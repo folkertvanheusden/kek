@@ -1,0 +1,119 @@
+// (C) 2018 by Folkert van Heusden
+// // Released under AGPL v3.0
+#include <errno.h>
+#include <poll.h>
+#include <string.h>
+#include <unistd.h>
+
+#include "tty.h"
+#include "gen.h"
+#include "memory.h"
+#include "utils.h"
+#include "terminal.h"
+
+extern NEWWIN *w_main;
+
+const char * const regnames[] = { 
+	"reader status ",
+	"reader buffer ",
+	"puncher status",
+	"puncher buffer"
+	};
+
+tty::tty(const bool withUI) : withUI(withUI)
+{
+	memset(registers, 0x00, sizeof registers);
+}
+
+tty::~tty()
+{
+}
+
+uint8_t tty::readByte(const uint16_t addr)
+{
+	uint16_t v = readWord(addr & ~1);
+
+	if (addr & 1)
+		return v >> 8;
+
+	return v;
+}
+
+uint16_t tty::readWord(const uint16_t addr)
+{
+	const int reg = (addr - PDP11TTY_BASE) / 2;
+	uint16_t vtemp = registers[reg];
+
+	fprintf(stderr, "PDP11TTY read addr %o (%s): ", addr, regnames[reg]);
+
+	if (addr == PDP11TTY_TKS) {
+		vtemp = c ? 128 : 0;
+	}
+	else if (addr == PDP11TTY_TKB) {
+		vtemp = c | (parity(c) << 7);
+		c = 0;
+	}
+	else if (addr == PDP11TTY_TPS) {
+		vtemp = 128;
+	}
+
+	fprintf(stderr, "%o\n", vtemp);
+
+	registers[reg] = vtemp;
+
+	return vtemp;
+}
+
+void tty::writeByte(const uint16_t addr, const uint8_t v)
+{
+	uint16_t vtemp = registers[(addr - PDP11TTY_BASE) / 2];
+	
+	if (addr & 1) {
+		vtemp &= ~0xff00;
+		vtemp |= v << 8;
+	}
+	else {
+		vtemp &= ~0x00ff;
+		vtemp |= v;
+	}
+
+	writeWord(addr, vtemp);
+}
+
+void tty::writeWord(const uint16_t addr, uint16_t v)
+{
+	const int reg = (addr - PDP11TTY_BASE) / 2;
+	fprintf(stderr, "PDP11TTY write %o (%s): %o\n", addr, regnames[reg], v);
+
+	if (v == 0207 && testMode) {
+		fprintf(stderr, "TestMode: TTY 0207 char\n");
+		exit(0);
+	}
+
+	// FIXME
+	if (addr == PDP11TTY_TPB) {
+		v &= 127;
+
+		FILE *tf = fopen("tty.dat", "a+");
+		if (tf) {
+			fprintf(tf, "%c", v);
+			fclose(tf);
+		}
+
+		if (withUI) {
+			if (v >= 32 || (v != 12 && v != 27 && v != 13)) {
+				wprintw(w_main -> win, "%c", v);
+				mydoupdate();
+			}
+		}
+		else {
+			printf("%c", v);
+			fflush(NULL);
+		}
+
+		fprintf(stderr, "punch char: '%c'\n", v);
+	}
+
+	D(fprintf(stderr, "set register %o to %o\n", addr, v);)
+	registers[(addr - PDP11TTY_BASE) / 2] = v;
+}
