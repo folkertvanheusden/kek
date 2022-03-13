@@ -28,13 +28,16 @@ psw_store_retrieve_fail:
 	CALL	print_start
 	RET
 
-psw_flags_trigger:
+clear_flags:
 	CLC
 	CLV
 	CLZ
 	CLN
+	RET
 
+psw_flags_trigger:
 ; test zero bit
+	CALL	clear_flags
 	MOV	#0,R1
 	TST	R1
 	BEQ	psw_trigger_1_next
@@ -43,6 +46,7 @@ psw_flags_trigger:
 	JMP	psw_trigger_fail
 
 psw_trigger_1_next:
+	CALL	clear_flags
 	MOV	#128.,R1
 	TST	R1
 	BNE	psw_trigger_2_next
@@ -50,7 +54,7 @@ psw_trigger_1_next:
 	JMP	psw_trigger_fail
 
 psw_trigger_2_next:
-
+	CALL	clear_flags
 ; test overflow bit (overflow)
 	MOV	#127.,R1
 	INCB	R1
@@ -60,6 +64,7 @@ psw_trigger_2_next:
 
 ; test overflow bit (underflow)
 psw_trigger_3_next:
+	CALL	clear_flags
 	MOV	#-128.,R1
 	DECB	R1
 	BVS	psw_trigger_4_next
@@ -67,6 +72,7 @@ psw_trigger_3_next:
 	JMP	psw_trigger_fail
 
 psw_trigger_4_next:
+	CALL	clear_flags
 ; test minus bit
 	MOV	#127.,R1
 	INCB	R1
@@ -75,6 +81,7 @@ psw_trigger_4_next:
 	JMP	psw_trigger_fail
 
 psw_trigger_5_next:
+	CALL	clear_flags
 	MOV	#128.,R1
 	DECB	R1
 	BPL	psw_trigger_6_next
@@ -82,6 +89,7 @@ psw_trigger_5_next:
 	JMP	psw_trigger_fail
 
 psw_trigger_6_next:
+	CALL	clear_flags
 ; carry flag test
 	MOV	#128.,R1
 	ASLB	R1
@@ -90,6 +98,7 @@ psw_trigger_6_next:
 	JMP	psw_trigger_fail
 
 psw_trigger_7_next:
+	CALL	clear_flags
 	MOV	#64.,R1
 	ASLB	R1
 	BCC	psw_trigger_8_next
@@ -100,6 +109,7 @@ psw_trigger_8_next:
 	RET
 
 psw_trigger_fail:
+	CALL	clear_flags
 ; emit test number
 	MOV	R2,R0
 	CALL	print_binary
