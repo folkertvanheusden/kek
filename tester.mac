@@ -1,0 +1,52 @@
+; in simh:
+; simh> set console telnet=3333
+; then invoke telnet to port 3333 on the simh systm
+; simh> load test.bin
+; simh> run
+
+
+; initialize stack pointer
+start:	MOV	#1000, R6
+
+	MOV	#textstart, R0
+	CALL	printstart
+
+
+	MOV	#textfin, R0
+	CALL	printstart
+	TRAP	7
+
+; store copy of R0 on the stack
+printstart:	MOV	R0,-(SP)
+; store PSW (status register) on stack
+	MFPS	-(SP)
+
+; string ends with 0x00
+print:	TSTB	(R0)
+	BEQ	pdone
+
+; put character in tty buffer
+	MOVB	(R0), @#TTYTX
+
+; wait for it to be transmitted
+waittx:	TSTB	@#TTYST
+	BPL	waittx
+
+	INC	R0
+	JMP	print
+
+; retrieve stored r0, r1 and psw from stack
+pdone:	MTPS	(SP)+
+
+	MOV	(SP)+,R0
+	RET
+
+	make_raw
+
+textstart:	.ASCII	"tester running...\r\n\x00"
+textfin:	.ASCII	"tester finished\r\n\x00"
+
+textbuffer:	.BLKB	256.
+
+TTYST	=	177564
+TTYTX	=	177566
