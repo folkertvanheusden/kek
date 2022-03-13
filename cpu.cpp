@@ -194,7 +194,7 @@ uint16_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const bool word_mode
 			addRegister(7, prev_mode, + 2);
 			temp = b -> read(getRegister(reg, prev_mode) + next_word, word_mode, prev_mode);
 			//fprintf(stderr, "-> %d: %o\n", word_mode, temp);
-#ifdef _DEBUG
+#ifndef NDEBUG
 			if (reg == 7)
 				*text = format("0o%o", getPC() + next_word); // FIXME
 			else
@@ -337,7 +337,7 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 	const uint8_t src_mode = (src >> 3) & 7;
 	const uint8_t src_reg = src & 7;
 
-#ifdef _DEBUG
+#ifndef NDEBUG
 	std::string debug_a, debug_b;
 	std::string *src_gam_text = &debug_a, *dst_gam_text = &debug_b;
 #endif
@@ -433,7 +433,7 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 				    if (dst_mode == 0)
 					    putGAM(dst_mode, dst_reg, word_mode, result, false, dst_gam_text);
 				    else {
-#ifdef _DEBUG
+#ifndef NDEBUG
 					    dst_gam_text -> assign(format("(%o)", a));
 #endif
 					    b -> write(a, word_mode, result);
@@ -479,7 +479,7 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 {
 	const uint8_t reg = (instr >> 6) & 7;
 
-#ifdef _DEBUG
+#ifndef NDEBUG
 	std::string debug_b;
 	std::string *dst_gam_text = &debug_b;
 #endif
@@ -624,7 +624,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 	int32_t vl = -1;
 	uint16_t v = -1;
 
-#ifdef _DEBUG
+#ifndef NDEBUG
 	std::string debug_b;
 	std::string *dst_gam_text = &debug_b;
 #endif
@@ -926,7 +926,7 @@ bool cpu::conditional_branch_instructions(const uint16_t instr)
 	const uint8_t opcode = (instr >> 8) & 255;
 	const int8_t offset = instr & 255;
 	bool take = false;
-#ifdef _DEBUG
+#ifndef NDEBUG
 	std::string name;
 #endif
 
@@ -1062,6 +1062,11 @@ bool cpu::condition_code_operations(const uint16_t instr)
 
 void cpu::pushStack(const uint16_t v)
 {
+	if (getRegister(6) == stackLimitRegister) {
+		printf("stackLimitRegister reached\n");
+		exit(1);
+	}
+
 	addRegister(6, false, -2);
 	b -> writeWord(getRegister(6, false), v);
 }
@@ -1259,7 +1264,7 @@ bool cpu::step()
 	return true;
 
 ok:
-#ifdef _DEBUG
+#ifndef NDEBUG
 	for(int r=0; r<8; r++)
 		fprintf(stderr, "%06o ", getRegister(r, false));
 	fprintf(stderr, " | n%dz%dv%dc%d P%dC%d S%d", getPSW_n(), getPSW_z(), getPSW_v(), getPSW_c(), (getPSW() >> 12) & 3, getPSW() >> 14, getBitPSW(11));
