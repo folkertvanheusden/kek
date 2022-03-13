@@ -914,6 +914,16 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					  b -> write(a, word_mode, v); // ?
 				  break;
 
+		case 0b000110100: // MTPS (put something in PSW)
+				  D(fprintf(stderr, "MTPS\n");)
+				  psw = getGAM(dst_mode, dst_reg, word_mode, false, src_gam_text);
+				  break;
+
+		case 0b000110111: // MFPS (get PSW to something)
+				  D(fprintf(stderr, "MFPS\n");)
+				  putGAM(dst_mode, dst_reg, word_mode, psw, false, dst_gam_text);
+				  break;
+
 		default:
 				  return false;
 	}
