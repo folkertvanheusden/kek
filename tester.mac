@@ -96,6 +96,7 @@ bit_seperator2:
 
 textstart:	.ASCII	"tester running...\r\n\x00"
 textfin:	.ASCII	"tester finished\r\n\x00"
+.EVEN
 
 textbuffer:	.BLKB	256.
 
