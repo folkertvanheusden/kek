@@ -627,6 +627,8 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 #ifndef NDEBUG
 	std::string debug_b;
 	std::string *dst_gam_text = &debug_b;
+	std::string debug_b2;
+	std::string *src_gam_text = &debug_b2;
 #endif
 
 	switch(opcode) {
