@@ -1,5 +1,5 @@
 // (C) 2018 by Folkert van Heusden
-// Released under AGPL v3.0
+// Released under Apache License v2.0
 #include <assert.h>
 #include <stdio.h>
 
@@ -71,6 +71,11 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev)
 
 		if (a == 0177514) { // printer, CSR register, LP11
 			fprintf(stderr, "read LP11 CSR\n");
+			return 0x80;
+		}
+
+		if (a == 0177564) { // console tty status register
+			fprintf(stderr, "console tty status register\n");
 			return 0x80;
 		}
 
@@ -404,6 +409,12 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 
 		if (a == 0177374) { // FIXME
 			fprintf(stderr, "char: %c\n", value & 127);
+			return 128;
+		}
+
+		if (a == 0177566) { // console tty buffer register
+			fprintf(stderr, "bus::write TTY buffer %c\n", value);
+			printf("%c", value & 127);
 			return 128;
 		}
 

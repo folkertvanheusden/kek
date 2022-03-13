@@ -1,5 +1,5 @@
 // (C) 2018 by Folkert van Heusden
-// Released under AGPL v3.0
+// Released under Apache License v2.0
 #include <stdarg.h>
 #include <stdint.h>
 #include <string>

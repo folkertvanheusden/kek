@@ -1,5 +1,5 @@
-// (C) 2018 by Folkert van Heusden
-// Released under AGPL v3.0
+// (C) 2018-2022 by Folkert van Heusden
+// Released under Apache License v2.0
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
