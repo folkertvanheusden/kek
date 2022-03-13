@@ -1,0 +1,41 @@
+.EXTERN ALL
+
+psw_store_retrieve:
+; set PSW to all bits set
+	MOV	#65535,R1
+	MTPS	R1
+; clear PSW status bits
+	CLC
+	CLV
+	CLZ
+	CLN
+; retrieve PSW and verify the flags are 0
+	MFPS	R2
+
+; clear currently non-relevant psw-bits
+	BIC 	#240.,R2
+
+	TSTB	R2
+	BNE	psw_store_retrieve_fail
+
+	RET
+
+psw_store_retrieve_fail:
+	MOV	R2,R0
+	CALL	print_binary
+
+	MOV	#psw_fail_text, R0
+	CALL	print_start
+	RET
+
+psw_flags_trigger:
+	CLC
+	CLV
+	CLZ
+	CLN
+
+; TODO
+
+	RET
+
+psw_fail_text:	.ASCII	"MFPS / MTPS handling FAIL\r\n\x00"
