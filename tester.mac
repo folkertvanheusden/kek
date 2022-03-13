@@ -9,15 +9,58 @@
 start:	MOV	#1000, R6
 
 	MOV	#textstart, R0
-	CALL	printstart
+	CALL	print_start
 
+	CALL	psw_store_retrieve
+
+	CALL	psw_flags_trigger
 
 	MOV	#textfin, R0
-	CALL	printstart
+	CALL	print_start
 	TRAP	7
 
+psw_store_retrieve:
+; set PSW to all bits set
+	MOV	#65535,R1
+	MTPS	R1
+; clear PSW status bits
+	CLC
+	CLV
+	CLZ
+	CLN
+; retrieve PSW and verify the flags are 0
+	MFPS	R2
+
+; clear uninteresting flags
+	BIC 	#4,R2
+	BIC 	#5,R2
+	BIC 	#6,R2
+	BIC 	#7,R2
+
+	TSTB	R2
+	BNE	psw_store_retrieve_fail
+
+	RET
+
+psw_store_retrieve_fail:
+	MOV	R2,R0
+	CALL	print_binary
+	MOV	#psw_fail_text, R0
+	CALL	print_start
+	RET
+
+psw_flags_trigger:
+	CLC
+	CLV
+	CLZ
+	CLN
+
+	RET
+
+psw_fail_text:	.ASCII	"MFPS / MTPS handling FAIL\r\n\x00"
+
 ; store copy of R0 on the stack
-printstart:	MOV	R0,-(SP)
+print_start:	MOV	R0,-(SP)
 ; store PSW (status register) on stack
 	MFPS	-(SP)
 
@@ -38,6 +81,38 @@ waittx:	TSTB	@#TTYST
 ; retrieve stored r0, r1 and psw from stack
 pdone:	MTPS	(SP)+
 
+	MOV	(SP)+,R0
+	RET
+
+print_binary:
+	MOV	R0,-(SP)
+	MOV	R1,-(SP)
+; 8 bits in a byte
+	MOV	#8.,R1
+
+print_bit:
+	BIT	#0,R0
+	BEQ	print_1:
+waittx0:
+	TSTB	@#TTYST
+	BPL	waittx0
+	MOVB	#33, @#TTYTX
+	BR	print_next_bit
+print_1:
+waittxt1:
+	TSTB	@#TTYST
+	BPL	waittx1
+	MOVB	#34, @#TTYTX
+
+print_next_bit:
+; move R0 contents to the next bit
+	ASR	R0
+; keep track of the number of bits emitted
+	DEC	R1
+	TST	R1
+	BNE	print_bit
+
+	MOV	(SP)+,R1
 	MOV	(SP)+,R0
 	RET
 
