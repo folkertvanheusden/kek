@@ -38,8 +38,8 @@ clear_flags:
 psw_flags_trigger:
 ; test zero bit
 	CALL	clear_flags
-	MOV	#0,R1
-	TST	R1
+	MOV	#32768.,R1
+	TSTB	R1
 	BEQ	psw_trigger_1_next
 ; store test number
 	MOV	#1.,R2
@@ -48,7 +48,7 @@ psw_flags_trigger:
 psw_trigger_1_next:
 	CALL	clear_flags
 	MOV	#128.,R1
-	TST	R1
+	TSTB	R1
 	BNE	psw_trigger_2_next
 	MOV	#2.,R2
 	JMP	psw_trigger_fail
@@ -106,6 +106,78 @@ psw_trigger_7_next:
 	JMP	psw_trigger_fail
 
 psw_trigger_8_next:
+; 16 bit tests
+
+; test zero bit
+	CALL	clear_flags
+	MOV	#0,R1
+	TST	R1
+	BEQ	psw_trigger_1_next16b
+; store test number
+	MOV	#9.,R2
+	JMP	psw_trigger_fail
+
+psw_trigger_1_next16b:
+	CALL	clear_flags
+	MOV	#32768.,R1
+	TST	R1
+	BNE	psw_trigger_2_next16b
+	MOV	#10.,R2
+	JMP	psw_trigger_fail
+
+psw_trigger_2_next16b:
+	CALL	clear_flags
+; test overflow bit (overflow)
+	MOV	#32767.,R1
+	INC	R1
+	BVS	psw_trigger_3_next16b
+	MOV	#11.,R2
+	JMP	psw_trigger_fail
+
+; test overflow bit (underflow)
+psw_trigger_3_next16b:
+	CALL	clear_flags
+	MOV	#-32768.,R1
+	DEC	R1
+	BVS	psw_trigger_4_next16b
+	MOV	#12.,R2
+	JMP	psw_trigger_fail
+
+psw_trigger_4_next16b:
+	CALL	clear_flags
+; test minus bit
+	MOV	#32767.,R1
+	INC	R1
+	BMI	psw_trigger_5_next16b
+	MOV	#13.,R2
+	JMP	psw_trigger_fail
+
+psw_trigger_5_next16b:
+	CALL	clear_flags
+	MOV	#32768.,R1
+	DEC	R1
+	BPL	psw_trigger_6_next16b
+	MOV	#14.,R2
+	JMP	psw_trigger_fail
+
+psw_trigger_6_next16b:
+	CALL	clear_flags
+; carry flag test
+	MOV	#32768.,R1
+	ASL	R1
+	BCS	psw_trigger_7_next16b
+	MOV	#15.,R2
+	JMP	psw_trigger_fail
+
+psw_trigger_7_next16b:
+	CALL	clear_flags
+	MOV	#16384.,R1
+	ASL	R1
+	BCC	psw_trigger_8_next16b
+	MOV	#16.,R2
+	JMP	psw_trigger_fail
+
+psw_trigger_8_next16b:
 	RET
 
 psw_trigger_fail:
