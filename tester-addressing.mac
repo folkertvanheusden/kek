@@ -80,17 +80,33 @@ test_addr_2a2_ok:
 	BEQ	test_addr_2b1_ok
 	MOV	#9.,R0
 	JMP	test_addr_fail
-;
+
 test_addr_2b1_ok:
-; address increased 2 bytes
-	MOV	#v1234,R2
-	INC	R2
-	CMP	R0,R2
+; test if this pdp-11 has the hw-bug
+	MOV	#v1234,R0
+	MOV	(R0)+,R0
+	CMP	#1234.,R0
 	BEQ	test_addr_2b2_ok
 	MOV	#10.,R0
 	JMP	test_addr_fail
 
 test_addr_2b2_ok:
+; verify contents of addr1234 first
+	MOV	addr1234,r0
+	CMP	#1234.,(R0)
+	BEQ	test_addr_3b_verify_ok
+	MOV	#12.,R0
+	JMP	test_addr_fail
+
+test_addr_3b_verify_ok:
+	MOV	@(R0)+,R1
+	MOV	#v1234after,R2
+	CMP	R0,R2
+	BEQ	test_addr_3b2_ok
+	MOV	#13.,R0
+	JMP	test_addr_fail
+
+test_addr_3b2_ok:
 	; TODO
 
 	RET
@@ -108,6 +124,9 @@ test_addr_fail_txt:
 
 v1234:	DW	1234.
 v1234after:	DW	4321.
+
+addr1234:	DW	v1234
+addr1234after:	DW	v1234after
 
 test_addr:
 	CALL	test_addr_0
