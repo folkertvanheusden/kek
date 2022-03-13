@@ -11,6 +11,7 @@ start:	MOV	#1000, R6
 	JMP	go
 
 .INCLUDE "tester-psw.mac"
+.INCLUDE "tester-adc-sbc.mac"
 
 go:	MOV	#textstart, R0
 	CALL	print_start
@@ -18,6 +19,8 @@ go:	MOV	#textstart, R0
 	CALL	psw_store_retrieve
 
 	CALL	psw_flags_trigger
+
+	CALL	test_adc
 
 	MOV	#textfin, R0
 	CALL	print_start
@@ -52,11 +55,11 @@ print_binary:
 	MFPS	-(SP)
 	MOV	R0,-(SP)
 	MOV	R1,-(SP)
-; 8 bits in a byte
-	MOV	#8.,R1
+; 16 bits in a word
+	MOV	#16.,R1
 
 print_bit:
-	ASLB	R0
+	ASL	R0
 	BCS	print_1
 waittx0:
 	TSTB	@#TTYST

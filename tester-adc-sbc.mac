@@ -1,0 +1,44 @@
+.EXTERN ALL
+
+test_adc:
+; initial value
+	MOV	#32769.,R0
+; number of additions
+	MOV	#257.,R1
+
+test_adc_loop:
+	ADD	#1003.,R0
+	ADC	R0
+
+	DEC	R1
+	TST	R1
+	BNE	test_adc_loop
+
+	CMP	#28400.,R0
+	BNE	test_adc_failed
+
+; test 8 bit
+	MOV	#32769.,R0
+	MOV	#257.,R1
+
+test_adc_loop8b:
+	ADD	#13.,R0
+	ADCB	R0
+
+	DEC	R1
+	TST	R1
+	BNE	test_adc_loop8b
+
+	CMP	#36110.,R0
+	BNE	test_adc_failed
+
+	RET
+
+test_adc_failed:
+	MOV	#adc_fail_text,R0
+	CALL	print_start
+	RET
+	
+adc_fail_text:
+	.ASCII	"ADC handling FAIL\r\n\x00"
+.EVEN
