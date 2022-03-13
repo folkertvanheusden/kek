@@ -22,6 +22,8 @@ go:	MOV	#textstart, R0
 
 	CALL	test_adc
 
+	CALL	test_sbc
+
 	MOV	#textfin, R0
 	CALL	print_start
 	TRAP	7

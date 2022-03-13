@@ -10,11 +10,15 @@ test_adc_loop:
 	ADD	#1003.,R0
 	ADC	R0
 
+	MFPS	R2
+	BIC     #65520.,R2
+	ADD	R2,R0
+
 	DEC	R1
 	TST	R1
 	BNE	test_adc_loop
 
-	CMP	#28400.,R0
+	CMP	#29424.,R0
 	BNE	test_adc_failed
 
 ; test 8 bit
@@ -25,11 +29,15 @@ test_adc_loop8b:
 	ADD	#13.,R0
 	ADCB	R0
 
+	MFPS	R2
+	BIC     #65520.,R2
+	ADD	R2,R0
+
 	DEC	R1
 	TST	R1
 	BNE	test_adc_loop8b
 
-	CMP	#36110.,R0
+	CMP	#36878.,R0
 	BNE	test_adc_failed
 
 	RET
@@ -41,4 +49,55 @@ test_adc_failed:
 	
 adc_fail_text:
 	.ASCII	"ADC handling FAIL\r\n\x00"
+.EVEN
+
+test_sbc:
+; initial value
+	MOV	#32769.,R0
+; number of additions
+	MOV	#257.,R1
+
+test_sbc_loop:
+	SUB	#1003.,R0
+	SBC	R0
+
+	MFPS	R2
+	BIC     #65520.,R2
+	SUB	R2,R0
+
+	DEC	R1
+	TST	R1
+	BNE	test_sbc_loop
+
+	CMP	#36106.,R0
+	BNE	test_sbc_failed
+
+; test 8 bit
+	MOV	#32769.,R0
+	MOV	#257.,R1
+
+test_sbc_loop8b:
+	SUB	#13.,R0
+	SBCB	R0
+
+	MFPS	R2
+	BIC     #65520.,R2
+	SUB	R2,R0
+
+	DEC	R1
+	TST	R1
+	BNE	test_sbc_loop8b
+
+	CMP	#28652.,R0
+	BNE	test_sbc_failed
+
+	RET
+
+test_sbc_failed:
+	MOV	#sbc_fail_text,R0
+	CALL	print_start
+	RET
+	
+sbc_fail_text:
+	.ASCII	"SBC handling FAIL\r\n\x00"
 .EVEN
