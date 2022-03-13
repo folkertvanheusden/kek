@@ -12,6 +12,7 @@ start:	MOV	#1000, R6
 
 .INCLUDE "tester-psw.mac"
 .INCLUDE "tester-adc-sbc.mac"
+.INCLUDE "tester-addressing.mac"
 
 go:	MOV	#textstart, R0
 	CALL	print_start
@@ -23,6 +24,8 @@ go:	MOV	#textstart, R0
 	CALL	test_adc
 
 	CALL	test_sbc
+
+	CALL	test_addr
 
 	MOV	#textfin, R0
 	CALL	print_start

@@ -1,0 +1,114 @@
+.EXTERN ALL
+
+test_addr_0:
+; address mode 0 
+; b1010101001010101
+; 16 bit put/get
+	MOV	#43605.,R0
+	CMP	#43605.,R0
+	BEQ	test_addr_0a_ok
+	MOV	#1.,R0
+	JMP	test_addr_fail
+
+test_addr_0a_ok:
+; 8 bit put / 16 bit get, should sign extend
+	MOVB	#240.,R0
+	CMP	#65520.,R0
+	BEQ	test_addr_0b_ok
+	MOV	#2.,R0
+	JMP	test_addr_fail
+
+test_addr_0b_ok:
+; 8 bit put / 16 bit get, should sign extend
+	MOVB	#127.,R0
+	CMP	#127.,R0
+	BEQ	test_addr_0c_ok
+	MOV	#3.,R0
+	JMP	test_addr_fail
+
+test_addr_0c_ok:
+; address mode 1
+; indirect get 16 bit
+	MOV	#v1234,R0
+	MOV	(R0),R1
+	CMP	#1234.,R1
+	BEQ	test_addr_1a_ok
+	MOV	#4.,R0
+	JMP	test_addr_fail
+
+test_addr_1a_ok:
+; indirect get 8 bit, sign extended
+	MOV	#v1234,R0
+	MOVB	(R0),R1
+	CMP	#65490.,R1
+	BEQ	test_addr_1b_ok
+	MOV	#5.,R0
+	JMP	test_addr_fail
+
+test_addr_1b_ok:
+; indirect get 16 bit
+	MOV	#v1234,R0
+	MOVB	(R0),R1
+	CMP	#1234.,R1
+	BNE	test_addr_1c_ok
+	MOV	#6.,R0
+	JMP	test_addr_fail
+
+test_addr_1c_ok:
+; address mode 2
+; value did not change
+	MOV	#v1234,R0
+	MOV 	(R0)+,R1
+	CMP	#1234.,R1
+	BEQ	test_addr_2a1_ok
+	MOV	#7.,R0
+	JMP	test_addr_fail
+;
+test_addr_2a1_ok:
+; address increased 2 bytes
+	MOV	#v1234after,R2
+	CMP	R0,R2
+	BEQ	test_addr_2a2_ok
+	MOV	#8.,R0
+	JMP	test_addr_fail
+
+test_addr_2a2_ok:
+; value did not change
+	MOV	#v1234,R0
+	MOVB 	(R0)+,R1
+	CMPB	#210.,R1
+	BEQ	test_addr_2b1_ok
+	MOV	#9.,R0
+	JMP	test_addr_fail
+;
+test_addr_2b1_ok:
+; address increased 2 bytes
+	MOV	#v1234,R2
+	INC	R2
+	CMP	R0,R2
+	BEQ	test_addr_2b2_ok
+	MOV	#10.,R0
+	JMP	test_addr_fail
+
+test_addr_2b2_ok:
+	; TODO
+
+	RET
+
+test_addr_fail:
+	CALL	print_binary
+
+	MOV	#test_addr_fail_txt,R0
+	CALL	print_start
+	RET
+
+test_addr_fail_txt:
+	.ASCII	"addressing handling FAIL\r\n\x00"
+.EVEN
+
+v1234:	DW	1234.
+v1234after:	DW	4321.
+
+test_addr:
+	CALL	test_addr_0
+	RET
