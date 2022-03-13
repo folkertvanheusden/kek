@@ -1,6 +1,9 @@
 .EXTERN ALL
 
 test_addr_0:
+	MOV	#what_address,R0
+	CALL	print_start
+
 ; address mode 0 
 ; b1010101001010101
 ; 16 bit put/get
@@ -27,6 +30,7 @@ test_addr_0b_ok:
 	JMP	test_addr_fail
 
 test_addr_0c_ok:
+test_addr_1:
 ; address mode 1
 ; indirect get 16 bit
 	MOV	#v1234,R0
@@ -55,6 +59,7 @@ test_addr_1b_ok:
 	JMP	test_addr_fail
 
 test_addr_1c_ok:
+test_addr_2:
 ; address mode 2
 ; value did not change
 	MOV	#v1234,R0
@@ -91,6 +96,7 @@ test_addr_2b1_ok:
 	JMP	test_addr_fail
 
 test_addr_2b2_ok:
+test_addr_3:
 ; verify contents of addr1234 first
 	MOV	addr1234,r0
 	CMP	#1234.,(R0)
@@ -107,8 +113,59 @@ test_addr_3b_verify_ok:
 	JMP	test_addr_fail
 
 test_addr_3b2_ok:
-	; TODO
+test_addr_4:
 
+	; TODO
+; address mode 4
+; value did not change
+	MOV	#v1234,R0
+	MOV 	-(R0),R1
+	CMP	#4455.,R1
+	BEQ	test_addr_4a1_ok
+	MOV	#14.,R0
+	JMP	test_addr_fail
+;
+test_addr_4a1_ok:
+; address drecreased 2 bytes
+	MOV	#v4455before,R2
+	CMP	R0,R2
+	BEQ	test_addr_4a2_ok
+	MOV	#15.,R0
+	JMP	test_addr_fail
+
+test_addr_4a2_ok:
+; value did not change
+	MOV	#v1234,R0
+	MOVB 	-(R0),R1
+	CMPB	#17.,R1
+	BEQ	test_addr_4a3_ok
+	MOV	#16.,R0
+	JMP	test_addr_fail
+
+test_addr_4a3_ok:
+test_addr_5:
+; TODO
+
+
+test_addr_6:
+	MOV	#v1234,R0
+	MOV	2(R0),R1
+	CMP	#4321.,R1
+	BEQ	test_addr_6_ok
+	MOV	#17.,R0
+	JMP	test_addr_fail
+
+test_addr_6_ok:
+test_addr_7:
+; index deferred
+	MOV	#addr1234,R0
+	MOV	@2(R0),R1
+	CMP	#4321.,R1
+	BEQ	test_addr_7_ok
+	MOV	#18.,R0
+	JMP	test_addr_fail
+
+test_addr_7_ok:
 	RET
 
 test_addr_fail:
@@ -120,8 +177,13 @@ test_addr_fail:
 
 test_addr_fail_txt:
 	.ASCII	"addressing handling FAIL\r\n\x00"
+
+what_address:
+	.ASCII	"addressing tests\r\n\x00"
+
 .EVEN
 
+v4455before:	DW	4455.
 v1234:	DW	1234.
 v1234after:	DW	4321.
 

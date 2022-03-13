@@ -1,6 +1,9 @@
 .EXTERN ALL
 
 test_adc:
+	MOV	#what_adc,R0
+	CALL	print_start
+
 ; initial value
 	MOV	#32769.,R0
 ; number of additions
@@ -100,4 +103,8 @@ test_sbc_failed:
 	
 sbc_fail_text:
 	.ASCII	"SBC handling FAIL\r\n\x00"
+
+what_adc:
+	.ASCII	"ADC/SBC test\r\n\x00"
+
 .EVEN

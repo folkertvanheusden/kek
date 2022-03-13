@@ -1,6 +1,9 @@
 .EXTERN ALL
 
 psw_store_retrieve:
+	MOV	#what_psw,R0
+	CALL	print_start
+
 ; set PSW to all bits set
 	MOV	#65535,R1
 	MTPS	R1
@@ -198,4 +201,8 @@ psw_store_retrieve_fail_text:
 
 psw_trigger_fail_text:
 	.ASCII	"PSW trigger fail\r\n\x00"
+
+what_psw:
+	.ASCII	"PSW handling test\r\n\x00"
+
 .EVEN
