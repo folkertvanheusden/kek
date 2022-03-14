@@ -44,8 +44,6 @@ uint16_t tty::readWord(const uint16_t addr)
 	const int reg = (addr - PDP11TTY_BASE) / 2;
 	uint16_t vtemp = registers[reg];
 
-	fprintf(stderr, "PDP11TTY read addr %o (%s): ", addr, regnames[reg]);
-
 	if (addr == PDP11TTY_TKS) {
 		vtemp = c ? 128 : 0;
 	}
@@ -57,7 +55,7 @@ uint16_t tty::readWord(const uint16_t addr)
 		vtemp = 128;
 	}
 
-	fprintf(stderr, "%o\n", vtemp);
+	fprintf(stderr, "PDP11TTY read addr %o (%s): %d, 7bit: %d\n", addr, regnames[reg], vtemp, vtemp & 127);
 
 	registers[reg] = vtemp;
 
@@ -116,4 +114,14 @@ void tty::writeWord(const uint16_t addr, uint16_t v)
 
 	D(fprintf(stderr, "set register %o to %o\n", addr, v);)
 	registers[(addr - PDP11TTY_BASE) / 2] = v;
+}
+
+void tty::sendChar(const char v)
+{
+	if (c)
+		fprintf(stderr, "PDP11TTY: overwriting %d - %c\n", c, c);
+	else
+		fprintf(stderr, "PDP11TTY: setting character %d - %c\n", v, v);
+
+	c = v;
 }

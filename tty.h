@@ -28,7 +28,7 @@ public:
 
 	void setTest() { testMode = true; }
 
-	void sendChar(const char v) { c = v; };
+	void sendChar(const char v);
 
 	uint8_t readByte(const uint16_t addr);
 	uint16_t readWord(const uint16_t addr);

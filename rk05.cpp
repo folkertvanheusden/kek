@@ -59,22 +59,13 @@ uint16_t rk05::readWord(const uint16_t addr)
 	else if (addr == RK05_CS) {	// 0177404
 		setBit(registers[reg], 15, false); // clear error
 		setBit(registers[reg], 14, false); // clear hard error
-#if 0
-		if (registers[reg] & 1)
-			registers[reg] &= ~128; // controller ready
-		else
-			registers[reg] |= 128; // controller ready
-#else
 		setBit(registers[reg], 7, true); // controller ready
-#endif
 	}
 
 	uint16_t vtemp = registers[reg];
 
 	if (addr == RK05_CS)
 		setBit(registers[reg], 0, false); // clear go
-
-	fprintf(stderr, "%o\n", vtemp);
 
 	return vtemp;
 }

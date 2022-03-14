@@ -3,6 +3,7 @@
 #include <poll.h>
 #include <signal.h>
 #include <string.h>
+#include <termios.h>
 #include <unistd.h>
 
 #include "memory.h"
@@ -286,7 +287,11 @@ int main(int argc, char *argv[])
 		resize_terminal();
 	}
 
-	struct pollfd fds[] = { { 0, POLLIN, 0 } };
+	struct termios tty_opts_raw { 0 };
+	cfmakeraw(&tty_opts_raw);
+	tcsetattr(STDIN_FILENO, TCSANOW, &tty_opts_raw);
+
+	struct pollfd fds[] = { { STDIN_FILENO, POLLIN, 0 } };
 
 	const unsigned long start = get_ms();
 	unsigned long icount = 0;
@@ -300,16 +305,19 @@ int main(int argc, char *argv[])
 		icount++;
 
 		if (icount % 1000 == 0) {
-			if (poll(fds, 1, 0) == 1) {
-				int ch = getch();
+			if (poll(fds, 1, 0) == 1 && fds[0].revents) {
+				int ch = 0;
+
+				if (withUI)
+					ch = getch();
+				else
+					ch = getchar();
 
 				if (ch == 3)
 					break;
 
 				if (ch > 0 && ch < 127)
 					tty_->sendChar(ch);
-
-				fds[0].revents = 0;
 			}
 
 			if (icount % 1000000 == 0 && withUI) {
