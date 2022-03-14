@@ -905,7 +905,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 		case 0b00110110: // MTPI/MTPD
 				  // FIXME
 				  a = getGAMAddress(dst_mode, dst_reg, word_mode, false);
-				  fprintf(stderr, "MTPI/MTPD\n");
+				  D(fprintf(stderr, "MTPI/MTPD\n");)
 				  v = popStack();
 				  setPSW_n(word_mode ? v & 0x80 : v & 0x8000);
 				  setPSW_z(v == 0);

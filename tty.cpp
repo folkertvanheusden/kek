@@ -55,7 +55,7 @@ uint16_t tty::readWord(const uint16_t addr)
 		vtemp = 128;
 	}
 
-	fprintf(stderr, "PDP11TTY read addr %o (%s): %d, 7bit: %d\n", addr, regnames[reg], vtemp, vtemp & 127);
+	D(fprintf(stderr, "PDP11TTY read addr %o (%s): %d, 7bit: %d\n", addr, regnames[reg], vtemp, vtemp & 127);)
 
 	registers[reg] = vtemp;
 
@@ -81,7 +81,8 @@ void tty::writeByte(const uint16_t addr, const uint8_t v)
 void tty::writeWord(const uint16_t addr, uint16_t v)
 {
 	const int reg = (addr - PDP11TTY_BASE) / 2;
-	fprintf(stderr, "PDP11TTY write %o (%s): %o\n", addr, regnames[reg], v);
+
+	D(fprintf(stderr, "PDP11TTY write %o (%s): %o\n", addr, regnames[reg], v);)
 
 	if (v == 0207 && testMode) {
 		fprintf(stderr, "TestMode: TTY 0207 char\n");
