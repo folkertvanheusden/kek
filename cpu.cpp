@@ -1103,7 +1103,7 @@ bool cpu::misc_operations(const uint16_t instr)
 		case 0b0000000000000000: // HALT
 			D(fprintf(stderr, "HALT\n");)
 			// pretend HALT is not executed, proceed
-			//haltFlag = true;
+			haltFlag = true;
 			return true;
 
 		case 0b0000000000000001: // WAIT

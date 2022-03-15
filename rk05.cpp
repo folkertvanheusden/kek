@@ -120,7 +120,7 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 			else if (func == 1) { // write
 				D(fprintf(stderr, "RK05 writing %zo bytes to offset %o (%d dec)\n", reclen, diskoffb, diskoffb);)
 
-				int p = reclen; // FIXME
+				uint32_t p = reclen; // FIXME
 				for(size_t i=0; i<reclen; i++)
 					xfer_buffer[i] = b -> readByte(memoff + i);
 
@@ -150,15 +150,15 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 				if (fseek(fh, diskoffb, SEEK_SET) == -1)
 					fprintf(stderr, "RK05 seek error %s\n", strerror(errno));
 				
-				int temp = reclen;
-				int p = memoff;
+				uint32_t temp = reclen;
+				uint32_t p = memoff;
 				while(temp > 0) {
-					int cur = std::min(int(sizeof xfer_buffer), temp);
+					uint32_t cur = std::min(uint32_t(sizeof xfer_buffer), temp);
 
 					if (fread(xfer_buffer, 1, cur, fh) != size_t(cur))
 						D(fprintf(stderr, "RK05 fread error: %s\n", strerror(errno));)
 
-					for(int i=0; i<cur; i++) {
+					for(uint32_t i=0; i<cur; i++) {
 						if (p < 0160000)
 							b -> writeByte(p, xfer_buffer[i]);
 						p++;
