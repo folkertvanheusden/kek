@@ -255,7 +255,18 @@ void setup() {
 	Serial.println(F("Emulation starting!"));
 }
 
+unsigned int icount = 0;
+
 void loop() {
+	icount++;
+
+	if (icount % 1000 == 0 && Serial.available()) {
+		char c = Serial.read();
+
+		if (c > 0 && c < 127)
+			tty_->sendChar(c);
+	}
+
 	if (c->step()) {
 		Serial.println(F(""));
 		Serial.println(F(" *** EMULATION STOPPED *** "));
