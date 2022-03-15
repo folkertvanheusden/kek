@@ -219,6 +219,8 @@ uint32_t start_ts = 0;
 void setup() {
 	Serial.begin(115200);
 
+	Serial.println(F("This PDP-11 emulator is called \"kek\" (reason for that is forgotten) and was written by Folkert van Heusden."));
+
 	Serial.print(F("Size of int: "));
 	Serial.println(sizeof(int));
 
