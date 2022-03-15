@@ -3,9 +3,10 @@
 #include <errno.h>
 #include <string.h>
 
-#include "rk05.h"
-#include "gen.h"
 #include "bus.h"
+#include "error.h"
+#include "gen.h"
+#include "rk05.h"
 #include "utils.h"
 
 const char * const regnames[] = { 
@@ -24,6 +25,8 @@ rk05::rk05(const std::string & file, bus *const b) : b(b)
 	memset(xfer_buffer, 0x00, sizeof xfer_buffer);
 
 	fh = fopen(file.c_str(), "rb");
+	if (!fh)
+		error_exit(true, "rk05: cannot open \"%s\"", file.c_str());
 }
 
 rk05::~rk05()

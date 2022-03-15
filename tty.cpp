@@ -1,7 +1,11 @@
 // (C) 2018 by Folkert van Heusden
 // // Released under Apache License v2.0
 #include <errno.h>
+#if defined(ESP32)
+#include <Arduino.h>
+#else
 #include <poll.h>
+#endif
 #include <string.h>
 #include <unistd.h>
 
@@ -9,9 +13,11 @@
 #include "gen.h"
 #include "memory.h"
 #include "utils.h"
-#include "terminal.h"
 
+#if !defined(ESP32)
+#include "terminal.h"
 extern NEWWIN *w_main;
+#endif
 
 const char * const regnames[] = { 
 	"reader status ",
@@ -85,14 +91,20 @@ void tty::writeWord(const uint16_t addr, uint16_t v)
 	D(fprintf(stderr, "PDP11TTY write %o (%s): %o\n", addr, regnames[reg], v);)
 
 	if (v == 0207 && testMode) {
-		fprintf(stderr, "TestMode: TTY 0207 char\n");
+		D(fprintf(stderr, "TestMode: TTY 0207 char\n");)
+
+#if !defined(ESP32)
 		exit(0);
+#endif
 	}
 
 	// FIXME
 	if (addr == PDP11TTY_TPB) {
 		v &= 127;
 
+#if defined(ESP32)
+		Serial.print(char(v));
+#else
 		FILE *tf = fopen("tty.dat", "a+");
 		if (tf) {
 			fprintf(tf, "%c", v);
@@ -111,6 +123,7 @@ void tty::writeWord(const uint16_t addr, uint16_t v)
 		}
 
 		fprintf(stderr, "punch char: '%c'\n", v);
+#endif
 	}
 
 	D(fprintf(stderr, "set register %o to %o\n", addr, v);)
@@ -119,10 +132,12 @@ void tty::writeWord(const uint16_t addr, uint16_t v)
 
 void tty::sendChar(const char v)
 {
+#if !defined(ESP32)
 	if (c)
 		fprintf(stderr, "PDP11TTY: overwriting %d - %c\n", c, c);
 	else
 		fprintf(stderr, "PDP11TTY: setting character %d - %c\n", v, v);
+#endif
 
 	c = v;
 }

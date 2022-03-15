@@ -194,7 +194,7 @@ uint16_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const bool word_mode
 			addRegister(7, prev_mode, + 2);
 			temp = b -> read(getRegister(reg, prev_mode) + next_word, word_mode, prev_mode);
 			//fprintf(stderr, "-> %d: %o\n", word_mode, temp);
-#ifndef NDEBUG
+#if !defined(NDEBUG) && !defined(ESP32)
 			if (reg == 7)
 				*text = format("0o%o", getPC() + next_word); // FIXME
 			else
@@ -337,7 +337,7 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 	const uint8_t src_mode = (src >> 3) & 7;
 	const uint8_t src_reg = src & 7;
 
-#ifndef NDEBUG
+#if !defined(NDEBUG) && !defined(ESP32)
 	std::string debug_a, debug_b;
 	std::string *src_gam_text = &debug_a, *dst_gam_text = &debug_b;
 #endif
@@ -433,7 +433,7 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 				    if (dst_mode == 0)
 					    putGAM(dst_mode, dst_reg, word_mode, result, false, dst_gam_text);
 				    else {
-#ifndef NDEBUG
+#if !defined(NDEBUG) && !defined(ESP32)
 					    dst_gam_text -> assign(format("(%o)", a));
 #endif
 					    b -> write(a, word_mode, result);
@@ -479,7 +479,7 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 {
 	const uint8_t reg = (instr >> 6) & 7;
 
-#ifndef NDEBUG
+#if !defined(NDEBUG) && !defined(ESP32)
 	std::string debug_b;
 	std::string *dst_gam_text = &debug_b;
 #endif
@@ -624,7 +624,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 	int32_t vl = -1;
 	uint16_t v = -1;
 
-#ifndef NDEBUG
+#if !defined(NDEBUG) && !defined(ESP32)
 	std::string debug_b;
 	std::string *dst_gam_text = &debug_b;
 	std::string debug_b2;
@@ -938,7 +938,7 @@ bool cpu::conditional_branch_instructions(const uint16_t instr)
 	const uint8_t opcode = (instr >> 8) & 255;
 	const int8_t offset = instr & 255;
 	bool take = false;
-#ifndef NDEBUG
+#if !defined(NDEBUG) && !defined(ESP32)
 	std::string name;
 #endif
 
@@ -1102,13 +1102,8 @@ bool cpu::misc_operations(const uint16_t instr)
 	switch(instr) {
 		case 0b0000000000000000: // HALT
 			D(fprintf(stderr, "HALT\n");)
-			haltFlag = true;
-			{
-				FILE *fh = fopen("halt.dat", "wb");
-				for(int i=0; i<256; i++)
-					fputc(b -> readByte(getPC() - 2 + i), fh);
-				fclose(fh);
-			}
+			// pretend HALT is not executed, proceed
+			//haltFlag = true;
 			return true;
 
 		case 0b0000000000000001: // WAIT
@@ -1276,7 +1271,7 @@ bool cpu::step()
 	return true;
 
 ok:
-#ifndef NDEBUG
+#if !defined(NDEBUG) && !defined(ESP32)
 	for(int r=0; r<8; r++)
 		fprintf(stderr, "%06o ", getRegister(r, false));
 	fprintf(stderr, " | n%dz%dv%dc%d P%dC%d S%d", getPSW_n(), getPSW_z(), getPSW_v(), getPSW_c(), (getPSW() >> 12) & 3, getPSW() >> 14, getBitPSW(11));
