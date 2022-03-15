@@ -16,7 +16,9 @@
 bus::bus() : c(nullptr), tm11(nullptr), rk05_(nullptr), rx02_(nullptr), tty_(nullptr)
 {
 #if defined(ESP32)
-	int n = 8;
+	// ESP32 goes in a crash-loop when allocating 128kB
+	// see also https://github.com/espressif/esp-idf/issues/1934
+	int n = 14;
 #else
 	int n = 16;
 #endif

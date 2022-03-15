@@ -9,8 +9,8 @@
 #include "utils.h"
 #include "error.h"
 
-bus *b = new bus();
-cpu *c = new cpu(b);
+bus *b = nullptr;
+cpu *c = nullptr;
 tty *tty_ = nullptr;
 
 uint16_t loadbin(bus *const b)
@@ -222,6 +222,12 @@ void setup() {
 	Serial.print(F("Size of int: "));
 	Serial.println(sizeof(int));
 
+	Serial.print(F("CPU clock frequency: "));
+	Serial.println(getCpuFrequencyMhz());
+
+	Serial.print(F("Free RAM before init: "));
+	Serial.println(ESP.getFreeHeap());
+
 	Serial.println(F("Init bus"));
 	b = new bus();
 
@@ -241,6 +247,9 @@ void setup() {
 	Serial.println(F("Load program"));
 	exec_addr = loadbin(b);
 	c->setRegister(7, exec_addr);
+
+	Serial.print(F("Free RAM after init: "));
+	Serial.println(ESP.getFreeHeap());
 
 	pinMode(LED_BUILTIN, OUTPUT);
 
@@ -280,7 +289,7 @@ void loop() {
 		Serial.println(F(" *** EMULATION STOPPED *** "));
 		Serial.print(F("Instructions per second: "));
 		Serial.println(icount * 1000.0 / (millis() - start_ts));
-		delay(1000);
+		delay(3000);
 		Serial.println(F(" *** EMULATION RESTARTING *** "));
 
 		c->setRegister(7, exec_addr);
