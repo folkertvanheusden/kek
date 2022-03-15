@@ -52,6 +52,12 @@ uint16_t tty::readWord(const uint16_t addr)
 
 	if (addr == PDP11TTY_TKS) {
 		vtemp = c ? 128 : 0;
+
+#if defined(ESP32)
+		static bool led_state = true;
+		digitalWrite(LED_BUILTIN, led_state);
+		led_state = !led_state;
+#endif
 	}
 	else if (addr == PDP11TTY_TKB) {
 		vtemp = c | (parity(c) << 7);

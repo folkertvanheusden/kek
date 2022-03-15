@@ -214,6 +214,8 @@ uint16_t loadbin(bus *const b)
 
 uint16_t exec_addr = 0;
 
+uint32_t start_ts = 0;
+
 void setup() {
 	Serial.begin(115200);
 
@@ -240,6 +242,8 @@ void setup() {
 	exec_addr = loadbin(b);
 	c->setRegister(7, exec_addr);
 
+	pinMode(LED_BUILTIN, OUTPUT);
+
 	Serial.println(F("Press <enter> to start"));
 
 	for(;;) {
@@ -253,27 +257,36 @@ void setup() {
 	}
 
 	Serial.println(F("Emulation starting!"));
+
+	start_ts = millis();
 }
 
-unsigned int icount = 0;
+uint32_t icount = 0;
 
 void loop() {
 	icount++;
 
-	if (icount % 1000 == 0 && Serial.available()) {
-		char c = Serial.read();
+	if ((icount & 1023) == 0) {
+		if (Serial.available()) {
+			char c = Serial.read();
 
-		if (c > 0 && c < 127)
-			tty_->sendChar(c);
+			if (c > 0 && c < 127)
+				tty_->sendChar(c);
+		}
 	}
 
 	if (c->step()) {
 		Serial.println(F(""));
 		Serial.println(F(" *** EMULATION STOPPED *** "));
+		Serial.print(F("Instructions per second: "));
+		Serial.println(icount * 1000.0 / (millis() - start_ts));
 		delay(1000);
 		Serial.println(F(" *** EMULATION RESTARTING *** "));
 
 		c->setRegister(7, exec_addr);
 		c->resetHalt();
+
+		start_ts = millis();
+		icount = 0;
 	}
 }
