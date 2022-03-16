@@ -2,6 +2,7 @@
 // Released under Apache License v2.0
 #include <poll.h>
 #include <signal.h>
+#include <stdlib.h>
 #include <string.h>
 #include <termios.h>
 #include <unistd.h>
@@ -13,6 +14,13 @@
 #include "tests.h"
 #include "terminal.h"
 #include "error.h"
+
+struct termios org_tty_opts { 0 };
+
+void reset_terminal()
+{
+	tcsetattr(STDIN_FILENO, TCSANOW, &org_tty_opts);
+}
 
 void loadbin(bus *const b, uint16_t base, const char *const file)
 {
@@ -286,6 +294,10 @@ int main(int argc, char *argv[])
 		sigaction(SIGWINCH, &sa, nullptr);
 		resize_terminal();
 	}
+
+	atexit(reset_terminal);
+
+	tcgetattr(STDIN_FILENO, &org_tty_opts);
 
 	struct termios tty_opts_raw { 0 };
 	cfmakeraw(&tty_opts_raw);
