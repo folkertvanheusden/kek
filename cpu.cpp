@@ -1120,7 +1120,7 @@ std::pair<std::string, int> cpu::addressing_to_string(const uint8_t mode_registe
 
 		case 3:
 			if (reg == 7)
-				return { format("@#%06o|%x|%d", next_word, next_word, next_word), 4 };
+				return { format("@#%06o", next_word), 4 };
 
 			return { format("@(%s)+", reg_name.c_str()), 2 };
 
@@ -1170,7 +1170,7 @@ void cpu::disassemble()
 	// TODO: 100000011
 
 	if (do_opcode == 0b000) {
-		auto dst_text = addressing_to_string(src_register, pc);
+		auto dst_text = addressing_to_string(dst_register, pc);
 
 		// single_operand_instructions
 		switch(so_opcode) {
@@ -1276,7 +1276,7 @@ void cpu::disassemble()
 				break;
 
 			case 7:
-				text = std::string("SOB") + dst_text.first;
+				text = std::string("SOB ") + dst_text.first;
 				break;
 		}
 
@@ -1475,13 +1475,6 @@ bool cpu::step()
 {
 	if (getPC() & 1)
 		busError();
-
-        if (getPC() == 03332) {
-                FILE *fh = fopen("debug.dat", "wb");
-                for(int i=0; i<256; i++)
-                        fputc(b -> readByte(getPC() + i), fh);
-                fclose(fh);
-        }
 
 	disassemble();
 
