@@ -39,7 +39,7 @@ private:
 	bool condition_code_operations(const uint16_t instr);
 	bool misc_operations(const uint16_t instr);
 
-	std::string addressing_to_string(const uint8_t mode_register, const uint16_t pc);
+	std::pair<std::string, int> addressing_to_string(const uint8_t mode_register, const uint16_t pc);
 	void disassemble();
 
 public:

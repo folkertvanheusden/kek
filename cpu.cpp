@@ -1117,13 +1117,15 @@ void cpu::busError()
 	setPC(b -> readWord(4));
 }
 
-std::string cpu::addressing_to_string(const uint8_t mode_register, const uint16_t pc)
+std::pair<std::string, int> cpu::addressing_to_string(const uint8_t mode_register, const uint16_t pc)
 {
 	assert(mode_register < 64);
 
-	uint16_t    next_word = b->readWord((pc + 2) & 65535);
+	int         pc_offset = 0;
 
-	int         reg = mode_register & 7;
+	uint16_t    next_word = b->readWord(pc & 65535);
+
+	int         reg       = mode_register & 7;
 
 	std::string reg_name;
 	if (reg == 6)
@@ -1135,47 +1137,48 @@ std::string cpu::addressing_to_string(const uint8_t mode_register, const uint16_
 
 	switch(mode_register >> 3) {
 		case 0:
-			return reg_name;
+			return { reg_name, 2 };
 
 		case 1:
-			return format("(%s)", reg_name.c_str());
+			return { format("(%s)", reg_name.c_str()), 2 };
 
 		case 2:
 			if (reg == 7)
-				return format("#%06o", next_word);
+				return { format("#%06o!2", next_word), 4 };
 
-			return format("(%s)+", reg_name.c_str());
+			return { format("(%s)+", reg_name.c_str()), 2 };
 
 		case 3:
 			if (reg == 7)
-				return format("@#%06o", next_word);
+				return { format("@#%06o|%x|%d!3", next_word, next_word, next_word), 4 };
 
-			return format("@(%s)+", reg_name.c_str());
+			return { format("@(%s)+", reg_name.c_str()), 2 };
 
 		case 4:
-			return format("-(%s)", reg_name.c_str());
+			return { format("-(%s)", reg_name.c_str()), 2 };
 
 		case 5:
-			return format("@-(%s)", reg_name.c_str());
+			return { format("@-(%s)", reg_name.c_str()), 2 };
 
 		case 6:
 			if (reg == 7)
-				return format("%06o", next_word);
+				return { format("%06o!6a", (pc + next_word + 2) & 65535), 4 };
 
-			return format("o%o(%s)", next_word, reg_name.c_str());
+			return { format("o%o(%s)!6b", next_word, reg_name.c_str()), 4 };
 
 		case 7:
 			if (reg == 7)
-				return format("@%06o", next_word);
+				return { format("@%06o!7a", next_word), 4 };
 
-			return format("@o%o(%s)", next_word, reg_name.c_str());
+			return { format("@o%o(%s)!7b", next_word, reg_name.c_str()), 4 };
 	}
 
-	return "??";
+	return { "??", 0 };
 }
 
 void cpu::disassemble()
 {
+#if !defined(ESP32)
 	uint16_t    pc            = getPC();
 	uint16_t    instruction   = b->readWord(pc);
 
@@ -1188,21 +1191,21 @@ void cpu::disassemble()
 	std::string text;
 	std::string name;
 
+	std::string space = " ";
+	std::string comma = ",";
+
 	uint8_t     src_register  = (instruction >> 6) & 63;
 	uint8_t     dst_register  = (instruction >> 0) & 63;
-
-	std::string src_text;  // ASH, ASHC, MUL, DIV
-	std::string dst_text      = addressing_to_string(dst_register, pc + 2);  // for single as src can have an extra operand as well
 
 	// TODO: 100000011
 
 	if (do_opcode == 0b000) {
-		dst_text = addressing_to_string(dst_register, pc);
+		auto dst_text = addressing_to_string(src_register, pc);
 
 		// single_operand_instructions
 		switch(so_opcode) {
 			case 0b00000011:
-				text = "SWAB " + dst_text;
+				text = "SWAB " + dst_text.first;
 				break;
 
 			case 0b000101000:
@@ -1275,10 +1278,11 @@ void cpu::disassemble()
 		}
 
 		if (text.empty() && name.empty() == false)
-			text = name + word_mode_str + " " + dst_text;
+			text = name + word_mode_str + space + dst_text.first;
 	}
 	else if (do_opcode == 0b111) {
-		src_text = format("R%d", (instruction >> 6) & 7);
+		std::string src_text = format("R%d", (instruction >> 6) & 7);
+		auto        dst_text = addressing_to_string(dst_register, pc);
 
 		switch(ado_opcode) {
 			case 0:
@@ -1302,12 +1306,12 @@ void cpu::disassemble()
 				break;
 
 			case 7:
-				text = std::string("SOB") + dst_text;
+				text = std::string("SOB") + dst_text.first;
 				break;
 		}
 
 		if (text.empty() && name.empty() == false)
-			text = name + " " + src_text + "," + dst_text;
+			text = name + space + src_text + comma + dst_text.first;
 	}
 	else {
 		switch(do_opcode) {
@@ -1339,7 +1343,10 @@ void cpu::disassemble()
 				break;
 		}
 
-		text = name + word_mode_str + " " + addressing_to_string(src_register, pc) + "," + dst_text;
+		auto src_text = addressing_to_string(src_register, (pc + 2) & 65535);
+		auto dst_text = addressing_to_string(dst_register, (pc + src_text.second) & 65535);
+
+		text = name + word_mode_str + space + src_text.first + comma + dst_text.first;
 	}
 
 	if (text.empty()) {  // conditional branch instructions
@@ -1410,7 +1417,7 @@ void cpu::disassemble()
 		}
 
 		if (text.empty() && name.empty() == false)
-			text = name + " " + format("%06o", new_pc);
+			text = name + space + format("%06o", new_pc);
 	}
 
 	if (text.empty()) {
@@ -1467,11 +1474,17 @@ void cpu::disassemble()
 		if ((instruction >> 8) == 0b10001001)
 			text = format("TRAP %d", instruction & 255);
 
-		if ((instruction & ~0b111111) == 0b0000000001000000)
-			text = std::string("JMP ") + dst_text;
+		if ((instruction & ~0b111111) == 0b0000000001000000) {
+			auto dst_text = addressing_to_string(src_register, pc);
 
-		if ((instruction & 0b1111111000000000) == 0b0000100000000000)
-			text = std::string("JSR ") + dst_text;
+			text = std::string("JMP ") + dst_text.first;
+		}
+
+		if ((instruction & 0b1111111000000000) == 0b0000100000000000) {
+			auto dst_text = addressing_to_string(src_register, pc);
+
+			text = std::string("JSR ") + dst_text.first;
+		}
 
 		if ((instruction & 0b1111111111111000) == 0b0000000010000000)
 			text = "RTS";
@@ -1480,12 +1493,20 @@ void cpu::disassemble()
 	fprintf(stderr, "PC: %06o, SP: %06o, PSW: %d%d|%d|%d|%d%d%d%d%d, instr: %06o: %s\n", pc, sp[psw >> 14],
 			psw >> 14, (psw >> 12) & 3, (psw >> 11) & 1, (psw >> 5) & 7, !!(psw & 16), !!(psw & 8), !!(psw & 4), !!(psw & 2), psw & 1,
 			instruction, text.c_str());
+#endif
 }
 
 bool cpu::step()
 {
 	if (getPC() & 1)
 		busError();
+
+        if (getPC() == 03332) {
+                FILE *fh = fopen("debug.dat", "wb");
+                for(int i=0; i<256; i++)
+                        fputc(b -> readByte(getPC() + i), fh);
+                fclose(fh);
+        }
 
 	disassemble();
 
