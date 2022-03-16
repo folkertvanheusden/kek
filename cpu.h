@@ -27,8 +27,8 @@ private:
 	void addRegister(const int nr, const bool MF_MT, const uint16_t value);
 
 	uint16_t getGAMAddress(const uint8_t mode, const int reg, const bool word_mode, const bool MF_MT);
-	uint16_t getGAM(const uint8_t mode, const uint8_t reg, const bool word_mode, const bool MF_MT, std::string *const text);
-	void putGAM(const uint8_t mode, const int reg, const bool word_mode, const uint16_t value, const bool MF_FT, std::string *const text);
+	uint16_t getGAM(const uint8_t mode, const uint8_t reg, const bool word_mode, const bool MF_MT);
+	void putGAM(const uint8_t mode, const int reg, const bool word_mode, const uint16_t value, const bool MF_FT);
 
 	void switchModeToKernel();
 
