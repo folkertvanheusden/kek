@@ -35,8 +35,6 @@ void cpu::reset()
 
 uint16_t cpu::getRegister(const int nr, const bool prev_mode) const
 {
-	assert(nr >= 0 && nr <= 7);
-
 	if (nr < 6)
 		return regs0_5[getBitPSW(11)][nr];
 
@@ -52,8 +50,6 @@ uint16_t cpu::getRegister(const int nr, const bool prev_mode) const
 
 void cpu::setRegister(const int nr, const bool prev_mode, const uint16_t value)
 {
-	assert(nr >= 0 && nr <= 7);
-
 	if (nr < 6)
 		regs0_5[getBitPSW(11)][nr] = value;
 	else if (nr == 6) {
@@ -69,8 +65,6 @@ void cpu::setRegister(const int nr, const bool prev_mode, const uint16_t value)
 
 void cpu::addRegister(const int nr, const bool prev_mode, const uint16_t value)
 {
-	assert(nr >= 0 && nr <= 7);
-
 	if (nr < 6)
 		regs0_5[getBitPSW(11)][nr] += value;
 	else if (nr == 6) {
@@ -221,7 +215,6 @@ void cpu::putGAM(const uint8_t mode, const int reg, const bool word_mode, const 
 			if (word_mode) {
 				uint16_t temp = getRegister(reg, prev_mode);
 				temp &= 0xff00;
-				assert(value < 256);
 				temp |= value;
 				setRegister(reg, prev_mode, temp);
 			}
@@ -601,7 +594,6 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 			uint16_t oldPC = getPC(); // FIXME gaat dit wel goed voor R7?
 			addRegister(reg, false, -1);
 			if (getRegister(reg, false)) {
-				assert(dst >= 0);
 				uint16_t newPC = oldPC - dst * 2;
 				D(fprintf(stderr, " jump back from %o to %o\n", oldPC, newPC);)
 				setPC(newPC);

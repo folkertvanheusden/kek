@@ -79,11 +79,11 @@ public:
 	uint16_t getStackLimitRegister() { return stackLimitRegister; }
 	void setStackLimitRegister(const uint16_t v) { stackLimitRegister = v; }
 
-	uint16_t getRegister(const bool user, const int nr) const { assert(nr >= 0 && nr < 6); return regs0_5[user][nr]; }
+	uint16_t getRegister(const bool user, const int nr) const { return regs0_5[user][nr]; }
 	uint16_t getStackPointer(const int which) const { assert(which >= 0 && which < 4); return sp[which]; }
 	uint16_t getPC() const { return pc; }
 
-	void setRegister(const bool user, const int nr, const uint16_t value) { assert(nr >= 0 && nr < 6); regs0_5[user][nr] = value; }
+	void setRegister(const bool user, const int nr, const uint16_t value) { regs0_5[user][nr] = value; }
 	void setStackPointer(const int which, const uint16_t value) { assert(which >= 0 && which < 4); sp[which] = value; }
 	void setPC(const uint16_t value) { pc = value; }
 

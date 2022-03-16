@@ -18,7 +18,7 @@ bus::bus() : c(nullptr), tm11(nullptr), rk05_(nullptr), rx02_(nullptr), tty_(nul
 #if defined(ESP32)
 	// ESP32 goes in a crash-loop when allocating 128kB
 	// see also https://github.com/espressif/esp-idf/issues/1934
-	int n = 14;
+	int n = 12;
 #else
 	int n = 16;
 #endif
@@ -267,15 +267,12 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 {
 	//D(fprintf(stderr, "write bus %o(%d): %o\n", a, word_mode, value);)
 
-	assert(word_mode == 0 || value < 256);
-
 	if (a >= 0160000) {
 		D(fprintf(stderr, "write%c %o to I/O %o\n", word_mode ? 'b' : ' ', value, a);)
 
 		if (word_mode) {
 			if (a == 0177776 || a == 0177777) { // PSW
 				D(fprintf(stderr, "writeb PSW %s\n", a & 1 ? "MSB" : "LSB");)
-				assert(value < 256);
 				uint16_t vtemp = c -> getPSW();
 
 				if (a & 1)
