@@ -6,8 +6,8 @@
 #include <string.h>
 
 #include "cpu.h"
-#include "utils.h"
 #include "gen.h"
+#include "utils.h"
 
 #ifndef _DEBUG
 std::string *src_gam_text = NULL, *dst_gam_text = NULL;
@@ -1117,12 +1117,367 @@ void cpu::busError()
 	setPC(b -> readWord(4));
 }
 
+std::string cpu::addressing_to_string(const uint8_t mode_register, const uint16_t pc)
+{
+	assert(mode_register < 64);
+
+	uint16_t    next_word = b->readWord((pc + 2) & 65535);
+
+	int         reg = mode_register & 7;
+
+	std::string reg_name;
+	if (reg == 6)
+		reg_name = "SP";
+	else if (reg == 7)
+		reg_name = "PC";
+	else
+		reg_name = format("R%d", reg);
+
+	switch(mode_register >> 3) {
+		case 0:
+			return reg_name;
+
+		case 1:
+			return format("(%s)", reg_name.c_str());
+
+		case 2:
+			if (reg == 7)
+				return format("#%06o", next_word);
+
+			return format("(%s)+", reg_name.c_str());
+
+		case 3:
+			if (reg == 7)
+				return format("@#%06o", next_word);
+
+			return format("@(%s)+", reg_name.c_str());
+
+		case 4:
+			return format("-(%s)", reg_name.c_str());
+
+		case 5:
+			return format("@-(%s)", reg_name.c_str());
+
+		case 6:
+			if (reg == 7)
+				return format("%06o", (pc + next_word) & 65535);
+
+			return format("o%o(%s)", next_word, reg_name.c_str());
+
+		case 7:
+			if (reg == 7)
+				return format("@%06o", (pc + next_word) & 65535);
+
+			return format("@o%o(%s)", next_word, reg_name.c_str());
+	}
+
+	return "??";
+}
+
 void cpu::disassemble()
 {
-	uint16_t pc          = getPC();
-	uint16_t instruction = b->readWord(pc);
+	uint16_t    pc            = getPC();
+	uint16_t    instruction   = b->readWord(pc);
 
-	fprintf(stderr, "PC: %05x, instruction: %04x\n", pc, instruction);
+	bool        word_mode     = !!(instruction & 0x8000);
+	std::string word_mode_str = word_mode ? "B" : "";
+	uint8_t     ado_opcode    = (instruction >>  9) &  7;  // additional double operand
+        uint8_t     do_opcode     = (instruction >> 12) &  7;  // double operand
+	uint8_t     so_opcode     = (instruction >>  6) & 63;  // single operand
+
+	std::string text;
+	std::string name;
+
+	uint8_t     src_register  = (instruction >> 6) & 63;
+	uint8_t     dst_register  = (instruction >> 0) & 63;
+
+	std::string src_text;  // ASH, ASHC, MUL, DIV
+	std::string dst_text      = addressing_to_string(dst_register, pc + 2);  // for single as src can have an extra operand as well
+
+	// TODO: 100000011
+
+	if (do_opcode == 0b000) {
+		dst_text = addressing_to_string(dst_register, pc);
+
+		// single_operand_instructions
+		switch(so_opcode) {
+			case 0b00000011:
+				text = "SWAB " + dst_text;
+				break;
+
+			case 0b000101000:
+				name = "CLR";
+				break;
+
+			case 0b000101001:
+				name = "COM";
+				break;
+
+			case 0b000101010:
+				name = "INC";
+				break;
+
+			case 0b000101011:
+				name = "DEC";
+				break;
+
+			case 0b000101100:
+				name = "NEG";
+				break;
+
+			case 0b000101101:
+				name = "ADC";
+				break;
+
+			case 0b000101110:
+				name = "SBC";
+				break;
+
+			case 0b000101111:
+				name = "TST";
+				break;
+
+			case 0b000110000:
+				name = "ROR";
+				break;
+
+			case 0b000110001:
+				name = "ROL";
+				break;
+
+			case 0b000110010:
+				name = "ASR";
+				break;
+
+			case 0b00110011:
+				name = "ASL";
+				break;
+
+			case 0b00110101:
+				name = word_mode ? "MFPD" : "MFPI";
+				break;
+
+			case 0b00110110:
+				name = word_mode ? "MTPD" : "MTPI";
+				break;
+
+			case 0b000110100:
+				if (word_mode == false)
+					name = "MTPS";
+				break;
+
+			case 0b000110111:
+				if (word_mode == false)
+					name = "SXT";
+				else
+					name = "MFPS";
+				break;
+		}
+
+		if (text.empty() && name.empty() == false)
+			text = name + word_mode_str + " " + dst_text;
+	}
+	else if (do_opcode == 0b111) {
+		src_text = format("R%d", (instruction >> 6) & 7);
+
+		switch(ado_opcode) {
+			case 0:
+				name = "MUL";
+				break;
+
+			case 1:
+				name = "DIV";
+				break;
+
+			case 2:
+				name = "ASH";
+				break;
+
+			case 3:
+				name = "ASHC";
+				break;
+
+			case 4:
+				name = "XOR";
+				break;
+
+			case 7:
+				text = std::string("SOB") + dst_text;
+				break;
+		}
+
+		if (text.empty() && name.empty() == false)
+			text = name + " " + src_text + "," + dst_text;
+	}
+	else {
+		switch(do_opcode) {
+			case 0b001:
+				name = "MOV";
+				break;
+
+			case 0b010:
+				name = "CMP";
+				break;
+
+			case 0b011:
+				name = "BIT";
+				break;
+
+			case 0b100:
+				name = "BIC";
+				break;
+
+			case 0b101:
+				name = "BIS";
+				break;
+
+			case 0b110:
+				if (word_mode)
+					name = "SUB";
+				else
+					name = "ADD";
+				break;
+		}
+
+		text = name + word_mode_str + " " + addressing_to_string(src_register, pc) + "," + dst_text;
+	}
+
+	if (text.empty()) {  // conditional branch instructions
+		uint8_t  cb_opcode = (instruction >> 8) & 255;
+		int8_t   offset    = instruction & 255;
+		uint16_t new_pc    = (pc + 2 + offset * 2) & 65535;
+
+		switch(cb_opcode) {
+			case 0b00000001:
+				name = "BR";
+				break;
+
+			case 0b00000010:
+				name = "BNE";
+				break;
+
+			case 0b00000011:
+				name = "BEQ";
+				break;
+
+			case 0b00000100:
+				name = "BGE";
+				break;
+
+			case 0b00000101:
+				name = "BLT";
+				break;
+
+			case 0b00000110:
+				name = "BGT";
+				break;
+
+			case 0b00000111:
+				name = "BLE";
+				break;
+
+			case 0b10000000:
+				name = "BPL";
+				break;
+
+			case 0b10000001:
+				name = "BMI";
+				break;
+
+			case 0b10000010:
+				name = "BHI";
+				break;
+
+			case 0b10000011:
+				name = "BLOS";
+				break;
+
+			case 0b10000100:
+				name = "BVC";
+				break;
+
+			case 0b10000101:
+				name = "BVS";
+				break;
+
+			case 0b10000110:
+				name = "BCC";
+				break;
+
+			case 0b10000111:
+				name = "BCS/BLO";
+				break;
+		}
+
+		if (text.empty() && name.empty() == false)
+			text = name + " $o" + format("%06o", new_pc);
+	}
+
+	if (text.empty()) {
+		if ((instruction & ~7) == 0000230)
+			text = format("SPL%d", instruction & 7);
+
+		if ((instruction & ~31) == 0b10100000) { // set condition bits
+			text = word_mode ? "S" : "C";
+
+			if (instruction & 0b1000)
+				text += "n";
+			if (instruction & 0b0100)
+				text += "z";
+			if (instruction & 0b0010)
+				text += "v";
+			if (instruction & 0b0001)
+				text += "c";
+		}
+
+		switch(instruction) {
+			case 0b0000000010100000:
+			case 0b0000000010110000:
+				text = "NOP";
+				break;
+
+			case 0b0000000000000000:
+				text = "HALT";
+				break;
+
+			case 0b0000000000000001:
+				text = "WAIT";
+				break;
+
+			case 0b0000000000000010:
+				text = "RTI";
+				break;
+
+			case 0b0000000000000110:
+				text = "RTT";
+				break;
+
+			case 0b0000000000000111:
+				text = "MFPT";
+				break;
+
+			case 0b0000000000000101:
+				text = "RESET";
+				break;
+		}
+
+		if ((instruction >> 8) == 0b10001000)
+			text = format("EMT %d", instruction & 255);
+
+		if ((instruction >> 8) == 0b10001001)
+			text = format("TRAP %d", instruction & 255);
+
+		if ((instruction & ~0b111111) == 0b0000000001000000)
+			text = std::string("JMP ") + dst_text;
+
+		if ((instruction & 0b1111111000000000) == 0b0000100000000000)
+			text = std::string("JSR ") + dst_text;
+
+		if ((instruction & 0b1111111111111000) == 0b0000000010000000)
+			text = "RTS";
+	}
+
+	fprintf(stderr, "PC: %06o, instruction: %06o: %s\n", pc, instruction, text.c_str());
 }
 
 bool cpu::step()
