@@ -1088,6 +1088,7 @@ void cpu::busError()
 
 std::pair<std::string, int> cpu::addressing_to_string(const uint8_t mode_register, const uint16_t pc)
 {
+#if !defined(ESP32)
 	assert(mode_register < 64);
 
 	int         pc_offset = 0;
@@ -1141,7 +1142,7 @@ std::pair<std::string, int> cpu::addressing_to_string(const uint8_t mode_registe
 
 			return { format("@o%o(%s)", next_word, reg_name.c_str()), 4 };
 	}
-
+#endif
 	return { "??", 0 };
 }
 
