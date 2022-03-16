@@ -39,6 +39,8 @@ private:
 	bool condition_code_operations(const uint16_t instr);
 	bool misc_operations(const uint16_t instr);
 
+	void disassemble();
+
 public:
 	explicit cpu(bus *const b);
 	~cpu();

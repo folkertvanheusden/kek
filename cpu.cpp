@@ -148,10 +148,8 @@ uint16_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const bool word_mode
 
 	switch(mode) {
 		case 0: // 000 
-			D(*text = format("R%d", reg);)
 			return getRegister(reg, prev_mode) & (word_mode ? 0xff : 0xffff);
 		case 1:
-			D(*text = format("(R%d)", reg);)
 			return b -> read(getRegister(reg, prev_mode), word_mode, prev_mode);
 		case 2:
 			temp = b -> read(getRegister(reg, prev_mode), word_mode, prev_mode);
@@ -167,19 +165,16 @@ uint16_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const bool word_mode
 #endif
 			return temp;
 		case 3:
-			D(*text = format("@(R%d)+", reg);)
 			temp = b -> read(b -> read(getRegister(reg, prev_mode), false, prev_mode), word_mode, prev_mode);
 			addRegister(reg, prev_mode, 2);
 			return temp;
 		case 4:
-			D(*text = format("-(R%d)", reg);)
 			if (reg == 7 || reg == 6)
 				addRegister(reg, prev_mode, - 2);
 			else
 				addRegister(reg, prev_mode, word_mode ? -1 : -2);
 			return b -> read(getRegister(reg, prev_mode), word_mode, prev_mode);
 		case 5:
-			D(*text = format("@-(R%d)", reg);)
 			addRegister(reg, prev_mode, -2);
 			return b -> read(b -> read(getRegister(reg, prev_mode), false, prev_mode), word_mode, prev_mode);
 		case 6:
@@ -198,7 +193,6 @@ uint16_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const bool word_mode
 		case 7:
 			next_word = b -> read(getPC(), false, prev_mode);
 			addRegister(7, prev_mode, + 2);
-			D(*text = format("@0o%o(R%d)", next_word, reg);)
 			return b -> read(b -> read(getRegister(reg, prev_mode) + next_word, false, prev_mode), word_mode, prev_mode);
 	}
 
@@ -211,7 +205,6 @@ void cpu::putGAM(const uint8_t mode, const int reg, const bool word_mode, const 
 
 	switch(mode) {
 		case 0:
-			D(*text = format("R%d", reg);)
 			if (word_mode) {
 				uint16_t temp = getRegister(reg, prev_mode);
 				temp &= 0xff00;
@@ -223,11 +216,9 @@ void cpu::putGAM(const uint8_t mode, const int reg, const bool word_mode, const 
 			}
 			break;
 		case 1:
-			D(*text = format("(R%d)", reg);)
-				b -> write(getRegister(reg, prev_mode), word_mode, value);
+			b -> write(getRegister(reg, prev_mode), word_mode, value);
 			break;
 		case 2:
-			D(*text = format("(R%d)+", reg);)
 			b -> write(getRegister(reg, prev_mode), word_mode, value);
 			if (reg == 7 || reg == 6)
 				addRegister(reg, prev_mode, 2);
@@ -235,12 +226,10 @@ void cpu::putGAM(const uint8_t mode, const int reg, const bool word_mode, const 
 				addRegister(reg, prev_mode, word_mode ? 1 : 2);
 			break;
 		case 3:
-			D(*text = format("@(R%d)+", reg);)
 			b -> write(b -> readWord(getRegister(reg, prev_mode)), word_mode, value);
 			addRegister(reg, prev_mode, 2);
 			break;
 		case 4:
-			D(*text = format("-(R%d)", reg);)
 			if (reg == 7 || reg == 6)
 				addRegister(reg, prev_mode, -2);
 			else
@@ -248,20 +237,17 @@ void cpu::putGAM(const uint8_t mode, const int reg, const bool word_mode, const 
 			b -> write(getRegister(reg, prev_mode), word_mode, value);
 			break;
 		case 5:
-			D(*text = format("@-(R%d)", reg);)
 			addRegister(reg, prev_mode, -2);
 			b -> write(b -> readWord(getRegister(reg, prev_mode)), word_mode, value);
 			break;
 		case 6:
 			next_word = b -> readWord(getPC());
 			addRegister(7, prev_mode, 2);
-			D(*text = format("0o%o(R%d)", next_word, reg);)
 			b -> write(getRegister(reg, prev_mode) + next_word, word_mode, value);
 			break;
 		case 7:
 			next_word = b -> readWord(getPC());
 			addRegister(7, prev_mode, 2);
-			D(*text = format("@0o%o(R%d)", next_word, reg);)
 			b -> write(b -> readWord(getRegister(reg, prev_mode) + next_word), word_mode, value);
 			break;
 
@@ -352,7 +338,6 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 			else {
 				putGAM(dst_mode, dst_reg, word_mode, src_value, false, dst_gam_text);
 			}
-			D(fprintf(stderr, "MOV%c %s to %s\n", word_mode ? 'B' : ' ', src_gam_text -> c_str(), dst_gam_text -> c_str());)
 
 			setPSW_n(SIGN(src_value, word_mode));
 			setPSW_z(src_value == 0);
@@ -361,7 +346,6 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 			return true;
 
 		case 0b010: { // CMP/CMPB Compare Word/Byte
-				    //fprintf(stderr, "src mode %d src reg %d, dst mode %d dst reg %d\n", src_mode, src_reg, dst_mode, dst_reg);
 				    src_value = getGAM(src_mode, src_reg, word_mode, false, src_gam_text);
 				    uint16_t dst_value = getGAM(dst_mode, dst_reg, word_mode, false, dst_gam_text);
 
@@ -370,18 +354,9 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 				    setPSW_z(temp == 0);
 
 				    setPSW_v(SIGN((src_value ^ dst_value) & (~dst_value ^ temp), word_mode));
-				    // fprintf(stderr, "SIGNsimh: %d\n", SIGN((src_value ^ dst_value) & (~dst_value ^ temp), word_mode));
-				    // fprintf(stderr, "SIGNme__: %d\n", SIGN(src_value, word_mode) != SIGN(dst_value, word_mode) && SIGN(dst_value, word_mode) == SIGN(temp, word_mode));
 
 				    setPSW_c(src_value < dst_value);
 
-				    //fprintf(stderr, "%o - %o > %o | %d, %d\n", 
-				    //	    src_value, dst_value, src_value - dst_value,
-				    //	    SIGN((src_value ^ dst_value) & (~dst_value ^ temp), word_mode),
-				    //	    sign(src_value) != sign(dst_value) && sign(src_value) == sign(temp));
-
-				    D(fprintf(stderr, "CMP%c %s to %s    n%dz%dv%dc%d\n", word_mode ? 'B' : ' ', src_gam_text -> c_str(), dst_gam_text -> c_str(), getPSW_n(), getPSW_z(), getPSW_v(), getPSW_c());)
-				    //	fprintf(stderr, "%o %o %o\n", b -> readWord(017026), getPC(), b -> readWord(017026 + getPC()));
 				    return true;
 			    }
 
@@ -389,7 +364,6 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 				    src_value = getGAM(src_mode, src_reg, word_mode, false, src_gam_text);
 				    uint16_t dst_value = getGAM(dst_mode, dst_reg, word_mode, false, dst_gam_text);
 				    uint16_t result = dst_value & src_value;
-				    D(fprintf(stderr, "BIT%c %s to %s\n", word_mode ? 'B' : ' ', src_gam_text -> c_str(), dst_gam_text -> c_str());)
 				    setPSW_n(SIGN(result, word_mode));
 				    setPSW_z(result == 0);
 				    setPSW_v(false);
@@ -402,14 +376,10 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 
 				    uint16_t result = b -> readWord(a) & ~src_value;
 
-				    if (dst_mode == 0) {
+				    if (dst_mode == 0)
 					    putGAM(dst_mode, dst_reg, word_mode, result, false, dst_gam_text);
-					    D(fprintf(stderr, "BIC%c %s to R%d\n", word_mode ? 'B' : ' ', src_gam_text -> c_str(), dst_reg);)
-				    }
-				    else {
+				    else
 					    b -> write(a, word_mode, result);
-					    D(fprintf(stderr, "BIC%c %s to @%o\n", word_mode ? 'B' : ' ', src_gam_text -> c_str(), a);)
-				    }
 
 				    setPSW_n(SIGN(result, word_mode));
 				    setPSW_z(result == 0);
@@ -435,7 +405,6 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 				    setPSW_n(SIGN(result, word_mode));
 				    setPSW_z(result == 0);
 				    setPSW_v(false);
-				    D(fprintf(stderr, "BIS%c %s to %s\n", word_mode ? 'B' : ' ', src_gam_text -> c_str(), dst_gam_text -> c_str());)
 				    return true;
 			    }
 
@@ -460,7 +429,6 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 					    setRegister(dst_reg, false, result);
 				    else
 					    b -> writeWord(da, result);
-				    D(fprintf(stderr, "%s %s to %s      (%o (%d), %o (%d)) = %d\n", (instr & 0x8000) ? "SUB" : "ADD", src_gam_text -> c_str(), dst_gam_text -> c_str(), src_value, src_value, dst_value, dst_value, result);)
 				    return true;
 			    }
 	}
@@ -485,7 +453,6 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 
 	switch(operation) {
 		case 0: { // MUL
-				D(fprintf(stderr, "MUL\n");)
 				uint16_t R = getRegister(reg);
 				int32_t result = R * getGAM(dst_mode, dst_reg, true, false, dst_gam_text);
 
@@ -516,9 +483,7 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 					int32_t quot = R0R1 / divider;
 					uint16_t rem = R0R1 % divider;
 
-					D(fprintf(stderr, "DIV R%d,%s \t%d/%d = %d,%d\n", reg, dst_gam_text -> c_str(), R0R1, divider, quot, rem);)
-
-						setRegister(reg, quot);
+					setRegister(reg, quot);
 					setRegister(reg + 1, rem);
 
 					setPSW_n(R0R1 / divider < 0);
@@ -533,18 +498,17 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 		case 2: { // ASH
 				int16_t R = getRegister(reg), oldR = R;
 				int8_t shift = getGAM(dst_mode, dst_reg, true, false, dst_gam_text);
-				D(fprintf(stderr, "ASH R%d,%d\n", reg, shift);)
 
-					if (shift > 0) {
-						R <<= shift - 1;
-						setPSW_c(R & 0x8000);
-						R <<= 1;
-					}
-					else if (shift < 0) {
-						R >>= -shift - 1;
-						setPSW_c(R & 1);
-						R >>= 1;
-					}
+				if (shift > 0) {
+					R <<= shift - 1;
+					setPSW_c(R & 0x8000);
+					R <<= 1;
+				}
+				else if (shift < 0) {
+					R >>= -shift - 1;
+					setPSW_c(R & 1);
+					R >>= 1;
+				}
 
 				setPSW_n(R < 0);
 				setPSW_z(R == 0);
@@ -555,8 +519,7 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 			}
 
 		case 3: { // ASHC
-				D(fprintf(stderr, "ASHC\n");)
-					uint32_t R0R1 = (getRegister(reg) << 16) | getRegister(reg + 1);
+				uint32_t R0R1 = (getRegister(reg) << 16) | getRegister(reg + 1);
 				int16_t shift = getGAM(dst_mode, dst_reg, true, false, dst_gam_text);
 
 				if (shift > 0) {
@@ -580,7 +543,6 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 			}
 
 		case 4: { // XOR (word only)
-				D(fprintf(stderr, "XOR\n");)
 				uint16_t src_value = getGAM(dst_mode, dst_reg, true, false, dst_gam_text) ^ getRegister(reg);
 				putGAM(dst_mode, dst_reg, false, src_value, false, dst_gam_text);
 				setPSW_n(src_value & 0x8000);
@@ -590,16 +552,14 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 			}
 
 		case 7: { // SOB
-			D(fprintf(stderr, "SOB    (%o)\n", reg);)
 			uint16_t oldPC = getPC(); // FIXME gaat dit wel goed voor R7?
 			addRegister(reg, false, -1);
 			if (getRegister(reg, false)) {
 				uint16_t newPC = oldPC - dst * 2;
-				D(fprintf(stderr, " jump back from %o to %o\n", oldPC, newPC);)
 				setPC(newPC);
 			}
 			return true;
-			}
+		}
 	}
 
 	return false;
@@ -628,19 +588,16 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 			if (word_mode) // handled elsewhere
 				return false;
 			else {
-				D(fprintf(stderr, "SWAB ");)
 				a = getGAMAddress(dst_mode, dst_reg, word_mode, false);
 				uint8_t t1, t2;
 				uint16_t t;
 				if (dst_mode == 0) {
-					D(fprintf(stderr, "R%d\n", dst_reg);)
 					t = getRegister(dst_reg, false);
 					t1 = t >> 8;
 					t2 = t & 255;
 					setRegister(dst_reg, false, (t2 << 8) | t1);
 				}
 				else {
-					D(fprintf(stderr, "\n");)
 					t = getRegister(dst_reg, false);
 					t1 = b -> readByte(a);
 					t2 = b -> readByte(a + 1);
@@ -658,7 +615,6 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 		case 0b000101000: // CLR/CLRB
 			a = getGAMAddress(dst_mode, dst_reg, word_mode, false);
-			D(fprintf(stderr, "CLR (wm%d, mode%d,reg%d): addr %o, value %o\n", word_mode, dst_mode, dst_reg, a, b -> read(a, word_mode));)
 			if (dst_mode == 0)
 				putGAM(dst_mode, dst_reg, word_mode, 0, false, dst_gam_text);
 			else
@@ -670,7 +626,6 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 			break;
 
 		case 0b000101001: // COM/COMB
-			D(fprintf(stderr, "COM%c\n", word_mode ? 'B' : ' ');)
 			a = getGAMAddress(dst_mode, dst_reg, word_mode, false);
 			vl = b -> read(a, word_mode);
 			if (word_mode)
@@ -691,9 +646,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 			break;
 
 		case 0b000101010: // INC/INCB
-			D(fprintf(stderr, "INC%c dst-mode %d\n", word_mode ? 'B' : ' ', dst_mode);)
 			a = getGAMAddress(dst_mode, dst_reg, word_mode, false);
-			D(fprintf(stderr, " read from %o\n", a);)
 			v = b -> read(a, word_mode);
 			vl = (v + 1) & (word_mode ? 0xff : 0xffff);
 			setPSW_n(word_mode ? vl > 127 : vl > 32767);
@@ -706,8 +659,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 			break;
 
 		case 0b000101011: // DEC/DECB
-			D(fprintf(stderr, "DEC%c\n", word_mode ? 'B' : ' ');)
-				a = getGAMAddress(dst_mode, dst_reg, word_mode, false);
+			a = getGAMAddress(dst_mode, dst_reg, word_mode, false);
 			v = b -> read(a, word_mode);
 			vl = (v - 1) & (word_mode ? 0xff : 0xffff);
 			setPSW_n(word_mode ? vl > 127 : vl > 32767);
@@ -720,8 +672,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 			break;
 
 		case 0b000101100: // NEG/NEGB
-			D(fprintf(stderr, "NEG%c\n", word_mode ? 'B' : ' ');)
-				a = getGAMAddress(dst_mode, dst_reg, word_mode, false);
+			a = getGAMAddress(dst_mode, dst_reg, word_mode, false);
 			v = b -> read(a, word_mode);
 			vl = word_mode ? uint8_t(-int8_t(v)) : -int16_t(v);
 			if (dst_mode == 0)
@@ -735,7 +686,6 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 			break;
 
 		case 0b000101101: { // ADC/ADCB
-					  D(fprintf(stderr, "ADC%c\n", word_mode ? 'B' : ' ');)
 					  a = getGAMAddress(dst_mode, dst_reg, word_mode, false);
 					  uint16_t org = b -> read(a, word_mode);
 					  uint16_t new_ = org + getPSW_c();
@@ -751,7 +701,6 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 				  }
 
 		case 0b000101110: // SBC/SBCB
-				  D(fprintf(stderr, "SBC%c\n", word_mode ? 'B' : ' ');)
 				  a = getGAMAddress(dst_mode, dst_reg, word_mode, false);
 				  //fprintf(stderr, "%d,%d\n", dst_mode, dst_reg);
 				  v = b -> read(a, word_mode);
@@ -771,7 +720,6 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 				  break;
 
 		case 0b000101111: // TST/TSTB
-				  D(fprintf(stderr, "TST%c\n", word_mode ? 'B' : ' ');)
 				  v = getGAM(dst_mode, dst_reg, word_mode, false, dst_gam_text);
 				  setPSW_n(word_mode ? v & 128 : v & 32768);
 				  setPSW_z(v == 0);
@@ -780,7 +728,6 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 				  break;
 
 		case 0b000110000: { // ROR/RORB
-					  D(fprintf(stderr, "ROR%c\n", word_mode ? 'B' : ' ');)
 					  a = getGAMAddress(dst_mode, dst_reg, word_mode, false);
 					  uint16_t t = b -> read(a, word_mode);
 					  bool new_carry = t & 1;
@@ -812,7 +759,6 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 				  }
 
 		case 0b000110001: { // ROL/ROLB
-					  D(fprintf(stderr, "ROL%c, carry is %d\n", word_mode ? 'B' : ' ', getPSW_c());)
 					  a = getGAMAddress(dst_mode, dst_reg, word_mode, false);
 					  uint16_t t = b -> read(a, word_mode);
 					  bool new_carry = false;
@@ -845,7 +791,6 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 				  }
 
 		case 0b000110010: { // ASR/ASRB
-					  D(fprintf(stderr, "ASR%c\n", word_mode ? 'B' : ' ');)
 					  a = getGAMAddress(dst_mode, dst_reg, word_mode, false);
 					  vl = b -> read(a, word_mode);
 
@@ -870,7 +815,6 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 				  }
 
 		case 0b00110011: // ASL/ASLB
-				  D(fprintf(stderr, "ASL%c\n", word_mode ? 'B' : ' ');)
 				  a = getGAMAddress(dst_mode, dst_reg, word_mode, false);
 				  vl = b -> read(a, word_mode);
 				  v = (vl << 1) & (word_mode ? 0xff : 0xffff);
@@ -887,7 +831,6 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 		case 0b00110101: // MFPD/MFPI
 				  // FIXME
 				  v = getGAM(dst_mode, dst_reg, word_mode, true, dst_gam_text);
-				  D(fprintf(stderr, "MFPD/MFPI %s\n", dst_gam_text -> c_str());)
 				  setPSW_n(word_mode ? v & 0x80 : v & 0x8000);
 				  setPSW_z(v == 0);
 				  setPSW_v(false);
@@ -897,7 +840,6 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 		case 0b00110110: // MTPI/MTPD
 				  // FIXME
 				  a = getGAMAddress(dst_mode, dst_reg, word_mode, false);
-				  D(fprintf(stderr, "MTPI/MTPD\n");)
 				  v = popStack();
 				  setPSW_n(word_mode ? v & 0x80 : v & 0x8000);
 				  setPSW_z(v == 0);
@@ -909,12 +851,10 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 				  break;
 
 		case 0b000110100: // MTPS (put something in PSW)
-				  D(fprintf(stderr, "MTPS\n");)
 				  psw = getGAM(dst_mode, dst_reg, word_mode, false, src_gam_text);
 				  break;
 
 		case 0b000110111: // MFPS (get PSW to something)
-				  D(fprintf(stderr, "MFPS\n");)
 				  putGAM(dst_mode, dst_reg, word_mode, psw, false, dst_gam_text);
 				  break;
 
@@ -937,88 +877,70 @@ bool cpu::conditional_branch_instructions(const uint16_t instr)
 	switch(opcode) {
 		case 0b00000001: // BR
 			take = true;
-			D(name = "BR";)
-				break;
+			break;
 
 		case 0b00000010: // BNE
 			take = !getPSW_z();
-			D(name = "BNE";)
-				break;
+			break;
 
 		case 0b00000011: // BEQ
 			take = getPSW_z();
-			D(name = "BEQ";)
-				break;
+			break;
 
 		case 0b00000100: // BGE
 			take = (getPSW_n() ^ getPSW_v()) == false;
-			D(name = "BGE";)
-				break;
+			break;
 
 		case 0b00000101: // BLT
 			take = getPSW_n() ^ getPSW_v();
-			D(name = "BLT";)
-				break;
+			break;
 
 		case 0b00000110: // BGT
 			take = ((getPSW_n() ^ getPSW_v()) | getPSW_z()) == false;
-			D(name = "BGT";)
-				break;
+			break;
 
 		case 0b00000111: // BLE
 			take = (getPSW_n() ^ getPSW_v()) | getPSW_z();
-			D(name = "BLE";)
-				break;
+			break;
 
 		case 0b10000000: // BPL
 			take = getPSW_n() == false;
-			D(name = "BPL";)
-				break;
+			break;
 
 		case 0b10000001: // BMI
 			take = getPSW_n() == true;
-			D(name = "BMI";)
-				break;
+			break;
 
 		case 0b10000010: // BHI
 			take = getPSW_c() == false && getPSW_z() == false;
-			D(name = "BHI";)
-				break;
+			break;
 
 		case 0b10000011: // BLOS
 			take = getPSW_c() | getPSW_z();
-			D(name = "BLOS";)
-				break;
+			break;
 
 		case 0b10000100: // BVC
 			take = getPSW_v() == false;
-			D(name = "BVC";)
-				break;
+			break;
 
 		case 0b10000101: // BVS
 			take = getPSW_v();
-			D(name = "BVS";)
-				break;
+			break;
 
 		case 0b10000110: // BCC
 			take = getPSW_c() == false;
-			D(name = "BCC";)
 			break;
 
 		case 0b10000111: // BCS / BLO
 			take = getPSW_c();
-			D(name = "BCS/BLO";)
 			break;
 
 		default:
 			return false;
 	}
 
-	D(fprintf(stderr, "%s %o (%d)\n", name.c_str(), offset, take);)
-	if (take) {
-		D(fprintf(stderr, "branch %d from 0o%o to 0o%o\n", offset * 2, getPC(), getPC() + offset * 2);)
+	if (take)
 		addRegister(7, false, offset * 2);
-	}
 
 	return true;
 }
@@ -1028,19 +950,16 @@ bool cpu::condition_code_operations(const uint16_t instr)
 	switch(instr) {
 		case 0b0000000010100000: // NOP
 		case 0b0000000010110000: // NOP
-			D(fprintf(stderr, "NOP\n");)
 			return true;
 	}
 
 	if ((instr & ~7) == 0000230) { // SPLx
 		int level = instr & 7;
-		D(fprintf(stderr, "SPL %d\n", level);)
 		setPSW_spl(level);
 		return true;
 	}
 
 	if ((instr & ~31) == 0b10100000) { // set condition bits
-		D(fprintf(stderr, "%s n%dz%dv%dc%d\n", instr & 0b10000 ? "SET" : "CLR", !!(instr & 8), !!(instr & 4), !!(instr & 2), instr & 1);)
 		if (instr & 0b10000) {
 			setPSW_n(instr & 0b1000);
 			setPSW_z(instr & 0b0100);
@@ -1093,29 +1012,24 @@ bool cpu::misc_operations(const uint16_t instr)
 {
 	switch(instr) {
 		case 0b0000000000000000: // HALT
-			D(fprintf(stderr, "HALT\n");)
 			// pretend HALT is not executed, proceed
 			haltFlag = true;
 			return true;
 
 		case 0b0000000000000001: // WAIT
-			D(fprintf(stderr, "WAIT\n");)
 			return true;
 
 		case 0b0000000000000010: // RTI
-			D(fprintf(stderr, "RTI\n");)
 			setPC(popStack());
 			setPSW(popStack());
 			return true;
 
 		case 0b0000000000000110: // RTT
-			D(fprintf(stderr, "RTT\n");)
 			setPC(popStack());
 			setPSW(popStack());
 			return true;
 
 		case 0b0000000000000111: // MFPT
-			D(fprintf(stderr, "MFPT\n");)
 			if (emulateMFPT)
 				setRegister(0, true, 1); // PDP-11/44
 			else {
@@ -1127,13 +1041,11 @@ bool cpu::misc_operations(const uint16_t instr)
 			return true;
 
 		case 0b0000000000000101: // RESET
-			D(fprintf(stderr, "RESET\n");)
 			resetFlag = true;
 			return true;
 	}
 
 	if ((instr >> 8) == 0b10001000) { // EMT
-		D(fprintf(stderr, "EMT\n");)
 		pushStack(getPSW());
 		pushStack(getPC());
 		setPC(b -> readWord(030));
@@ -1147,7 +1059,6 @@ bool cpu::misc_operations(const uint16_t instr)
 		switchModeToKernel();
 		setPC(b -> readWord(034));
 		setPSW(b -> readWord(036));
-		D(fprintf(stderr, "TRAP (sp: %o, new pc: %o)\n", getRegister(6, false), getPC());)
 		return true;
 	}
 
@@ -1155,14 +1066,12 @@ bool cpu::misc_operations(const uint16_t instr)
 		int dst_mode = (instr >> 3) & 7, dst_reg = instr & 7;
 		bool word_mode = false;
 		setPC(getGAMAddress(dst_mode, dst_reg, word_mode, false));
-		D(fprintf(stderr, "JMP %o\n", getPC());)
 		return true;
 	}
 
 	if ((instr & 0b1111111000000000) == 0b0000100000000000) { // JSR
 		const int link_reg = (instr >> 6) & 7;
 		uint16_t dst_value = getGAMAddress((instr >> 3) & 7, instr & 7, false, false);
-		D(fprintf(stderr, "JSR R%d,%o\n", link_reg, dst_value);)
 
 		// PUSH link
 		pushStack(getRegister(link_reg, false));
@@ -1186,8 +1095,6 @@ bool cpu::misc_operations(const uint16_t instr)
 		// POP link
 		setRegister(link_reg, false, popStack());
 
-		D(fprintf(stderr, "RTS new PC: %o, link reg %d: %o\n", temp, link_reg, getRegister(link_reg, false));)
-
 		return true;
 	}
 
@@ -1196,7 +1103,6 @@ bool cpu::misc_operations(const uint16_t instr)
 
 void cpu::busError()
 {
-	fprintf(stderr, " *** BUS ERROR ***\n");
 	//  PSW = 177776
 	//  mov @#PSW, -(sp)
 	pushStack(getPSW());
@@ -1209,32 +1115,26 @@ void cpu::busError()
 
 	//  mov @#VEC, pc
 	setPC(b -> readWord(4));
-	fprintf(stderr, " GO TO %o, PSW %o\n", getPC(), getPSW());
+}
+
+void cpu::disassemble()
+{
+	uint16_t pc          = getPC();
+	uint16_t instruction = b->readWord(pc);
+
+	fprintf(stderr, "PC: %05x, instruction: %04x\n", pc, instruction);
 }
 
 bool cpu::step()
 {
-	if (getPC() == 0xbfba) {
-		FILE *fh = fopen("debug.dat", "wb");
-		for(int i=0; i<256; i++)
-			fputc(b -> readByte(getPC() + i), fh);
-		fclose(fh);
-	}
-
-	if (getPC() & 1) {
-		D(fprintf(stderr, "odd addressing\n");)
+	if (getPC() & 1)
 		busError();
-	}
 
-	D(fprintf(stderr, "0x%04x/%d/0o%06o:", getPC(), getPC(), getPC());)
+	disassemble();
+
 	b -> setMMR2(getPC());
-	uint16_t instr = b -> readWord(getPC());
-	D(fprintf(stderr, " INSTR 0x%04x 0o%06o\n", instr, instr);)
+	uint16_t instr = b->readWord(getPC());
 	addRegister(7, false, 2);
-	D(fprintf(stderr, " PC is now %o\n", getPC());)
-
-	//	if (single_operand_instructions(instr))
-	//		goto ok;
 
 	if (double_operand_instructions(instr))
 		goto ok;
@@ -1260,15 +1160,6 @@ bool cpu::step()
 	exit(1);
 	return false;
 
-	return true;
-
 ok:
-#if !defined(NDEBUG) && !defined(ESP32)
-	for(int r=0; r<8; r++)
-		fprintf(stderr, "%06o ", getRegister(r, false));
-	fprintf(stderr, " | n%dz%dv%dc%d P%dC%d S%d", getPSW_n(), getPSW_z(), getPSW_v(), getPSW_c(), (getPSW() >> 12) & 3, getPSW() >> 14, getBitPSW(11));
-	fprintf(stderr, "\n\n");
-#endif
-
 	return haltFlag; // return flags that indicate that special attention is required
 }
