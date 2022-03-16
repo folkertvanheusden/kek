@@ -340,6 +340,10 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 				c -> setStackPointer(3, value);
 				return value;
 			}
+
+			if (a == 0177770) {  // microprogram break register
+				return value;
+			}
 		}
 
 		if (a == 0177766) { // cpu error register
