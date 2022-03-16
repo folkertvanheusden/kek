@@ -854,8 +854,24 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 				  psw = getGAM(dst_mode, dst_reg, word_mode, false, src_gam_text);
 				  break;
 
-		case 0b000110111: // MFPS (get PSW to something)
-				  putGAM(dst_mode, dst_reg, word_mode, psw, false, dst_gam_text);
+		case 0b000110111: // MFPS (get PSW to something) / SXT
+				  if (word_mode) {  // MFPS
+				  	putGAM(dst_mode, dst_reg, word_mode, psw, false, dst_gam_text);
+				  }
+				  else {  // SXT
+					a = getGAMAddress(dst_mode, dst_reg, word_mode, false);
+					v = b -> read(a, word_mode);
+
+					vl = getPSW_n() ? -1 : 0;
+
+					setPSW_z(getPSW_n() == false);
+					setPSW_v(false);
+
+					if (dst_mode == 0)
+						putGAM(dst_mode, dst_reg, word_mode, vl, false, dst_gam_text);
+					else
+						b -> write(a, word_mode, vl);
+				  }
 				  break;
 
 		default:
