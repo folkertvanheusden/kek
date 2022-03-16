@@ -1160,13 +1160,13 @@ std::string cpu::addressing_to_string(const uint8_t mode_register, const uint16_
 
 		case 6:
 			if (reg == 7)
-				return format("%06o", (pc + next_word) & 65535);
+				return format("%06o", next_word);
 
 			return format("o%o(%s)", next_word, reg_name.c_str());
 
 		case 7:
 			if (reg == 7)
-				return format("@%06o", (pc + next_word) & 65535);
+				return format("@%06o", next_word);
 
 			return format("@o%o(%s)", next_word, reg_name.c_str());
 	}
@@ -1410,7 +1410,7 @@ void cpu::disassemble()
 		}
 
 		if (text.empty() && name.empty() == false)
-			text = name + " $o" + format("%06o", new_pc);
+			text = name + " " + format("%06o", new_pc);
 	}
 
 	if (text.empty()) {
@@ -1418,16 +1418,16 @@ void cpu::disassemble()
 			text = format("SPL%d", instruction & 7);
 
 		if ((instruction & ~31) == 0b10100000) { // set condition bits
-			text = word_mode ? "S" : "C";
+			text = word_mode ? "S" : "CL";
 
 			if (instruction & 0b1000)
-				text += "n";
+				text += "N";
 			if (instruction & 0b0100)
-				text += "z";
+				text += "Z";
 			if (instruction & 0b0010)
-				text += "v";
+				text += "V";
 			if (instruction & 0b0001)
-				text += "c";
+				text += "C";
 		}
 
 		switch(instruction) {

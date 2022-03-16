@@ -246,19 +246,15 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev)
 
 	const uint8_t apf = a >> 13; // active page field
 	bool is_user = use_prev ? (c -> getBitPSW(12) && c -> getBitPSW(13)) : (c -> getBitPSW(14) && c -> getBitPSW(15));
-	D(fprintf(stderr, "READ: is_user %d, offset %d\n", is_user, apf + is_user * 8);)
 	uint32_t m_offset = pages[apf + is_user * 8].par * 64;
 
 	if ((a & 1) && word_mode == 0)
 		D(fprintf(stderr, "odd addressing\n");)
 
-	D(fprintf(stderr, "READ FROM %o\n", m_offset);)
 	if (!word_mode)
 		temp = m -> readWord(m_offset + (a & 8191));
 	else
 		temp = m -> readByte(m_offset + (a & 8191));
-
-	//	D(fprintf(stderr, "read bus %o(%d): %o\n", a, word_mode, temp);)
 
 	return temp;
 }
@@ -444,7 +440,6 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 
 	const uint8_t apf = a >> 13; // active page field
 	bool is_user = use_prev ? (c -> getBitPSW(12) && c -> getBitPSW(13)) : (c -> getBitPSW(14) && c -> getBitPSW(15));
-	D(fprintf(stderr, "WRITE: is_user %d, offset %d\n", is_user, apf + is_user * 8);)
 	uint32_t m_offset = pages[apf + is_user * 8].par * 64;
 
 	pages[apf].pdr |= 1 << 6; // page has been written to
@@ -452,7 +447,6 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 	if ((a & 1) && word_mode == 0)
 		D(fprintf(stderr, "odd addressing\n");)
 
-	D(fprintf(stderr, "WRITE TO: %o\n", m_offset);)
 	if (word_mode)
 		m -> writeByte(m_offset + (a & 8191), value);
 	else
