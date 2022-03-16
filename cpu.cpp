@@ -512,7 +512,7 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 			}
 
 		case 4: { // XOR (word only)
-				uint16_t src_value = getGAM(dst_mode, dst_reg, true, false) ^ getRegister(reg);
+				uint16_t src_value = getGAM(dst_mode, dst_reg, false, false) ^ getRegister(reg);
 				putGAM(dst_mode, dst_reg, false, src_value, false);
 				setPSW_n(src_value & 0x8000);
 				setPSW_z(src_value == 0);
