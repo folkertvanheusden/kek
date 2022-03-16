@@ -960,26 +960,16 @@ bool cpu::condition_code_operations(const uint16_t instr)
 	}
 
 	if ((instr & ~31) == 0b10100000) { // set condition bits
-		if (instr & 0b10000) {
-			if (instr & 0b1000)
-				setPSW_n(true);
-			if (instr & 0b0100)
-				setPSW_z(true);
-			if (instr & 0b0010)
-				setPSW_v(true);
-			if (instr & 0b0001)
-				setPSW_c(true);
-		}
-		else {
-			if (instr & 0b1000)
-				setPSW_n(false);
-			if (instr & 0b0100)
-				setPSW_z(false);
-			if (instr & 0b0010)
-				setPSW_v(false);
-			if (instr & 0b0001)
-				setPSW_c(false);
-		}
+		bool state = !!(instr & 0b10000);
+
+		if (instr & 0b1000)
+			setPSW_n(state);
+		if (instr & 0b0100)
+			setPSW_z(state);
+		if (instr & 0b0010)
+			setPSW_v(state);
+		if (instr & 0b0001)
+			setPSW_c(state);
 
 		return true;
 	}
