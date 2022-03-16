@@ -1477,7 +1477,9 @@ void cpu::disassemble()
 			text = "RTS";
 	}
 
-	fprintf(stderr, "PC: %06o, instruction: %06o: %s\n", pc, instruction, text.c_str());
+	fprintf(stderr, "PC: %06o, SP: %06o, PSW: %d%d|%d|%d|%d%d%d%d%d, instr: %06o: %s\n", pc, sp[psw >> 14],
+			psw >> 14, (psw >> 12) & 3, (psw >> 11) & 1, (psw >> 5) & 7, !!(psw & 16), !!(psw & 8), !!(psw & 4), !!(psw & 2), psw & 1,
+			instruction, text.c_str());
 }
 
 bool cpu::step()
