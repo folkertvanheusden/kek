@@ -239,7 +239,10 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev)
 			D(fprintf(stderr, "bus::readWord: odd address UNHANDLED %o\n", a);)
 		D(fprintf(stderr, "UNHANDLED read %o(%c)\n", a, word_mode ? 'B' : ' ');)
 
-		c -> busError();
+		if (a == 0177760)
+			return 0167777;  // TODO; get this from memory.cpp min(memsize, 64kB - 4kB)
+
+//		c -> busError();
 
 		return -1;
 	}
