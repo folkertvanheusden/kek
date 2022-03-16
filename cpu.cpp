@@ -606,8 +606,8 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					b -> writeByte(a + 1, t1);
 				}
 
-				setPSW_n(t2 & 0x80);
-				setPSW_z(t2 == 0);
+				setPSW_n(t1 & 0x80);
+				setPSW_z(t1 == 0);
 				setPSW_v(false);
 				setPSW_c(false);
 				break;
