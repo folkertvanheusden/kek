@@ -1144,13 +1144,13 @@ std::pair<std::string, int> cpu::addressing_to_string(const uint8_t mode_registe
 
 		case 2:
 			if (reg == 7)
-				return { format("#%06o!2", next_word), 4 };
+				return { format("#%06o", next_word), 4 };
 
 			return { format("(%s)+", reg_name.c_str()), 2 };
 
 		case 3:
 			if (reg == 7)
-				return { format("@#%06o|%x|%d!3", next_word, next_word, next_word), 4 };
+				return { format("@#%06o|%x|%d", next_word, next_word, next_word), 4 };
 
 			return { format("@(%s)+", reg_name.c_str()), 2 };
 
@@ -1162,15 +1162,15 @@ std::pair<std::string, int> cpu::addressing_to_string(const uint8_t mode_registe
 
 		case 6:
 			if (reg == 7)
-				return { format("%06o!6a", (pc + next_word + 2) & 65535), 4 };
+				return { format("%06o", (pc + next_word + 2) & 65535), 4 };
 
-			return { format("o%o(%s)!6b", next_word, reg_name.c_str()), 4 };
+			return { format("o%o(%s)", next_word, reg_name.c_str()), 4 };
 
 		case 7:
 			if (reg == 7)
-				return { format("@%06o!7a", next_word), 4 };
+				return { format("@%06o", next_word), 4 };
 
-			return { format("@o%o(%s)!7b", next_word, reg_name.c_str()), 4 };
+			return { format("@o%o(%s)", next_word, reg_name.c_str()), 4 };
 	}
 
 	return { "??", 0 };
@@ -1425,7 +1425,7 @@ void cpu::disassemble()
 			text = format("SPL%d", instruction & 7);
 
 		if ((instruction & ~31) == 0b10100000) { // set condition bits
-			text = word_mode ? "S" : "CL";
+			text = instruction & 0b10000 ? "SE" : "CL";
 
 			if (instruction & 0b1000)
 				text += "N";
@@ -1489,6 +1489,9 @@ void cpu::disassemble()
 		if ((instruction & 0b1111111111111000) == 0b0000000010000000)
 			text = "RTS";
 	}
+
+	if (text.empty())
+		text = "???";
 
 	fprintf(stderr, "R0: %06o, R1: %06o, R2: %06o, R3: %06o, R4: %06o, R5: %06o, SP: %06o, PC: %06o, PSW: %d%d|%d|%d|%d%d%d%d%d, instr: %06o: %s\n",
 			getRegister(0), getRegister(1), getRegister(2), getRegister(3), getRegister(4), getRegister(5),
