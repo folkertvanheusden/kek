@@ -466,7 +466,7 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 
 		case 2: { // ASH
 				int16_t R = getRegister(reg), oldR = R;
-				int8_t shift = getGAM(dst_mode, dst_reg, true, false);
+				int8_t shift = dst > 31 ? -(64 - dst) : dst;
 
 				if (shift > 0) {
 					R <<= shift - 1;
@@ -512,11 +512,18 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 			}
 
 		case 4: { // XOR (word only)
-				uint16_t src_value = getGAM(dst_mode, dst_reg, false, false) ^ getRegister(reg);
-				putGAM(dst_mode, dst_reg, false, src_value, false);
-				setPSW_n(src_value & 0x8000);
-				setPSW_z(src_value == 0);
+				uint16_t a = getGAMAddress(dst_mode, dst_reg, false, false);
+				uint16_t vl = b->read(a, false) ^ getRegister(reg);;
+
+				if (dst_mode == 0)
+					putGAM(dst_mode, dst_reg, false, vl, false);
+				else
+					b->write(a, false, vl);
+
+				setPSW_n(vl & 0x8000);
+				setPSW_z(vl == 0);
 				setPSW_v(false);
+
 				return true;
 			}
 
@@ -1253,8 +1260,9 @@ void cpu::disassemble()
 	else if (do_opcode == 0b111) {
 		std::string src_text = format("R%d", (instruction >> 6) & 7);
 		auto        dst_text = addressing_to_string(dst_register, pc);
+		uint8_t     dst      = instruction & 63;
 
-		switch(ado_opcode) {
+		switch(ado_opcode) {  // additional double operand
 			case 0:
 				name = "MUL";
 				break;
@@ -1264,7 +1272,7 @@ void cpu::disassemble()
 				break;
 
 			case 2:
-				name = "ASH";
+				text = format("ASH %s,%d", src_text.c_str(), dst > 31 ? -(64 - dst) : dst);
 				break;
 
 			case 3:
@@ -1475,6 +1483,14 @@ bool cpu::step()
 {
 	if (getPC() & 1)
 		busError();
+
+	if (getPC() == 06746)
+	{
+		FILE *fh = fopen("debug.dat", "wb");
+		for(int i=0; i<256; i++)
+			fputc(b -> readByte(getPC() + i), fh);
+		fclose(fh);
+	}
 
 	disassemble();
 
