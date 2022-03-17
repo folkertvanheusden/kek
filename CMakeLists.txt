@@ -1,5 +1,5 @@
 project(PDP-11)
-cmake_minimum_required(VERSION 3.2)
+cmake_minimum_required(VERSION 3.9)
 
 
 set(CMAKE_CXX_STANDARD 17)
@@ -21,6 +21,10 @@ add_executable(
   utils.cpp
 )
 
+include(CheckIPOSupported)
+check_ipo_supported(RESULT supported)
+
+#set(CMAKE_BUILD_TYPE RelWithDebInfo)
 set(CMAKE_BUILD_TYPE Debug)
 
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
