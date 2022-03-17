@@ -67,7 +67,7 @@ uint16_t tty::readWord(const uint16_t addr)
 		vtemp = 128;
 	}
 
-	D(fprintf(stderr, "PDP11TTY read addr %o (%s): %d, 7bit: %d\n", addr, regnames[reg], vtemp, vtemp & 127);)
+	//D(fprintf(stderr, "PDP11TTY read addr %o (%s): %d, 7bit: %d\n", addr, regnames[reg], vtemp, vtemp & 127);)
 
 	registers[reg] = vtemp;
 

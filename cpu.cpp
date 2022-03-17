@@ -1291,7 +1291,7 @@ void cpu::disassemble()
 				break;
 
 			case 7:
-				text = std::string("SOB ") + dst_text.first;
+				text = std::string("SOB ") + src_text;
 				break;
 		}
 

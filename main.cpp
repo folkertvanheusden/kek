@@ -306,7 +306,8 @@ int main(int argc, char *argv[])
 	struct pollfd fds[] = { { STDIN_FILENO, POLLIN, 0 } };
 
 	const unsigned long start = get_ms();
-	unsigned long icount = 0;
+	uint64_t icount = 0;
+
 	for(;;) {
 		if (c->step()) {
 			//c->setRegister(7, 01000);
@@ -342,6 +343,8 @@ int main(int argc, char *argv[])
 
 	if (withUI)
 		endwin();
+
+	fprintf(stderr, "Instructions per second: %.3f\n\n", icount * 1000.0 / (get_ms() - start));
 
 	delete b;
 
