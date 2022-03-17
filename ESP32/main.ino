@@ -50,12 +50,17 @@ void panel(void *p) {
 	CRGB leds[1];  // FIXME 1: aantal leds, zie ook v
 	FastLED.addLeds<NEOPIXEL, NEOPIXELS_PIN>(leds, 1);
 
+	const CRGB run_mode_led_color[4] = { CRGB::Red, CRGB::Yellow, CRGB::Blue, CRGB::Green };
+
 	for(;;) {
 		vTaskDelay(100 / portTICK_RATE_MS);
 
-		uint16_t current_pc = c->getPC();
+		uint16_t current_PC  = c->getPC();
+		uint16_t current_PSW = c->getPSW();
 
-		leds[0] = current_pc & (1 << 5) ? CRGB::Red : CRGB::Black;
+		CRGB     led_color   = run_mode_led_color[current_PSW >> 14];
+
+		leds[0] = current_PC & (1 << 4) ? led_color : CRGB::Black;
 
 		FastLED.show();
 	}
@@ -126,6 +131,34 @@ void setup() {
 
 uint32_t icount = 0;
 
+void dump_state(bus *const b) {
+	cpu *const c = b->getCpu();
+
+	uint32_t now = millis();
+	uint32_t t_diff = now - start_ts;
+
+	double mips = icount / (1000.0 * t_diff);
+
+	// see https://retrocomputing.stackexchange.com/questions/6960/what-was-the-clock-speed-and-ips-for-the-original-pdp-11
+	constexpr double pdp11_clock_cycle = 150;  // ns, for the 11/70
+	constexpr double pdp11_mhz = 1000.0 / pdp11_clock_cycle; 
+	constexpr double pdp11_avg_cycles_per_instruction = (1 + 5) / 2.0;
+	constexpr double pdp11_estimated_mips = pdp11_mhz / pdp11_avg_cycles_per_instruction;
+
+	Serial.print(F("MIPS: "));
+	Serial.println(mips);
+
+	Serial.print(F("emulation speed (aproximately): "));
+	Serial.print(mips * 100 / pdp11_estimated_mips);
+	Serial.println('%');
+
+	Serial.print(F("PC: "));
+	Serial.println(c->getPC());
+
+	Serial.print(F("Uptime (ms): "));
+	Serial.println(t_diff);
+}
+
 void loop() {
 	icount++;
 
@@ -133,21 +166,17 @@ void loop() {
 		if (Serial.available()) {
 			char c = Serial.read();
 
-			if (c == 5) {
-				Serial.print(F("Instructions per second: "));
-				Serial.println(icount * 1000.0 / (millis() - start_ts));
-			}
-			else if (c > 0 && c < 127) {
+			if (c == 5)
+				dump_state(b);
+			else if (c > 0 && c < 127)
 				tty_->sendChar(c);
-			}
 		}
 	}
 
 	if (c->step()) {
 		Serial.println(F(""));
 		Serial.println(F(" *** EMULATION STOPPED *** "));
-		Serial.print(F("Instructions per second: "));
-		Serial.println(icount * 1000.0 / (millis() - start_ts));
+		dump_state(b);
 		delay(3000);
 		Serial.println(F(" *** EMULATION RESTARTING *** "));
 
