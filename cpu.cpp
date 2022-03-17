@@ -1009,6 +1009,13 @@ bool cpu::misc_operations(const uint16_t instr)
 			setPSW(popStack());
 			return true;
 
+		case 0b0000000000000011: // BPT
+			pushStack(getPSW());
+			pushStack(getPC());
+			setPC(b -> readWord(014));
+			setPSW(b -> readWord(016));
+			return true;
+
 		case 0b0000000000000100: // IOT
 			pushStack(getPSW());
 			pushStack(getPC());
@@ -1449,6 +1456,10 @@ void cpu::disassemble()
 
 			case 0b0000000000000010:
 				text = "RTI";
+				break;
+
+			case 0b0000000000000011:
+				text = "BPT";
 				break;
 
 			case 0b0000000000000100:
