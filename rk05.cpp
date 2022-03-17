@@ -142,6 +142,10 @@ void rk05::writeByte(const uint16_t addr, const uint8_t v)
 
 void rk05::writeWord(const uint16_t addr, uint16_t v)
 {
+#if defined(ESP32)
+	digitalWrite(LED_BUILTIN, LOW);
+#endif
+
 	const int reg = (addr - RK05_BASE) / 2;
 	fprintf(stderr, "RK05 write %s/%o: %o\n", regnames[reg], addr, v);
 
@@ -176,8 +180,6 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 					xfer_buffer[i] = b -> readByte(memoff + i);
 
 #if defined(ESP32)
-				digitalWrite(LED_BUILTIN, LOW);
-
 				if (!fh.seek(diskoffb))
 					fprintf(stderr, "RK05 seek error %s\n", strerror(errno));
 				if (fh.write(xfer_buffer, reclen) != reclen)
@@ -203,16 +205,11 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 				}
 
 				registers[(RK05_DA - RK05_BASE) / 2] = sector | (surface << 4) | (cylinder << 5);
-
-#if defined(ESP32)
-				digitalWrite(LED_BUILTIN, HIGH);
-#endif
 			}
 			else if (func == 2) { // read
 				fprintf(stderr, "RK05 reading %zo bytes from offset %o (%d dec) to %o\n", reclen, diskoffb, diskoffb, memoff);
 
 #if defined(ESP32)
-				digitalWrite(LED_BUILTIN, LOW);
 				if (!fh.seek(diskoffb))
 					fprintf(stderr, "RK05 seek error %s\n", strerror(errno));
 #else
@@ -258,9 +255,6 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 				}
 
 				registers[(RK05_DA - RK05_BASE) / 2] = sector | (surface << 4) | (cylinder << 5);
-#if defined(ESP32)
-				digitalWrite(LED_BUILTIN, HIGH);
-#endif
 			}
 			else if (func == 4) {
 				fprintf(stderr, "RK05 seek to offset %o\n", diskoffb);
@@ -281,4 +275,8 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 
 	D(fprintf(stderr, "set register %o to %o\n", addr, v);)
 	registers[reg] = v;
+
+#if defined(ESP32)
+	digitalWrite(LED_BUILTIN, HIGH);
+#endif
 }
