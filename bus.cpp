@@ -50,6 +50,7 @@ void bus::clearmem()
 
 uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev)
 {
+	// fprintf(stderr, "read [%d] from %06o [%d]\n", word_mode, a, use_prev);
 	uint16_t temp = 0;
 
 	if (a >= 0160000) {
@@ -264,6 +265,7 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev)
 
 uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bool use_prev)
 {
+	// fprintf(stderr, "write [%d] %06o to %06o\n", word_mode, value, a);
 	//D(fprintf(stderr, "write bus %o(%d): %o\n", a, word_mode, value);)
 
 	if (a >= 0160000) {
@@ -440,7 +442,7 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 			D(fprintf(stderr, "bus::writeWord: odd address UNHANDLED\n");)
 		D(fprintf(stderr, "UNHANDLED write %o(%c): %o\n", a, word_mode ? 'B' : ' ', value);)
 
-		c -> busError();
+//		c -> busError();
 
 		return value;
 	}
