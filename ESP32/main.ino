@@ -106,8 +106,13 @@ void loop() {
 		if (Serial.available()) {
 			char c = Serial.read();
 
-			if (c > 0 && c < 127)
+			if (c == 5) {
+				Serial.print(F("Instructions per second: "));
+				Serial.println(icount * 1000.0 / (millis() - start_ts));
+			}
+			else if (c > 0 && c < 127) {
 				tty_->sendChar(c);
+			}
 		}
 	}
 
