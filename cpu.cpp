@@ -134,7 +134,7 @@ void cpu::setPSW_n(const bool v)
 void cpu::setPSW_spl(const int v)
 {
 	psw &= 7 << 5;
-	psw |= (v & 7) << 5;
+	psw |= v << 5;
 }
 
 // GAM = general addressing modes
@@ -938,6 +938,15 @@ bool cpu::condition_code_operations(const uint16_t instr)
 	if ((instr & ~7) == 0000230) { // SPLx
 		int level = instr & 7;
 		setPSW_spl(level);
+
+		// trap via vector 010
+		pushStack(getPSW());
+		pushStack(getPC());
+		setPSW(b->readWord(012));
+		setPC(b->readWord(010));
+
+		fprintf(stderr, "SPL%d, new pc: %06o\n", level, getPC());
+
 		return true;
 	}
 
@@ -1086,6 +1095,8 @@ bool cpu::misc_operations(const uint16_t instr)
 
 void cpu::busError()
 {
+	fprintf(stderr, "BUS ERROR\n");
+
 	//  PSW = 177776
 	//  mov @#PSW, -(sp)
 	pushStack(getPSW());
