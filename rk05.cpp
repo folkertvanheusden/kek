@@ -35,13 +35,39 @@ rk05::rk05(const std::string & file, bus *const b) : b(b)
 	Serial.print(F("SS  : "));
 	Serial.println(int(SS));
 
+	Serial.println(F("Files on SD-card:"));
+
 	if (!sd.begin(SS, SD_SCK_MHZ(15)))
 		sd.initErrorHalt();
 
-	Serial.print(F("Opening: "));
-	Serial.println(file.c_str());
+	sd.ls("/", LS_DATE | LS_SIZE | LS_R);
 
-	if (!fh.open(file.c_str(), O_RDWR))
+	std::string selected_file;
+
+	while(Serial.available())
+		Serial.read();
+
+	Serial.print(F("Enter filename: "));
+
+	for(;;) {
+		if (Serial.available()) {
+			char c = Serial.read();
+
+			if (c == 13 || c == 10)
+				break;
+
+			if (c >= 32 && c < 127) {
+				selected_file += c;
+
+				Serial.print(c);
+			}
+		}
+	}
+
+	Serial.print(F("Opening file: "));
+	Serial.println(selected_file.c_str());
+
+	if (!fh.open(selected_file.c_str(), O_RDWR))
 		sd.errorHalt(F("rk05: open failed"));
 #else
 	fh = fopen(file.c_str(), "rb");

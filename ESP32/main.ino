@@ -72,7 +72,7 @@ void setup() {
 	b->add_tty(tty_);
 
 	Serial.println(F("Load RK05"));
-	b->add_rk05(new rk05("xxdp+.rk", b));
+	b->add_rk05(new rk05("", b));
 	setBootLoader(b);
 
 	Serial.print(F("Free RAM after init: "));
