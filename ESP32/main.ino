@@ -1,5 +1,6 @@
 // (C) 2018-2022 by Folkert van Heusden
 // Released under Apache License v2.0
+#include <FastLED.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -10,17 +11,17 @@
 #include "error.h"
 
 
-bus *b = nullptr;
-cpu *c = nullptr;
+#define NEOPIXELS_PIN	27
+bus *b    = nullptr;
+cpu *c    = nullptr;
 tty *tty_ = nullptr;
 
 uint16_t exec_addr = 0;
 
-uint32_t start_ts = 0;
+uint32_t start_ts  = 0;
 
-void setBootLoader(bus *const b)
-{
-	cpu *const c = b->getCpu();
+void setBootLoader(bus *const b) {
+	cpu     *const c      = b->getCpu();
 
 	const uint16_t offset = 01000;
 
@@ -41,6 +42,25 @@ void setBootLoader(bus *const b)
 
 	c->setRegister(7, offset);
 }
+
+void panel(void *p) {
+	bus *const b = reinterpret_cast<bus *>(p);
+	cpu *const c = b->getCpu();
+
+	CRGB leds[1];  // FIXME 1: aantal leds, zie ook v
+	FastLED.addLeds<NEOPIXEL, NEOPIXELS_PIN>(leds, 1);
+
+	for(;;) {
+		vTaskDelay(100 / portTICK_RATE_MS);
+
+		uint16_t current_pc = c->getPC();
+
+		leds[0] = current_pc & (1 << 5) ? CRGB::Red : CRGB::Black;
+
+		FastLED.show();
+	}
+}
+
 void setup() {
 	Serial.begin(115200);
 
@@ -49,10 +69,10 @@ void setup() {
 	Serial.print(F("Size of int: "));
 	Serial.println(sizeof(int));
 
-	Serial.print(F("CPU clock frequency: "));
+	Serial.print(F("CPU clock frequency (MHz): "));
 	Serial.println(getCpuFrequencyMhz());
 
-	Serial.print(F("Free RAM before init: "));
+	Serial.print(F("Free RAM before init (decimal bytes): "));
 	Serial.println(ESP.getFreeHeap());
 
 	Serial.println(F("Init bus"));
@@ -79,6 +99,13 @@ void setup() {
 	Serial.println(ESP.getFreeHeap());
 
 	pinMode(LED_BUILTIN, OUTPUT);
+
+	Serial.flush();
+
+	Serial.print(F("Starting panel (on CPU 0, main emulator runs on CPU "));
+	Serial.print(xPortGetCoreID());
+	Serial.println(F(")"));
+	xTaskCreatePinnedToCore(&panel, "panel", 2048, b, 5, nullptr, 0);
 
 	Serial.println(F("Press <enter> to start"));
 
