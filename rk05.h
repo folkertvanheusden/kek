@@ -6,6 +6,13 @@
 #include <stdio.h>
 #include <string>
 
+#if defined(ESP32)
+#include <SPI.h>
+#define USE_SDFAT
+#define SD_FAT_TYPE 1
+#include <SdFat.h>
+#endif
+
 // FIXME namen van defines
 #define RK05_DS		0177400	// drive status
 #define RK05_ERROR	0177402 // error
@@ -25,7 +32,12 @@ private:
 	bus *const b;
 	uint16_t registers[7];
 	uint8_t xfer_buffer[512];
+#if defined(ESP32)
+	SdFat32 sd;
+	File32 fh;
+#else
 	FILE *fh;
+#endif
 
 public:
 	rk05(const std::string & file, bus *const b);

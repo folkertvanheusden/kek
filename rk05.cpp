@@ -9,6 +9,7 @@
 #include "rk05.h"
 #include "utils.h"
 
+
 const char * const regnames[] = { 
 	"RK05_DS drivestatus",
 	"RK05_ERROR        ",
@@ -24,14 +25,38 @@ rk05::rk05(const std::string & file, bus *const b) : b(b)
 	memset(registers, 0x00, sizeof registers);
 	memset(xfer_buffer, 0x00, sizeof xfer_buffer);
 
+#if defined(ESP32)
+	Serial.print(F("MISO: "));
+	Serial.println(int(MISO));
+	Serial.print(F("MOSI: "));
+	Serial.println(int(MOSI));
+	Serial.print(F("SCK : "));
+	Serial.println(int(SCK));
+	Serial.print(F("SS  : "));
+	Serial.println(int(SS));
+
+	if (!sd.begin(SS, SD_SCK_MHZ(15)))
+		sd.initErrorHalt();
+
+	Serial.print(F("Opening: "));
+	Serial.println(file.c_str());
+
+	if (!fh.open(file.c_str(), O_RDWR))
+		sd.errorHalt(F("rk05: open failed"));
+#else
 	fh = fopen(file.c_str(), "rb");
 	if (!fh)
 		error_exit(true, "rk05: cannot open \"%s\"", file.c_str());
+#endif
 }
 
 rk05::~rk05()
 {
+#if defined(ESP32)
+	fh.close();
+#else
 	fclose(fh);
+#endif
 }
 
 uint8_t rk05::readByte(const uint16_t addr)
@@ -124,10 +149,19 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 				for(size_t i=0; i<reclen; i++)
 					xfer_buffer[i] = b -> readByte(memoff + i);
 
+#if defined(ESP32)
+				digitalWrite(LED_BUILTIN, LOW);
+
+				if (!fh.seek(diskoffb))
+					fprintf(stderr, "RK05 seek error %s\n", strerror(errno));
+				if (fh.write(xfer_buffer, reclen) != reclen)
+                                        fprintf(stderr, "RK05 fwrite error %s\n", strerror(errno));
+#else
 				if (fseek(fh, diskoffb, SEEK_SET) == -1)
 					fprintf(stderr, "RK05 seek error %s\n", strerror(errno));
 				if (fwrite(xfer_buffer, 1, reclen, fh) != reclen)
 					fprintf(stderr, "RK05 fwrite error %s\n", strerror(errno));
+#endif
 
 				if (v & 2048)
 					fprintf(stderr, "RK05 inhibit BA increase\n");
@@ -143,20 +177,35 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 				}
 
 				registers[(RK05_DA - RK05_BASE) / 2] = sector | (surface << 4) | (cylinder << 5);
+
+#if defined(ESP32)
+				digitalWrite(LED_BUILTIN, HIGH);
+#endif
 			}
 			else if (func == 2) { // read
 				fprintf(stderr, "RK05 reading %zo bytes from offset %o (%d dec) to %o\n", reclen, diskoffb, diskoffb, memoff);
 
+#if defined(ESP32)
+				digitalWrite(LED_BUILTIN, LOW);
+				if (!fh.seek(diskoffb))
+					fprintf(stderr, "RK05 seek error %s\n", strerror(errno));
+#else
 				if (fseek(fh, diskoffb, SEEK_SET) == -1)
 					fprintf(stderr, "RK05 seek error %s\n", strerror(errno));
+#endif
 				
 				uint32_t temp = reclen;
 				uint32_t p = memoff;
 				while(temp > 0) {
 					uint32_t cur = std::min(uint32_t(sizeof xfer_buffer), temp);
 
+#if defined(ESP32)
+					if (fh.read(xfer_buffer, cur) != size_t(cur))
+						D(fprintf(stderr, "RK05 fread error: %s\n", strerror(errno));)
+#else
 					if (fread(xfer_buffer, 1, cur, fh) != size_t(cur))
 						D(fprintf(stderr, "RK05 fread error: %s\n", strerror(errno));)
+#endif
 
 					for(uint32_t i=0; i<cur; i++) {
 						if (p < 0160000)
@@ -179,7 +228,11 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 						cylinder++;
 					}
 				}
+
 				registers[(RK05_DA - RK05_BASE) / 2] = sector | (surface << 4) | (cylinder << 5);
+#if defined(ESP32)
+				digitalWrite(LED_BUILTIN, HIGH);
+#endif
 			}
 			else if (func == 4) {
 				fprintf(stderr, "RK05 seek to offset %o\n", diskoffb);
