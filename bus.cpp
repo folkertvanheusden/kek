@@ -13,19 +13,19 @@
 #include "tm-11.h"
 #include "tty.h"
 
-bus::bus() : c(nullptr), tm11(nullptr), rk05_(nullptr), rx02_(nullptr), tty_(nullptr)
-{
 #if defined(ESP32)
-	// ESP32 goes in a crash-loop when allocating 128kB
-	// see also https://github.com/espressif/esp-idf/issues/1934
-	int n = 12;
+// ESP32 goes in a crash-loop when allocating 128kB
+// see also https://github.com/espressif/esp-idf/issues/1934
+constexpr int n_pages = 12;
 #else
-	int n = 16;
+constexpr int n_pages = 16;
 #endif
 
-	m = new memory(n * 8192);
+bus::bus() : c(nullptr), tm11(nullptr), rk05_(nullptr), rx02_(nullptr), tty_(nullptr)
+{
+	m = new memory(n_pages * 8192);
 
-	for(int i=0; i<n; i++) {
+	for(int i=0; i<n_pages; i++) {
 		pages[i].par = (i & 7) * 8192 / 64;
 		pages[i].pdr = (3 << 1) | (0 << 4) | (0 << 6) | ((8192 / (32 * 2)) << 8);
 	}
@@ -241,7 +241,7 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev)
 		D(fprintf(stderr, "UNHANDLED read %o(%c)\n", a, word_mode ? 'B' : ' ');)
 
 		if (a == 0177760)
-			return 0167777;  // TODO; get this from memory.cpp min(memsize, 64kB - 4kB)
+			return std::min(n_pages * 8192, 65536) - 4096;
 
 //		c -> busError();
 

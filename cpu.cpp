@@ -1517,14 +1517,6 @@ bool cpu::step()
 	if (getPC() & 1)
 		busError();
 
-	if (getPC() == 06746)
-	{
-		FILE *fh = fopen("debug.dat", "wb");
-		for(int i=0; i<256; i++)
-			fputc(b -> readByte(getPC() + i), fh);
-		fclose(fh);
-	}
-
 	disassemble();
 
 	b -> setMMR2(getPC());
@@ -1547,9 +1539,11 @@ bool cpu::step()
 
 	{
 		FILE *fh = fopen("fail.dat", "wb");
-		for(int i=0; i<256; i++)
-			fputc(b -> readByte(getPC() - 2 + i), fh);
-		fclose(fh);
+		if (fh) {
+			for(int i=0; i<256; i++)
+				fputc(b -> readByte(getPC() - 2 + i), fh);
+			fclose(fh);
+		}
 	}
 	busError();
 	exit(1);

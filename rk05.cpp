@@ -199,6 +199,8 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 				while(temp > 0) {
 					uint32_t cur = std::min(uint32_t(sizeof xfer_buffer), temp);
 
+					yield();
+
 #if defined(ESP32)
 					if (fh.read(xfer_buffer, cur) != size_t(cur))
 						D(fprintf(stderr, "RK05 fread error: %s\n", strerror(errno));)
