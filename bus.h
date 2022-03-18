@@ -56,4 +56,6 @@ public:
 	uint16_t writeWord(const uint16_t a, const uint16_t value);
 
 	void setMMR2(const uint16_t value) { MMR2 = value; }
+
+	uint32_t calculate_full_address(const uint16_t a);
 };

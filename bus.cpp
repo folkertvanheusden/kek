@@ -263,6 +263,15 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev)
 	return temp;
 }
 
+uint32_t bus::calculate_full_address(const uint16_t a)
+{
+	const uint8_t apf = a >> 13; // active page field
+	bool is_user = c -> getBitPSW(14) && c -> getBitPSW(15);
+	uint32_t m_offset = pages[apf + is_user * 8].par * 64;
+
+	return m_offset + (a & 8191);
+}
+
 uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bool use_prev)
 {
 	// fprintf(stderr, "write [%d] %06o to %06o\n", word_mode, value, a);

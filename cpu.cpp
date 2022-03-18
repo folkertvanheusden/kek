@@ -26,7 +26,7 @@ void cpu::reset()
 	memset(sp, 0x00, sizeof sp);
 	pc = 0;
 	psw = fpsr = 0;
-	resetFlag = haltFlag = false;
+	runMode = resetFlag = haltFlag = false;
 }
 
 uint16_t cpu::getRegister(const int nr, const bool prev_mode) const

@@ -16,6 +16,7 @@ private:
 	uint16_t psw { 0 }, fpsr { 0 };
 	uint16_t stackLimitRegister { 0 };
 	bool haltFlag { false }, resetFlag { false };
+	bool runMode  { false };
 
 	bool emulateMFPT { false };
 
@@ -59,6 +60,8 @@ public:
 	void busError();
 
 	void setEmulateMFPT(const bool v) { emulateMFPT = v; }
+
+	bool getRunMode() { return runMode; }
 
 	bool getPSW_c() const;
 	bool getPSW_v() const;
