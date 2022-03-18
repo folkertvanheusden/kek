@@ -11,7 +11,7 @@
 #include "error.h"
 
 
-#define NEOPIXELS_PIN	27
+#define NEOPIXELS_PIN	25
 bus *b    = nullptr;
 cpu *c    = nullptr;
 tty *tty_ = nullptr;
@@ -47,20 +47,32 @@ void panel(void *p) {
 	bus *const b = reinterpret_cast<bus *>(p);
 	cpu *const c = b->getCpu();
 
-	CRGB leds[1];  // FIXME 1: aantal leds, zie ook v
-	FastLED.addLeds<NEOPIXEL, NEOPIXELS_PIN>(leds, 1);
+	CRGB leds[32] { 0 };
+	FastLED.addLeds<NEOPIXEL, NEOPIXELS_PIN>(leds, 32);
+
+	FastLED.setBrightness(50);
+
+	FastLED.show();
 
 	const CRGB run_mode_led_color[4] = { CRGB::Red, CRGB::Yellow, CRGB::Blue, CRGB::Green };
 
 	for(;;) {
-		vTaskDelay(100 / portTICK_RATE_MS);
+		vTaskDelay(20 / portTICK_RATE_MS);
 
-		uint16_t current_PC  = c->getPC();
-		uint16_t current_PSW = c->getPSW();
+		uint16_t current_PC      = c->getPC();
+		uint32_t full_addr       = b->calculate_full_address(current_PC);
 
-		CRGB     led_color   = run_mode_led_color[current_PSW >> 14];
+		uint16_t current_PSW     = c->getPSW();
 
-		leds[0] = current_PC & (1 << 4) ? led_color : CRGB::Black;
+		const CRGB & led_color   = run_mode_led_color[current_PSW >> 14];
+
+		for(int b=0; b<22; b++)
+			leds[b] = full_addr & (1 << b) ? led_color : CRGB::Black;
+
+		leds[22] = c->getPSW_c() ? CRGB::Magenta : CRGB::Black;
+		leds[23] = c->getPSW_v() ? CRGB::Magenta : CRGB::Black;
+		leds[24] = c->getPSW_z() ? CRGB::Magenta : CRGB::Black;
+		leds[25] = c->getPSW_n() ? CRGB::Magenta : CRGB::Black;
 
 		FastLED.show();
 	}
