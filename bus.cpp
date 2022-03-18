@@ -31,6 +31,10 @@ bus::bus() : c(nullptr), tm11(nullptr), rk05_(nullptr), rx02_(nullptr), tty_(nul
 	}
 
 	CPUERR = MMR2 = MMR3 = PIR = CSR = 0;
+
+#if defined(ESP32)
+	queue = xQueueCreate(10, sizeof(char));
+#endif
 }
 
 bus::~bus()
@@ -438,7 +442,12 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 
 			if (value) {
 #if defined(ESP32)
-				Serial.print(char(value & 127));
+				char c = value & 127;
+
+				Serial.print(c);
+
+				if (xQueueSend(queue, &c, portMAX_DELAY) != pdTRUE)
+					Serial.println(F("queue fail"));
 #else
 				printf("%c", value & 127);
 #endif

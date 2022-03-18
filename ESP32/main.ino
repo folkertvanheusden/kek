@@ -1,14 +1,20 @@
 // (C) 2018-2022 by Folkert van Heusden
 // Released under Apache License v2.0
 #include <FastLED.h>
+#include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <WiFi.h>
+#include <sys/poll.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 
-#include "memory.h"
 #include "cpu.h"
+#include "error.h"
+#include "esp32.h"
+#include "memory.h"
 #include "tty.h"
 #include "utils.h"
-#include "error.h"
 
 
 #define NEOPIXELS_PIN	25
@@ -44,6 +50,8 @@ void setBootLoader(bus *const b) {
 }
 
 void panel(void *p) {
+	Serial.println(F("panel task started"));
+
 	bus *const b = reinterpret_cast<bus *>(p);
 	cpu *const c = b->getCpu();
 
@@ -78,6 +86,168 @@ void panel(void *p) {
 	}
 }
 
+SemaphoreHandle_t terminal_mutex = xSemaphoreCreateMutex();
+
+TaskHandle_t wifi_task { nullptr };
+
+char terminal[25][80];
+uint8_t tx = 0, ty = 0;
+
+void delete_first_line() {
+	memmove(&terminal[0][0], &terminal[1][0], sizeof(terminal[1]));
+	memset(&terminal[24][0], ' ', sizeof(terminal[24]));
+}
+
+void telnet_terminal(void *p) {
+	bus *const b = reinterpret_cast<bus *>(p);
+
+	Serial.println(F("telnet_terminal task started"));
+
+	for(;;) {
+		char c { 0 };
+
+		xQueueReceive(b->getTerminalQueue(), &c, portMAX_DELAY);
+
+		Serial.println(F("queue recv"));
+
+		xSemaphoreTake(terminal_mutex, portMAX_DELAY);
+
+		Serial.println(F("got mutex"));
+
+		if (c == 13 || c == 10) {
+			tx = 0;
+
+			ty++;
+			if (ty == 25) {
+				delete_first_line();
+				ty--;
+			}
+		}
+		else {
+			terminal[ty][tx] = c;
+
+			tx++;
+
+			if (tx == 80) {
+				tx = 0;
+
+				ty++;
+				if (ty == 25) {
+					delete_first_line();
+					ty--;
+				}
+			}
+		}
+
+		xSemaphoreGive(terminal_mutex);
+
+		Serial.println(F("notify task"));
+
+		xTaskNotify(wifi_task, 0, eNoAction);
+	}
+}
+
+void wifi(void *p) {
+	Serial.println(F("wifi task started"));
+
+	uint32_t ulNotifiedValue = 0;
+
+	int fd = socket(AF_INET, SOCK_STREAM, 0);
+
+	struct sockaddr_in server { 0 };
+	server.sin_family = AF_INET;
+	server.sin_addr.s_addr = INADDR_ANY;
+	server.sin_port = htons(23);
+ 
+	if (bind(fd, (struct sockaddr *)&server, sizeof(server)) == -1)
+		Serial.println(F("bind failed"));
+
+	if (listen(fd, 3) == -1)
+		Serial.println(F("listen failed"));
+
+	struct pollfd fds[] = { { fd, POLLIN, 0 } };
+
+	std::vector<int> clients;
+
+	for(;;) {
+		int rc = poll(fds, 1, 10);
+
+		if (rc == 1) {
+			int client = accept(fd, nullptr, nullptr);
+			if (client != -1)
+				clients.push_back(client);
+		}
+
+		if (xTaskNotifyWait(0, 0, &ulNotifiedValue, 100 / portMAX_DELAY) != pdTRUE)
+			continue;
+
+		Serial.println(F("got notification"));
+
+		xSemaphoreTake(terminal_mutex, portMAX_DELAY);
+
+		Serial.println(F("send to clients"));
+
+		for(size_t i=0; i<clients.size(); i++) {
+			if (write(clients.at(i), terminal, 80 * 25) == -1) {
+				close(clients.at(i));
+				clients.erase(clients.begin() + i);
+			}
+			else {
+				i++;
+			}
+		}
+
+		xSemaphoreGive(terminal_mutex);
+
+		Serial.println(F("send to clients"));
+	}
+}
+
+void setup_wifi_stations()
+{
+	WiFi.mode(WIFI_STA);
+
+	WiFi.softAP("PDP-11 KEK", nullptr, 5, 0, 4);
+
+#if 0
+	Serial.println(F("Scanning for WiFi access points..."));
+
+	int n = WiFi.scanNetworks();
+
+	Serial.println(F("scan done"));
+
+	if (n == 0)
+		Serial.println(F("no networks found"));
+	else {
+		for (int i = 0; i < n; ++i) {
+			// Print SSID and RSSI for each network found
+			Serial.print(i + 1);
+			Serial.print(F(": "));
+			Serial.print(WiFi.SSID(i));
+			Serial.print(F(" ("));
+			Serial.print(WiFi.RSSI(i));
+			Serial.print(F(")"));
+			Serial.println(WiFi.encryptionType(i) == WIFI_AUTH_OPEN ? " " : "*");
+			delay(10);
+		}
+	}
+
+	std::string ssid = read_terminal_line("SSID: ");
+	std::string password = read_terminal_line("password: ");
+	WiFi.begin(ssid.c_str(), password.c_str());
+#else
+	WiFi.begin("www.vanheusden.com", "Ditiseentest31415926");
+#endif
+
+	while (WiFi.status() != WL_CONNECTED) {
+		Serial.print('.');
+
+		delay(250);
+	}
+
+	Serial.println(WiFi.localIP());
+}
+
 void setup() {
 	Serial.begin(115200);
 
@@ -108,6 +278,18 @@ void setup() {
 	Serial.println(F("Connect TTY to bus"));
 	b->add_tty(tty_);
 
+	Serial.print(F("Starting panel (on CPU 0, main emulator runs on CPU "));
+	Serial.print(xPortGetCoreID());
+	Serial.println(F(")"));
+	xTaskCreatePinnedToCore(&panel, "panel", 2048, b, 5, nullptr, 0);
+
+	memset(terminal, ' ', sizeof(terminal));
+	xTaskCreatePinnedToCore(&telnet_terminal, "telnet", 2048, b, 5, nullptr, 0);
+
+	xTaskCreatePinnedToCore(&wifi, "wifi", 2048, b, 5, &wifi_task, 0);
+
+	setup_wifi_stations();
+
 	Serial.println(F("Load RK05"));
 	b->add_rk05(new rk05("", b));
 	setBootLoader(b);
@@ -118,11 +300,6 @@ void setup() {
 	pinMode(LED_BUILTIN, OUTPUT);
 
 	Serial.flush();
-
-	Serial.print(F("Starting panel (on CPU 0, main emulator runs on CPU "));
-	Serial.print(xPortGetCoreID());
-	Serial.println(F(")"));
-	xTaskCreatePinnedToCore(&panel, "panel", 2048, b, 5, nullptr, 0);
 
 	Serial.println(F("Press <enter> to start"));
 

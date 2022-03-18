@@ -5,6 +5,7 @@
 
 #include "bus.h"
 #include "error.h"
+#include "esp32.h"
 #include "gen.h"
 #include "rk05.h"
 #include "utils.h"
@@ -42,27 +43,10 @@ rk05::rk05(const std::string & file, bus *const b) : b(b)
 
 	sd.ls("/", LS_DATE | LS_SIZE | LS_R);
 
-	std::string selected_file;
-
 	while(Serial.available())
 		Serial.read();
 
-	Serial.print(F("Enter filename: "));
-
-	for(;;) {
-		if (Serial.available()) {
-			char c = Serial.read();
-
-			if (c == 13 || c == 10)
-				break;
-
-			if (c >= 32 && c < 127) {
-				selected_file += c;
-
-				Serial.print(c);
-			}
-		}
-	}
+	std::string selected_file = read_terminal_line("Enter filename: ");
 
 	Serial.print(F("Opening file: "));
 	Serial.println(selected_file.c_str());
