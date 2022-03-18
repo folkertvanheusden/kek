@@ -58,6 +58,7 @@ public:
 	uint16_t popStack();
 
 	void busError();
+	void trap(const uint16_t vector);
 
 	void setEmulateMFPT(const bool v) { emulateMFPT = v; }
 

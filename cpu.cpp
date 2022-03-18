@@ -1104,18 +1104,17 @@ void cpu::busError()
 {
 	fprintf(stderr, "BUS ERROR\n");
 
-	//  PSW = 177776
-	//  mov @#PSW, -(sp)
+	trap(4);
+}
+
+void cpu::trap(const uint16_t vector)
+{
+	fprintf(stderr, "TRAP %o\n", vector);
+
 	pushStack(getPSW());
-
-	//  mov pc, -(sp)
 	pushStack(getPC());
-
-	//  mov @#VEC+2, @#PSW
-	setPSW(b -> readWord(6));
-
-	//  mov @#VEC, pc
-	setPC(b -> readWord(4));
+	setPSW(b -> readWord(vector + 2));
+	setPC(b -> readWord(vector + 0));
 }
 
 std::pair<std::string, int> cpu::addressing_to_string(const uint8_t mode_register, const uint16_t pc)
