@@ -149,6 +149,9 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 	const int reg = (addr - RK05_BASE) / 2;
 	fprintf(stderr, "RK05 write %s/%o: %o\n", regnames[reg], addr, v);
 
+	D(fprintf(stderr, "set register %o to %o\n", addr, v);)
+	registers[reg] = v;
+
 	if (addr == RK05_CS) {
 		if (v & 1) { // GO
 			const int func = (v >> 1) & 7; // FUNCTION
@@ -272,9 +275,6 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 			registers[(RK05_WC - RK05_BASE) / 2] = 0;
 		}
 	}
-
-	D(fprintf(stderr, "set register %o to %o\n", addr, v);)
-	registers[reg] = v;
 
 #if defined(ESP32)
 	digitalWrite(LED_BUILTIN, HIGH);
