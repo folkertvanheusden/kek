@@ -89,9 +89,9 @@ void panel(void *p) {
 SemaphoreHandle_t terminal_mutex = xSemaphoreCreateMutex();
 
 constexpr int terminal_columns = 80;
-constexpr int terminal_rows    = 24;
+constexpr int terminal_rows    = 25;
 char terminal[terminal_columns * terminal_rows];
-uint8_t tx = 0, ty = 24;
+uint8_t tx = 0, ty = terminal_rows - 1;
 QueueHandle_t to_telnet_queue = xQueueCreate(10, sizeof(char));
 
 void delete_first_line() {
