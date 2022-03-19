@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "bus.h"
+#include "cpu.h"
 #include "error.h"
 #include "esp32.h"
 #include "gen.h"
@@ -133,6 +134,9 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 	const int reg = (addr - RK05_BASE) / 2;
 	fprintf(stderr, "RK05 write %s/%o: %o\n", regnames[reg], addr, v);
 
+	D(fprintf(stderr, "set register %o to %o\n", addr, v);)
+	registers[reg] = v;
+
 	if (addr == RK05_CS) {
 		if (v & 1) { // GO
 			const int func = (v >> 1) & 7; // FUNCTION
@@ -206,9 +210,9 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 				while(temp > 0) {
 					uint32_t cur = std::min(uint32_t(sizeof xfer_buffer), temp);
 
+#if defined(ESP32)
 					yield();
 
-#if defined(ESP32)
 					if (fh.read(xfer_buffer, cur) != size_t(cur))
 						D(fprintf(stderr, "RK05 fread error: %s\n", strerror(errno));)
 #else
@@ -249,16 +253,16 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 				fprintf(stderr, "RK05 command %d UNHANDLED\n", func);
 			}
 
-			if (v & 64) { // bit 6, invoke interrupt when done vector address 220, see http://www.pdp-11.nl/peripherals/disk/rk05-info.html
-				fprintf(stderr, "RK05 HIER\n"); // FIXME
-			}
-
 			registers[(RK05_WC - RK05_BASE) / 2] = 0;
+
+			registers[(RK05_DS - RK05_BASE) / 2] |= 64;  // drive ready
+			registers[(RK05_CS - RK05_BASE) / 2] |= 128;  // control ready
+
+			if (v & 64) { // bit 6, invoke interrupt when done vector address 220, see http://www.pdp-11.nl/peripherals/disk/rk05-info.html
+				b->getCpu()->trap(0220);
+			}
 		}
 	}
-
-	D(fprintf(stderr, "set register %o to %o\n", addr, v);)
-	registers[reg] = v;
 
 #if defined(ESP32)
 	digitalWrite(LED_BUILTIN, HIGH);
