@@ -1,4 +1,4 @@
-// (C) 2018 by Folkert van Heusden
+// (C) 2018-2022 by Folkert van Heusden
 // Released under Apache License v2.0
 #pragma once
 
@@ -22,11 +22,19 @@ private:
 	bool testMode { false }, withUI { false };
 	char c { 0 };
 
+#if defined(ESP32)
+	QueueHandle_t queue { nullptr };
+#endif
+
 public:
 	tty(const bool withUI);
 	virtual ~tty();
 
 	void setTest() { testMode = true; }
+
+#if defined(ESP32)
+	QueueHandle_t & getTerminalQueue() { return queue; }
+#endif
 
 	void sendChar(const char v);
 

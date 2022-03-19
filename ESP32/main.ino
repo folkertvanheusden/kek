@@ -100,19 +100,19 @@ void delete_first_line() {
 
 void telnet_terminal(void *p) {
 	bus *const b = reinterpret_cast<bus *>(p);
+	tty *const tty_ = b->getTty();
 
 	Serial.println(F("telnet_terminal task started"));
+
+	if (!tty_)
+		Serial.println(F(" *** NO TTY ***"));
 
 	for(;;) {
 		char c { 0 };
 
-		xQueueReceive(b->getTerminalQueue(), &c, portMAX_DELAY);
-
-		Serial.println(F("queue recv"));
+		xQueueReceive(tty_->getTerminalQueue(), &c, portMAX_DELAY);
 
 		xSemaphoreTake(terminal_mutex, portMAX_DELAY);
-
-		Serial.println(F("got mutex"));
 
 		if (c == 13 || c == 10) {
 			tx = 0;
@@ -140,8 +140,6 @@ void telnet_terminal(void *p) {
 		}
 
 		xSemaphoreGive(terminal_mutex);
-
-		Serial.println(F("notify task"));
 
 		xTaskNotify(wifi_task, 0, eNoAction);
 	}
@@ -181,14 +179,17 @@ void wifi(void *p) {
 		if (xTaskNotifyWait(0, 0, &ulNotifiedValue, 100 / portMAX_DELAY) != pdTRUE)
 			continue;
 
-		Serial.println(F("got notification"));
-
 		xSemaphoreTake(terminal_mutex, portMAX_DELAY);
 
-		Serial.println(F("send to clients"));
+		std::string out = "\033[2J";
+
+		for(int y=0; y<25; y++)
+			out += format("\033[%dH", y + 1) + std::string(&terminal[y][0], 80);
+
+		xSemaphoreGive(terminal_mutex);
 
 		for(size_t i=0; i<clients.size(); i++) {
-			if (write(clients.at(i), terminal, 80 * 25) == -1) {
+			if (write(clients.at(i), out.c_str(), out.size()) == -1) {
 				close(clients.at(i));
 				clients.erase(clients.begin() + i);
 			}
@@ -196,10 +197,6 @@ void wifi(void *p) {
 				i++;
 			}
 		}
-
-		xSemaphoreGive(terminal_mutex);
-
-		Serial.println(F("send to clients"));
 	}
 }
 
@@ -282,12 +279,12 @@ void setup() {
 	Serial.print(F("Starting panel (on CPU 0, main emulator runs on CPU "));
 	Serial.print(xPortGetCoreID());
 	Serial.println(F(")"));
-	xTaskCreatePinnedToCore(&panel, "panel", 2048, b, 5, nullptr, 0);
+	xTaskCreatePinnedToCore(&panel, "panel", 2048, b, 1, nullptr, 0);
 
 	memset(terminal, ' ', sizeof(terminal));
-	xTaskCreatePinnedToCore(&telnet_terminal, "telnet", 2048, b, 5, nullptr, 0);
+	xTaskCreatePinnedToCore(&telnet_terminal, "telnet", 2048, b, 7, nullptr, 0);
 
-	xTaskCreatePinnedToCore(&wifi, "wifi", 2048, b, 5, &wifi_task, 0);
+	xTaskCreatePinnedToCore(&wifi, "wifi", 2048, b, 7, &wifi_task, 0);
 
 	setup_wifi_stations();
 

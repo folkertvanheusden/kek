@@ -18,7 +18,6 @@ void setBit(uint16_t & v, const int bit, const bool vb)
 		v |= mask;
 }
 
-#if !defined(ESP32)
 std::string format(const char *const fmt, ...)
 {
 	char *buffer = nullptr;
@@ -33,7 +32,6 @@ std::string format(const char *const fmt, ...)
 
 	return result;
 }
-#endif
 
 unsigned long get_ms()
 {

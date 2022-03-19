@@ -8,7 +8,5 @@ int parity(int v);
 
 #define sign(a) ( ( (a) < 0 )  ?  -1   : ( (a) > 0 ) )
 
-#if !defined(ESP32)
 std::string format(const char *const fmt, ...);
-#endif
 unsigned long get_ms();

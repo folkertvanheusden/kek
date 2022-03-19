@@ -33,10 +33,6 @@ private:
 
 	uint16_t MMR2 { 0 }, MMR3 { 0 }, CPUERR { 0 }, PIR { 0 }, CSR { 0 };
 
-#if defined(ESP32)
-	QueueHandle_t queue { nullptr };
-#endif
-
 public:
 	bus();
 	~bus();
@@ -49,11 +45,9 @@ public:
 	void add_rx02(rx02 *rx02_) { this -> rx02_ = rx02_; }
 	void add_tty(tty *tty_) { this -> tty_ = tty_; }
 
-	cpu *getCpu() { return this -> c; }
+	cpu *getCpu() { return this->c; }
 
-#if defined(ESP32)
-	QueueHandle_t & getTerminalQueue() { return queue; }
-#endif
+	tty *getTty() { return this->tty_; }
 
 	uint16_t read(const uint16_t a, const bool word_mode, const bool use_prev=false);
 	uint16_t readByte(const uint16_t a) { return read(a, true); }

@@ -1,8 +1,5 @@
 // (C) 2018 by Folkert van Heusden
 // Released under Apache License v2.0
-#if defined(ESP32)
-#include <Arduino.h>
-#endif
 #include <assert.h>
 #include <stdio.h>
 
@@ -31,10 +28,6 @@ bus::bus() : c(nullptr), tm11(nullptr), rk05_(nullptr), rx02_(nullptr), tty_(nul
 	}
 
 	CPUERR = MMR2 = MMR3 = PIR = CSR = 0;
-
-#if defined(ESP32)
-	queue = xQueueCreate(10, sizeof(char));
-#endif
 }
 
 bus::~bus()
@@ -434,25 +427,6 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 
 		if (a == 0177374) { // FIXME
 			fprintf(stderr, "char: %c\n", value & 127);
-			return 128;
-		}
-
-		if (a == 0177566) { // console tty buffer register
-			D(fprintf(stderr, "bus::write TTY buffer %d / %c\n", value, value);)
-
-			if (value) {
-#if defined(ESP32)
-				char c = value & 127;
-
-				Serial.print(c);
-
-				if (xQueueSend(queue, &c, portMAX_DELAY) != pdTRUE)
-					Serial.println(F("queue fail"));
-#else
-				printf("%c", value & 127);
-#endif
-			}
-
 			return 128;
 		}
 

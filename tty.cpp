@@ -29,6 +29,13 @@ const char * const regnames[] = {
 tty::tty(const bool withUI) : withUI(withUI)
 {
 	memset(registers, 0x00, sizeof registers);
+
+#if defined(ESP32)
+	queue = xQueueCreate(10, sizeof(char));
+
+	if (queue == nullptr)
+		Serial.println(F("Problem creating TTY queue"));
+#endif
 }
 
 tty::~tty()
@@ -103,7 +110,12 @@ void tty::writeWord(const uint16_t addr, uint16_t v)
 		v &= 127;
 
 #if defined(ESP32)
-		Serial.print(char(v));
+		char c = v & 127;
+
+		Serial.print(c);
+
+		if (xQueueSend(queue, &c, portMAX_DELAY) != pdTRUE)
+			Serial.println(F("queue TTY character failed"));
 #else
 		FILE *tf = fopen("tty.dat", "a+");
 		if (tf) {
