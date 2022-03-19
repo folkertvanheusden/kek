@@ -86,7 +86,7 @@ uint16_t rk05::readWord(const uint16_t addr)
 {
 	const int reg = (addr - RK05_BASE) / 2;
 
-	fprintf(stderr, "RK05 read %s/%o: ", reg[regnames], addr);
+	D(fprintf(stderr, "RK05 read %s/%o: ", reg[regnames], addr);)
 
 	if (addr == RK05_DS) {		// 0177400
 		setBit(registers[reg], 11, true); // disk on-line
@@ -134,7 +134,7 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 #endif
 
 	const int reg = (addr - RK05_BASE) / 2;
-	fprintf(stderr, "RK05 write %s/%o: %o\n", regnames[reg], addr, v);
+	D(fprintf(stderr, "RK05 write %s/%o: %o\n", regnames[reg], addr, v);)
 
 	D(fprintf(stderr, "set register %o to %o\n", addr, v);)
 	registers[reg] = v;
@@ -144,21 +144,21 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 			const int func = (v >> 1) & 7; // FUNCTION
 			int16_t wc = registers[(RK05_WC - RK05_BASE) / 2];
 			const size_t reclen = wc < 0 ? (-wc * 2) : wc * 2;
-			fprintf(stderr, "RK05 rec len %zd\n", reclen);
+			D(fprintf(stderr, "RK05 rec len %zd\n", reclen);)
 
 			uint16_t dummy = registers[(RK05_DA - RK05_BASE) / 2];
 			uint8_t sector = dummy & 0b1111;
 			uint8_t surface = (dummy >> 4) & 1;
 			int track = (dummy >> 4) & 511;
 			uint16_t cylinder = (dummy >> 5) & 255;
-			fprintf(stderr, "RK05 position sec %d surf %d cyl %d\n", sector, surface, cylinder);
+			D(fprintf(stderr, "RK05 position sec %d surf %d cyl %d\n", sector, surface, cylinder);)
 
 			const int diskoff = track * 12 + sector;
 
 			const int diskoffb = diskoff * 512; // RK05 is high density
 			const uint16_t memoff = registers[(RK05_BA - RK05_BASE) / 2];
 
-			fprintf(stderr, "invoke %d\n", func);
+			D(fprintf(stderr, "invoke %d\n", func);)
 
 			if (func == 0) { // controller reset
 			}
@@ -182,7 +182,7 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 #endif
 
 				if (v & 2048)
-					fprintf(stderr, "RK05 inhibit BA increase\n");
+					D(fprintf(stderr, "RK05 inhibit BA increase\n");)
 				else
 					registers[(RK05_BA - RK05_BASE) / 2] += p;
 
@@ -197,7 +197,7 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 				registers[(RK05_DA - RK05_BASE) / 2] = sector | (surface << 4) | (cylinder << 5);
 			}
 			else if (func == 2) { // read
-				fprintf(stderr, "RK05 reading %zo bytes from offset %o (%d dec) to %o\n", reclen, diskoffb, diskoffb, memoff);
+				D(fprintf(stderr, "RK05 reading %zo bytes from offset %o (%d dec) to %o\n", reclen, diskoffb, diskoffb, memoff);)
 
 #if defined(ESP32)
 				if (!fh.seek(diskoffb))
@@ -232,7 +232,7 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 				}
 
 				if (v & 2048)
-					fprintf(stderr, "RK05 inhibit BA increase\n");
+					D(fprintf(stderr, "RK05 inhibit BA increase\n");)
 				else
 					registers[(RK05_BA - RK05_BASE) / 2] += p;
 
@@ -247,12 +247,12 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 				registers[(RK05_DA - RK05_BASE) / 2] = sector | (surface << 4) | (cylinder << 5);
 			}
 			else if (func == 4) {
-				fprintf(stderr, "RK05 seek to offset %o\n", diskoffb);
+				D(fprintf(stderr, "RK05 seek to offset %o\n", diskoffb);)
 			}
 			else if (func == 7)
-				fprintf(stderr, "RK05 write lock\n");
+				D(fprintf(stderr, "RK05 write lock\n");)
 			else {
-				fprintf(stderr, "RK05 command %d UNHANDLED\n", func);
+				D(fprintf(stderr, "RK05 command %d UNHANDLED\n", func);)
 			}
 
 			registers[(RK05_WC - RK05_BASE) / 2] = 0;
