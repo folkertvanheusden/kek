@@ -30,8 +30,6 @@ private:
 	uint16_t getGAM(const uint8_t mode, const uint8_t reg, const bool word_mode, const bool MF_MT);
 	void putGAM(const uint8_t mode, const int reg, const bool word_mode, const uint16_t value, const bool MF_FT);
 
-	void switchModeToKernel();
-
 	bool double_operand_instructions(const uint16_t instr);
 	bool additional_double_operand_instructions(const uint16_t instr);
 	bool single_operand_instructions(const uint16_t instr);

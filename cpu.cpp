@@ -969,7 +969,7 @@ bool cpu::condition_code_operations(const uint16_t instr)
 void cpu::pushStack(const uint16_t v)
 {
 	if (getRegister(6) == stackLimitRegister) {
-		printf("stackLimitRegister reached\n");
+		printf("stackLimitRegister reached\n");  // TODO
 		exit(1);
 	}
 
@@ -982,13 +982,6 @@ uint16_t cpu::popStack()
 	uint16_t temp = b -> readWord(getRegister(6, false));
 	addRegister(6, false, 2);
 	return temp;
-}
-
-void cpu::switchModeToKernel()
-{
-	int previous_mode = (psw >> 14) & 3;
-	psw &= 0007777;
-	psw |= previous_mode << 12;
 }
 
 bool cpu::misc_operations(const uint16_t instr)
@@ -1039,7 +1032,6 @@ bool cpu::misc_operations(const uint16_t instr)
 
 	if ((instr >> 8) == 0b10001001) { // TRAP
 		trap(034);
-		switchModeToKernel();
 		return true;
 	}
 
@@ -1089,13 +1081,20 @@ void cpu::busError()
 
 void cpu::trap(const uint16_t vector)
 {
-	pushStack(getPSW());
-	pushStack(getPC());
+	uint16_t before_psw = getPSW();
+	uint16_t before_pc  = getPC();
 
-	setPSW(b->readWord(vector + 2));
-	setPC (b->readWord(vector + 0));
+	// switch to kernel mode & update 'previous mode'
+	uint16_t new_psw = b->readWord(vector + 2) & 0147777;  // mask off old 'previous mode'
+	new_psw |= (before_psw >> 2) & 030000; // apply new 'previous mode'
+	setPSW(new_psw);
 
-	D(fprintf(stderr, "TRAP %o: PC is now %06o\n", vector, getPC());)
+	pushStack(before_psw);
+	pushStack(before_pc);
+
+	setPC(b->readWord(vector + 0));
+
+	D(fprintf(stderr, "TRAP %o: PC is now %06o, PSW is now %06o\n", vector, getPC(), new_psw);)
 }
 
 std::pair<std::string, int> cpu::addressing_to_string(const uint8_t mode_register, const uint16_t pc)
