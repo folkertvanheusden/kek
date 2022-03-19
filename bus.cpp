@@ -247,6 +247,11 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev)
 
 	const uint8_t apf = a >> 13; // active page field
 	bool is_user = use_prev ? (c -> getBitPSW(12) && c -> getBitPSW(13)) : (c -> getBitPSW(14) && c -> getBitPSW(15));
+
+	// always retrieve interrupt etc vectors from kernel space
+	if (a < 256 * 4)
+		is_user = false;
+
 	uint32_t m_offset = pages[apf + is_user * 8].par * 64;
 
 	if ((a & 1) && word_mode == 0)
@@ -447,6 +452,11 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 	const uint8_t apf = a >> 13; // active page field
 	bool is_user = use_prev ? (c -> getBitPSW(12) && c -> getBitPSW(13)) : (c -> getBitPSW(14) && c -> getBitPSW(15));
 	uint32_t m_offset = pages[apf + is_user * 8].par * 64;
+
+	// always write interrupt etc vectors from to kernel space
+	// TODO: check rights
+	if (a < 256 * 4)
+		is_user = false;
 
 	pages[apf].pdr |= 1 << 6; // page has been written to
 
