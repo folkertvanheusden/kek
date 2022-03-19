@@ -529,12 +529,18 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 			}
 
 		case 7: { // SOB
-			uint16_t oldPC = getPC(); // FIXME gaat dit wel goed voor R7?
-			addRegister(reg, false, -1);
+			uint16_t oldPC = getPC();
+
+			if (reg == 7)
+				addRegister(reg, false, -2);
+			else
+				addRegister(reg, false, -1);
+
 			if (getRegister(reg, false)) {
 				uint16_t newPC = oldPC - dst * 2;
 				setPC(newPC);
 			}
+
 			return true;
 		}
 	}
