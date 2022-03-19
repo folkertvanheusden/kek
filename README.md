@@ -26,5 +26,6 @@ To run a tape image:
 ... where offset is a decimal(!) address to start (optional).
 
 
-Released in 2018 under AGPL v3.0
+Released under Apache License v2.0
+
 Folkert van Heusden
