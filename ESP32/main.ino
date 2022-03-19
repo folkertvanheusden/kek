@@ -88,10 +88,9 @@ void panel(void *p) {
 
 SemaphoreHandle_t terminal_mutex = xSemaphoreCreateMutex();
 
-TaskHandle_t wifi_task { nullptr };
-
 char terminal[25][80];
 uint8_t tx = 0, ty = 0;
+QueueHandle_t queue = xQueueCreate(10, sizeof(char));
 
 void delete_first_line() {
 	memmove(&terminal[0][0], &terminal[1][0], sizeof(terminal[1]));
@@ -112,6 +111,7 @@ void telnet_terminal(void *p) {
 
 		xQueueReceive(tty_->getTerminalQueue(), &c, portMAX_DELAY);
 
+		// update terminal buffer
 		xSemaphoreTake(terminal_mutex, portMAX_DELAY);
 
 		if (c == 13 || c == 10) {
@@ -141,7 +141,9 @@ void telnet_terminal(void *p) {
 
 		xSemaphoreGive(terminal_mutex);
 
-		xTaskNotify(wifi_task, 0, eNoAction);
+		// pass through to telnet clients
+		if (xQueueSend(queue, &c, portMAX_DELAY) != pdTRUE)
+			Serial.println(F("queue TTY character failed"));
 	}
 }
 
@@ -172,29 +174,37 @@ void wifi(void *p) {
 
 		if (rc == 1) {
 			int client = accept(fd, nullptr, nullptr);
-			if (client != -1)
+			if (client != -1) {
 				clients.push_back(client);
+
+				// send initial terminal stat
+				std::string out = "\033[2J";
+
+				xSemaphoreTake(terminal_mutex, portMAX_DELAY);
+
+				for(int y=0; y<25; y++)
+					out += format("\033[%dH", y + 1) + std::string(&terminal[y][0], 80);
+
+				xSemaphoreGive(terminal_mutex);
+
+				write(client, out.c_str(), out.size());
+			}
 		}
 
-		if (xTaskNotifyWait(0, 0, &ulNotifiedValue, 100 / portMAX_DELAY) != pdTRUE)
-			continue;
+		std::string out;
+		char c { 0 };
+		while (xQueueReceive(tty_->getTerminalQueue(), &c, 10 / portMAX_DELAY) == pdTRUE)
+			out += c;
 
-		xSemaphoreTake(terminal_mutex, portMAX_DELAY);
-
-		std::string out = "\033[2J";
-
-		for(int y=0; y<25; y++)
-			out += format("\033[%dH", y + 1) + std::string(&terminal[y][0], 80);
-
-		xSemaphoreGive(terminal_mutex);
-
-		for(size_t i=0; i<clients.size(); i++) {
-			if (write(clients.at(i), out.c_str(), out.size()) == -1) {
-				close(clients.at(i));
-				clients.erase(clients.begin() + i);
-			}
-			else {
-				i++;
+		if (!out.empty()) {
+			for(size_t i=0; i<clients.size(); i++) {
+				if (write(clients.at(i), out.c_str(), out.size()) == -1) {
+					close(clients.at(i));
+					clients.erase(clients.begin() + i);
+				}
+				else {
+					i++;
+				}
 			}
 		}
 	}
@@ -284,7 +294,7 @@ void setup() {
 	memset(terminal, ' ', sizeof(terminal));
 	xTaskCreatePinnedToCore(&telnet_terminal, "telnet", 2048, b, 7, nullptr, 0);
 
-	xTaskCreatePinnedToCore(&wifi, "wifi", 2048, b, 7, &wifi_task, 0);
+	xTaskCreatePinnedToCore(&wifi, "wifi", 2048, b, 7, nullptr, 0);
 
 	setup_wifi_stations();
 
