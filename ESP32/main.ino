@@ -197,7 +197,7 @@ void wifi(void *p) {
 			out += c;
 
 		if (!out.empty()) {
-			for(size_t i=0; i<clients.size(); i++) {
+			for(size_t i=0; i<clients.size();) {
 				if (write(clients.at(i), out.c_str(), out.size()) == -1) {
 					close(clients.at(i));
 					clients.erase(clients.begin() + i);
