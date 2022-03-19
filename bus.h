@@ -33,6 +33,8 @@ private:
 
 	uint16_t MMR2 { 0 }, MMR3 { 0 }, CPUERR { 0 }, PIR { 0 }, CSR { 0 };
 
+	uint16_t switch_register { 0 };
+
 public:
 	bus();
 	~bus();
@@ -58,6 +60,8 @@ public:
 	uint16_t writeWord(const uint16_t a, const uint16_t value);
 
 	void setMMR2(const uint16_t value) { MMR2 = value; }
+
+	uint16_t get_switch_register() const { return switch_register; }
 
 	uint32_t calculate_full_address(const uint16_t a);
 };

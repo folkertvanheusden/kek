@@ -16,10 +16,14 @@
 #include "error.h"
 
 struct termios org_tty_opts { 0 };
+bool withUI = false;
 
 void reset_terminal()
 {
-	tcsetattr(STDIN_FILENO, TCSANOW, &org_tty_opts);
+	if (withUI)
+		endwin();
+	else
+		tcsetattr(STDIN_FILENO, TCSANOW, &org_tty_opts);
 }
 
 void loadbin(bus *const b, uint16_t base, const char *const file)
@@ -225,7 +229,7 @@ int main(int argc, char *argv[])
 
 	c -> setEmulateMFPT(true);
 
-	bool testMode = false, testCases = false, withUI = false;
+	bool testMode = false, testCases = false;
 	int opt = -1;
 	while((opt = getopt(argc, argv, "hm:T:R:p:nL:")) != -1)
 	{
@@ -333,9 +337,10 @@ int main(int argc, char *argv[])
 					tty_->sendChar(ch);
 			}
 
-			if (icount % 1000000 == 0 && withUI) {
+			if (icount % 100000 == 0 && withUI) {
 				unsigned long now = get_ms();
 				mvwprintw(w_main_b -> win, 0, 24, "%.1f/s   ", icount * 1000.0 / (now - start));
+				mvwprintw(w_main_b -> win, 0, 42, "%06o", b->get_switch_register());
 				mydoupdate();
 			}
 		}

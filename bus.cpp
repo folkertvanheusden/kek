@@ -423,6 +423,11 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 			return value;
 		}
 
+		if (a == 0177570) {  // switch register
+			switch_register = value;
+			return value;
+		}
+
 		///////////
 
 		if (a == 0177374) { // FIXME
