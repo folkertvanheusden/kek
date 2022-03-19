@@ -14,7 +14,16 @@ std::string read_terminal_line(const std::string & prompt)
 			if (c == 13 || c == 10)
 				break;
 
-			if (c >= 32 && c < 127) {
+			if (c == 8) {
+				if (!str.empty()) {
+					str = str.substr(0, str.size() - 1);
+
+					Serial.print(char(8));
+					Serial.print(' ');
+					Serial.print(char(8));
+				}
+			}
+			else if (c >= 32 && c < 127) {
 				str += c;
 
 				Serial.print(c);
