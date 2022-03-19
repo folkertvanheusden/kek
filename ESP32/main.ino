@@ -170,16 +170,19 @@ void wifi(void *p) {
 				clients.push_back(client);
 
 				// send initial terminal stat
-				std::string out = "\033[2J";
+				write(client, "\033[2J", 4);
 
 				xSemaphoreTake(terminal_mutex, portMAX_DELAY);
 
-				for(int y=0; y<25; y++)
-					out += format("\033[%dH", y + 1) + std::string(&terminal[y * 80], 80);
+				for(int y=0; y<25; y++) {
+					std::string out = format("\033[%dH", y + 1);
+					write(client, out.c_str(), out.size());
+
+					if (write(client, &terminal[y * 80], 80) != 80)
+						break;
+				}
 
 				xSemaphoreGive(terminal_mutex);
-
-				write(client, out.c_str(), out.size());
 			}
 		}
 
