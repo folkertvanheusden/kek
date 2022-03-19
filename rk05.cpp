@@ -44,18 +44,22 @@ rk05::rk05(const std::string & file, bus *const b) : b(b)
 	if (!sd.begin(SS, SD_SCK_MHZ(15)))
 		sd.initErrorHalt();
 
-	sd.ls("/", LS_DATE | LS_SIZE | LS_R);
+	for(;;) {
+		sd.ls("/", LS_DATE | LS_SIZE | LS_R);
 
-	while(Serial.available())
-		Serial.read();
+		while(Serial.available())
+			Serial.read();
 
-	std::string selected_file = read_terminal_line("Enter filename: ");
+		std::string selected_file = read_terminal_line("Enter filename: ");
 
-	Serial.print(F("Opening file: "));
-	Serial.println(selected_file.c_str());
+		Serial.print(F("Opening file: "));
+		Serial.println(selected_file.c_str());
 
-	if (!fh.open(selected_file.c_str(), O_RDWR))
-		sd.errorHalt(F("rk05: open failed"));
+		if (fh.open(selected_file.c_str(), O_RDWR))
+			break;
+
+		Serial.println(F("rk05: open failed"));
+	}
 #else
 	fh = fopen(file.c_str(), "rb");
 	if (!fh)

@@ -172,6 +172,16 @@ void wifi(void *p) {
 			if (client != -1) {
 				clients.push_back(client);
 
+				constexpr const uint8_t dont_auth[] = { 0xff, 0xf4, 0x25,  // don't auth
+									0xff, 0xfb, 0x03,  // suppress goahead
+									0xff, 0xfe, 0x22,  // don't line-mode
+									0xff, 0xfe, 0x27,  // don't new envt0
+									0xff, 0xfb, 0x01,  // will echo
+									0xff, 0xfe, 0x01,  // don't echo
+									0xff, 0xfd, 0x2d };  // no echo
+
+				write(client, dont_auth, sizeof(dont_auth));
+
 				// send initial terminal stat
 				write(client, "\033[2J", 4);
 

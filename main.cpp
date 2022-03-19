@@ -314,6 +314,21 @@ int main(int argc, char *argv[])
 
 	for(;;) {
 		if (c->step()) {
+#if !defined(ESP32)
+			FILE *fh = fopen("halt.mac", "wb");
+			if (fh) {
+				uint16_t pc = 024320;
+				fprintf(fh, "\t.LINK %06o\n", pc);
+
+				for(int i=0; i<4096; i += 2)
+					fprintf(fh, "\t.DW %06o\n", b->readWord((pc + i) & 0xffff));
+
+				fprintf(fh, "\tmake_raw\n");
+
+				fclose(fh);
+			}
+#endif
+
 			//c->setRegister(7, 01000);
 			//c->resetHalt();
 			break;
