@@ -88,13 +88,15 @@ void panel(void *p) {
 
 SemaphoreHandle_t terminal_mutex = xSemaphoreCreateMutex();
 
-char terminal[80 * 25];
-uint8_t tx = 0, ty = 0;
-QueueHandle_t queue = xQueueCreate(10, sizeof(char));
+constexpr int terminal_columns = 80;
+constexpr int terminal_rows    = 24;
+char terminal[terminal_columns * terminal_rows];
+uint8_t tx = 0, ty = 24;
+QueueHandle_t to_telnet_queue = xQueueCreate(10, sizeof(char));
 
 void delete_first_line() {
-	memmove(&terminal[0], &terminal[80], 80 * 24);
-	memset(&terminal[80 * 24], ' ', 80);
+	memmove(&terminal[0], &terminal[terminal_columns], terminal_columns * (terminal_rows - 1));
+	memset(&terminal[terminal_columns * (terminal_rows - 1)], ' ', terminal_columns);
 }
 
 void telnet_terminal(void *p) {
@@ -107,26 +109,27 @@ void telnet_terminal(void *p) {
 		Serial.println(F(" *** NO TTY ***"));
 
 	for(;;) {
-		char c { 0 };
+		char cc { 0 };
 
-		xQueueReceive(tty_->getTerminalQueue(), &c, portMAX_DELAY);
+		xQueueReceive(tty_->getTerminalQueue(), &cc, portMAX_DELAY);
 
 		// update terminal buffer
 		xSemaphoreTake(terminal_mutex, portMAX_DELAY);
 
-		if (c == 13 || c == 10) {
-			tx = 0, ty++;
-		}
+		if (cc == 13)
+			tx = 0;
+		else if (cc == 10)
+			ty++;
 		else {
-			terminal[ty * 80 + tx] = c;
+			terminal[ty * terminal_columns + tx] = cc;
 
 			tx++;
 
-			if (tx == 80)
+			if (tx == terminal_columns)
 				tx = 0, ty++;
 		}
 
-		if (ty == 25) {
+		if (ty == terminal_rows) {
 			delete_first_line();
 			ty--;
 		}
@@ -134,7 +137,7 @@ void telnet_terminal(void *p) {
 		xSemaphoreGive(terminal_mutex);
 
 		// pass through to telnet clients
-		if (xQueueSend(queue, &c, portMAX_DELAY) != pdTRUE)
+		if (xQueueSend(to_telnet_queue, &cc, portMAX_DELAY) != pdTRUE)
 			Serial.println(F("queue TTY character failed"));
 	}
 }
@@ -174,11 +177,12 @@ void wifi(void *p) {
 
 				xSemaphoreTake(terminal_mutex, portMAX_DELAY);
 
-				for(int y=0; y<25; y++) {
+				for(int y=0; y<terminal_rows; y++) {
 					std::string out = format("\033[%dH", y + 1);
-					write(client, out.c_str(), out.size());
+					if (write(client, out.c_str(), out.size()) != out.size())
+						break;
 
-					if (write(client, &terminal[y * 80], 80) != 80)
+					if (write(client, &terminal[y * terminal_columns], terminal_columns) != terminal_columns)
 						break;
 				}
 
@@ -188,7 +192,7 @@ void wifi(void *p) {
 
 		std::string out;
 		char c { 0 };
-		while (xQueueReceive(tty_->getTerminalQueue(), &c, 10 / portMAX_DELAY) == pdTRUE)
+		while (xQueueReceive(to_telnet_queue, &c, 10 / portMAX_DELAY) == pdTRUE)
 			out += c;
 
 		if (!out.empty()) {
