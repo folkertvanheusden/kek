@@ -1109,12 +1109,12 @@ void cpu::busError()
 
 void cpu::trap(const uint16_t vector)
 {
-	fprintf(stderr, "TRAP %o\n", vector);
-
 	pushStack(getPSW());
 	pushStack(getPC());
 	setPSW(b -> readWord(vector + 2));
 	setPC(b -> readWord(vector + 0));
+
+	fprintf(stderr, "TRAP %o: PC is now %06o\n", vector, getPC());
 }
 
 std::pair<std::string, int> cpu::addressing_to_string(const uint8_t mode_register, const uint16_t pc)
