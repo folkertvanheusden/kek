@@ -940,10 +940,7 @@ bool cpu::condition_code_operations(const uint16_t instr)
 		setPSW_spl(level);
 
 		// trap via vector 010
-		pushStack(getPSW());
-		pushStack(getPC());
-		setPSW(b->readWord(012));
-		setPC(b->readWord(010));
+		trap(010);
 
 		fprintf(stderr, "SPL%d, new pc: %06o\n", level, getPC());
 
@@ -1010,17 +1007,11 @@ bool cpu::misc_operations(const uint16_t instr)
 			return true;
 
 		case 0b0000000000000011: // BPT
-			pushStack(getPSW());
-			pushStack(getPC());
-			setPC(b -> readWord(014));
-			setPSW(b -> readWord(016));
+			trap(014);
 			return true;
 
 		case 0b0000000000000100: // IOT
-			pushStack(getPSW());
-			pushStack(getPC());
-			setPC(b -> readWord(020));
-			setPSW(b -> readWord(022));
+			trap(020);
 			return true;
 
 		case 0b0000000000000110: // RTT
@@ -1031,12 +1022,8 @@ bool cpu::misc_operations(const uint16_t instr)
 		case 0b0000000000000111: // MFPT
 			if (emulateMFPT)
 				setRegister(0, true, 1); // PDP-11/44
-			else {
-				pushStack(getPSW());
-				pushStack(getPC());
-				setPC(b -> readWord(012));
-				setPSW(b -> readWord(014));
-			}
+			else
+				trap(012);
 			return true;
 
 		case 0b0000000000000101: // RESET
@@ -1045,19 +1032,13 @@ bool cpu::misc_operations(const uint16_t instr)
 	}
 
 	if ((instr >> 8) == 0b10001000) { // EMT
-		pushStack(getPSW());
-		pushStack(getPC());
-		setPC(b -> readWord(030));
-		setPSW(b -> readWord(032));
+		trap(030);
 		return true;
 	}
 
 	if ((instr >> 8) == 0b10001001) { // TRAP
-		pushStack(getPSW());
-		pushStack(getPC());
+		trap(034);
 		switchModeToKernel();
-		setPC(b -> readWord(034));
-		setPSW(b -> readWord(036));
 		return true;
 	}
 
