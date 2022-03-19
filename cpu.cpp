@@ -1287,7 +1287,7 @@ void cpu::disassemble()
 				break;
 
 			case 2:
-				text = format("ASH %s,%d", src_text.c_str(), dst > 31 ? -(64 - dst) : dst);
+				name = "ASH";
 				break;
 
 			case 3:
