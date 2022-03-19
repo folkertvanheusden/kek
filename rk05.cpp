@@ -6,7 +6,9 @@
 #include "bus.h"
 #include "cpu.h"
 #include "error.h"
+#if defined(ESP32)
 #include "esp32.h"
+#endif
 #include "gen.h"
 #include "rk05.h"
 #include "utils.h"
