@@ -25,7 +25,8 @@ void cpu::reset()
 	memset(regs0_5, 0x00, sizeof regs0_5);
 	memset(sp, 0x00, sizeof sp);
 	pc = 0;
-	psw = fpsr = 0;
+	psw = 7 << 5;
+	fpsr = 0;
 	runMode = resetFlag = haltFlag = false;
 }
 
