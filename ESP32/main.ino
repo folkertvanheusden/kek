@@ -88,13 +88,13 @@ void panel(void *p) {
 
 SemaphoreHandle_t terminal_mutex = xSemaphoreCreateMutex();
 
-char terminal[25][80];
+char terminal[80 * 25];
 uint8_t tx = 0, ty = 0;
 QueueHandle_t queue = xQueueCreate(10, sizeof(char));
 
 void delete_first_line() {
-	memmove(&terminal[0][0], &terminal[1][0], sizeof(terminal[1]));
-	memset(&terminal[24][0], ' ', sizeof(terminal[24]));
+	memmove(&terminal[0], &terminal[80], 80 * 24);
+	memset(&terminal[80 * 24], ' ', 80);
 }
 
 void telnet_terminal(void *p) {
@@ -115,28 +115,20 @@ void telnet_terminal(void *p) {
 		xSemaphoreTake(terminal_mutex, portMAX_DELAY);
 
 		if (c == 13 || c == 10) {
-			tx = 0;
-
-			ty++;
-			if (ty == 25) {
-				delete_first_line();
-				ty--;
-			}
+			tx = 0, ty++;
 		}
 		else {
-			terminal[ty][tx] = c;
+			terminal[ty * 80 + tx] = c;
 
 			tx++;
 
-			if (tx == 80) {
-				tx = 0;
+			if (tx == 80)
+				tx = 0, ty++;
+		}
 
-				ty++;
-				if (ty == 25) {
-					delete_first_line();
-					ty--;
-				}
-			}
+		if (ty == 25) {
+			delete_first_line();
+			ty--;
 		}
 
 		xSemaphoreGive(terminal_mutex);
@@ -183,7 +175,7 @@ void wifi(void *p) {
 				xSemaphoreTake(terminal_mutex, portMAX_DELAY);
 
 				for(int y=0; y<25; y++)
-					out += format("\033[%dH", y + 1) + std::string(&terminal[y][0], 80);
+					out += format("\033[%dH", y + 1) + std::string(&terminal[y * 80], 80);
 
 				xSemaphoreGive(terminal_mutex);
 
