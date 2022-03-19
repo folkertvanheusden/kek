@@ -1111,8 +1111,9 @@ void cpu::trap(const uint16_t vector)
 {
 	pushStack(getPSW());
 	pushStack(getPC());
-	setPSW(b -> readWord(vector + 2));
-	setPC(b -> readWord(vector + 0));
+
+	setPSW(b->readWord(vector + 2));
+	setPC (b->readWord(vector + 0));
 
 	fprintf(stderr, "TRAP %o: PC is now %06o\n", vector, getPC());
 }
