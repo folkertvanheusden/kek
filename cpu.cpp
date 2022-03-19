@@ -466,8 +466,9 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 			}
 
 		case 2: { // ASH
-				int16_t R = getRegister(reg), oldR = R;
-				int8_t shift = dst > 31 ? -(64 - dst) : dst;
+				int16_t  R     = getRegister(reg), oldR = R;
+				uint16_t a     = getGAMAddress(dst_mode, dst_reg, false, false);
+				int16_t  shift = b->read(a, false);
 
 				if (shift > 0) {
 					R <<= shift - 1;
@@ -475,7 +476,7 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 					R <<= 1;
 				}
 				else if (shift < 0) {
-					R >>= -shift - 1;
+					R >>= -(shift - 1);
 					setPSW_c(R & 1);
 					R >>= 1;
 				}
@@ -484,7 +485,11 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 				setPSW_z(R == 0);
 				setPSW_v(sign(R) != sign(oldR));
 
-				setRegister(reg, R);
+				if (dst_mode == 0)
+					putGAM(dst_mode, dst_reg, false, R, false);
+				else
+					b->write(a, false, R);
+
 				return true;
 			}
 
