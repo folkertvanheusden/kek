@@ -162,11 +162,12 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 			const int diskoffb = diskoff * 512; // RK05 is high density
 			const uint16_t memoff = registers[(RK05_BA - RK05_BASE) / 2];
 
-			D(fprintf(stderr, "invoke %d\n", func);)
-
 			if (func == 0) { // controller reset
+				D(fprintf(stderr, "invoke %d (controller reset)\n", func);)
+
 			}
 			else if (func == 1) { // write
+				D(fprintf(stderr, "invoke %d (write)\n", func);)
 				D(fprintf(stderr, "RK05 writing %zo bytes to offset %o (%d dec)\n", reclen, diskoffb, diskoffb);)
 
 				uint32_t p = reclen; // FIXME
@@ -201,6 +202,7 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 				registers[(RK05_DA - RK05_BASE) / 2] = sector | (surface << 4) | (cylinder << 5);
 			}
 			else if (func == 2) { // read
+				D(fprintf(stderr, "invoke %d (read)\n", func);)
 				D(fprintf(stderr, "RK05 reading %zo bytes from offset %o (%d dec) to %o\n", reclen, diskoffb, diskoffb, memoff);)
 
 #if defined(ESP32)
@@ -251,10 +253,13 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 				registers[(RK05_DA - RK05_BASE) / 2] = sector | (surface << 4) | (cylinder << 5);
 			}
 			else if (func == 4) {
+				D(fprintf(stderr, "invoke %d (seek)\n", func);)
 				D(fprintf(stderr, "RK05 seek to offset %o\n", diskoffb);)
 			}
-			else if (func == 7)
+			else if (func == 7) {
+				D(fprintf(stderr, "invoke %d (write lock)\n", func);)
 				D(fprintf(stderr, "RK05 write lock\n");)
+			}
 			else {
 				D(fprintf(stderr, "RK05 command %d UNHANDLED\n", func);)
 			}
