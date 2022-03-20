@@ -139,7 +139,7 @@ void cpu::setPSW_n(const bool v)
 
 void cpu::setPSW_spl(const int v)
 {
-	psw &= 7 << 5;
+	psw &= ~(7 << 5);
 	psw |= v << 5;
 }
 

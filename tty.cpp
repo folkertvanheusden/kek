@@ -112,6 +112,8 @@ void tty::writeWord(const uint16_t addr, uint16_t v)
 	if (addr == PDP11TTY_TPB) {
 		char c = v & 127;
 
+		D(fprintf(stderr, "PDP11TTY print '%c'\n", c);)
+
 #if defined(ESP32)
 		if (xQueueSend(queue, &c, portMAX_DELAY) != pdTRUE)
 			Serial.println(F("queue TTY character failed"));

@@ -69,27 +69,27 @@ void test__registers(cpu *const c)
 
 	// PSW
 	c -> reset();
-	assert(c -> getPSW() == 0);
+	assert(c -> getPSW() == 0 | (7 << 5));
 
 	c -> reset();
         c -> setPSW_c(true);
-	assert(c -> getPSW() == 1);
+	assert(c -> getPSW() == 1 | (7 << 5));
 
 	c -> reset();
 	c -> setPSW_v(true);
-	assert(c -> getPSW() == 2);
+	assert(c -> getPSW() == 2 | (7 << 5));
 
 	c -> reset();
 	c -> setPSW_z(true);
-	assert(c -> getPSW() == 4);
+	assert(c -> getPSW() == 4 | (7 << 5));
 
 	c -> reset();
 	c -> setPSW_n(true);
-	assert(c -> getPSW() == 8);
+	assert(c -> getPSW() == 8 | (7 << 5));
 
 	c -> reset();
-	c -> setPSW_spl(7);
-	assert(c -> getPSW() == (7 << 5));
+	c -> setPSW_spl(1);
+	assert(c -> getPSW() == (1 << 5));
 }
 
 void test_cmp(cpu *const c)
@@ -1391,9 +1391,11 @@ void test_rts(cpu *const c)
 	c -> setRegister(6, 01000);
 	b -> writeWord(0, 0004010);
 	b -> writeWord(10, 0b0000000010000000);
-	do_test(c, 2);
-	assert(c -> getRegister(0) == 10);
+	do_test(c, 1);
 	assert(c -> getRegister(6) == 0776);
+	do_test(c, 1);
+	assert(c -> getRegister(0) == 10);
+	assert(c -> getRegister(6) == 01000);
 	assert(c -> getRegister(7) == 2);
 	//
 	c -> reset();
@@ -1698,7 +1700,7 @@ void test_swab(cpu *const c)
 	b -> writeWord(0, 000301);	// SWAB R1
 	do_test(c, 1);
 	assert(c -> getRegister(1) == 0177577);
-	assert(c -> getPSW_n());
+	assert(!c -> getPSW_n());
 	assert(!c -> getPSW_z());
 	assert(!c -> getPSW_v());
 	assert(!c -> getPSW_c());
