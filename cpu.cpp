@@ -11,7 +11,7 @@
 
 #define SIGN(x, wm) ((wm) ? (x) & 0x80 : (x) & 0x8000)
 
-cpu::cpu(bus *const b) : b(b)
+cpu::cpu(bus *const b, uint32_t *const event) : b(b), event(event)
 {
 	reset();
 }
@@ -1509,7 +1509,7 @@ void cpu::disassemble()
 #endif
 }
 
-bool cpu::step()
+void cpu::step()
 {
 	if (getPC() & 1)
 		busError();
@@ -1522,16 +1522,16 @@ bool cpu::step()
 	addRegister(7, false, 2);
 
 	if (double_operand_instructions(instr))
-		goto ok;
+		return;
 
 	if (conditional_branch_instructions(instr))
-		goto ok;
+		return;
 
 	if (condition_code_operations(instr))
-		goto ok;
+		return;
 
 	if (misc_operations(instr))
-		goto ok;
+		return;
 
 	fprintf(stderr, "UNHANDLED instruction %o\n\n", instr);
 
@@ -1543,10 +1543,6 @@ bool cpu::step()
 			fclose(fh);
 		}
 	}
-	busError();
-	exit(1);
-	return false;
 
-ok:
-	return haltFlag; // return flags that indicate that special attention is required
+	*event = 1;
 }

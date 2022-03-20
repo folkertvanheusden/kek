@@ -2,6 +2,7 @@
 // Released under Apache License v2.0
 #pragma once
 
+#include <functional>
 #include <stdint.h>
 #include <stdio.h>
 #include <string>
@@ -18,16 +19,20 @@ class memory;
 class tty
 {
 private:
-	uint16_t registers[4];
-	bool testMode { false }, withUI { false };
-	char c { 0 };
+	std::function<bool()>       poll_char;
+	std::function<uint8_t()>    get_char;
+	std::function<void(char c)> put_char;
+	bool     have_char    { false };
+	uint16_t registers[4] { 0 };
+	bool     testMode     { false };
+	bool     withUI       { false };
 
 #if defined(ESP32)
 	QueueHandle_t queue { nullptr };
 #endif
 
 public:
-	tty(const bool withUI);
+	tty(std::function<bool()> poll_char, std::function<uint8_t()> get_char, std::function<void(char c)> put_char);
 	virtual ~tty();
 
 	void setTest() { testMode = true; }
@@ -35,8 +40,6 @@ public:
 #if defined(ESP32)
 	QueueHandle_t & getTerminalQueue() { return queue; }
 #endif
-
-	void sendChar(const char v);
 
 	uint8_t readByte(const uint16_t addr);
 	uint16_t readWord(const uint16_t addr);

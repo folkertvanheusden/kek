@@ -18,6 +18,7 @@ private:
 	uint16_t stackLimitRegister { 0 };
 	bool haltFlag { false }, resetFlag { false };
 	bool runMode  { false };
+	uint32_t *const event { nullptr };
 
 	bool emulateMFPT { false };
 
@@ -42,7 +43,7 @@ private:
 	void disassemble();
 
 public:
-	explicit cpu(bus *const b);
+	explicit cpu(bus *const b, uint32_t *const event);
 	~cpu();
 
 	void setDisassemble(const bool state);
@@ -51,7 +52,7 @@ public:
 
 	void reset();
 
-	bool step(); // FIXME return mask of flags (halt, reset, etc)
+	void step();
 	void resetHalt() { haltFlag = false; }
 	void resetReset() { resetFlag = false; }
 

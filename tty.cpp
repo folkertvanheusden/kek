@@ -26,10 +26,11 @@ const char * const regnames[] = {
 	"puncher buffer"
 	};
 
-tty::tty(const bool withUI) : withUI(withUI)
+tty::tty(std::function<bool()> poll_char, std::function<uint8_t()> get_char, std::function<void(char c)> put_char) :
+	poll_char(poll_char),
+	get_char(get_char),
+	put_char(put_char)
 {
-	memset(registers, 0x00, sizeof registers);
-
 #if defined(ESP32)
 	queue = xQueueCreate(10, sizeof(char));
 
@@ -57,12 +58,23 @@ uint16_t tty::readWord(const uint16_t addr)
 	const int reg = (addr - PDP11TTY_BASE) / 2;
 	uint16_t vtemp = registers[reg];
 
+	if (!have_char)
+		have_char = poll_char();
+
 	if (addr == PDP11TTY_TKS) {
-		vtemp = c ? 128 : 0;
+		vtemp = have_char ? 128 : 0;
 	}
 	else if (addr == PDP11TTY_TKB) {
-		vtemp = c | (parity(c) << 7);
-		c = 0;
+		if (have_char) {
+			char c = get_char();
+
+			vtemp = c | (parity(c) << 7);
+
+			have_char = false;
+		}
+		else {
+			vtemp = 0;
+		}
 	}
 	else if (addr == PDP11TTY_TPS) {
 		vtemp = 128;
@@ -107,49 +119,18 @@ void tty::writeWord(const uint16_t addr, uint16_t v)
 
 	// FIXME
 	if (addr == PDP11TTY_TPB) {
-		v &= 127;
-
-#if defined(ESP32)
 		char c = v & 127;
 
+#if defined(ESP32)
 		Serial.print(c);
 
 		if (xQueueSend(queue, &c, portMAX_DELAY) != pdTRUE)
 			Serial.println(F("queue TTY character failed"));
 #else
-		FILE *tf = fopen("tty.dat", "a+");
-		if (tf) {
-			fprintf(tf, "%c", v);
-			fclose(tf);
-		}
-
-		if (withUI) {
-			if (v >= 32 || (v != 12 && v != 27 && v != 13)) {
-				wprintw(w_main -> win, "%c", v);
-				mydoupdate();
-			}
-		}
-		else {
-			printf("%c", v);
-			fflush(NULL);
-		}
-
-		fprintf(stderr, "punch char: '%c'\n", v);
+		put_char(c);
 #endif
 	}
 
 	D(fprintf(stderr, "set register %o to %o\n", addr, v);)
 	registers[(addr - PDP11TTY_BASE) / 2] = v;
-}
-
-void tty::sendChar(const char v)
-{
-#if !defined(ESP32)
-	if (c)
-		fprintf(stderr, "PDP11TTY: overwriting %d - %c\n", c, c);
-	else
-		fprintf(stderr, "PDP11TTY: setting character %d - %c\n", v, v);
-#endif
-
-	c = v;
 }

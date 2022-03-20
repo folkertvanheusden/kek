@@ -1,5 +1,6 @@
-// (C) 2018 by Folkert van Heusden
+// (C) 2018-2022 by Folkert van Heusden
 // Released under Apache License v2.0
+#include <atomic>
 #include <poll.h>
 #include <signal.h>
 #include <stdlib.h>
@@ -15,8 +16,11 @@
 #include "terminal.h"
 #include "error.h"
 
-struct termios org_tty_opts { 0 };
-bool withUI = false;
+struct termios   org_tty_opts { 0 };
+bool             withUI       { false };
+uint32_t         event        { 0 };
+std::atomic_bool terminate    { false };
+
 
 void reset_terminal()
 {
@@ -40,19 +44,6 @@ void setBootLoader(bus *const b)
 {
 	cpu *const c = b -> getCpu();
 
-#if 0
-	const uint16_t offset = 0200;
-	constexpr uint16_t bootrom[] = {
-		0012737,
-		0000400,
-		0177572,
-		0012737,
-		0070707,
-		0000200,
-		0000000
-	};
-#else
-#if 1
 	const uint16_t offset = 01000;
 	constexpr uint16_t bootrom[] = {
 		0012700,
@@ -65,41 +56,6 @@ void setBootLoader(bus *const b)
 		0100376,
 		0005007
 	};
-#else
-	const uint16_t offset = 02000;
-	constexpr uint16_t bootrom[] = {
-//		0042113,
-		0012706,
-		0002000,
-		0012700,
-		0000000,        /* boot unit */
-		0010003,
-		0000303,
-		0006303,
-		0006303,
-		0006303,
-		0006303,
-		0006303,
-		0012701,
-		0177412,
-		0010311,
-		0005041,
-		0012741,
-		0177000,
-		0012741,
-		0000005,
-		0005002,
-		0005003,
-		0012704,
-		0002020,
-		0005005,
-		0105711,
-		0100376,
-		0105011,
-		0005007
-	};
-#endif
-#endif
 
 	FILE *fh = fopen("boot.dat", "wb");
 
@@ -204,7 +160,54 @@ void resize_terminal()
 volatile bool sw = false;
 void sw_handler(int s)
 {
-	sw = true;
+	if (s == SIGWINCH)
+		sw = true;
+	else {
+		fprintf(stderr, "Terminating...\n");
+
+		terminate = true;
+	}
+}
+
+bool poll_char()
+{
+	struct pollfd fds[] = { { STDIN_FILENO, POLLIN, 0 } };
+
+	return poll(fds, 1, 0) == 1 && fds[0].revents;
+}
+
+char get_char()
+{
+	char c = getchar();
+
+	if (c == 3)
+		event = 1;
+
+	return c;
+}
+
+char get_char_ui()
+{
+	char c = getch();
+
+	if (c == 3)
+		event = 1;
+
+	return c;
+}
+
+void put_char(char c)
+{
+	printf("%c", c);
+	fflush(nullptr);
+}
+
+void put_char_ui(char c)
+{
+	if (c >= 32 || (c != 12 && c != 27 && c != 13)) {
+		wprintw(w_main -> win, "%c", c);
+		mydoupdate();
+	}
 }
 
 void help()
@@ -225,7 +228,7 @@ int main(int argc, char *argv[])
 	//setlocale(LC_ALL, "");
 
 	bus *b = new bus();
-	cpu *c = new cpu(b);
+	cpu *c = new cpu(b, &event);
 	b->add_cpu(c);
 
 	c -> setEmulateMFPT(true);
@@ -282,7 +285,13 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	tty *tty_ = new tty(withUI);
+	tty *tty_ = nullptr;
+
+	if (withUI)
+		tty_ = new tty(poll_char, get_char_ui, put_char_ui);
+	else
+		tty_ = new tty(poll_char, get_char, put_char);
+
 	b->add_tty(tty_);
 
 	if (testMode)
@@ -293,16 +302,21 @@ int main(int argc, char *argv[])
 
 	fprintf(stderr, "Start running at %o\n", c->getRegister(7));
 
+	struct sigaction sa { };
+	sa.sa_handler = sw_handler;
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = SA_RESTART;
+
 	if (withUI) {
 		init_ncurses(true);
 
-		struct sigaction sa;
-		sa.sa_handler = sw_handler;
-		sigemptyset(&sa.sa_mask);
-		sa.sa_flags = SA_RESTART;
 		sigaction(SIGWINCH, &sa, nullptr);
+
 		resize_terminal();
 	}
+
+	sigaction(SIGTERM , &sa, nullptr);
+	sigaction(SIGINT  , &sa, nullptr);
 
 	atexit(reset_terminal);
 
@@ -318,7 +332,9 @@ int main(int argc, char *argv[])
 	uint64_t icount = 0;
 
 	for(;;) {
-		if (c->step()) {
+		c->step();
+
+		if (event) {
 #if !defined(ESP32)
 			FILE *fh = fopen("halt.mac", "wb");
 			if (fh) {
@@ -341,28 +357,16 @@ int main(int argc, char *argv[])
 
 		icount++;
 
-		if ((icount & 4095) == 0) {
-			if (poll(fds, 1, 0) == 1 && fds[0].revents) {
-				int ch = 0;
-
-				if (withUI)
-					ch = getch();
-				else
-					ch = getchar();
-
-				if (ch == 3)
-					break;
-
-				if (ch > 0 && ch < 127)
-					tty_->sendChar(ch);
-			}
-
-			if ((icount & 262143) == 0 && withUI) {
+		if ((icount & 262143) == 0) {
+			if (withUI) {
 				unsigned long now = get_ms();
 				mvwprintw(w_main_b -> win, 0, 24, "%.1f/s   ", icount * 1000.0 / (now - start));
 				mvwprintw(w_main_b -> win, 0, 42, "%06o", b->get_switch_register());
 				mydoupdate();
 			}
+
+			if (terminate)
+				event = 1;
 		}
 	}
 
