@@ -434,8 +434,8 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 
 	switch(operation) {
 		case 0: { // MUL
-				uint16_t R = getRegister(reg);
-				int32_t result = R * getGAM(dst_mode, dst_reg, true, false);
+				uint16_t R      = getRegister(reg);
+				int32_t  result = R * getGAM(dst_mode, dst_reg, true, false);
 
 				if (reg & 1)
 					setRegister(reg, result >> 16);
@@ -451,7 +451,7 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 			}
 
 		case 1: { // DIV
-				int32_t R0R1 = (getRegister(reg) << 16) | getRegister(reg + 1);
+				int32_t R0R1    = (getRegister(reg) << 16) | getRegister(reg + 1);
 				int32_t divider = getGAM(dst_mode, dst_reg, true, false);
 
 				if (divider == 0) {
@@ -508,7 +508,7 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 			}
 
 		case 3: { // ASHC
-				uint32_t R0R1 = (getRegister(reg) << 16) | getRegister(reg + 1);
+				uint32_t R0R1  = (getRegister(reg) << 16) | getRegister(reg + 1);
 				uint16_t a     = getGAMAddress(dst_mode, dst_reg, false, false);
 				int16_t  shift = b->read(a, false);
 
@@ -522,6 +522,9 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 					setPSW_c(R0R1 & 1);
 					R0R1 >>= 1;
 				}
+				else {
+					setPSW_c(false);
+				}
 
 				setRegister(reg, R0R1 & 65535);
 				setRegister(reg + 1, R0R1 >> 16);
@@ -533,7 +536,7 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 			}
 
 		case 4: { // XOR (word only)
-				uint16_t a = getGAMAddress(dst_mode, dst_reg, false, false);
+				uint16_t a  = getGAMAddress(dst_mode, dst_reg, false, false);
 				uint16_t vl = b->read(a, false) ^ getRegister(reg);
 
 				if (dst_mode == 0)
@@ -549,20 +552,21 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 			}
 
 		case 7: { // SOB
-			uint16_t oldPC = getPC();
+				uint16_t oldPC = getPC();
 
-			if (reg == 7)
-				addRegister(reg, false, -2);
-			else
-				addRegister(reg, false, -1);
+				if (reg == 7)
+					addRegister(reg, false, -2);
+				else
+					addRegister(reg, false, -1);
 
-			if (getRegister(reg, false)) {
-				uint16_t newPC = oldPC - dst * 2;
-				setPC(newPC);
+				if (getRegister(reg, false)) {
+					uint16_t newPC = oldPC - dst * 2;
+
+					setPC(newPC);
+				}
+
+				return true;
 			}
-
-			return true;
-		}
 	}
 
 	return false;
