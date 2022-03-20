@@ -489,7 +489,12 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 					R <<= 1;
 				}
 				else {
-					R >>= 64 - shift - 1;
+					// extend sign-bit
+					if (R & 0x8000)  // convert to unsigned 32b int & extend sign
+						R = (uint32_t(R) | 0xffff0000) >> (64 - shift - 1);
+					else
+						R >>= 64 - shift - 1;
+
 					setPSW_c(R & 1);
 					R >>= 1;
 				}
@@ -522,7 +527,12 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 					R0R1 <<= 1;
 				}
 				else {
-					R0R1 >>= 64 - shift - 1;
+					// extend sign-bit
+					if (R0R1 & 0x80000000)  // convert to unsigned 64b int & extend sign
+						R0R1 = (uint64_t(R0R1) | 0xffffffff0000) >> (64 - shift - 1);
+					else
+						R0R1 >>= 64 - shift - 1;
+
 
 					setPSW_c(R0R1 & 1);
 
