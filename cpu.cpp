@@ -746,7 +746,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					  uint16_t t = b -> read(a, word_mode);
 					  bool new_carry = false;
 
-					  uint16_t temp;
+					  uint16_t temp = 0;
 					  if (word_mode) {
 						  new_carry = t & 0x80;
 						  temp = ((t << 1) | getPSW_c()) & 0xff;

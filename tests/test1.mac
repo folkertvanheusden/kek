@@ -1,0 +1,33 @@
+label:	CLC
+	MOV	#0.,R0
+	ASR	R0	;
+	NOP
+
+	CLC
+	MOV	#0,R1
+	ASRB	R1	;
+	NOP
+
+	CLC
+	MOV	#117400,R2
+	ASR	R2	;
+	NOP
+
+	CLC
+	MOV	#117400,R3
+	ASRB	R3	;
+	NOP
+
+	CLC
+	MOV	#77776,R4
+	ASR	R4	;
+	NOP
+
+	CLC
+	MOV	#77776,R5
+	ASRB	R5	;
+	NOP
+
+	HALT
+
+	make_raw

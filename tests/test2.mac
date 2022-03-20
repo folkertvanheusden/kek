@@ -1,0 +1,16 @@
+	mov	#1000,SP
+
+	mov	#trapfunc, @#034
+	
+traploop:	SEC
+	SEN
+	SEV
+	TRAP	0
+	JMP	traploop
+
+trapfunc:
+	NOP
+	NOP
+	RTT
+
+	make_raw

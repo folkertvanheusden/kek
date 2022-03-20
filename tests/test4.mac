@@ -1,0 +1,27 @@
+label:	MOV	#0.,R0
+	NEG	R0	; 0
+	NOP
+
+	MOV	#0,R1
+	NEGB	R1	; 0
+	NOP
+
+	MOV	#117400,R2
+	NEG	R2	; 060400
+	NOP
+
+	MOV	#117400,R3
+	NEGB	R3	; 117400
+	NOP
+
+	MOV	#1,R4
+	NEG	R4	; 177777
+	NOP
+
+	MOV	#1,R5
+	NEGB	R5	; 000377
+	NOP
+
+	HALT
+
+	make_raw

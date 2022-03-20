@@ -1,0 +1,33 @@
+label:	SEC
+	MOV	#0.,R0
+	ROL	R0	;
+	NOP
+
+	SEC
+	MOV	#0,R1
+	ROLB	R1	;
+	NOP
+
+	SEC
+	MOV	#117400,R2
+	ROL	R2	;
+	NOP
+
+	SEC
+	MOV	#117400,R3
+	ROLB	R3	;
+	NOP
+
+	SEC
+	MOV	#1,R4
+	ROL	R4	;
+	NOP
+
+	SEC
+	MOV	#1,R5
+	ROLB	R5	;
+	NOP
+
+	HALT
+
+	make_raw
