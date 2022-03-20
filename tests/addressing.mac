@@ -1,0 +1,7 @@
+	.LINK 3326
+	MOV	#1000,SP
+start:	MOV	#177564,016327
+
+	TRAP	7
+
+	make_raw
