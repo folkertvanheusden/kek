@@ -10,8 +10,9 @@
 class cpu
 {
 private:
+	bool disas { false };
 	uint16_t regs0_5[2][6]; // R0...5, selected by bit 11 in PSW, 
-	uint16_t sp[3+1]; // stackpointers, MF../MT.. select via 12/13 from PSW, others via 14/15
+	uint16_t sp[3 + 1]; // stackpointers, MF../MT.. select via 12/13 from PSW, others via 14/15
 	uint16_t pc { 0 };
 	uint16_t psw { 0 }, fpsr { 0 };
 	uint16_t stackLimitRegister { 0 };
@@ -43,6 +44,8 @@ private:
 public:
 	explicit cpu(bus *const b);
 	~cpu();
+
+	void setDisassemble(const bool state);
 
 	bus *getBus() { return b; }
 

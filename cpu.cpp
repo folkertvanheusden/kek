@@ -30,6 +30,11 @@ void cpu::reset()
 	runMode = resetFlag = haltFlag = false;
 }
 
+void cpu::setDisassemble(const bool state)
+{
+	disas = state;
+}
+
 uint16_t cpu::getRegister(const int nr, const bool prev_mode) const
 {
 	if (nr < 6)
@@ -295,15 +300,15 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 	if (operation == 0b111)
 		return additional_double_operand_instructions(instr);
 
-	const uint8_t src = (instr >> 6) & 63;
-	const uint8_t src_mode = (src >> 3) & 7;
-	const uint8_t src_reg = src & 7;
+	const uint8_t src       = (instr >> 6) & 63;
+	const uint8_t src_mode  = (src >> 3) & 7;
+	const uint8_t src_reg   = src & 7;
 
-	uint16_t src_value;
+	uint16_t      src_value = 0;
 
-	const uint8_t dst = instr & 63;
-	const uint8_t dst_mode = (dst >> 3) & 7;
-	const uint8_t dst_reg = dst & 7;
+	const uint8_t dst       = instr & 63;
+	const uint8_t dst_mode  = (dst >> 3) & 7;
+	const uint8_t dst_reg   = dst & 7;
 
 	switch(operation) {
 		case 0b001: // MOV/MOVB Move Word/Byte
@@ -1509,7 +1514,8 @@ bool cpu::step()
 	if (getPC() & 1)
 		busError();
 
-	disassemble();
+	if (disas)
+		disassemble();
 
 	b -> setMMR2(getPC());
 	uint16_t instr = b->readWord(getPC());

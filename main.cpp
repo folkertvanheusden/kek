@@ -217,6 +217,7 @@ void help()
 	printf("-p 123   set CPU start pointer to decimal(!) value\n");
 	printf("-L f.bin load file into memory at address given by -p (and run it)\n");
 	printf("-n       ncurses UI\n");
+	printf("-d       enable disassemble\n");
 }
 
 int main(int argc, char *argv[])
@@ -231,12 +232,16 @@ int main(int argc, char *argv[])
 
 	bool testMode = false, testCases = false;
 	int opt = -1;
-	while((opt = getopt(argc, argv, "hm:T:R:p:nL:")) != -1)
+	while((opt = getopt(argc, argv, "hm:T:R:p:ndL:")) != -1)
 	{
 		switch(opt) {
 			case 'h':
 				help();
 				return 1;
+
+			case 'd':
+				c->setDisassemble(true);
+				break;
 
 			case 'n':
 				withUI = true;
@@ -336,7 +341,7 @@ int main(int argc, char *argv[])
 
 		icount++;
 
-		if (icount % 1000 == 0) {
+		if ((icount & 4095) == 0) {
 			if (poll(fds, 1, 0) == 1 && fds[0].revents) {
 				int ch = 0;
 
@@ -352,7 +357,7 @@ int main(int argc, char *argv[])
 					tty_->sendChar(ch);
 			}
 
-			if (icount % 100000 == 0 && withUI) {
+			if ((icount & 262143) == 0 && withUI) {
 				unsigned long now = get_ms();
 				mvwprintw(w_main_b -> win, 0, 24, "%.1f/s   ", icount * 1000.0 / (now - start));
 				mvwprintw(w_main_b -> win, 0, 42, "%06o", b->get_switch_register());
