@@ -60,7 +60,7 @@ void panel(void *p) {
 	CRGB leds[32] { 0 };
 	FastLED.addLeds<NEOPIXEL, NEOPIXELS_PIN>(leds, 32);
 
-	FastLED.setBrightness(50);
+	FastLED.setBrightness(25);
 
 	FastLED.show();
 
