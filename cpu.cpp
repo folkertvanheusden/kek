@@ -503,10 +503,7 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 				setPSW_z(R == 0);
 				setPSW_v(sign(R) != sign(oldR));
 
-				if (dst_mode == 0)
-					putGAM(dst_mode, dst_reg, false, R, false);
-				else
-					b->write(a, false, R);
+				setRegister(reg, R);
 
 				return true;
 			}
