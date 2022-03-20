@@ -481,9 +481,12 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 					R <<= 1;
 				}
 				else if (shift < 0) {
-					R >>= -(shift - 1);
+					R >>= -(shift + 1);
 					setPSW_c(R & 1);
 					R >>= 1;
+				}
+				else {
+					setPSW_c(false);
 				}
 
 				setPSW_n(R < 0);
@@ -839,16 +842,20 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 				  break;
 
 		case 0b000110100: // MTPS (put something in PSW)
-				  psw = getGAM(dst_mode, dst_reg, word_mode, false);
+				  psw &= 0xff00;  // only alter lower 8 bits
+				  psw |= getGAM(dst_mode, dst_reg, word_mode, false) & 0xef;  // can't change bit 4
 				  break;
 
 		case 0b000110111: // MFPS (get PSW to something) / SXT
 				  if (word_mode) {  // MFPS
-				  	putGAM(dst_mode, dst_reg, word_mode, psw, false);
+					uint16_t temp = psw & 0xff;
+					if (dst_mode == 0 && sign(temp))
+						temp |= 0xff00;
+
+				 	putGAM(dst_mode, dst_reg, word_mode, temp, false);
 				  }
 				  else {  // SXT
 					a = getGAMAddress(dst_mode, dst_reg, word_mode, false);
-					v = b -> read(a, word_mode);
 
 					vl = getPSW_n() ? -1 : 0;
 
