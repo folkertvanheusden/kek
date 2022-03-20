@@ -896,7 +896,7 @@ bool cpu::conditional_branch_instructions(const uint16_t instr)
 			break;
 
 		case 0b00000100: // BGE
-			take = (getPSW_n() ^ getPSW_v()) == false;
+			take = getPSW_n() == getPSW_v();
 			break;
 
 		case 0b00000101: // BLT
@@ -904,11 +904,11 @@ bool cpu::conditional_branch_instructions(const uint16_t instr)
 			break;
 
 		case 0b00000110: // BGT
-			take = ((getPSW_n() ^ getPSW_v()) | getPSW_z()) == false;
+			take = getPSW_n() == getPSW_v() && getPSW_z() == false;
 			break;
 
 		case 0b00000111: // BLE
-			take = (getPSW_n() ^ getPSW_v()) | getPSW_z();
+			take = getPSW_n() != getPSW_v() | getPSW_z();
 			break;
 
 		case 0b10000000: // BPL
