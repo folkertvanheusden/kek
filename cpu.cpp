@@ -1478,7 +1478,7 @@ void cpu::disassemble()
 			text = format("TRAP %o", instruction & 255);
 
 		if ((instruction & ~0b111111) == 0b0000000001000000) {
-			auto dst_text = addressing_to_string(src_register, pc);
+			auto dst_text = addressing_to_string(dst_register, pc);
 
 			text = std::string("JMP ") + dst_text.first;
 		}
