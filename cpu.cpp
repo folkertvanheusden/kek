@@ -479,20 +479,19 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 		case 2: { // ASH
 				int16_t  R     = getRegister(reg), oldR = R;
 				uint16_t a     = getGAMAddress(dst_mode, dst_reg, false, false);
-				int16_t  shift = b->read(a, false);
+				int16_t  shift = b->read(a, false) & 077; // mask of lower 6 bit
 
-				if (shift > 0) {
+				if (shift == 0)
+					setPSW_c(false);
+				else if (shift < 32) {
 					R <<= shift - 1;
 					setPSW_c(R & 0x8000);
 					R <<= 1;
 				}
-				else if (shift < 0) {
-					R >>= -(shift + 1);
+				else {
+					R >>= 64 - shift - 1;
 					setPSW_c(R & 1);
 					R >>= 1;
-				}
-				else {
-					setPSW_c(false);
 				}
 
 				setPSW_n(R < 0);
