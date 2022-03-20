@@ -1270,15 +1270,15 @@ void cpu::disassemble()
 				break;
 
 			case 0b000110100:
-				if (word_mode == false)
+				if (word_mode == true)
 					name = "MTPS";
 				break;
 
 			case 0b000110111:
-				if (word_mode == false)
-					name = "SXT";
-				else
+				if (word_mode == true)
 					name = "MFPS";
+				else
+					name = "SXT";
 				break;
 		}
 
