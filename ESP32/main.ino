@@ -254,8 +254,8 @@ void setup_wifi_stations()
 	std::string password = read_terminal_line("password: ");
 	WiFi.begin(ssid.c_str(), password.c_str());
 #else
-	//WiFi.begin("www.vanheusden.com", "Ditiseentest31415926");
-	WiFi.begin("NURDspace-guest", "harkharkhark");
+	WiFi.begin("www.vanheusden.com", "Ditiseentest31415926");
+	//WiFi.begin("NURDspace-guest", "harkharkhark");
 #endif
 
 	while (WiFi.status() != WL_CONNECTED) {

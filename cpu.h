@@ -16,9 +16,8 @@ private:
 	uint16_t pc { 0 };
 	uint16_t psw { 0 }, fpsr { 0 };
 	uint16_t stackLimitRegister { 0 };
-	bool haltFlag { false }, resetFlag { false };
-	bool runMode  { false };
-
+	bool resetFlag   { false };
+	bool runMode     { false };
 	bool emulateMFPT { false };
 
 	bus *const b { nullptr };
@@ -54,7 +53,6 @@ public:
 	void reset();
 
 	void step();
-	void resetHalt() { haltFlag = false; }
 	void resetReset() { resetFlag = false; }
 
 	void pushStack(const uint16_t v);

@@ -27,7 +27,7 @@ void cpu::reset()
 	pc = 0;
 	psw = 7 << 5;
 	fpsr = 0;
-	runMode = resetFlag = haltFlag = false;
+	runMode = resetFlag = false;
 }
 
 void cpu::setDisassemble(const bool state)
@@ -1007,7 +1007,7 @@ bool cpu::misc_operations(const uint16_t instr)
 	switch(instr) {
 		case 0b0000000000000000: // HALT
 			// pretend HALT is not executed, proceed
-			haltFlag = true;
+			*event = 1;
 			return true;
 
 		case 0b0000000000000001: // WAIT

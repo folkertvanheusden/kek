@@ -66,7 +66,7 @@ uint16_t tty::readWord(const uint16_t addr)
 	}
 	else if (addr == PDP11TTY_TKB) {
 		if (have_char) {
-			char c = get_char();
+			uint8_t c = get_char();
 
 			vtemp = c | (parity(c) << 7);
 
