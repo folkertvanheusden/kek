@@ -520,7 +520,7 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 
 		case 4: { // XOR (word only)
 				uint16_t a = getGAMAddress(dst_mode, dst_reg, false, false);
-				uint16_t vl = b->read(a, false) ^ getRegister(reg);;
+				uint16_t vl = b->read(a, false) ^ getRegister(reg);
 
 				if (dst_mode == 0)
 					putGAM(dst_mode, dst_reg, false, vl, false);
@@ -609,21 +609,22 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 		case 0b000101001: // COM/COMB
 			a = getGAMAddress(dst_mode, dst_reg, word_mode, false);
-			vl = b -> read(a, word_mode);
-			if (word_mode)
-				vl ^= 0xff;
-			else
-				vl ^= 0xffff;
+			v = b -> read(a, word_mode);
 
-			setPSW_n(SIGN(vl, word_mode));
-			setPSW_z(vl == 0);
+			if (word_mode)
+				v ^= 0xff;
+			else
+				v ^= 0xffff;
+
+			setPSW_n(SIGN(v, word_mode));
+			setPSW_z(v == 0);
 			setPSW_v(false);
 			setPSW_c(true);
 
 			if (dst_mode == 0)
-				putGAM(dst_mode, dst_reg, word_mode, vl, false);
+				putGAM(dst_mode, dst_reg, word_mode, v, false);
 			else
-				b -> write(a, word_mode, vl);
+				b -> write(a, word_mode, v);
 
 			break;
 
