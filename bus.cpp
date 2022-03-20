@@ -18,7 +18,7 @@ constexpr int n_pages = 12;
 constexpr int n_pages = 16;
 #endif
 
-bus::bus() : c(nullptr), tm11(nullptr), rk05_(nullptr), rx02_(nullptr), tty_(nullptr)
+bus::bus()
 {
 	m = new memory(n_pages * 8192);
 

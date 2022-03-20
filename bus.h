@@ -21,15 +21,15 @@ typedef struct
 class bus
 {
 private:
-	cpu *c { nullptr };
-	tm_11 *tm11 { nullptr };
-	rk05 *rk05_ { nullptr };
-	rx02 *rx02_ { nullptr };
-	tty *tty_ { nullptr };
+	cpu    *c     { nullptr };
+	tm_11  *tm11  { nullptr };
+	rk05   *rk05_ { nullptr };
+	rx02   *rx02_ { nullptr };
+	tty    *tty_  { nullptr };
 
-	memory *m { nullptr };
+	memory *m     { nullptr };
 
-	page_t pages[16];
+	page_t pages[16] { 0 };
 
 	uint16_t MMR2 { 0 }, MMR3 { 0 }, CPUERR { 0 }, PIR { 0 }, CSR { 0 };
 
