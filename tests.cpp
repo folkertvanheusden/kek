@@ -1374,9 +1374,11 @@ void test_jsr(cpu *const c)
 
 	c -> reset();
 	c -> setRegister(1, 10);
+	c -> setRegister(6, 01000);
 	b -> writeWord(0, 0004011);	// JSR
 	do_test(c, 1);
 	assert(c -> getRegister(0) == 2);
+	assert(c -> getRegister(6) == 0776);
 	assert(c -> getRegister(7) == 10);
 }
 
@@ -1386,19 +1388,23 @@ void test_rts(cpu *const c)
 
 	c -> reset();
 	c -> setRegister(0, 10);
+	c -> setRegister(6, 01000);
 	b -> writeWord(0, 0004010);
 	b -> writeWord(10, 0b0000000010000000);
 	do_test(c, 2);
 	assert(c -> getRegister(0) == 10);
+	assert(c -> getRegister(6) == 0776);
 	assert(c -> getRegister(7) == 2);
 	//
 	c -> reset();
 	c -> setRegister(0, 10);
+	c -> setRegister(6, 01000);
 	b -> writeWord(0, 0004110);
 	b -> writeWord(10, 0b0000000010000001);
 	do_test(c, 2);
 	assert(c -> getRegister(0) == 10);
 	assert(c -> getRegister(1) == 0);
+	assert(c -> getRegister(6) == 01000);
 	assert(c -> getRegister(7) == 2);
 }
 
