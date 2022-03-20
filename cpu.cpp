@@ -313,7 +313,7 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 				    uint16_t src_value = getGAM(src_mode, src_reg, word_mode, false);
 				    if (word_mode) {
 					    if (dst_mode == 0)
-						    setRegister(dst_reg, false, int8_t(src_value));
+						    setRegister(dst_reg, false, int8_t(src_value));  // int8_t: sign extension
 					    else
 						    putGAM(dst_mode, dst_reg, word_mode, src_value, false);
 				    }
@@ -903,7 +903,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 				 else {  // SXT
 					 uint16_t a  = getGAMAddress(dst_mode, dst_reg, word_mode, false);
 
-					 int32_t  vl = getPSW_n() ? -1 : 0;
+					 int32_t  vl = -getPSW_n();
 
 					 setPSW_z(getPSW_n() == false);
 					 setPSW_v(false);
@@ -954,7 +954,7 @@ bool cpu::conditional_branch_instructions(const uint16_t instr)
 			break;
 
 		case 0b00000111: // BLE
-			take = getPSW_n() != getPSW_v() | getPSW_z();
+			take = getPSW_n() != getPSW_v() || getPSW_z();
 			break;
 
 		case 0b10000000: // BPL
@@ -970,7 +970,7 @@ bool cpu::conditional_branch_instructions(const uint16_t instr)
 			break;
 
 		case 0b10000011: // BLOS
-			take = getPSW_c() | getPSW_z();
+			take = getPSW_c() || getPSW_z();
 			break;
 
 		case 0b10000100: // BVC
@@ -1599,6 +1599,8 @@ void cpu::step()
 			fclose(fh);
 		}
 	}
+
+	trap(010);
 
 	*event = 1;
 }
