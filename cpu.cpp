@@ -1008,10 +1008,10 @@ bool cpu::condition_code_operations(const uint16_t instr)
 		int level = instr & 7;
 		setPSW_spl(level);
 
-		// trap via vector 010
-		trap(010);
+//		// trap via vector 010  only(?) on an 11/60 and not(?) on an 11/70
+//		trap(010);
 
-		fprintf(stderr, "SPL%d, new pc: %06o\n", level, getPC());
+		D(fprintf(stderr, "SPL%d, new pc: %06o\n", level, getPC());)
 
 		return true;
 	}
