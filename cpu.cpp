@@ -1511,14 +1511,18 @@ void cpu::disassemble()
 
 void cpu::step()
 {
-	if (getPC() & 1)
+	uint16_t temp_pc = getPC();
+
+	if (temp_pc & 1)
 		busError();
 
 	if (disas)
 		disassemble();
 
-	b -> setMMR2(getPC());
-	uint16_t instr = b->readWord(getPC());
+	b->setMMR2(temp_pc);
+
+	uint16_t instr = b->readWord(temp_pc);
+
 	addRegister(7, false, 2);
 
 	if (double_operand_instructions(instr))
