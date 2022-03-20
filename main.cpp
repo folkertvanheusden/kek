@@ -213,8 +213,7 @@ void put_char_ui(char c)
 void help()
 {
 	printf("-h       this help\n");
-	printf("-m mode  \"test\": for running xxdp (stop on bell)\n");
-	printf("         \"tc\": run testcases\n");
+	printf("-m mode  \"tc\": run testcases\n");
 	printf("-T t.bin load file as a binary tape file (like simh \"load\" command)\n");
 	printf("-R d.rk  load file as a RK05 disk device\n");
 	printf("-p 123   set CPU start pointer to decimal(!) value\n");
@@ -233,7 +232,7 @@ int main(int argc, char *argv[])
 
 	c -> setEmulateMFPT(true);
 
-	bool testMode = false, testCases = false;
+	bool testCases = false;
 	int opt = -1;
 	while((opt = getopt(argc, argv, "hm:T:R:p:ndL:")) != -1)
 	{
@@ -251,9 +250,7 @@ int main(int argc, char *argv[])
 				break;
 
 			case 'm':
-				if (strcasecmp(optarg, "test") == 0)
-					testMode = true;
-				else if (strcasecmp(optarg, "tc") == 0)
+				if (strcasecmp(optarg, "tc") == 0)
 					testCases = true;
 				else {
 					fprintf(stderr, "\"-m %s\" is not known\n", optarg);
@@ -293,9 +290,6 @@ int main(int argc, char *argv[])
 		tty_ = new tty(poll_char, get_char, put_char);
 
 	b->add_tty(tty_);
-
-	if (testMode)
-		tty_->setTest();
 
 	if (testCases)
 		tests(c);

@@ -18,11 +18,12 @@ private:
 	uint16_t stackLimitRegister { 0 };
 	bool haltFlag { false }, resetFlag { false };
 	bool runMode  { false };
-	uint32_t *const event { nullptr };
 
 	bool emulateMFPT { false };
 
 	bus *const b { nullptr };
+
+	uint32_t *const event { nullptr };
 
 	uint16_t getRegister(const int nr, const bool MF_MT) const;
 	void setRegister(const int nr, const bool MF_MT, const uint16_t value);

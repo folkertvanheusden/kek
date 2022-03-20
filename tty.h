@@ -24,7 +24,6 @@ private:
 	std::function<void(char c)> put_char;
 	bool     have_char    { false };
 	uint16_t registers[4] { 0 };
-	bool     testMode     { false };
 	bool     withUI       { false };
 
 #if defined(ESP32)
@@ -34,8 +33,6 @@ private:
 public:
 	tty(std::function<bool()> poll_char, std::function<uint8_t()> get_char, std::function<void(char c)> put_char);
 	virtual ~tty();
-
-	void setTest() { testMode = true; }
 
 #if defined(ESP32)
 	QueueHandle_t & getTerminalQueue() { return queue; }

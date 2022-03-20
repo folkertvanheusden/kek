@@ -22,6 +22,8 @@ bus *b    = nullptr;
 cpu *c    = nullptr;
 tty *tty_ = nullptr;
 
+uint32_t event     = 0;
+
 uint16_t exec_addr = 0;
 
 uint32_t start_ts  = 0;
@@ -113,6 +115,8 @@ void telnet_terminal(void *p) {
 
 		xQueueReceive(tty_->getTerminalQueue(), &cc, portMAX_DELAY);
 
+		Serial.print(cc);
+
 		// update terminal buffer
 		xSemaphoreTake(terminal_mutex, portMAX_DELAY);
 
@@ -144,8 +148,6 @@ void telnet_terminal(void *p) {
 
 void wifi(void *p) {
 	Serial.println(F("wifi task started"));
-
-	uint32_t ulNotifiedValue = 0;
 
 	int fd = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -283,7 +285,7 @@ void setup() {
 	b = new bus();
 
 	Serial.println(F("Init CPU"));
-	c = new cpu(b);
+	c = new cpu(b, &event);
 
 	Serial.println(F("Connect CPU to BUS"));
 	b->add_cpu(c);
@@ -291,7 +293,7 @@ void setup() {
 	c->setEmulateMFPT(true);
 
 	Serial.println(F("Init TTY"));
-	tty_ = new tty(false);
+	tty_ = new tty(poll_char, get_char, put_char);
 	Serial.println(F("Connect TTY to bus"));
 	b->add_tty(tty_);
 
@@ -365,21 +367,32 @@ void dump_state(bus *const b) {
 	Serial.println(t_diff);
 }
 
+bool poll_char()
+{
+	return Serial.available() > 0;
+}
+
+char get_char()
+{
+	char c = Serial.read();
+
+	if (c == 5)
+		dump_state(b);
+
+	return c;
+}
+
+void put_char(char c)
+{
+	Serial.print(c);
+}
+
 void loop() {
 	icount++;
 
-	if ((icount & 1023) == 0) {
-		if (Serial.available()) {
-			char c = Serial.read();
+	c->step();
 
-			if (c == 5)
-				dump_state(b);
-			else if (c > 0 && c < 127)
-				tty_->sendChar(c);
-		}
-	}
-
-	if (c->step()) {
+	if (event) {
 		Serial.println(F(""));
 		Serial.println(F(" *** EMULATION STOPPED *** "));
 		dump_state(b);

@@ -1081,7 +1081,6 @@ bool cpu::misc_operations(const uint16_t instr)
 
 		// MOVE link, PC
 		setPC(getRegister(link_reg, false));
-		uint16_t temp = getPC();
 
 		// POP link
 		setRegister(link_reg, false, popStack());
