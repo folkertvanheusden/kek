@@ -399,8 +399,8 @@ void loop() {
 		delay(3000);
 		Serial.println(F(" *** EMULATION RESTARTING *** "));
 
+		c->reset();
 		c->setRegister(7, exec_addr);
-		c->resetHalt();
 
 		start_ts = millis();
 		icount = 0;
