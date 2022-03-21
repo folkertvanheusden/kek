@@ -326,8 +326,13 @@ int main(int argc, char *argv[])
 
 	struct pollfd fds[] = { { STDIN_FILENO, POLLIN, 0 } };
 
-	const unsigned long start = get_ms();
-	uint64_t icount = 0;
+	uint32_t icount           = 0;
+	uint64_t total_icount     = 0;
+	uint32_t refresh_interval = 262144;
+	constexpr uint32_t pdp_11_70_mips  = 1000000000 / 300;  // 300ns cache
+
+	const unsigned long start          = get_ms();
+	unsigned long       interval_start = start;
 
 	for(;;) {
 		c->step();
@@ -355,16 +360,33 @@ int main(int argc, char *argv[])
 
 		icount++;
 
-		if ((icount & 262143) == 0) {
+		if (icount >= refresh_interval) {
+			total_icount += icount;
+
+			unsigned long now = get_ms();
+
+			unsigned long took_ms = std::max(1ul, now - interval_start);
+
+			refresh_interval = (1000 * icount) / took_ms;
+
+			if (refresh_interval == 0)
+				refresh_interval = 65536;
+			else if (refresh_interval > pdp_11_70_mips)
+				refresh_interval = pdp_11_70_mips;
+
+			fprintf(stderr, "instructions_executed: %u, took_ms: %lu, new refresh_interval: %u\n", icount, took_ms, refresh_interval);
+
 			if (withUI) {
-				unsigned long now = get_ms();
-				mvwprintw(w_main_b -> win, 0, 24, "%.1f/s   ", icount * 1000.0 / (now - start));
+				mvwprintw(w_main_b -> win, 0, 24, "%.1f/s   ", icount * 1000.0 / took_ms);
 				mvwprintw(w_main_b -> win, 0, 42, "%06o", b->get_switch_register());
 				mydoupdate();
 			}
 
 			if (terminate)
 				event = 1;
+
+			interval_start = now;
+			icount = 0;
 		}
 	}
 
