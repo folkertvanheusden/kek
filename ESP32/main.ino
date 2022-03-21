@@ -57,8 +57,9 @@ void panel(void *p) {
 	bus *const b = reinterpret_cast<bus *>(p);
 	cpu *const c = b->getCpu();
 
-	CRGB leds[32] { 0 };
-	FastLED.addLeds<NEOPIXEL, NEOPIXELS_PIN>(leds, 32);
+	constexpr const uint8_t n_leds = 80;
+	CRGB leds[n_leds] { 0 };
+	FastLED.addLeds<NEOPIXEL, NEOPIXELS_PIN>(leds, n_leds);
 
 	FastLED.setBrightness(25);
 
@@ -69,20 +70,24 @@ void panel(void *p) {
 	for(;;) {
 		vTaskDelay(20 / portTICK_RATE_MS);
 
-		uint16_t current_PC      = c->getPC();
-		uint32_t full_addr       = b->calculate_full_address(current_PC);
+		// note that these are approximately as there's no mutex on the emulation
+		uint16_t current_PC    = c->getPC();
+		uint32_t full_addr     = b->calculate_full_address(current_PC);
 
-		uint16_t current_PSW     = c->getPSW();
+		uint16_t current_instr = b->readWord(current_PC);
 
-		const CRGB & led_color   = run_mode_led_color[current_PSW >> 14];
+		uint16_t current_PSW   = c->getPSW();
 
-		for(int b=0; b<22; b++)
+		const CRGB & led_color = run_mode_led_color[current_PSW >> 14];
+
+		for(uint8_t b=0; b<22; b++)
 			leds[b] = full_addr & (1 << b) ? led_color : CRGB::Black;
 
-		leds[22] = c->getPSW_c() ? CRGB::Magenta : CRGB::Black;
-		leds[23] = c->getPSW_v() ? CRGB::Magenta : CRGB::Black;
-		leds[24] = c->getPSW_z() ? CRGB::Magenta : CRGB::Black;
-		leds[25] = c->getPSW_n() ? CRGB::Magenta : CRGB::Black;
+		for(uint8_t b=0; b<16; b++)
+			leds[b + 22] = current_PSW & (1 << b) ? CRGB::Magenta : CRGB::Black;
+
+		for(uint8_t b=0; b<16; b++)
+			leds[b + 38] = current_instr & (1 << b) ? CRGB::Red : CRGB::Black;
 
 		FastLED.show();
 	}
