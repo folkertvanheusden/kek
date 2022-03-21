@@ -42,9 +42,9 @@ uint16_t cpu::getRegister(const int nr, const bool prev_mode) const
 
 	if (nr == 6) {
 		if (prev_mode)
-			return sp[(getBitPSW(13) << 1) | getBitPSW(12)];
+			return sp[(getPSW() >> 12) & 3];
 
-		return sp[(getBitPSW(15) << 1) | getBitPSW(14)];
+		return sp[getPSW() >> 14];
 	}
 
 	return pc;
@@ -56,9 +56,9 @@ void cpu::setRegister(const int nr, const bool prev_mode, const uint16_t value)
 		regs0_5[getBitPSW(11)][nr] = value;
 	else if (nr == 6) {
 		if (prev_mode)
-			sp[(getBitPSW(13) << 1) | getBitPSW(12)] = value;
+			sp[(getPSW() >> 12) & 3] = value;
 		else
-			sp[(getBitPSW(15) << 1) | getBitPSW(14)] = value;
+			sp[getPSW() >> 14] = value;
 	}
 	else {
 		pc = value;
@@ -71,14 +71,12 @@ void cpu::addRegister(const int nr, const bool prev_mode, const uint16_t value)
 		regs0_5[getBitPSW(11)][nr] += value;
 	else if (nr == 6) {
 		if (prev_mode)
-			sp[(getBitPSW(13) << 1) | getBitPSW(12)] += value;
+			sp[(getPSW() >> 12) & 3] += value;
 		else
-			sp[(getBitPSW(15) << 1) | getBitPSW(14)] += value;
+			sp[getPSW() >> 14] += value;
 	}
 	else {
-		assert((pc & 1) == 0);
 		pc += value;
-		assert((pc & 1) == 0);
 	}
 }
 
