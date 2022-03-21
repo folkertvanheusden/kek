@@ -2,6 +2,7 @@
 // Released under Apache License v2.0
 #pragma once
 
+#include <atomic>
 #include <stdint.h>
 #include <stdio.h>
 #include <string>
@@ -38,9 +39,11 @@ private:
 #else
 	FILE *fh;
 #endif
+	std::atomic_bool *const disk_read_acitivity  { nullptr };
+	std::atomic_bool *const disk_write_acitivity { nullptr };
 
 public:
-	rk05(const std::string & file, bus *const b);
+	rk05(const std::string & file, bus *const b, std::atomic_bool *const disk_read_acitivity, std::atomic_bool *const disk_write_acitivity);
 	virtual ~rk05();
 
 	uint8_t readByte(const uint16_t addr);

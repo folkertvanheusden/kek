@@ -24,7 +24,10 @@ const char * const regnames[] = {
 	"RK05_DATABUF      "
 	};
 
-rk05::rk05(const std::string & file, bus *const b) : b(b)
+rk05::rk05(const std::string & file, bus *const b, std::atomic_bool *const disk_read_acitivity, std::atomic_bool *const disk_write_acitivity) :
+	b(b),
+	disk_read_acitivity(disk_read_acitivity),
+	disk_write_acitivity(disk_write_acitivity)
 {
 	memset(registers, 0x00, sizeof registers);
 	memset(xfer_buffer, 0x00, sizeof xfer_buffer);
@@ -167,6 +170,9 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 
 			}
 			else if (func == 1) { // write
+				if (disk_write_acitivity)
+					*disk_write_acitivity = true;
+
 				D(fprintf(stderr, "invoke %d (write)\n", func);)
 				D(fprintf(stderr, "RK05 writing %zo bytes to offset %o (%d dec)\n", reclen, diskoffb, diskoffb);)
 
@@ -200,8 +206,14 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 				}
 
 				registers[(RK05_DA - RK05_BASE) / 2] = sector | (surface << 4) | (cylinder << 5);
+
+				if (disk_write_acitivity)
+					*disk_write_acitivity = false;
 			}
 			else if (func == 2) { // read
+				if (disk_read_acitivity)
+					*disk_read_acitivity = true;
+
 				D(fprintf(stderr, "invoke %d (read)\n", func);)
 				D(fprintf(stderr, "RK05 reading %zo bytes from offset %o (%d dec) to %o\n", reclen, diskoffb, diskoffb, memoff);)
 
@@ -251,6 +263,9 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 				}
 
 				registers[(RK05_DA - RK05_BASE) / 2] = sector | (surface << 4) | (cylinder << 5);
+
+				if (disk_write_acitivity)
+					*disk_write_acitivity = false;
 			}
 			else if (func == 4) {
 				D(fprintf(stderr, "invoke %d (seek)\n", func);)
