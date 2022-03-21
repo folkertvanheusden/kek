@@ -1,6 +1,7 @@
 // (C) 2018-2022 by Folkert van Heusden
 // Released under Apache License v2.0
 #include <Adafruit_NeoPixel.h>
+#include <atomic>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -18,6 +19,7 @@
 
 
 #define NEOPIXELS_PIN	25
+
 bus *b    = nullptr;
 cpu *c    = nullptr;
 tty *tty_ = nullptr;
@@ -27,6 +29,12 @@ uint32_t event     = 0;
 uint16_t exec_addr = 0;
 
 uint32_t start_ts  = 0;
+
+std::atomic_bool running { false };
+std::atomic_bool on_wifi { false };
+std::atomic_bool console_telnet_clients { false };
+std::atomic_bool disk_read_activity     { false };
+std::atomic_bool disk_write_activity    { false };
 
 void setBootLoader(bus *const b) {
 	cpu     *const c      = b->getCpu();
@@ -57,7 +65,7 @@ void panel(void *p) {
 	bus *const b = reinterpret_cast<bus *>(p);
 	cpu *const c = b->getCpu();
 
-	constexpr const uint8_t n_leds = 80;
+	constexpr const uint8_t n_leds = 60;
 	Adafruit_NeoPixel pixels(n_leds, NEOPIXELS_PIN, NEO_RGBW);
 	pixels.begin();
 
@@ -66,10 +74,14 @@ void panel(void *p) {
 	pixels.setBrightness(48);
 	pixels.show();
 
-	const uint32_t run_mode_led_color[4] = { pixels.Color(255, 0, 0), pixels.Color(255, 255, 0), pixels.Color(0, 0, 255), pixels.Color(0, 255, 0) };
-
 	const uint32_t magenta = pixels.Color(255, 0, 255);
 	const uint32_t red     = pixels.Color(255, 0, 0);
+	const uint32_t green   = pixels.Color(0, 255, 0);
+	const uint32_t blue    = pixels.Color(0, 0, 255);
+	const uint32_t yellow  = pixels.Color(255, 255, 0);
+	const uint32_t white   = pixels.Color(255, 255, 255, 255);
+
+	const uint32_t run_mode_led_color[4] = { red, yellow, blue, green };
 
 	// initial animation
 	for(uint8_t i=0; i<n_leds; i++) {
@@ -83,7 +95,7 @@ void panel(void *p) {
 
 		pixels.show();
 
-		delay(25);
+		delay(10);
 	}
 
 	pixels.clear();
@@ -110,6 +122,13 @@ void panel(void *p) {
 
 		for(uint8_t b=0; b<16; b++)
 			pixels.setPixelColor(b + 38, current_instr & (1 << b) ? red : 0);
+
+		pixels.setPixelColor(54, running ? white : 0);
+
+		pixels.setPixelColor(55, on_wifi ? white : 0);
+
+		pixels.setPixelColor(56, disk_read_activity  ? blue : 0);
+		pixels.setPixelColor(57, disk_write_activity ? blue : 0);
 
 		pixels.show();
 	}
@@ -194,6 +213,8 @@ void wifi(void *p) {
 	std::vector<int> clients;
 
 	for(;;) {
+		on_wifi = WiFi.status() == WL_CONNECTED;
+
 		int rc = poll(fds, 1, 10);
 
 		if (rc == 1) {
@@ -228,6 +249,8 @@ void wifi(void *p) {
 				xSemaphoreGive(terminal_mutex);
 			}
 		}
+
+		console_telnet_clients = clients.empty() == false;
 
 		std::string out;
 		char c { 0 };
@@ -291,6 +314,8 @@ void setup_wifi_stations()
 		delay(250);
 	}
 
+	on_wifi = true;
+
 	Serial.println(WiFi.localIP());
 }
 
@@ -337,7 +362,7 @@ void setup() {
 	setup_wifi_stations();
 
 	Serial.println(F("Load RK05"));
-	b->add_rk05(new rk05("", b));
+	b->add_rk05(new rk05("", b, &disk_read_activity, &disk_write_activity));
 	setBootLoader(b);
 
 	Serial.print(F("Free RAM after init: "));
@@ -362,6 +387,8 @@ void setup() {
 	Serial.println(F("Emulation starting!"));
 
 	start_ts = millis();
+
+	running = true;
 }
 
 uint32_t icount = 0;
@@ -420,6 +447,8 @@ void loop() {
 	c->step();
 
 	if (event) {
+		running = false;
+
 		Serial.println(F(""));
 		Serial.println(F(" *** EMULATION STOPPED *** "));
 		dump_state(b);
@@ -431,5 +460,7 @@ void loop() {
 
 		start_ts = millis();
 		icount = 0;
+
+		running = true;
 	}
 }
