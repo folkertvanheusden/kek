@@ -1,6 +1,6 @@
 // (C) 2018-2022 by Folkert van Heusden
 // Released under Apache License v2.0
-#include <FastLED.h>
+#include <Adafruit_NeoPixel.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -58,14 +58,18 @@ void panel(void *p) {
 	cpu *const c = b->getCpu();
 
 	constexpr const uint8_t n_leds = 80;
-	CRGB leds[n_leds] { 0 };
-	FastLED.addLeds<NEOPIXEL, NEOPIXELS_PIN>(leds, n_leds);
+	Adafruit_NeoPixel pixels(n_leds, NEOPIXELS_PIN, NEO_RGBW);
+	pixels.begin();
 
-	FastLED.setBrightness(25);
+	pixels.clear();
 
-	FastLED.show();
+	pixels.setBrightness(48);
+	pixels.show();
 
-	const CRGB run_mode_led_color[4] = { CRGB::Red, CRGB::Yellow, CRGB::Blue, CRGB::Green };
+	const uint32_t run_mode_led_color[4] = { pixels.Color(255, 0, 0), pixels.Color(255, 255, 0), pixels.Color(0, 0, 255), pixels.Color(0, 255, 0) };
+
+	const uint32_t magenta = pixels.Color(255, 0, 255);
+	const uint32_t red     = pixels.Color(255, 0, 0);
 
 	for(;;) {
 		vTaskDelay(20 / portTICK_RATE_MS);
@@ -78,18 +82,18 @@ void panel(void *p) {
 
 		uint16_t current_PSW   = c->getPSW();
 
-		const CRGB & led_color = run_mode_led_color[current_PSW >> 14];
+		uint32_t led_color     = run_mode_led_color[current_PSW >> 14];
 
 		for(uint8_t b=0; b<22; b++)
-			leds[b] = full_addr & (1 << b) ? led_color : CRGB::Black;
+			pixels.setPixelColor(b, full_addr & (1 << b) ? led_color : 0);
 
 		for(uint8_t b=0; b<16; b++)
-			leds[b + 22] = current_PSW & (1 << b) ? CRGB::Magenta : CRGB::Black;
+			pixels.setPixelColor(b + 22, current_PSW & (1 << b) ? magenta : 0);
 
 		for(uint8_t b=0; b<16; b++)
-			leds[b + 38] = current_instr & (1 << b) ? CRGB::Red : CRGB::Black;
+			pixels.setPixelColor(b + 38, current_instr & (1 << b) ? red : 0);
 
-		FastLED.show();
+		pixels.show();
 	}
 }
 
