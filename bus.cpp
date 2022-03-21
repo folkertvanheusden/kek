@@ -22,9 +22,11 @@ bus::bus()
 {
 	m = new memory(n_pages * 8192);
 
-	for(int i=0; i<n_pages; i++) {
-		pages[i].par = (i & 7) * 8192 / 64;
-		pages[i].pdr = (3 << 1) | (0 << 4) | (0 << 6) | ((8192 / (32 * 2)) << 8);
+	for(int rm=0; rm<4; rm++) {
+		for(int i=0; i<n_pages; i++) {
+			pages[rm][i].par = (i & 7) * 8192 / 64;
+			pages[rm][i].pdr = (3 << 1) | (0 << 4) | (0 << 6) | ((8192 / (32 * 2)) << 8);
+		}
 	}
 
 	CPUERR = MMR0 = MMR1 = MMR2 = MMR3 = PIR = CSR = 0;
@@ -49,6 +51,8 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev)
 {
 	// fprintf(stderr, "read [%d] from %06o [%d]\n", word_mode, a, use_prev);
 	uint16_t temp = 0;
+
+	int run_mode = c->getPSW() >> 14;
 
 	if (a >= 0160000) {
 		D(fprintf(stderr, "read%c I/O %o\n", word_mode ? 'b' : ' ', a);)
@@ -90,25 +94,25 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev)
 
 		/// MMU ///
 		if (a >= 0172300 && a < 0172320) {
-			uint16_t t = pages[((a & 017) >> 1)].pdr;
+			uint16_t t = pages[run_mode][((a & 017) >> 1)].pdr;
 			D(fprintf(stderr, "read PDR for %d: %o\n", (a & 017) >> 1, t);)
 			return t;
 		}
 
 		if (a >= 0172340 && a < 0172360) {
-			uint16_t t = pages[((a & 017) >> 1)].par;
+			uint16_t t = pages[run_mode][((a & 017) >> 1)].par;
 			D(fprintf(stderr, "read PAR for %d: %o\n", (a & 017) >> 1, t);)
 			return t;
 		}
 
 		if (a >= 0177600 && a < 0177620) {
-			uint16_t t = pages[((a & 017) >> 1) + 8].pdr;
+			uint16_t t = pages[run_mode][((a & 017) >> 1) + 8].pdr;
 			D(fprintf(stderr, "read PDR for %d: %o\n", ((a & 017) >> 1) + 8, t);)
 			return t;
 		}
 
 		if (a >= 0177640 && a < 0177660) {
-			uint16_t t = pages[((a & 017) >> 1) + 8].par;
+			uint16_t t = pages[run_mode][((a & 017) >> 1) + 8].par;
 			D(fprintf(stderr, "read PAR for %d: %o\n", ((a & 017) >> 1) + 8, t);)
 			return t;
 		}
@@ -268,7 +272,7 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev)
 	if (a < 256 * 4)
 		is_user = false;
 
-	uint32_t m_offset = pages[apf + is_user * 8].par * 64;
+	uint32_t m_offset = pages[run_mode][apf + is_user * 8].par * 64;
 
 	if ((a & 1) && word_mode == 0)
 		D(fprintf(stderr, "odd addressing\n");)
@@ -284,8 +288,11 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev)
 uint32_t bus::calculate_full_address(const uint16_t a)
 {
 	const uint8_t apf = a >> 13; // active page field
-	bool is_user = c -> getBitPSW(14) && c -> getBitPSW(15);
-	uint32_t m_offset = pages[apf + is_user * 8].par * 64;
+
+	int run_mode = c->getPSW() >> 14;
+	bool is_user = run_mode == 3;
+
+	uint32_t m_offset = pages[run_mode][apf + is_user * 8].par * 64;
 
 	return m_offset + (a & 8191);
 }
@@ -294,6 +301,8 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 {
 	// fprintf(stderr, "write [%d] %06o to %06o\n", word_mode, value, a);
 	//D(fprintf(stderr, "write bus %o(%d): %o\n", a, word_mode, value);)
+
+	int run_mode = c->getPSW() >> 14;
 
 	if (a >= 0160000) {
 		D(fprintf(stderr, "write%c %o to I/O %o\n", word_mode ? 'b' : ' ', value, a);)
@@ -433,27 +442,28 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 		}
 
 		/// MMU ///
+
 		if (a >= 0172300 && a < 0172320) {
 			D(fprintf(stderr, "write set PDR for %d to %o\n", (a & 017) >> 1, value);)
-			pages[((a & 017) >> 1)].pdr = value;
+			pages[run_mode][((a & 017) >> 1)].pdr = value;
 			return value;
 		}
 
 		if (a >= 0172340 && a < 0172360) {
 			D(fprintf(stderr, "write set PAR for %d to %o\n", (a & 017) >> 1, value);)
-			pages[((a & 017) >> 1)].par = value;
+			pages[run_mode][((a & 017) >> 1)].par = value;
 			return value;
 		}
 
 		if (a >= 0117600 && a < 0117620) {
 			D(fprintf(stderr, "write set PDR for %d to %o\n", ((a & 017) >> 1) + 8, value);)
-			pages[((a & 017) >> 1) + 8].pdr = value;
+			pages[run_mode][((a & 017) >> 1) + 8].pdr = value;
 			return value;
 		}
 
 		if (a >= 0117640 && a < 0177660) {
 			D(fprintf(stderr, "write set PAR for %d to %o\n", ((a & 017) >> 1) + 8, value);)
-			pages[((a & 017) >> 1) + 8].par = value;
+			pages[run_mode][((a & 017) >> 1) + 8].par = value;
 			return value;
 		}
 
@@ -485,14 +495,14 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 
 	const uint8_t apf = a >> 13; // active page field
 	bool is_user = use_prev ? (c -> getBitPSW(12) && c -> getBitPSW(13)) : (c -> getBitPSW(14) && c -> getBitPSW(15));
-	uint32_t m_offset = pages[apf + is_user * 8].par * 64;
+	uint32_t m_offset = pages[run_mode][apf + is_user * 8].par * 64;
 
 	// always write interrupt etc vectors from to kernel space
 	// TODO: check rights
 	if (a < 256 * 4)
 		is_user = false;
 
-	pages[apf].pdr |= 1 << 6; // page has been written to
+	pages[run_mode][apf].pdr |= 1 << 6; // page has been written to
 
 	if ((a & 1) && word_mode == 0)
 		D(fprintf(stderr, "odd addressing\n");)
