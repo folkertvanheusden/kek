@@ -599,13 +599,15 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 						 if (dst_mode == 0) {
 							 uint16_t t = getRegister(dst_reg, false);
+
 							 t1 = t >> 8;
 							 t2 = t & 255;
+
 							 setRegister(dst_reg, false, (t2 << 8) | t1);
 						 }
 						 else {
 							 uint16_t a = getGAMAddress(dst_mode, dst_reg, word_mode, false);
-							 uint16_t t = getRegister(dst_reg, false);
+
 							 t1 = b -> readByte(a);
 							 t2 = b -> readByte(a + 1);
 
