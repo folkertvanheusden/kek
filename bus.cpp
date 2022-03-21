@@ -237,8 +237,14 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev)
 			D(fprintf(stderr, "bus::readWord: odd address UNHANDLED %o\n", a);)
 		D(fprintf(stderr, "UNHANDLED read %o(%c)\n", a, word_mode ? 'B' : ' ');)
 
-		if (a == 0177760)
-			return std::min(n_pages * 8192, 65536) - 4096;
+		// LO size register field must be all 1s, so subtract 1
+		constexpr const uint32_t system_size = n_pages * 8192 - 4096 - 1;
+
+		if (a == 0177762)  // system size HI
+			return system_size >> 16;
+
+		if (a == 0177760)  // system size LO
+			return system_size & 65535;
 
 //		c -> busError();
 
