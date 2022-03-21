@@ -867,18 +867,23 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 				 }
 
 		case 0b00110110: { // MTPI/MTPD
-					 // FIXME
-					 uint16_t a = getGAMAddress(dst_mode, dst_reg, word_mode, false);
+					 // always words: word_mode-bit is to select between MTPI and MTPD
+
+					 // calculate address in '13/12'-address-space
+					 uint16_t a = getGAMAddress(dst_mode, dst_reg, false, true);
+					 // retrieve word from '15/14'-stack
 					 uint16_t v = popStack();
 
 					 setPSW_n(word_mode ? v & 0x80 : v & 0x8000);
 					 setPSW_z(v == 0);
 					 setPSW_v(false);
 
+					 fprintf(stderr, "MTP%c: address %06o, value %06o\n", word_mode ? 'D' : 'I', a, v);
+
 					 if (dst_mode == 0)
-						 putGAM(dst_mode, dst_reg, word_mode, v, true);
+						 putGAM(dst_mode, dst_reg, false, v, false); // ???
 					 else
-						 b -> write(a, word_mode, v); // ?
+						 b -> write(a, false, v);
 
 					 break;
 				 }
