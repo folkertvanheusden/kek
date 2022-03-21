@@ -263,7 +263,7 @@ int main(int argc, char *argv[])
 				break;
 
 			case 'R': {
-					  b->add_rk05(new rk05(optarg, b));
+					  b->add_rk05(new rk05(optarg, b, nullptr, nullptr));
 					  setBootLoader(b);
 					  break;
 				  }
