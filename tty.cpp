@@ -58,19 +58,24 @@ uint16_t tty::readWord(const uint16_t addr)
 	const int reg = (addr - PDP11TTY_BASE) / 2;
 	uint16_t vtemp = registers[reg];
 
-	if (!have_char)
-		have_char = poll_char();
+	if (have_char_1) {
+		have_char_1 = false;
+		have_char_2 = true;
+	}
+	else if (have_char_2 == false) {
+		have_char_1 = poll_char();
+	}
 
 	if (addr == PDP11TTY_TKS) {
-		vtemp = have_char ? 128 : 0;
+		vtemp = (have_char_2 ? 1 << 7 : 0) | (have_char_1 ? 1 << 11 : 0);
 	}
 	else if (addr == PDP11TTY_TKB) {
-		if (have_char) {
+		if (have_char_2) {
 			uint8_t c = get_char();
 
 			vtemp = c | (parity(c) << 7);
 
-			have_char = false;
+			have_char_2 = false;
 		}
 		else {
 			vtemp = 0;
@@ -80,7 +85,7 @@ uint16_t tty::readWord(const uint16_t addr)
 		vtemp = 128;
 	}
 
-	//D(fprintf(stderr, "PDP11TTY read addr %o (%s): %d, 7bit: %d\n", addr, regnames[reg], vtemp, vtemp & 127);)
+	D(fprintf(stderr, "PDP11TTY read addr %o (%s): %d, 7bit: %d\n", addr, regnames[reg], vtemp, vtemp & 127);)
 
 	registers[reg] = vtemp;
 

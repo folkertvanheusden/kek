@@ -22,7 +22,8 @@ private:
 	std::function<bool()>       poll_char;
 	std::function<uint8_t()>    get_char;
 	std::function<void(char c)> put_char;
-	bool     have_char    { false };
+	bool     have_char_1  { false };  // RCVR BUSY bit high (11)
+	bool     have_char_2  { false };  // RCVR DONE bit high (7)
 	uint16_t registers[4] { 0 };
 	bool     withUI       { false };
 
