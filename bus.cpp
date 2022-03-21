@@ -27,7 +27,7 @@ bus::bus()
 		pages[i].pdr = (3 << 1) | (0 << 4) | (0 << 6) | ((8192 / (32 * 2)) << 8);
 	}
 
-	CPUERR = MMR2 = MMR3 = PIR = CSR = 0;
+	CPUERR = MMR0 = MMR1 = MMR2 = MMR3 = PIR = CSR = 0;
 }
 
 bus::~bus()
@@ -174,6 +174,16 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev)
 			}
 		}
 		else {
+			if (a == 0177572) { // MMR0
+				D(fprintf(stderr, "read MMR0\n");)
+				return MMR0;
+			}
+
+			if (a == 0177574) { // MMR1
+				D(fprintf(stderr, "read MMR1\n");)
+				return MMR1;
+			}
+
 			if (a == 0177576) { // MMR2
 				D(fprintf(stderr, "read MMR2\n");)
 				return MMR2;
@@ -375,6 +385,24 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 			D(fprintf(stderr, "write set MMR3 to %o\n", value);)
 			MMR3 = value;
 			return MMR3;
+		}
+
+		if (a == 0177576) { // MMR2
+			D(fprintf(stderr, "write set MMR2 to %o\n", value);)
+			MMR2 = value;
+			return MMR2;
+		}
+
+		if (a == 0177574) { // MMR1
+			D(fprintf(stderr, "write set MMR1 to %o\n", value);)
+			MMR1 = value;
+			return MMR1;
+		}
+
+		if (a == 0177572) { // MMR0
+			D(fprintf(stderr, "write set MMR0 to %o\n", value);)
+			MMR0 = value;
+			return MMR0;
 		}
 
 		if (a == 0177772) { // PIR
