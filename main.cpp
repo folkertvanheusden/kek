@@ -226,6 +226,10 @@ int main(int argc, char *argv[])
 {
 	//setlocale(LC_ALL, "");
 
+	fprintf(stderr, "This PDP-11 emulator is called \"kek\" (reason for that is forgotten) and was written by Folkert van Heusden.\n");
+
+	fprintf(stderr, "Build on: " __DATE__ " " __TIME__ "\n");
+
 	bus *b = new bus();
 	cpu *c = new cpu(b, &event);
 	b->add_cpu(c);
