@@ -3,3 +3,6 @@
 *.gz
 *.tgz
 .pio
+tests/*.lst
+tests/*.bin
+*.log
