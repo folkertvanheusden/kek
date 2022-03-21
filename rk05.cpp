@@ -93,8 +93,6 @@ uint16_t rk05::readWord(const uint16_t addr)
 {
 	const int reg = (addr - RK05_BASE) / 2;
 
-	D(fprintf(stderr, "RK05 read %s/%o: ", reg[regnames], addr);)
-
 	if (addr == RK05_DS) {		// 0177400
 		setBit(registers[reg], 11, true); // disk on-line
 		setBit(registers[reg], 8, true); // sector ok
@@ -114,6 +112,8 @@ uint16_t rk05::readWord(const uint16_t addr)
 
 	if (addr == RK05_CS)
 		setBit(registers[reg], 0, false); // clear go
+
+	D(fprintf(stderr, "RK05 read %s/%o: %06o\n", reg[regnames], addr, vtemp);)
 
 	return vtemp;
 }
