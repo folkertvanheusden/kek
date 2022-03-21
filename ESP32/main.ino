@@ -71,6 +71,24 @@ void panel(void *p) {
 	const uint32_t magenta = pixels.Color(255, 0, 255);
 	const uint32_t red     = pixels.Color(255, 0, 0);
 
+	// initial animation
+	for(uint8_t i=0; i<n_leds; i++) {
+		pixels.setPixelColor(i, 255, 255, 255);
+
+		int p = i - 10;
+		if (p < 0)
+			p += n_leds;
+
+		pixels.setPixelColor(p, 0, 0, 0);
+
+		pixels.show();
+
+		delay(25);
+	}
+
+	pixels.clear();
+	pixels.show();
+
 	for(;;) {
 		vTaskDelay(20 / portTICK_RATE_MS);
 
