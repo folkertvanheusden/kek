@@ -6,3 +6,5 @@
 tests/*.lst
 tests/*.bin
 *.log
+work/
+tests/
