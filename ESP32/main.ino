@@ -324,6 +324,8 @@ void setup() {
 
 	Serial.println(F("This PDP-11 emulator is called \"kek\" (reason for that is forgotten) and was written by Folkert van Heusden."));
 
+	Serial.println(F("Build on: " __DATE__ " " __TIME__));
+
 	Serial.print(F("Size of int: "));
 	Serial.println(sizeof(int));
 
