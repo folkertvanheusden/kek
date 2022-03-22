@@ -901,8 +901,9 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 				 if (word_mode) {  // MFPS
 					 uint16_t temp = psw & 0xff;
 
-					 if (dst_mode == 0 && SIGN(temp))
-						 temp |= 0xff00;
+					 setPSW_n(temp & 128);
+					 setPSW_z(temp == 0);
+					 setPSW_v(false);
 
 					 putGAM(dst_mode, dst_reg, word_mode, temp, false);
 				 }
