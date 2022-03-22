@@ -93,36 +93,66 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev)
 		}
 
 		/// MMU ///
-		if (a >= 0172300 && a < 0172320) {
-			uint16_t t = pages[run_mode][((a & 017) >> 1)].pdr;
-			D(fprintf(stderr, "read PDR for %d: %o\n", (a & 017) >> 1, t);)
+		if (a >= 0172200 && a < 0172220) {
+			uint16_t t = pages[001][((a & 017) >> 1)].pdr;
+			D(fprintf(stderr, "read supervisor I PDR for %d: %o\n", (a & 017) >> 1, t);)
+			return t;
+		}
+		if (a >= 0172220 && a < 0172240) {
+			uint16_t t = pages[001][((a & 017) >> 1) + 8].pdr;
+			D(fprintf(stderr, "read supervisor D PDR for %d: %o\n", (a & 017) >> 1, t);)
+			return t;
+		}
+		if (a >= 0172240 && a < 0172260) {
+			uint16_t t = pages[001][((a & 017) >> 1)].par;
+			D(fprintf(stderr, "read supervisor I PAR for %d: %o\n", (a & 017) >> 1, t);)
+			return t;
+		}
+		if (a >= 0172260 && a < 0172300) {
+			uint16_t t = pages[001][((a & 017) >> 1) + 8].par;
+			D(fprintf(stderr, "read supervisor D PAR for %d: %o\n", (a & 017) >> 1, t);)
 			return t;
 		}
 
+		if (a >= 0172300 && a < 0172320) {
+			uint16_t t = pages[000][((a & 017) >> 1)].pdr;
+			D(fprintf(stderr, "read kernel I PDR for %d: %o\n", (a & 017) >> 1, t);)
+			return t;
+		}
+		if (a >= 0172320 && a < 0172340) {
+			uint16_t t = pages[000][((a & 017) >> 1) + 8].pdr;
+			D(fprintf(stderr, "read kernel D PDR for %d: %o\n", (a & 017) >> 1, t);)
+			return t;
+		}
 		if (a >= 0172340 && a < 0172360) {
-			uint16_t t = pages[run_mode][((a & 017) >> 1)].par;
-			D(fprintf(stderr, "read PAR for %d: %o\n", (a & 017) >> 1, t);)
+			uint16_t t = pages[000][((a & 017) >> 1)].par;
+			D(fprintf(stderr, "read kernel I PAR for %d: %o\n", (a & 017) >> 1, t);)
+			return t;
+		}
+		if (a >= 0172360 && a < 0172400) {
+			uint16_t t = pages[000][((a & 017) >> 1) + 8].par;
+			D(fprintf(stderr, "read kernel D PAR for %d: %o\n", (a & 017) >> 1, t);)
 			return t;
 		}
 
 		if (a >= 0177600 && a < 0177620) {
-			uint16_t t = pages[run_mode][((a & 017) >> 1) + 8].pdr;
-			D(fprintf(stderr, "read PDR for %d: %o\n", ((a & 017) >> 1) + 8, t);)
+			uint16_t t = pages[003][((a & 017) >> 1)].pdr;
+			D(fprintf(stderr, "read userspace I PDR for %d: %o\n", (a & 017) >> 1, t);)
 			return t;
 		}
-
+		if (a >= 0177620 && a < 0177640) {
+			uint16_t t = pages[003][((a & 017) >> 1) + 8].pdr;
+			D(fprintf(stderr, "read userspace D PDR for %d: %o\n", (a & 017) >> 1, t);)
+			return t;
+		}
 		if (a >= 0177640 && a < 0177660) {
-			uint16_t t = pages[run_mode][((a & 017) >> 1) + 8].par;
-			D(fprintf(stderr, "read PAR for %d: %o\n", ((a & 017) >> 1) + 8, t);)
+			uint16_t t = pages[003][((a & 017) >> 1)].par;
+			D(fprintf(stderr, "read userspace I PAR for %d: %o\n", (a & 017) >> 1, t);)
 			return t;
 		}
-
-		if (a == 0177572) {
-			uint16_t t = ((c -> getRunMode() ? 0b11 : 0b00) << 5) | // kernel == 00
-				((c -> getRegister(7) >> 13) << 1) | // page nr
-				0 // MMU enabled
-				;
-			D(fprintf(stderr, "read MMU SR0 %o\n", t);)
+		if (a >= 0177660 && a < 0177700) {
+			uint16_t t = pages[003][((a & 017) >> 1) + 8].par;
+			D(fprintf(stderr, "read userspace D PAR for %d: %o\n", (a & 017) >> 1, t);)
 			return t;
 		}
 		///////////
@@ -178,9 +208,13 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev)
 			}
 		}
 		else {
-			if (a == 0177572) { // MMR0
-				D(fprintf(stderr, "read MMR0\n");)
-				return MMR0;
+			if (a == 0177572) {
+				uint16_t t = (run_mode << 5) | // kernel == 00
+					((c -> getRegister(7) >> 13) << 1) | // page nr
+					0 // MMU enabled
+					;
+				D(fprintf(stderr, "read MMU SR0 %o\n", t);)
+				return t;
 			}
 
 			if (a == 0177574) { // MMR1
@@ -247,10 +281,6 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev)
 		if (tty_ && a >= PDP11TTY_BASE && a < PDP11TTY_END)
 			return word_mode ? tty_ -> readByte(a) : tty_ -> readWord(a);
 
-		if (a & 1)
-			D(fprintf(stderr, "bus::readWord: odd address UNHANDLED %o\n", a);)
-		D(fprintf(stderr, "UNHANDLED read %o(%c)\n", a, word_mode ? 'B' : ' ');)
-
 		// LO size register field must be all 1s, so subtract 1
 		constexpr const uint32_t system_size = n_pages * 8192 - 4096 - 1;
 
@@ -259,6 +289,11 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev)
 
 		if (a == 0177760)  // system size LO
 			return system_size & 65535;
+
+		if (a & 1)
+			D(fprintf(stderr, "bus::readWord: odd address UNHANDLED %o\n", a);)
+		else
+			D(fprintf(stderr, "UNHANDLED read %o(%c)\n", a, word_mode ? 'B' : ' ');)
 
 //		c -> busError();
 
@@ -442,30 +477,69 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 		}
 
 		/// MMU ///
+		if (a >= 0172200 && a < 0172220) {
+			uint16_t t = pages[001][((a & 017) >> 1)].pdr = value;
+			D(fprintf(stderr, "write supervisor I PDR for %d: %o\n", (a & 017) >> 1, t);)
+			return t;
+		}
+		if (a >= 0172220 && a < 0172240) {
+			uint16_t t = pages[001][((a & 017) >> 1) + 8].pdr = value;
+			D(fprintf(stderr, "write supervisor D PDR for %d: %o\n", (a & 017) >> 1, t);)
+			return t;
+		}
+		if (a >= 0172240 && a < 0172260) {
+			uint16_t t = pages[001][((a & 017) >> 1)].par = value;
+			D(fprintf(stderr, "write supervisor I PAR for %d: %o\n", (a & 017) >> 1, t);)
+			return t;
+		}
+		if (a >= 0172260 && a < 0172300) {
+			uint16_t t = pages[001][((a & 017) >> 1) + 8].par = value;
+			D(fprintf(stderr, "write supervisor D PAR for %d: %o\n", (a & 017) >> 1, t);)
+			return t;
+		}
 
 		if (a >= 0172300 && a < 0172320) {
-			D(fprintf(stderr, "write set PDR for %d to %o\n", (a & 017) >> 1, value);)
-			pages[run_mode][((a & 017) >> 1)].pdr = value;
-			return value;
+			uint16_t t = pages[000][((a & 017) >> 1)].pdr = value;
+			D(fprintf(stderr, "write kernel I PDR for %d: %o\n", (a & 017) >> 1, t);)
+			return t;
 		}
-
+		if (a >= 0172320 && a < 0172340) {
+			uint16_t t = pages[000][((a & 017) >> 1) + 8].pdr = value;
+			D(fprintf(stderr, "write kernel D PDR for %d: %o\n", (a & 017) >> 1, t);)
+			return t;
+		}
 		if (a >= 0172340 && a < 0172360) {
-			D(fprintf(stderr, "write set PAR for %d to %o\n", (a & 017) >> 1, value);)
-			pages[run_mode][((a & 017) >> 1)].par = value;
-			return value;
+			uint16_t t = pages[000][((a & 017) >> 1)].par = value;
+			D(fprintf(stderr, "write kernel I PAR for %d: %o\n", (a & 017) >> 1, t);)
+			return t;
+		}
+		if (a >= 0172360 && a < 0172400) {
+			uint16_t t = pages[000][((a & 017) >> 1) + 8].par = value;
+			D(fprintf(stderr, "write kernel D PAR for %d: %o\n", (a & 017) >> 1, t);)
+			return t;
 		}
 
-		if (a >= 0117600 && a < 0117620) {
-			D(fprintf(stderr, "write set PDR for %d to %o\n", ((a & 017) >> 1) + 8, value);)
-			pages[run_mode][((a & 017) >> 1) + 8].pdr = value;
-			return value;
+		if (a >= 0177600 && a < 0177620) {
+			uint16_t t = pages[003][((a & 017) >> 1)].pdr = value;
+			D(fprintf(stderr, "write userspace I PDR for %d: %o\n", (a & 017) >> 1, t);)
+			return t;
 		}
-
-		if (a >= 0117640 && a < 0177660) {
-			D(fprintf(stderr, "write set PAR for %d to %o\n", ((a & 017) >> 1) + 8, value);)
-			pages[run_mode][((a & 017) >> 1) + 8].par = value;
-			return value;
+		if (a >= 0177620 && a < 0177640) {
+			uint16_t t = pages[003][((a & 017) >> 1) + 8].pdr = value;
+			D(fprintf(stderr, "write userspace D PDR for %d: %o\n", (a & 017) >> 1, t);)
+			return t;
 		}
+		if (a >= 0177640 && a < 0177660) {
+			uint16_t t = pages[003][((a & 017) >> 1)].par = value;
+			D(fprintf(stderr, "write userspace I PAR for %d: %o\n", (a & 017) >> 1, t);)
+			return t;
+		}
+		if (a >= 0177660 && a < 0177700) {
+			uint16_t t = pages[003][((a & 017) >> 1) + 8].par = value;
+			D(fprintf(stderr, "write userspace D PAR for %d: %o\n", (a & 017) >> 1, t);)
+			return t;
+		}
+		////
 
 		if (a == 0177746) { // cache control register
 			// FIXME
