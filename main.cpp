@@ -6,20 +6,21 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "memory.h"
+#include "error.h"
 #include "console_ncurses.h"
 #include "console_posix.h"
 #include "cpu.h"
+#include "gen.h"
+#include "memory.h"
+#include "terminal.h"
+#include "tests.h"
 #include "tty.h"
 #include "utils.h"
-#include "tests.h"
-#include "terminal.h"
-#include "error.h"
+
 
 bool             withUI       { false };
 uint32_t         event        { 0 };
 std::atomic_bool terminate    { false };
-
 
 void loadbin(bus *const b, uint16_t base, const char *const file)
 {
@@ -288,7 +289,7 @@ int main(int argc, char *argv[])
 			else if (refresh_interval > pdp_11_70_mips)
 				refresh_interval = pdp_11_70_mips;
 
-			fprintf(stderr, "instructions_executed: %u, took_ms: %lu, new refresh_interval: %u\n", icount, took_ms, refresh_interval);
+			D(fprintf(stderr, "instructions_executed: %u, took_ms: %lu, new refresh_interval: %u\n", icount, took_ms, refresh_interval);)
 
 //			if (withUI) {
 //				mvwprintw(w_main_b -> win, 0, 24, "%.1f/s   ", icount * 1000.0 / took_ms);
