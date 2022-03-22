@@ -1253,7 +1253,7 @@ void cpu::disassemble()
 	// TODO: 100000011
 
 	if (do_opcode == 0b000) {
-		auto dst_text = addressing_to_string(dst_register, pc);
+		auto dst_text = addressing_to_string(dst_register, (pc + 2) & 65535);
 
 		// single_operand_instructions
 		switch(so_opcode) {
@@ -1335,7 +1335,7 @@ void cpu::disassemble()
 	}
 	else if (do_opcode == 0b111) {
 		std::string src_text = format("R%d", (instruction >> 6) & 7);
-		auto        dst_text = addressing_to_string(dst_register, pc);
+		auto        dst_text = addressing_to_string(dst_register, (pc + 2) & 65535);
 		uint8_t     dst      = instruction & 63;
 
 		switch(ado_opcode) {  // additional double operand
@@ -1537,13 +1537,13 @@ void cpu::disassemble()
 			text = format("TRAP %o", instruction & 255);
 
 		if ((instruction & ~0b111111) == 0b0000000001000000) {
-			auto dst_text = addressing_to_string(dst_register, pc);
+			auto dst_text = addressing_to_string(dst_register, (pc + 2) & 65535);
 
 			text = std::string("JMP ") + dst_text.first;
 		}
 
 		if ((instruction & 0b1111111000000000) == 0b0000100000000000) {
-			auto dst_text = addressing_to_string(src_register, pc);
+			auto dst_text = addressing_to_string(src_register, (pc + 2) & 65535);
 
 			text = std::string("JSR ") + dst_text.first;
 		}
