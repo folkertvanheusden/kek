@@ -60,7 +60,9 @@ void console::put_char(const char c)
 {
 	put_char_ll(c);
 
-	if (c == 13)
+	if (c == 0) {
+	}
+	else if (c == 13)
 		tx = 0;
 	else if (c == 10)
 		ty++;
