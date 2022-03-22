@@ -297,6 +297,8 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev)
 
 	if (a < 01000)
 		run_mode = 0;
+	else if (use_prev)
+		run_mode = (c->getPSW() >> 12) & 3;
 
 	uint32_t m_offset = pages[run_mode][apf].par * 64;
 
@@ -556,6 +558,8 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 
 	if (a < 01000)
 		run_mode = 0;
+	else if (use_prev)
+		run_mode = (c->getPSW() >> 12) & 3;
 
 	uint32_t m_offset = pages[run_mode][apf].par * 64;
 
