@@ -1,7 +1,6 @@
 #pragma once
 
 #include <atomic>
-#include <optional>
 #include <thread>
 #include <vector>
 
@@ -16,7 +15,7 @@ private:
 	std::vector<char>       buffer;
 
 protected:
-	virtual std::optional<char> wait_for_char(const int timeout) = 0;
+	virtual int wait_for_char(const int timeout) = 0;
 
 public:
 	console(std::atomic_bool *const terminate);

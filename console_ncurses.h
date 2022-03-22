@@ -11,7 +11,7 @@ private:
 	NEWWIN *w_main       { nullptr };
 
 protected:
-	std::optional<char> wait_for_char(const int timeout) override;
+	int wait_for_char(const int timeout) override;
 
 public:
 	console_ncurses(std::atomic_bool *const terminate);

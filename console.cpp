@@ -34,14 +34,14 @@ uint8_t console::get_char()
 void console::operator()()
 {
 	while(!*terminate) {
-		auto c = wait_for_char(500);
+		int c = wait_for_char(500);
 
-		if (c.has_value() == false)
+		if (c == -1)
 			continue;
 
 		if (c == 3)
 			*terminate = true;
 		else
-			buffer.push_back(c.value());
+			buffer.push_back(c);
 	}
 }

@@ -9,7 +9,7 @@ private:
 	struct termios org_tty_opts { 0 };
 
 protected:
-	std::optional<char> wait_for_char(const int timeout) override;
+	int wait_for_char(const int timeout) override;
 
 public:
 	console_posix(std::atomic_bool *const terminate);

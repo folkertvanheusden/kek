@@ -25,14 +25,14 @@ console_ncurses::~console_ncurses()
 	endwin();
 }
 
-std::optional<char> console_ncurses::wait_for_char(const int timeout)
+int console_ncurses::wait_for_char(const int timeout)
 {
 	struct pollfd fds[] = { { STDIN_FILENO, POLLIN, timeout } };
 
 	if (poll(fds, 1, 0) == 1 && fds[0].revents)
 		return getch();
 
-	return { };
+	return -1;
 }
 
 void console_ncurses::put_char(const char c)

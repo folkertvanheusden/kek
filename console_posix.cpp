@@ -25,14 +25,14 @@ console_posix::~console_posix()
 		error_exit(true, "~console_posix: tcsetattr failed");
 }
 
-std::optional<char> console_posix::wait_for_char(const int timeout)
+int console_posix::wait_for_char(const int timeout)
 {
 	struct pollfd fds[] = { { STDIN_FILENO, POLLIN, timeout } };
 
 	if (poll(fds, 1, 0) == 1 && fds[0].revents)
 		return getchar();
 
-	return { };
+	return -1;
 }
 
 void console_posix::put_char(const char c)
