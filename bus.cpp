@@ -301,21 +301,18 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev)
 	}
 
 	const uint8_t apf = a >> 13; // active page field
-	bool is_user = use_prev ? (c -> getBitPSW(12) && c -> getBitPSW(13)) : (c -> getBitPSW(14) && c -> getBitPSW(15));
 
-	// always retrieve interrupt etc vectors from kernel space
-	if (a < 256 * 4)
-		is_user = false;
+	if (a < 01000)
+		run_mode = 0;
 
-	uint32_t m_offset = pages[run_mode][apf + is_user * 8].par * 64;
+	uint32_t m_offset = pages[run_mode][apf].par * 64;
 
-	if ((a & 1) && word_mode == 0)
-		D(fprintf(stderr, "odd addressing\n");)
+	m_offset += a & 8191;
 
-	if (!word_mode)
-		temp = m -> readWord(m_offset + (a & 8191));
+	if (word_mode)
+		temp = m -> readByte(m_offset);
 	else
-		temp = m -> readByte(m_offset + (a & 8191));
+		temp = m -> readWord(m_offset);
 
 	return temp;
 }
@@ -325,9 +322,8 @@ uint32_t bus::calculate_full_address(const uint16_t a)
 	const uint8_t apf = a >> 13; // active page field
 
 	int run_mode = c->getPSW() >> 14;
-	bool is_user = run_mode == 3;
 
-	uint32_t m_offset = pages[run_mode][apf + is_user * 8].par * 64;
+	uint32_t m_offset = pages[run_mode][apf].par * 64;
 
 	return m_offset + (a & 8191);
 }
@@ -568,23 +564,20 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 	}
 
 	const uint8_t apf = a >> 13; // active page field
-	bool is_user = use_prev ? (c -> getBitPSW(12) && c -> getBitPSW(13)) : (c -> getBitPSW(14) && c -> getBitPSW(15));
-	uint32_t m_offset = pages[run_mode][apf + is_user * 8].par * 64;
 
-	// always write interrupt etc vectors from to kernel space
-	// TODO: check rights
-	if (a < 256 * 4)
-		is_user = false;
+	if (a < 01000)
+		run_mode = 0;
+
+	uint32_t m_offset = pages[run_mode][apf].par * 64;
 
 	pages[run_mode][apf].pdr |= 1 << 6; // page has been written to
 
-	if ((a & 1) && word_mode == 0)
-		D(fprintf(stderr, "odd addressing\n");)
+	m_offset += a & 8191;
 
 	if (word_mode)
-		m -> writeByte(m_offset + (a & 8191), value);
+		m -> writeByte(m_offset, value);
 	else
-		m -> writeWord(m_offset + (a & 8191), value);
+		m -> writeWord(m_offset, value);
 
 	return value;
 }
