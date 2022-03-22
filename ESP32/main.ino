@@ -10,6 +10,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
+#include "console_esp32.h"
 #include "cpu.h"
 #include "error.h"
 #include "esp32.h"
@@ -20,9 +21,10 @@
 
 #define NEOPIXELS_PIN	25
 
-bus *b    = nullptr;
-cpu *c    = nullptr;
-tty *tty_ = nullptr;
+bus     *b    = nullptr;
+cpu     *c    = nullptr;
+tty     *tty_ = nullptr;
+console *cnsl = nullptr;
 
 uint32_t event     = 0;
 
@@ -30,11 +32,12 @@ uint16_t exec_addr = 0;
 
 uint32_t start_ts  = 0;
 
-std::atomic_bool running { false };
-std::atomic_bool on_wifi { false };
-std::atomic_bool console_telnet_clients { false };
-std::atomic_bool disk_read_activity     { false };
-std::atomic_bool disk_write_activity    { false };
+std::atomic_bool terminate { false };
+
+std::atomic_bool running   { false };
+std::atomic_bool on_wifi   { false };
+std::atomic_bool disk_read_activity  { false };
+std::atomic_bool disk_write_activity { false };
 
 void setBootLoader(bus *const b) {
 	cpu     *const c      = b->getCpu();
@@ -134,145 +137,9 @@ void panel(void *p) {
 	}
 }
 
-SemaphoreHandle_t terminal_mutex = xSemaphoreCreateMutex();
-
-constexpr int terminal_columns = 80;
-constexpr int terminal_rows    = 25;
-char terminal[terminal_columns * terminal_rows];
-uint8_t tx = 0, ty = terminal_rows - 1;
-QueueHandle_t to_telnet_queue = xQueueCreate(10, sizeof(char));
-
-void delete_first_line() {
-	memmove(&terminal[0], &terminal[terminal_columns], terminal_columns * (terminal_rows - 1));
-	memset(&terminal[terminal_columns * (terminal_rows - 1)], ' ', terminal_columns);
-}
-
-void telnet_terminal(void *p) {
-	bus *const b = reinterpret_cast<bus *>(p);
-	tty *const tty_ = b->getTty();
-
-	Serial.println(F("telnet_terminal task started"));
-
-	if (!tty_)
-		Serial.println(F(" *** NO TTY ***"));
-
-	for(;;) {
-		char cc { 0 };
-
-		xQueueReceive(tty_->getTerminalQueue(), &cc, portMAX_DELAY);
-
-		Serial.print(cc);
-
-		// update terminal buffer
-		xSemaphoreTake(terminal_mutex, portMAX_DELAY);
-
-		if (cc == 13)
-			tx = 0;
-		else if (cc == 10)
-			ty++;
-		else {
-			terminal[ty * terminal_columns + tx] = cc;
-
-			tx++;
-
-			if (tx == terminal_columns)
-				tx = 0, ty++;
-		}
-
-		if (ty == terminal_rows) {
-			delete_first_line();
-			ty--;
-		}
-
-		xSemaphoreGive(terminal_mutex);
-
-		// pass through to telnet clients
-		if (xQueueSend(to_telnet_queue, &cc, portMAX_DELAY) != pdTRUE)
-			Serial.println(F("queue TTY character failed"));
-	}
-}
-
-void wifi(void *p) {
-	Serial.println(F("wifi task started"));
-
-	int fd = socket(AF_INET, SOCK_STREAM, 0);
-
-	struct sockaddr_in server { 0 };
-	server.sin_family = AF_INET;
-	server.sin_addr.s_addr = INADDR_ANY;
-	server.sin_port = htons(23);
- 
-	if (bind(fd, (struct sockaddr *)&server, sizeof(server)) == -1)
-		Serial.println(F("bind failed"));
-
-	if (listen(fd, 3) == -1)
-		Serial.println(F("listen failed"));
-
-	struct pollfd fds[] = { { fd, POLLIN, 0 } };
-
-	std::vector<int> clients;
-
-	for(;;) {
-		on_wifi = WiFi.status() == WL_CONNECTED;
-
-		int rc = poll(fds, 1, 10);
-
-		if (rc == 1) {
-			int client = accept(fd, nullptr, nullptr);
-			if (client != -1) {
-				clients.push_back(client);
-
-				constexpr const uint8_t dont_auth[] = { 0xff, 0xf4, 0x25,  // don't auth
-									0xff, 0xfb, 0x03,  // suppress goahead
-									0xff, 0xfe, 0x22,  // don't line-mode
-									0xff, 0xfe, 0x27,  // don't new envt0
-									0xff, 0xfb, 0x01,  // will echo
-									0xff, 0xfe, 0x01,  // don't echo
-									0xff, 0xfd, 0x2d };  // no echo
-
-				write(client, dont_auth, sizeof(dont_auth));
-
-				// send initial terminal stat
-				write(client, "\033[2J", 4);
-
-				xSemaphoreTake(terminal_mutex, portMAX_DELAY);
-
-				for(int y=0; y<terminal_rows; y++) {
-					std::string out = format("\033[%dH", y + 1);
-					if (write(client, out.c_str(), out.size()) != out.size())
-						break;
-
-					if (write(client, &terminal[y * terminal_columns], terminal_columns) != terminal_columns)
-						break;
-				}
-
-				xSemaphoreGive(terminal_mutex);
-			}
-		}
-
-		console_telnet_clients = clients.empty() == false;
-
-		std::string out;
-		char c { 0 };
-		while (xQueueReceive(to_telnet_queue, &c, 10 / portMAX_DELAY) == pdTRUE)
-			out += c;
-
-		if (!out.empty()) {
-			for(size_t i=0; i<clients.size();) {
-				if (write(clients.at(i), out.c_str(), out.size()) == -1) {
-					close(clients.at(i));
-					clients.erase(clients.begin() + i);
-				}
-				else {
-					i++;
-				}
-			}
-		}
-	}
-}
-
 void setup_wifi_stations()
 {
+#if 0
 	WiFi.mode(WIFI_STA);
 
 	WiFi.softAP("PDP-11 KEK", nullptr, 5, 0, 4);
@@ -317,6 +184,7 @@ void setup_wifi_stations()
 	on_wifi = true;
 
 	Serial.println(WiFi.localIP());
+#endif
 }
 
 void setup() {
@@ -346,8 +214,11 @@ void setup() {
 
 	c->setEmulateMFPT(true);
 
+	Serial.println(F("Init console"));
+	cnsl = new console_esp32(&terminate);
+
 	Serial.println(F("Init TTY"));
-	tty_ = new tty(poll_char, get_char, put_char);
+	tty_ = new tty(cnsl);
 	Serial.println(F("Connect TTY to bus"));
 	b->add_tty(tty_);
 
@@ -356,12 +227,7 @@ void setup() {
 	Serial.println(F(")"));
 	xTaskCreatePinnedToCore(&panel, "panel", 2048, b, 1, nullptr, 0);
 
-	memset(terminal, ' ', sizeof(terminal));
-	xTaskCreatePinnedToCore(&telnet_terminal, "telnet", 2048, b, 7, nullptr, 0);
-
-	xTaskCreatePinnedToCore(&wifi, "wifi", 2048, b, 7, nullptr, 0);
-
-	setup_wifi_stations();
+	// setup_wifi_stations();
 
 	Serial.println(F("Load RK05"));
 	b->add_rk05(new rk05("", b, &disk_read_activity, &disk_write_activity));
@@ -448,7 +314,7 @@ void loop() {
 
 	c->step();
 
-	if (event) {
+	if (event || terminate) {
 		running = false;
 
 		Serial.println(F(""));
@@ -463,6 +329,9 @@ void loop() {
 		start_ts = millis();
 		icount = 0;
 
-		running = true;
+		terminate = false;
+		event     = 0;
+
+		running   = true;
 	}
 }

@@ -27,17 +27,9 @@ private:
 	uint16_t registers[4] { 0 };
 	bool     withUI       { false };
 
-#if defined(ESP32)
-	QueueHandle_t queue { nullptr };
-#endif
-
 public:
 	tty(console *const c);
 	virtual ~tty();
-
-#if defined(ESP32)
-	QueueHandle_t & getTerminalQueue() { return queue; }
-#endif
 
 	uint8_t readByte(const uint16_t addr);
 	uint16_t readWord(const uint16_t addr);
