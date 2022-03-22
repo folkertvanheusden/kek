@@ -416,7 +416,7 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 
 		if (a == 0172516) { // MMR3
 			D(fprintf(stderr, "write set MMR3: %o\n", value);)
-			MMR3 = value;
+			MMR3 = value & 067;
 			return MMR3;
 		}
 
@@ -571,9 +571,9 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 	m_offset += a & 8191;
 
 	if (word_mode)
-		m -> writeByte(m_offset, value);
+		m->writeByte(m_offset, value);
 	else
-		m -> writeWord(m_offset, value);
+		m->writeWord(m_offset, value);
 
 	return value;
 }
@@ -586,4 +586,14 @@ uint16_t bus::readWord(const uint16_t a)
 uint16_t bus::writeWord(const uint16_t a, const uint16_t value)
 {
 	return write(a, false, value);
+}
+
+uint16_t bus::readUnibusByte(const uint16_t a)
+{
+	return m->readByte(a);
+}
+
+void bus::writeUnibusByte(const uint16_t a, const uint8_t v)
+{
+	m->writeByte(a, v);
 }

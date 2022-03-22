@@ -178,7 +178,7 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 
 				uint32_t p = reclen; // FIXME
 				for(size_t i=0; i<reclen; i++)
-					xfer_buffer[i] = b -> readByte(memoff + i);
+					xfer_buffer[i] = b->readUnibusByte(memoff + i);
 
 #if defined(ESP32)
 				if (!fh.seek(diskoffb))
@@ -242,7 +242,7 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 
 					for(uint32_t i=0; i<cur; i++) {
 						if (p < 0160000)
-							b -> writeByte(p, xfer_buffer[i]);
+							b -> writeUnibusByte(p, xfer_buffer[i]);
 						p++;
 					}
 

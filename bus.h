@@ -55,9 +55,13 @@ public:
 	uint16_t readByte(const uint16_t a) { return read(a, true); }
 	uint16_t readWord(const uint16_t a);
 
+	uint16_t readUnibusByte(const uint16_t a);
+
 	uint16_t write(const uint16_t a, const bool word_mode, uint16_t value, const bool use_prev=false);
 	uint8_t writeByte(const uint16_t a, const uint8_t value) { return write(a, true, value); }
 	uint16_t writeWord(const uint16_t a, const uint16_t value);
+
+	void writeUnibusByte(const uint16_t a, const uint8_t value);
 
 	void setMMR2(const uint16_t value) { MMR2 = value; }
 
