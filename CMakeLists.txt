@@ -8,6 +8,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 add_executable(
   kek
   bus.cpp
+  console.cpp
+  console_ncurses.cpp
+  console_posix.cpp
   cpu.cpp
   error.cpp
   main.cpp

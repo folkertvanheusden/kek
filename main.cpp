@@ -1,14 +1,14 @@
 // (C) 2018-2022 by Folkert van Heusden
 // Released under Apache License v2.0
 #include <atomic>
-#include <poll.h>
 #include <signal.h>
 #include <stdlib.h>
 #include <string.h>
-#include <termios.h>
 #include <unistd.h>
 
 #include "memory.h"
+#include "console_ncurses.h"
+#include "console_posix.h"
 #include "cpu.h"
 #include "tty.h"
 #include "utils.h"
@@ -16,19 +16,10 @@
 #include "terminal.h"
 #include "error.h"
 
-struct termios   org_tty_opts { 0 };
 bool             withUI       { false };
 uint32_t         event        { 0 };
 std::atomic_bool terminate    { false };
 
-
-void reset_terminal()
-{
-	if (withUI)
-		endwin();
-	else
-		tcsetattr(STDIN_FILENO, TCSANOW, &org_tty_opts);
-}
 
 void loadbin(bus *const b, uint16_t base, const char *const file)
 {
@@ -133,30 +124,6 @@ uint16_t loadTape(bus *const b, const char *const file)
 	return start;
 }
 
-NEWWIN *w_main_b = nullptr, *w_main = nullptr;
-
-void resize_terminal()
-{
-	determine_terminal_size();
-
-	if (ERR == resizeterm(max_y, max_x))
-		error_exit(true, "problem resizing terminal");
-
-	wresize(stdscr, max_y, max_x);
-
-	endwin();
-	refresh();
-
-	wclear(stdscr);
-
-	delete_window(w_main_b);
-	delete_window(w_main);
-	create_win_border(0, 0, max_x - 2, max_y - 2, "window", &w_main_b, &w_main, false);
-	scrollok(w_main -> win, TRUE);
-
-	mydoupdate();
-}
-
 volatile bool sw = false;
 void sw_handler(int s)
 {
@@ -166,47 +133,6 @@ void sw_handler(int s)
 		fprintf(stderr, "Terminating...\n");
 
 		terminate = true;
-	}
-}
-
-bool poll_char()
-{
-	struct pollfd fds[] = { { STDIN_FILENO, POLLIN, 0 } };
-
-	return poll(fds, 1, 0) == 1 && fds[0].revents;
-}
-
-char get_char()
-{
-	char c = getchar();
-
-	if (c == 3)
-		event = 1;
-
-	return c;
-}
-
-char get_char_ui()
-{
-	char c = getch();
-
-	if (c == 3)
-		event = 1;
-
-	return c;
-}
-
-void put_char(char c)
-{
-	printf("%c", c);
-	fflush(nullptr);
-}
-
-void put_char_ui(char c)
-{
-	if (c >= 32 || (c != 12 && c != 27 && c != 13)) {
-		wprintw(w_main -> win, "%c", c);
-		mydoupdate();
 	}
 }
 
@@ -285,13 +211,15 @@ int main(int argc, char *argv[])
 				  return 1;
 		}
 	}
-
-	tty *tty_ = nullptr;
+	
+	console *cnsl = nullptr;
 
 	if (withUI)
-		tty_ = new tty(poll_char, get_char_ui, put_char_ui);
+		cnsl = new console_ncurses(&terminate);
 	else
-		tty_ = new tty(poll_char, get_char, put_char);
+		cnsl = new console_posix(&terminate);
+
+	tty *tty_ = new tty(cnsl);
 
 	b->add_tty(tty_);
 
@@ -306,25 +234,11 @@ int main(int argc, char *argv[])
 	sa.sa_flags = SA_RESTART;
 
 	if (withUI) {
-		init_ncurses(true);
-
 		sigaction(SIGWINCH, &sa, nullptr);
-
-		resize_terminal();
 	}
 
-	sigaction(SIGTERM , &sa, nullptr);
-	sigaction(SIGINT  , &sa, nullptr);
-
-	atexit(reset_terminal);
-
-	tcgetattr(STDIN_FILENO, &org_tty_opts);
-
-	struct termios tty_opts_raw { 0 };
-	cfmakeraw(&tty_opts_raw);
-	tcsetattr(STDIN_FILENO, TCSANOW, &tty_opts_raw);
-
-	struct pollfd fds[] = { { STDIN_FILENO, POLLIN, 0 } };
+	sigaction(SIGTERM, &sa, nullptr);
+	sigaction(SIGINT , &sa, nullptr);
 
 	uint32_t icount           = 0;
 	uint64_t total_icount     = 0;
@@ -376,11 +290,11 @@ int main(int argc, char *argv[])
 
 			fprintf(stderr, "instructions_executed: %u, took_ms: %lu, new refresh_interval: %u\n", icount, took_ms, refresh_interval);
 
-			if (withUI) {
-				mvwprintw(w_main_b -> win, 0, 24, "%.1f/s   ", icount * 1000.0 / took_ms);
-				mvwprintw(w_main_b -> win, 0, 42, "%06o", b->get_switch_register());
-				mydoupdate();
-			}
+//			if (withUI) {
+//				mvwprintw(w_main_b -> win, 0, 24, "%.1f/s   ", icount * 1000.0 / took_ms);
+//				mvwprintw(w_main_b -> win, 0, 42, "%06o", b->get_switch_register());
+//				mydoupdate();
+//			}
 
 			if (terminate)
 				event = 1;
@@ -390,8 +304,9 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (withUI)
-		endwin();
+	terminate = true;
+
+	delete cnsl;
 
 	fprintf(stderr, "Instructions per second: %.3f\n\n", icount * 1000.0 / (get_ms() - start));
 

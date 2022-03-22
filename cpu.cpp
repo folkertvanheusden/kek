@@ -878,7 +878,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					 setPSW_z(v == 0);
 					 setPSW_v(false);
 
-					 fprintf(stderr, "MTP%c: address %06o, value %06o\n", word_mode ? 'D' : 'I', a, v);
+					 D(fprintf(stderr, "MTP%c: address %06o, value %06o\n", word_mode ? 'D' : 'I', a, v);)
 
 					 if (dst_mode == 0)
 						 putGAM(dst_mode, dst_reg, false, v, false); // ???
