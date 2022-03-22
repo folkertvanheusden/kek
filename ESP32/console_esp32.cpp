@@ -8,10 +8,16 @@
 
 console_esp32::console_esp32(std::atomic_bool *const terminate) : console(terminate)
 {
+	th = new std::thread(std::ref(*this));
 }
 
 console_esp32::~console_esp32()
 {
+	if (th) {
+		th->join();
+
+		delete th;
+	}
 }
 
 int console_esp32::wait_for_char(const int timeout)

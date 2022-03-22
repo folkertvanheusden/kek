@@ -12,10 +12,18 @@ console_ncurses::console_ncurses(std::atomic_bool *const terminate) : console(te
 	init_ncurses(true);
 
 	resize_terminal();
+
+	th = new std::thread(std::ref(*this));
 }
 
 console_ncurses::~console_ncurses()
 {
+	if (th) {
+		th->join();
+
+		delete th;
+	}
+
 	wprintw(w_main->win, "\n\n *** PRESS ENTER TO TERMINATE ***\n");
 	mydoupdate();
 

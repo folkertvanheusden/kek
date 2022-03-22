@@ -306,11 +306,11 @@ int main(int argc, char *argv[])
 
 	terminate = true;
 
+	delete b;
+
 	delete cnsl;
 
 	fprintf(stderr, "Instructions per second: %.3f\n\n", icount * 1000.0 / (get_ms() - start));
-
-	delete b;
 
 	return 0;
 }
