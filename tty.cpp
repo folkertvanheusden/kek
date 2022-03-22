@@ -19,6 +19,7 @@
 extern NEWWIN *w_main;
 #endif
 
+
 const char * const regnames[] = { 
 	"reader status ",
 	"reader buffer ",
@@ -26,10 +27,7 @@ const char * const regnames[] = {
 	"puncher buffer"
 	};
 
-tty::tty(std::function<bool()> poll_char, std::function<uint8_t()> get_char, std::function<void(char c)> put_char) :
-	poll_char(poll_char),
-	get_char(get_char),
-	put_char(put_char)
+tty::tty(console *const c) : c(c)
 {
 #if defined(ESP32)
 	queue = xQueueCreate(10, sizeof(char));
@@ -63,7 +61,7 @@ uint16_t tty::readWord(const uint16_t addr)
 		have_char_2 = true;
 	}
 	else if (have_char_2 == false) {
-		have_char_1 = poll_char();
+		have_char_1 = c->poll_char();
 	}
 
 	if (addr == PDP11TTY_TKS) {
@@ -71,9 +69,9 @@ uint16_t tty::readWord(const uint16_t addr)
 	}
 	else if (addr == PDP11TTY_TKB) {
 		if (have_char_2) {
-			uint8_t c = get_char();
+			uint8_t ch = c->get_char();
 
-			vtemp = c | (parity(c) << 7);
+			vtemp = ch | (parity(ch) << 7);
 
 			have_char_2 = false;
 		}
@@ -115,15 +113,15 @@ void tty::writeWord(const uint16_t addr, uint16_t v)
 	D(fprintf(stderr, "PDP11TTY write %o (%s): %o\n", addr, regnames[reg], v);)
 
 	if (addr == PDP11TTY_TPB) {
-		char c = v & 127;
+		char ch = v & 127;
 
-		D(fprintf(stderr, "PDP11TTY print '%c'\n", c);)
+		D(fprintf(stderr, "PDP11TTY print '%c'\n", ch);)
 
 #if defined(ESP32)
-		if (xQueueSend(queue, &c, portMAX_DELAY) != pdTRUE)
+		if (xQueueSend(queue, &ch, portMAX_DELAY) != pdTRUE)
 			Serial.println(F("queue TTY character failed"));
 #else
-		put_char(c);
+		c->put_char(ch);
 #endif
 	}
 

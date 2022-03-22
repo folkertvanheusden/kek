@@ -2,10 +2,12 @@
 // Released under Apache License v2.0
 #pragma once
 
-#include <functional>
 #include <stdint.h>
 #include <stdio.h>
 #include <string>
+
+#include "console.h"
+
 
 #define PDP11TTY_TKS		0177560	// reader status
 #define PDP11TTY_TKB		0177562	// reader buffer
@@ -19,9 +21,7 @@ class memory;
 class tty
 {
 private:
-	std::function<bool()>       poll_char;
-	std::function<uint8_t()>    get_char;
-	std::function<void(char c)> put_char;
+	console *const c      { nullptr };
 	bool     have_char_1  { false };  // RCVR BUSY bit high (11)
 	bool     have_char_2  { false };  // RCVR DONE bit high (7)
 	uint16_t registers[4] { 0 };
@@ -32,7 +32,7 @@ private:
 #endif
 
 public:
-	tty(std::function<bool()> poll_char, std::function<uint8_t()> get_char, std::function<void(char c)> put_char);
+	tty(console *const c);
 	virtual ~tty();
 
 #if defined(ESP32)
