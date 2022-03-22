@@ -23,6 +23,8 @@ bus::bus()
 {
 	m = new memory(n_pages * 8192);
 
+	memset(pages, 0x00, sizeof pages);
+
 	for(int rm=0; rm<4; rm++) {
 		for(int i=0; i<n_pages; i++) {
 			pages[rm][i].par = (i & 7) * 8192 / 64;
@@ -31,8 +33,6 @@ bus::bus()
 	}
 
 	CPUERR = MMR0 = MMR1 = MMR2 = MMR3 = PIR = CSR = 0;
-
-	memset(pages, 0x00, sizeof pages);
 }
 
 bus::~bus()
