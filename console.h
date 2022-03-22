@@ -13,8 +13,6 @@ class console
 private:
 	std::atomic_bool *const terminate   { nullptr };
 
-	std::thread            *th          { nullptr };
-
 	std::vector<char>       input_buffer;
 
 	char                    screen_buffer[t_height][t_width];
@@ -22,6 +20,8 @@ private:
 	uint8_t                 ty          { 0 };
 
 protected:
+	std::thread            *th          { nullptr };
+
 	virtual int wait_for_char(const int timeout) = 0;
 
 	virtual void put_char_ll(const char c) = 0;

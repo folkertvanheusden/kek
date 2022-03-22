@@ -17,12 +17,21 @@ console_posix::console_posix(std::atomic_bool *const terminate) : console(termin
 
 	if (tcsetattr(STDIN_FILENO, TCSANOW, &tty_opts_raw) == -1)
 		error_exit(true, "console_posix: tcsetattr failed");
+
+	th = new std::thread(std::ref(*this));
 }
 
 console_posix::~console_posix()
 {
+	if (th) {
+		th->join();
+
+		delete th;
+	}
+
 	if (tcsetattr(STDIN_FILENO, TCSANOW, &org_tty_opts) == -1)
 		error_exit(true, "~console_posix: tcsetattr failed");
+
 }
 
 int console_posix::wait_for_char(const int timeout)

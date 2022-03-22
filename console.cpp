@@ -12,17 +12,10 @@ console::console(std::atomic_bool *const terminate) :
 	terminate(terminate)
 {
 	memset(screen_buffer, ' ', sizeof screen_buffer);
-
-	th = new std::thread(std::ref(*this));
 }
 
 console::~console()
 {
-	if (th) {
-		th->join();
-
-		delete th;
-	}
 }
 
 bool console::poll_char()
