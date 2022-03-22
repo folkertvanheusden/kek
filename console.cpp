@@ -102,7 +102,7 @@ void console::operator()()
 		if (c == 3)  // ^c
 			*terminate = true;
 		else if (c == 12) {  // ^l
-			put_string_ll(format("\033[2J"));
+			put_string_ll(format("\033[2J\033[?7l"));
 
 			fprintf(stderr, "%d %d\n", tx, ty);
 
@@ -112,7 +112,7 @@ void console::operator()()
 				put_string_ll(std::string(screen_buffer[row], t_width));
 			}
 
-			put_string_ll(format("\033[%d;%dH", ty + 1, tx + 1));
+			put_string_ll(format("\033[%d;%dH\033[?7h", ty + 1, tx + 1));
 		}
 		else {
 			input_buffer.push_back(c);
