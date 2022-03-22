@@ -206,12 +206,8 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev)
 		}
 		else {
 			if (a == 0177572) {
-				uint16_t t = (run_mode << 5) | // kernel == 00
-					((c -> getRegister(7) >> 13) << 1) | // page nr
-					0 // MMU enabled
-					;
-				D(fprintf(stderr, "read MMU MMR0 %o\n", t);)
-				return t;
+				D(fprintf(stderr, "read MMR0\n");)
+				return MMR0;
 			}
 
 			if (a == 0177574) { // MMR1
@@ -433,7 +429,7 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 
 		if (a == 0177572) { // MMR0
 			D(fprintf(stderr, "write set MMR0: %o\n", value);)
-			MMR0 = value;
+			MMR0 = value & ~(3 << 10);  // bit 10 & 11 always read as 0
 			return MMR0;
 		}
 
