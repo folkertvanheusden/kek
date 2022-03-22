@@ -35,7 +35,7 @@ int console_ncurses::wait_for_char(const int timeout)
 	return -1;
 }
 
-void console_ncurses::put_char(const char c)
+void console_ncurses::put_char_ll(const char c)
 {
 	if (c >= 32 || (c != 12 && c != 27 && c != 13)) {
 		wprintw(w_main->win, "%c", c);

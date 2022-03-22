@@ -11,11 +11,11 @@ private:
 protected:
 	int wait_for_char(const int timeout) override;
 
+	void put_char_ll(const char c) override;
+
 public:
 	console_posix(std::atomic_bool *const terminate);
 	virtual ~console_posix();
-
-	void put_char(const char c) override;
 
 	void resize_terminal() override;
 };

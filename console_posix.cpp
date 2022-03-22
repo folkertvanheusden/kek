@@ -35,7 +35,7 @@ int console_posix::wait_for_char(const int timeout)
 	return -1;
 }
 
-void console_posix::put_char(const char c)
+void console_posix::put_char_ll(const char c)
 {
 	printf("%c", c);
 
