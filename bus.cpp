@@ -2,6 +2,7 @@
 // Released under Apache License v2.0
 #include <assert.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "bus.h"
 #include "gen.h"
@@ -30,6 +31,8 @@ bus::bus()
 	}
 
 	CPUERR = MMR0 = MMR1 = MMR2 = MMR3 = PIR = CSR = 0;
+
+	memset(pages, 0x00, sizeof pages);
 }
 
 bus::~bus()

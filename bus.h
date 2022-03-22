@@ -29,7 +29,7 @@ private:
 
 	memory *m     { nullptr };
 
-	page_t pages[4][16] { { 0, 0 } };
+	page_t  pages[4][16];
 
 	uint16_t MMR0 { 0 }, MMR1 { 0 }, MMR2 { 0 }, MMR3 { 0 }, CPUERR { 0 }, PIR { 0 }, CSR { 0 };
 
