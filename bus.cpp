@@ -49,14 +49,11 @@ void bus::clearmem()
 
 uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev)
 {
-	// fprintf(stderr, "read [%d] from %06o [%d]\n", word_mode, a, use_prev);
 	uint16_t temp = 0;
 
 	int run_mode = c->getPSW() >> 14;
 
 	if (a >= 0160000) {
-		D(fprintf(stderr, "read%c I/O %o\n", word_mode ? 'b' : ' ', a);)
-
 		if (a == 0177750) { // MAINT
 			D(fprintf(stderr, "read MAINT\n");)
 			return 1; // POWER OK
@@ -213,7 +210,7 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev)
 					((c -> getRegister(7) >> 13) << 1) | // page nr
 					0 // MMU enabled
 					;
-				D(fprintf(stderr, "read MMU SR0 %o\n", t);)
+				D(fprintf(stderr, "read MMU MMR0 %o\n", t);)
 				return t;
 			}
 
@@ -292,8 +289,8 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev)
 
 		if (a & 1)
 			D(fprintf(stderr, "bus::readWord: odd address UNHANDLED %o\n", a);)
-		else
-			D(fprintf(stderr, "UNHANDLED read %o(%c)\n", a, word_mode ? 'B' : ' ');)
+
+		D(fprintf(stderr, "UNHANDLED read %o(%c)\n", a, word_mode ? 'B' : ' ');)
 
 //		c -> busError();
 
@@ -330,14 +327,9 @@ uint32_t bus::calculate_full_address(const uint16_t a)
 
 uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bool use_prev)
 {
-	// fprintf(stderr, "write [%d] %06o to %06o\n", word_mode, value, a);
-	//D(fprintf(stderr, "write bus %o(%d): %o\n", a, word_mode, value);)
-
 	int run_mode = c->getPSW() >> 14;
 
 	if (a >= 0160000) {
-		D(fprintf(stderr, "write%c %o to I/O %o\n", word_mode ? 'b' : ' ', value, a);)
-
 		if (word_mode) {
 			if (a == 0177776 || a == 0177777) { // PSW
 				D(fprintf(stderr, "writeb PSW %s\n", a & 1 ? "MSB" : "LSB");)
@@ -354,7 +346,7 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 			}
 
 			if (a == 0177774 || a == 0177775) { // stack limit register
-				D(fprintf(stderr, "writeb Set stack limit register to %o\n", value);)
+				D(fprintf(stderr, "writeb Set stack limit register: %o\n", value);)
 					uint16_t v = c -> getStackLimitRegister();
 
 				if (a & 1)
@@ -374,38 +366,38 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 			}
 
 			if (a == 0177774) { // stack limit register
-				D(fprintf(stderr, "write Set stack limit register to %o\n", value);)
+				D(fprintf(stderr, "write Set stack limit register: %o\n", value);)
 				c -> setStackLimitRegister(value);
 				return value;
 			}
 
 			if (a >= 0177700 && a <= 0177705) { // kernel R0-R5
-				D(fprintf(stderr, "write kernel R%d to %o\n", a - 01777700, value);)
+				D(fprintf(stderr, "write kernel R%d: %o\n", a - 01777700, value);)
 				c -> setRegister(false, a - 0177700, value);
 				return value;
 			}
 			if (a >= 0177710 && a <= 0177715) { // user R0-R5
-				D(fprintf(stderr, "write user R%d to %o\n", a - 01777710, value);)
+				D(fprintf(stderr, "write user R%d: %o\n", a - 01777710, value);)
 				c -> setRegister(true, a - 0177710, value);
 				return value;
 			}
 			if (a == 0177706) { // kernel SP
-				D(fprintf(stderr, "write kernel SP to %o\n", value);)
+				D(fprintf(stderr, "write kernel SP: %o\n", value);)
 				c -> setStackPointer(0, value);
 				return value;
 			}
 			if (a == 0177707) { // PC
-				D(fprintf(stderr, "write PC to %o\n", value);)
+				D(fprintf(stderr, "write PC: %o\n", value);)
 				c -> setPC(value);
 				return value;
 			}
 			if (a == 0177716) { // supervisor SP
-				D(fprintf(stderr, "write supervisor sp to %o\n", value);)
+				D(fprintf(stderr, "write supervisor sp: %o\n", value);)
 				c -> setStackPointer(1, value);
 				return value;
 			}
 			if (a == 0177717) { // user SP
-				D(fprintf(stderr, "write user sp to %o\n", value);)
+				D(fprintf(stderr, "write user sp: %o\n", value);)
 				c -> setStackPointer(3, value);
 				return value;
 			}
@@ -416,43 +408,43 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 		}
 
 		if (a == 0177766) { // cpu error register
-			D(fprintf(stderr, "write CPUERR %o\n", value);)
+			D(fprintf(stderr, "write CPUERR: %o\n", value);)
 			CPUERR = 0;
 			return CPUERR;
 		}
 
 		if (a == 0172516) { // MMR3
-			D(fprintf(stderr, "write set MMR3 to %o\n", value);)
+			D(fprintf(stderr, "write set MMR3: %o\n", value);)
 			MMR3 = value;
 			return MMR3;
 		}
 
 		if (a == 0177576) { // MMR2
-			D(fprintf(stderr, "write set MMR2 to %o\n", value);)
+			D(fprintf(stderr, "write set MMR2: %o\n", value);)
 			MMR2 = value;
 			return MMR2;
 		}
 
 		if (a == 0177574) { // MMR1
-			D(fprintf(stderr, "write set MMR1 to %o\n", value);)
+			D(fprintf(stderr, "write set MMR1: %o\n", value);)
 			MMR1 = value;
 			return MMR1;
 		}
 
 		if (a == 0177572) { // MMR0
-			D(fprintf(stderr, "write set MMR0 to %o\n", value);)
+			D(fprintf(stderr, "write set MMR0: %o\n", value);)
 			MMR0 = value;
 			return MMR0;
 		}
 
 		if (a == 0177772) { // PIR
-			D(fprintf(stderr, "write set PIR to %o\n", value);)
+			D(fprintf(stderr, "write set PIR: %o\n", value);)
 			PIR = value; // FIXME
 			return PIR;
 		}
 
 		if (a == 0177546) { // line frequency clock and status register
-			D(fprintf(stderr, "write set LFC/SR to %o\n", value);)
+			D(fprintf(stderr, "write set LFC/SR: %o\n", value);)
 			CSR = value;
 			return CSR;
 		}
@@ -556,6 +548,7 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 
 		if (a & 1)
 			D(fprintf(stderr, "bus::writeWord: odd address UNHANDLED\n");)
+
 		D(fprintf(stderr, "UNHANDLED write %o(%c): %o\n", a, word_mode ? 'B' : ' ', value);)
 
 //		c -> busError();

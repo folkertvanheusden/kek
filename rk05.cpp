@@ -143,7 +143,7 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 	const int reg = (addr - RK05_BASE) / 2;
 	D(fprintf(stderr, "RK05 write %s/%o: %o\n", regnames[reg], addr, v);)
 
-	D(fprintf(stderr, "set register %o to %o\n", addr, v);)
+	D(fprintf(stderr, "set register %o: %o\n", addr, v);)
 	registers[reg] = v;
 
 	if (addr == RK05_CS) {
@@ -166,14 +166,14 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 			const uint16_t memoff = registers[(RK05_BA - RK05_BASE) / 2];
 
 			if (func == 0) { // controller reset
-				D(fprintf(stderr, "invoke %d (controller reset)\n", func);)
+				D(fprintf(stderr, "RK05 invoke %d (controller reset)\n", func);)
 
 			}
 			else if (func == 1) { // write
 				if (disk_write_acitivity)
 					*disk_write_acitivity = true;
 
-				D(fprintf(stderr, "invoke %d (write)\n", func);)
+				D(fprintf(stderr, "RK05 invoke %d (write)\n", func);)
 				D(fprintf(stderr, "RK05 writing %zo bytes to offset %o (%d dec)\n", reclen, diskoffb, diskoffb);)
 
 				uint32_t p = reclen; // FIXME
@@ -214,7 +214,7 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 				if (disk_read_acitivity)
 					*disk_read_acitivity = true;
 
-				D(fprintf(stderr, "invoke %d (read)\n", func);)
+				D(fprintf(stderr, "RK05 invoke %d (read)\n", func);)
 				D(fprintf(stderr, "RK05 reading %zo bytes from offset %o (%d dec) to %o\n", reclen, diskoffb, diskoffb, memoff);)
 
 #if defined(ESP32)
@@ -268,11 +268,11 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 					*disk_write_acitivity = false;
 			}
 			else if (func == 4) {
-				D(fprintf(stderr, "invoke %d (seek)\n", func);)
+				D(fprintf(stderr, "RK05 invoke %d (seek)\n", func);)
 				D(fprintf(stderr, "RK05 seek to offset %o\n", diskoffb);)
 			}
 			else if (func == 7) {
-				D(fprintf(stderr, "invoke %d (write lock)\n", func);)
+				D(fprintf(stderr, "RK05 invoke %d (write lock)\n", func);)
 				D(fprintf(stderr, "RK05 write lock\n");)
 			}
 			else {
