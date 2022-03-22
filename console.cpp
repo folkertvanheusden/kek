@@ -1,5 +1,6 @@
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string>
 #include <string.h>
 
@@ -17,9 +18,11 @@ console::console(std::atomic_bool *const terminate) :
 
 console::~console()
 {
-	th->join();
+	if (th) {
+		th->join();
 
-	delete th;
+		delete th;
+	}
 }
 
 bool console::poll_char()

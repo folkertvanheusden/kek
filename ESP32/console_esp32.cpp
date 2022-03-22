@@ -26,7 +26,7 @@ int console_esp32::wait_for_char(const int timeout)
 	return -1;
 }
 
-void console_esp32::put_char(const char c)
+void console_esp32::put_char_ll(const char c)
 {
 	Serial.print(c);
 }
