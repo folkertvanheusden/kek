@@ -284,9 +284,9 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 			registers[(RK05_DS - RK05_BASE) / 2] |= 64;  // drive ready
 			registers[(RK05_CS - RK05_BASE) / 2] |= 128;  // control ready
 
-			if (v & 64) { // bit 6, invoke interrupt when done vector address 220, see http://www.pdp-11.nl/peripherals/disk/rk05-info.html
-				b->getCpu()->trap(0220);
-			}
+			// bit 6, invoke interrupt when done vector address 220, see http://www.pdp-11.nl/peripherals/disk/rk05-info.html
+			if (v & 64)
+				b->getCpu()->queue_interrupt(5, 0220);
 		}
 	}
 

@@ -13,6 +13,9 @@
 
 cpu::cpu(bus *const b, uint32_t *const event) : b(b), event(event)
 {
+	for(int level=0; level<8; level++)
+		queued_interrupts.insert({ level, { } });
+
 	reset();
 }
 
@@ -139,6 +142,48 @@ void cpu::setPSW_spl(const int v)
 {
 	psw &= ~(7 << 5);
 	psw |= v << 5;
+}
+
+int cpu::getPSW_spl() const
+{
+	return (psw >> 5) & 7;
+}
+
+void cpu::setPSW(const uint16_t v)
+{
+	psw = v;
+}
+
+void cpu::check_queued_interrupts()
+{
+	uint8_t current_level = getPSW_spl();
+
+	uint8_t start_level = current_level <= 3 ? 0 : current_level + 1;
+
+	for(uint8_t i=start_level; i < 8; i++) {
+		auto interrupts = queued_interrupts.find(i);
+
+		if (interrupts->second.empty() == false) {
+			auto vector = interrupts->second.begin();
+
+			interrupts->second.erase(vector);
+
+			D(fprintf(stderr, "Invoking interrupt vector %o (IPL %d, current: %d)\n", *vector, i, current_level);)
+
+			trap(*vector, i);
+
+			break;
+		}
+	}
+}
+
+void cpu::queue_interrupt(const uint8_t level, const uint8_t vector)
+{
+	auto it = queued_interrupts.find(level);
+
+	it->second.insert(vector);
+
+	D(fprintf(stderr, "Queueing interrupt vector %o (IPL %d, current: %d), n: %zu\n", vector, level, getPSW_spl(), it->second.size());)
 }
 
 // GAM = general addressing modes
@@ -747,7 +792,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 		case 0b000101111: { // TST/TSTB
 					  uint16_t v = getGAM(dst_mode, dst_reg, word_mode, false);
-					  setPSW_n(word_mode ? v & 128 : v & 32768);
+					  setPSW_n(SIGN(v, word_mode));
 					  setPSW_z(v == 0);
 					  setPSW_v(false);
 					  setPSW_c(false);
@@ -1161,18 +1206,20 @@ void cpu::busError()
 	trap(4);
 }
 
-void cpu::trap(const uint16_t vector)
+void cpu::trap(const uint16_t vector, const int new_ipl)
 {
 	uint16_t before_psw = getPSW();
 	uint16_t before_pc  = getPC();
 
 	// switch to kernel mode & update 'previous mode'
 	uint16_t new_psw = b->readWord(vector + 2) & 0147777;  // mask off old 'previous mode'
+	if (new_ipl != -1)
+		new_psw = (new_psw & ~0xe0) | (new_ipl << 5);
 	new_psw |= (before_psw >> 2) & 030000; // apply new 'previous mode'
 	setPSW(new_psw);
 
 	pushStack(before_psw);
-	pushStack(before_pc);
+	pushStack(before_pc);  // TODO: komt deze op de goede stack?
 
 	setPC(b->readWord(vector + 0));
 
@@ -1575,6 +1622,8 @@ void cpu::disassemble()
 
 void cpu::step()
 {
+	check_queued_interrupts();
+
 	uint16_t temp_pc = getPC();
 
 	if (temp_pc & 1)

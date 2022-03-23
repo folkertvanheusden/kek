@@ -1,8 +1,10 @@
-// (C) 2018 by Folkert van Heusden
+// (C) 2018-2022 by Folkert van Heusden
 // Released under Apache License v2.0
 #pragma once
 
 #include <assert.h>
+#include <map>
+#include <set>
 #include <stdint.h>
 
 #include "bus.h"
@@ -10,19 +12,25 @@
 class cpu
 {
 private:
-	bool disas { false };
+	bool     disas { false };
 	uint16_t regs0_5[2][6]; // R0...5, selected by bit 11 in PSW, 
 	uint16_t sp[3 + 1]; // stackpointers, MF../MT.. select via 12/13 from PSW, others via 14/15
-	uint16_t pc { 0 };
-	uint16_t psw { 0 }, fpsr { 0 };
+	uint16_t pc    { 0 };
+	uint16_t psw   { 0 };
+	uint16_t fpsr  { 0 };
 	uint16_t stackLimitRegister { 0 };
 	bool resetFlag   { false };
 	bool runMode     { false };
 	bool emulateMFPT { false };
 
+	// level, vector
+	std::map<uint8_t, std::set<uint8_t> > queued_interrupts;
+
 	bus *const b { nullptr };
 
 	uint32_t *const event { nullptr };
+
+	void check_queued_interrupts();
 
 	uint16_t getRegister(const int nr, const bool MF_MT) const;
 	void setRegister(const int nr, const bool MF_MT, const uint16_t value);
@@ -58,8 +66,10 @@ public:
 	void pushStack(const uint16_t v);
 	uint16_t popStack();
 
+	void queue_interrupt(const uint8_t level, const uint8_t vector);
+
 	void busError();
-	void trap(const uint16_t vector);
+	void trap(const uint16_t vector, const int new_ipl = -1);
 
 	void setEmulateMFPT(const bool v) { emulateMFPT = v; }
 
@@ -69,6 +79,7 @@ public:
 	bool getPSW_v() const;
 	bool getPSW_z() const;
 	bool getPSW_n() const;
+	int  getPSW_spl() const;
 	bool getBitPSW(const int bit) const;
 
 	void setPSW_c(const bool v);
@@ -79,7 +90,7 @@ public:
 	void setBitPSW(const int bit, const bool v);
 
 	uint16_t getPSW() const { return psw; }
-	void setPSW(const uint16_t v) { psw = v; }
+	void setPSW(const uint16_t v);
 
 	uint16_t getStackLimitRegister() { return stackLimitRegister; }
 	void setStackLimitRegister(const uint16_t v) { stackLimitRegister = v; }
