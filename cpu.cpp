@@ -251,20 +251,14 @@ void cpu::putGAM(const uint8_t mode, const int reg, const bool word_mode, const 
 			break;
 		case 2:
 			b -> write(getRegister(reg, prev_mode), word_mode, value);
-			if (reg == 7 || reg == 6)
-				addRegister(reg, prev_mode, 2);
-			else
-				addRegister(reg, prev_mode, word_mode ? 1 : 2);
+			addRegister(reg, prev_mode, !word_mode || reg == 7 || reg == 6 ? 2 : 1);
 			break;
 		case 3:
 			b -> write(b -> readWord(getRegister(reg, prev_mode)), word_mode, value);
 			addRegister(reg, prev_mode, 2);
 			break;
 		case 4:
-			if (reg == 7 || reg == 6)
-				addRegister(reg, prev_mode, -2);
-			else
-				addRegister(reg, prev_mode, word_mode ? -1 : -2);
+			addRegister(reg, prev_mode, !word_mode || reg == 7 || reg == 6 ? -2 : -1);
 			b -> write(getRegister(reg, prev_mode), word_mode, value);
 			break;
 		case 5:
@@ -770,7 +764,6 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 		case 0b000101110: { // SBC/SBCB
 					  uint16_t  a = getGAMAddress(dst_mode, dst_reg, word_mode, false);
-					  //fprintf(stderr, "%d,%d\n", dst_mode, dst_reg);
 					  uint16_t  v = b -> read(a, word_mode);
 					  int32_t  vl = (v - getPSW_c()) & (word_mode ? 0xff : 0xffff);
 
@@ -822,7 +815,6 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 					  setPSW_c(new_carry);
 
-					  //fprintf(stderr, "%04x\n", temp);
 					  setPSW_n(SIGN(temp, word_mode));
 					  setPSW_z(temp == 0);
 					  setPSW_v(getPSW_c() ^ getPSW_n());
@@ -1102,13 +1094,19 @@ void cpu::pushStack(const uint16_t v)
 	}
 
 	addRegister(6, false, -2);
-	b -> writeWord(getRegister(6, false), v);
+
+	uint16_t a = getRegister(6, false);
+
+	b -> writeWord(a, v);
 }
 
 uint16_t cpu::popStack()
 {
-	uint16_t temp = b -> readWord(getRegister(6, false));
+	uint16_t a    = getRegister(6, false);
+	uint16_t temp = b -> readWord(a);
+
 	addRegister(6, false, 2);
+
 	return temp;
 }
 
@@ -1219,7 +1217,7 @@ void cpu::trap(const uint16_t vector, const int new_ipl)
 	setPSW(new_psw);
 
 	pushStack(before_psw);
-	pushStack(before_pc);  // TODO: komt deze op de goede stack?
+	pushStack(before_pc);
 
 	setPC(b->readWord(vector + 0));
 
@@ -1274,13 +1272,13 @@ std::pair<std::string, int> cpu::addressing_to_string(const uint8_t mode_registe
 			if (reg == 7)
 				return { format("%06o", (pc + next_word + 2) & 65535), 4 };
 
-			return { format("o%o(%s)", next_word, reg_name.c_str()), 4 };
+			return { format("%o(%s)", next_word, reg_name.c_str()), 4 };
 
 		case 7:
 			if (reg == 7)
 				return { format("@%06o", next_word), 4 };
 
-			return { format("@o%o(%s)", next_word, reg_name.c_str()), 4 };
+			return { format("@%o(%s)", next_word, reg_name.c_str()), 4 };
 	}
 #endif
 	return { "??", 0 };
