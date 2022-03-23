@@ -264,8 +264,8 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 
 				registers[(RK05_DA - RK05_BASE) / 2] = sector | (surface << 4) | (cylinder << 5);
 
-				if (disk_write_acitivity)
-					*disk_write_acitivity = false;
+				if (disk_read_acitivity)
+					*disk_read_acitivity = false;
 			}
 			else if (func == 4) {
 				D(fprintf(stderr, "RK05 invoke %d (seek)\n", func);)
