@@ -69,23 +69,23 @@ void test__registers(cpu *const c)
 
 	// PSW
 	c -> reset();
-	assert(c -> getPSW() == 0 | (7 << 5));
+	assert(c -> getPSW() == (0 | (7 << 5)));
 
 	c -> reset();
         c -> setPSW_c(true);
-	assert(c -> getPSW() == 1 | (7 << 5));
+	assert(c -> getPSW() == (1 | (7 << 5)));
 
 	c -> reset();
 	c -> setPSW_v(true);
-	assert(c -> getPSW() == 2 | (7 << 5));
+	assert(c -> getPSW() == (2 | (7 << 5)));
 
 	c -> reset();
 	c -> setPSW_z(true);
-	assert(c -> getPSW() == 4 | (7 << 5));
+	assert(c -> getPSW() == (4 | (7 << 5)));
 
 	c -> reset();
 	c -> setPSW_n(true);
-	assert(c -> getPSW() == 8 | (7 << 5));
+	assert(c -> getPSW() == (8 | (7 << 5)));
 
 	c -> reset();
 	c -> setPSW_spl(1);
