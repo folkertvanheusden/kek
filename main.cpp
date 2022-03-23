@@ -311,7 +311,7 @@ int main(int argc, char *argv[])
 
 	delete cnsl;
 
-	fprintf(stderr, "Instructions per second: %.3f\n\n", icount * 1000.0 / (get_ms() - start));
+	fprintf(stderr, "Instructions per second: %.3f\n\n", total_icount * 1000.0 / (get_ms() - start));
 
 	return 0;
 }
