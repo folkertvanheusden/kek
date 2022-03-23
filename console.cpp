@@ -8,8 +8,9 @@
 #include "utils.h"
 
 
-console::console(std::atomic_bool *const terminate) :
-	terminate(terminate)
+console::console(std::atomic_bool *const terminate, bus *const b) :
+	terminate(terminate),
+	b(b)
 {
 	memset(screen_buffer, ' ', sizeof screen_buffer);
 }

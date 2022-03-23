@@ -11,8 +11,10 @@ protected:
 	void put_char_ll(const char c) override;
 
 public:
-	console_esp32(std::atomic_bool *const terminate);
+	console_esp32(std::atomic_bool *const terminate, bus *const b);
 	virtual ~console_esp32();
 
 	void resize_terminal() override;
+
+	void panel_update_thread() override;
 };

@@ -7,7 +7,8 @@
 #include "error.h"
 
 
-console_posix::console_posix(std::atomic_bool *const terminate) : console(terminate)
+console_posix::console_posix(std::atomic_bool *const terminate, bus *const b) :
+	console(terminate, b)
 {
 	if (tcgetattr(STDIN_FILENO, &org_tty_opts) == -1)
 		error_exit(true, "console_posix: tcgetattr failed");
@@ -52,5 +53,9 @@ void console_posix::put_char_ll(const char c)
 }
 
 void console_posix::resize_terminal()
+{
+}
+
+void console_posix::panel_update_thread()
 {
 }

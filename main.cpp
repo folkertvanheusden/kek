@@ -216,9 +216,9 @@ int main(int argc, char *argv[])
 	console *cnsl = nullptr;
 
 	if (withUI)
-		cnsl = new console_ncurses(&terminate);
+		cnsl = new console_ncurses(&terminate, b);
 	else
-		cnsl = new console_posix(&terminate);
+		cnsl = new console_posix(&terminate, b);
 
 	tty *tty_ = new tty(cnsl);
 

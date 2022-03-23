@@ -7,7 +7,8 @@
 #include "error.h"
 
 
-console_ncurses::console_ncurses(std::atomic_bool *const terminate) : console(terminate)
+console_ncurses::console_ncurses(std::atomic_bool *const terminate, bus *const b) :
+	console(terminate, b)
 {
 	init_ncurses(true);
 
@@ -74,4 +75,8 @@ void console_ncurses::resize_terminal()
 	scrollok(w_main -> win, TRUE);
 
 	mydoupdate();
+}
+
+void console_ncurses::panel_update_thread()
+{
 }

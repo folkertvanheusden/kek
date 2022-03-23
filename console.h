@@ -4,6 +4,8 @@
 #include <thread>
 #include <vector>
 
+#include "bus.h"
+
 
 constexpr const int t_width  { 80 };
 constexpr const int t_height { 25 };
@@ -20,7 +22,11 @@ private:
 	uint8_t                 ty          { 0 };
 
 protected:
+	bus              *const b           { nullptr };
 	std::thread            *th          { nullptr };
+	std::atomic_bool        disk_read_activity_flag  { false };
+	std::atomic_bool        disk_write_activity_flag { false };
+	std::atomic_bool        running_flag             { false };
 
 	virtual int wait_for_char(const int timeout) = 0;
 
@@ -29,7 +35,7 @@ protected:
 	void put_string_ll(const std::string & what);
 
 public:
-	console(std::atomic_bool *const terminate);
+	console(std::atomic_bool *const terminate, bus *const b);
 	virtual ~console();
 
 	bool    poll_char();
@@ -43,4 +49,10 @@ public:
 	virtual void resize_terminal() = 0;
 
 	void    operator()();
+
+	std::atomic_bool * get_running_flag()             { return &running_flag; }
+	std::atomic_bool * get_disk_read_activity_flag()  { return &disk_read_activity_flag; }
+	std::atomic_bool * get_disk_write_activity_flag() { return &disk_write_activity_flag; }
+
+	virtual void panel_update_thread() = 0;
 };

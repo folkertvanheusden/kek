@@ -1,6 +1,5 @@
 // (C) 2018-2022 by Folkert van Heusden
 // Released under Apache License v2.0
-#include <Adafruit_NeoPixel.h>
 #include <atomic>
 #include <stdio.h>
 #include <string.h>
@@ -19,8 +18,6 @@
 #include "utils.h"
 
 
-#define NEOPIXELS_PIN	25
-
 bus     *b    = nullptr;
 cpu     *c    = nullptr;
 tty     *tty_ = nullptr;
@@ -34,10 +31,9 @@ uint32_t start_ts  = 0;
 
 std::atomic_bool terminate { false };
 
-std::atomic_bool running   { false };
-std::atomic_bool on_wifi   { false };
-std::atomic_bool disk_read_activity  { false };
-std::atomic_bool disk_write_activity { false };
+std::atomic_bool *running  { nullptr };
+
+// std::atomic_bool on_wifi   { false };
 
 void setBootLoader(bus *const b) {
 	cpu     *const c      = b->getCpu();
@@ -62,79 +58,11 @@ void setBootLoader(bus *const b) {
 	c->setRegister(7, offset);
 }
 
-void panel(void *p) {
-	Serial.println(F("panel task started"));
+void console_thread_wrapper(void *const c)
+{
+	console *const cnsl = reinterpret_cast<console *>(c);
 
-	bus *const b = reinterpret_cast<bus *>(p);
-	cpu *const c = b->getCpu();
-
-	constexpr const uint8_t n_leds = 60;
-	Adafruit_NeoPixel pixels(n_leds, NEOPIXELS_PIN, NEO_RGBW);
-	pixels.begin();
-
-	pixels.clear();
-
-	pixels.setBrightness(48);
-	pixels.show();
-
-	const uint32_t magenta = pixels.Color(255, 0, 255);
-	const uint32_t red     = pixels.Color(255, 0, 0);
-	const uint32_t green   = pixels.Color(0, 255, 0);
-	const uint32_t blue    = pixels.Color(0, 0, 255);
-	const uint32_t yellow  = pixels.Color(255, 255, 0);
-	const uint32_t white   = pixels.Color(255, 255, 255, 255);
-
-	const uint32_t run_mode_led_color[4] = { red, yellow, blue, green };
-
-	// initial animation
-	for(uint8_t i=0; i<n_leds; i++) {
-		pixels.setPixelColor(i, 255, 255, 255);
-
-		int p = i - 10;
-		if (p < 0)
-			p += n_leds;
-
-		pixels.setPixelColor(p, 0, 0, 0);
-
-		pixels.show();
-
-		delay(10);
-	}
-
-	pixels.clear();
-	pixels.show();
-
-	for(;;) {
-		vTaskDelay(20 / portTICK_RATE_MS);
-
-		// note that these are approximately as there's no mutex on the emulation
-		uint16_t current_PC    = c->getPC();
-		uint32_t full_addr     = b->calculate_full_address(current_PC);
-
-		uint16_t current_instr = b->readWord(current_PC);
-
-		uint16_t current_PSW   = c->getPSW();
-
-		uint32_t led_color     = run_mode_led_color[current_PSW >> 14];
-
-		for(uint8_t b=0; b<22; b++)
-			pixels.setPixelColor(b, full_addr & (1 << b) ? led_color : 0);
-
-		for(uint8_t b=0; b<16; b++)
-			pixels.setPixelColor(b + 22, current_PSW & (1 << b) ? magenta : 0);
-
-		for(uint8_t b=0; b<16; b++)
-			pixels.setPixelColor(b + 38, current_instr & (1 << b) ? red : 0);
-
-		pixels.setPixelColor(54, running ? white : 0);
-
-		pixels.setPixelColor(55, on_wifi ? white : 0);
-
-		pixels.setPixelColor(56, disk_read_activity  ? blue : 0);
-		pixels.setPixelColor(57, disk_write_activity ? blue : 0);
-
-		pixels.show();
-	}
+	cnsl->panel_update_thread();
 }
 
 void setup_wifi_stations()
@@ -215,7 +143,9 @@ void setup() {
 	c->setEmulateMFPT(true);
 
 	Serial.println(F("Init console"));
-	cnsl = new console_esp32(&terminate);
+	cnsl = new console_esp32(&terminate, b);
+
+	running = cnsl->get_running_flag();
 
 	Serial.println(F("Init TTY"));
 	tty_ = new tty(cnsl);
@@ -225,12 +155,12 @@ void setup() {
 	Serial.print(F("Starting panel (on CPU 0, main emulator runs on CPU "));
 	Serial.print(xPortGetCoreID());
 	Serial.println(F(")"));
-	xTaskCreatePinnedToCore(&panel, "panel", 2048, b, 1, nullptr, 0);
+	xTaskCreatePinnedToCore(&console_thread_wrapper, "panel", 2048, cnsl, 1, nullptr, 0);
 
 	// setup_wifi_stations();
 
 	Serial.println(F("Load RK05"));
-	b->add_rk05(new rk05("", b, &disk_read_activity, &disk_write_activity));
+	b->add_rk05(new rk05("", b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
 	setBootLoader(b);
 
 	Serial.print(F("Free RAM after init: "));
@@ -256,7 +186,7 @@ void setup() {
 
 	start_ts = millis();
 
-	running = true;
+	*running = true;
 }
 
 uint32_t icount = 0;
@@ -315,7 +245,7 @@ void loop() {
 	c->step();
 
 	if (event || terminate) {
-		running = false;
+		*running = false;
 
 		Serial.println(F(""));
 		Serial.println(F(" *** EMULATION STOPPED *** "));
@@ -332,6 +262,6 @@ void loop() {
 		terminate = false;
 		event     = 0;
 
-		running   = true;
+		*running   = true;
 	}
 }

@@ -14,8 +14,10 @@ protected:
 	void put_char_ll(const char c) override;
 
 public:
-	console_posix(std::atomic_bool *const terminate);
+	console_posix(std::atomic_bool *const terminate, bus *const b);
 	virtual ~console_posix();
 
 	void resize_terminal() override;
+
+	void panel_update_thread() override;
 };

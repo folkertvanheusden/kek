@@ -8,10 +8,10 @@
 #include "tm-11.h"
 #include "rk05.h"
 #include "rx02.h"
-#include "tty.h"
 
 class cpu;
 class memory;
+class tty;
 
 typedef struct
 {
