@@ -428,7 +428,7 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 				    int16_t  result    = 0;
 
 				    if (instr & 0x8000) {
-					    result = (dst_value + ~src_value + 1) & 0xffff;
+					    result = (dst_value - src_value) & 0xffff;
 					    setPSW_v(sign(src_value) != sign(dst_value) && sign(src_value) == sign(result));
 					    setPSW_c(uint16_t(dst_value) < uint16_t(src_value));
 				    }
@@ -606,15 +606,10 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 			}
 
 		case 7: { // SOB
-				uint16_t oldPC = getPC();
-
-				if (reg == 7)
-					addRegister(reg, false, -2);
-				else
-					addRegister(reg, false, -1);
+				addRegister(reg, false, -1);
 
 				if (getRegister(reg, false)) {
-					uint16_t newPC = oldPC - dst * 2;
+					uint16_t newPC = getPC() - dst * 2;
 
 					setPC(newPC);
 				}
