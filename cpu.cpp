@@ -294,20 +294,14 @@ uint16_t cpu::getGAMAddress(const uint8_t mode, const int reg, const bool word_m
 			return getRegister(reg, prev_mode);
 		case 2:
 			temp = getRegister(reg, prev_mode);
-			if (reg == 6 || reg == 7)
-				addRegister(reg, prev_mode, 2);
-			else
-				addRegister(reg, prev_mode, word_mode ? 1 : 2);
+			addRegister(reg, prev_mode, !word_mode || reg == 6 || reg == 7 ? 2 : 1);
 			return temp;
 		case 3:
 			temp = b -> readWord(getRegister(reg, prev_mode));
 			addRegister(reg, prev_mode, 2);
 			return temp;
 		case 4:
-			if (reg == 6 || reg == 7)
-				addRegister(reg, prev_mode, -2);
-			else
-				addRegister(reg, prev_mode, word_mode ? -1 : -2);
+			addRegister(reg, prev_mode, !word_mode || reg == 6 || reg == 7 ? -2 : -1);
 			return getRegister(reg, prev_mode);
 		case 5:
 			addRegister(reg, prev_mode, -2);
@@ -496,25 +490,32 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 					setPSW_v(true);
 					setPSW_c(true);
 
-					break;
+					return true;
 				}
 
 				int32_t R0R1    = (getRegister(reg) << 16) | getRegister(reg + 1);
 
-				int32_t quot = R0R1 / divider;
-				uint16_t rem = R0R1 % divider;
+				int32_t  quot   = R0R1 / divider;
+				uint16_t rem    = R0R1 % divider;
 				fprintf(stderr, "value: %d, divider: %d, gives: %d / %d\n", R0R1, divider, quot, rem);
 				fprintf(stderr, "value: %o, divider: %o, gives: %o / %o\n", R0R1, divider, quot, rem);
 
 				// TODO: handle results out of range
 
+				setPSW_n(quot < 0);
+				setPSW_z(quot == 0);
+				setPSW_c(false);
+
+				if (quot > 32767 || quot < -32768) {
+					setPSW_v(true);
+
+					return true;
+				}
+
 				setRegister(reg, quot);
 				setRegister(reg + 1, rem);
 
-				setPSW_n(quot < 0);
-				setPSW_z(quot == 0);
-				setPSW_v(quot > 32767 || quot < -32768);
-				setPSW_c(false);
+				setPSW_v(false);
 
 				return true;
 			}
@@ -1168,14 +1169,22 @@ bool cpu::misc_operations(const uint16_t instr)
 	}
 
 	if ((instr & ~0b111111) == 0b0000000001000000) { // JMP
-		int dst_mode = (instr >> 3) & 7, dst_reg = instr & 7;
-		bool word_mode = false;
-		setPC(getGAMAddress(dst_mode, dst_reg, word_mode, false));
+		int dst_mode = (instr >> 3) & 7;
+
+		if (dst_mode == 0)  // cannot jump to a register
+			trap(010);
+		else {
+			int dst_reg = instr & 7;
+
+			bool word_mode = false;
+			setPC(getGAMAddress(dst_mode, dst_reg, word_mode, false));
+		}
+
 		return true;
 	}
 
 	if ((instr & 0b1111111000000000) == 0b0000100000000000) { // JSR
-		const int link_reg = (instr >> 6) & 7;
+		int      link_reg  = (instr >> 6) & 7;
 		uint16_t dst_value = getGAMAddress((instr >> 3) & 7, instr & 7, false, false);
 
 		// PUSH link
@@ -1193,11 +1202,13 @@ bool cpu::misc_operations(const uint16_t instr)
 	if ((instr & 0b1111111111111000) == 0b0000000010000000) { // RTS
 		const int link_reg = instr & 7;
 
+		uint16_t  v        = popStack();
+
 		// MOVE link, PC
 		setPC(getRegister(link_reg, false));
 
 		// POP link
-		setRegister(link_reg, false, popStack());
+		setRegister(link_reg, false, v);
 
 		return true;
 	}
