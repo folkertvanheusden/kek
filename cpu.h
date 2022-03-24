@@ -99,6 +99,7 @@ public:
 	uint16_t getStackPointer(const int which) const { assert(which >= 0 && which < 4); return sp[which]; }
 	uint16_t getPC() const { return pc; }
 
+	void setRegisterLowByte(const int nr, const bool prev_mode, const uint16_t value);
 	void setRegister(const bool user, const int nr, const uint16_t value) { regs0_5[user][nr] = value; }
 	void setStackPointer(const int which, const uint16_t value) { assert(which >= 0 && which < 4); sp[which] = value; }
 	void setPC(const uint16_t value) { pc = value; }
