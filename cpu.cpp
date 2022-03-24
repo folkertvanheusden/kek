@@ -198,20 +198,14 @@ uint16_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const bool word_mode
 			return b -> read(getRegister(reg, prev_mode), word_mode, prev_mode);
 		case 2:
 			temp = b -> read(getRegister(reg, prev_mode), word_mode, prev_mode);
-			if (reg == 7 || reg == 6)
-				addRegister(reg, prev_mode, 2);
-			else
-				addRegister(reg, prev_mode, word_mode ? 1 : 2);
+			addRegister(reg, prev_mode, !word_mode || reg == 7 || reg == 6 ? 2 : 1);
 			return temp;
 		case 3:
 			temp = b -> read(b -> read(getRegister(reg, prev_mode), false, prev_mode), word_mode, prev_mode);
 			addRegister(reg, prev_mode, 2);
 			return temp;
 		case 4:
-			if (reg == 7 || reg == 6)
-				addRegister(reg, prev_mode, - 2);
-			else
-				addRegister(reg, prev_mode, word_mode ? -1 : -2);
+			addRegister(reg, prev_mode, !word_mode || reg == 7 || reg == 6 ? -2 : -1);
 			return b -> read(getRegister(reg, prev_mode), word_mode, prev_mode);
 		case 5:
 			addRegister(reg, prev_mode, -2);
@@ -236,15 +230,7 @@ void cpu::putGAM(const uint8_t mode, const int reg, const bool word_mode, const 
 
 	switch(mode) {
 		case 0:
-			if (word_mode) {
-				uint16_t temp = getRegister(reg, prev_mode);
-				temp &= 0xff00;
-				temp |= value;
-				setRegister(reg, prev_mode, temp);
-			}
-			else {
-				setRegister(reg, prev_mode, value);
-			}
+			setRegister(reg, prev_mode, value);
 			break;
 		case 1:
 			b -> write(getRegister(reg, prev_mode), word_mode, value);
