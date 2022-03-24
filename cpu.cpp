@@ -376,7 +376,7 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 		case 0b011: { // BIT/BITB Bit Test Word/Byte
 				    uint16_t src_value = getGAM(src_mode, src_reg, word_mode, false);
 				    uint16_t dst_value = getGAM(dst_mode, dst_reg, word_mode, false);
-				    uint16_t result    = dst_value & src_value;
+				    uint16_t result    = (dst_value & src_value) & (word_mode ? 0xff : 0xffff);
 
 				    setPSW_n(SIGN(result, word_mode));
 				    setPSW_z(result == 0);
