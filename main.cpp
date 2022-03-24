@@ -163,6 +163,7 @@ int main(int argc, char *argv[])
 
 	c -> setEmulateMFPT(true);
 
+	std::string rk05_file;
 	bool testCases = false;
 	int opt = -1;
 	while((opt = getopt(argc, argv, "hm:T:R:p:ndL:")) != -1)
@@ -193,11 +194,9 @@ int main(int argc, char *argv[])
 				c->setRegister(7, loadTape(b, optarg));
 				break;
 
-			case 'R': {
-					  b->add_rk05(new rk05(optarg, b, nullptr, nullptr));
-					  setBootLoader(b);
-					  break;
-				  }
+			case 'R':
+				rk05_file = optarg;
+				break;
 
 			case 'p':
 				c->setRegister(7, atoi(optarg));
@@ -219,6 +218,12 @@ int main(int argc, char *argv[])
 		cnsl = new console_ncurses(&terminate, b);
 	else
 		cnsl = new console_posix(&terminate, b);
+
+	if (rk05_file.empty() == false) {
+		b->add_rk05(new rk05(rk05_file, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
+
+		setBootLoader(b);
+	}
 
 	tty *tty_ = new tty(cnsl);
 
