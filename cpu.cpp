@@ -488,29 +488,33 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 			}
 
 		case 1: { // DIV
-				int32_t R0R1    = (getRegister(reg) << 16) | getRegister(reg + 1);
-				int32_t divider = getGAM(dst_mode, dst_reg, true, false);
+				int16_t divider = getGAM(dst_mode, dst_reg, false, false);
 
-				if (divider == 0) {
+				if (divider == 0) {  // divide by zero
 					setPSW_n(false);
 					setPSW_z(true);
 					setPSW_v(true);
 					setPSW_c(true);
+
+					break;
 				}
-				else {
-					int32_t quot = R0R1 / divider;
-					uint16_t rem = R0R1 % divider;
 
-					// TODO: handle results out of range
+				int32_t R0R1    = (getRegister(reg) << 16) | getRegister(reg + 1);
 
-					setRegister(reg, quot);
-					setRegister(reg + 1, rem);
+				int32_t quot = R0R1 / divider;
+				uint16_t rem = R0R1 % divider;
+				fprintf(stderr, "value: %d, divider: %d, gives: %d / %d\n", R0R1, divider, quot, rem);
+				fprintf(stderr, "value: %o, divider: %o, gives: %o / %o\n", R0R1, divider, quot, rem);
 
-					setPSW_n(quot < 0);
-					setPSW_z(quot == 0);
-					setPSW_v(quot > 0xffff || quot < -0xffff);
-					setPSW_c(false);
-				}
+				// TODO: handle results out of range
+
+				setRegister(reg, quot);
+				setRegister(reg + 1, rem);
+
+				setPSW_n(quot < 0);
+				setPSW_z(quot == 0);
+				setPSW_v(quot > 32767 || quot < -32768);
+				setPSW_c(false);
 
 				return true;
 			}
