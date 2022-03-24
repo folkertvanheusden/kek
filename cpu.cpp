@@ -74,6 +74,8 @@ void cpu::setRegisterLowByte(const int nr, const bool word_mode, const uint16_t 
 		uint16_t v = getRegister(nr, false);
 
 		v &= 0xff00;
+
+		assert(value < 256);
 		v |= value;
 
 		setRegister(nr, false, v);
@@ -343,15 +345,11 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 	switch(operation) {
 		case 0b001: { // MOV/MOVB Move Word/Byte
 				    uint16_t src_value = getGAM(src_mode, src_reg, word_mode, false);
-				    if (word_mode) {
-					    if (dst_mode == 0)
-						    setRegister(dst_reg, false, int8_t(src_value));  // int8_t: sign extension
-					    else
-						    putGAM(dst_mode, dst_reg, word_mode, src_value, false);
-				    }
-				    else {
+
+				    if (word_mode && dst_mode == 0)
+					    setRegister(dst_reg, false, int8_t(src_value));  // int8_t: sign extension
+				    else
 					    putGAM(dst_mode, dst_reg, word_mode, src_value, false);
-				    }
 
 				    setPSW_n(SIGN(src_value, word_mode));
 				    setPSW_z(src_value == 0);
@@ -390,7 +388,7 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 				    uint16_t src_value = getGAM(src_mode, src_reg, word_mode, false);
 				    uint16_t a         = getGAMAddress(dst_mode, dst_reg, word_mode, false);
 
-				    uint16_t result    = b -> readWord(a) & ~src_value;
+				    uint16_t result    = b->read(a, word_mode) & ~src_value;
 
 				    if (dst_mode == 0)
 					    setRegisterLowByte(dst_reg, word_mode, result);
@@ -408,7 +406,7 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 				    uint16_t src_value = getGAM(src_mode, src_reg, word_mode, false);
 				    uint16_t a         = getGAMAddress(dst_mode, dst_reg, word_mode, false);
 
-				    uint16_t result    = b -> readWord(a) | src_value;
+				    uint16_t result    = b->read(a, word_mode) | src_value;
 
 				    if (dst_mode == 0)
 					    setRegisterLowByte(dst_reg, word_mode, result);
@@ -424,8 +422,8 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 
 		case 0b110: { // ADD/SUB Add/Subtract Word
 				    int16_t  src_value = getGAM(src_mode, src_reg, false, false);
-				    uint16_t da        = getGAMAddress(dst_mode, dst_reg, false, false);
-				    int16_t  dst_value = b -> readWord(da);
+				    uint16_t dst_addr  = getGAMAddress(dst_mode, dst_reg, false, false);
+				    int16_t  dst_value = b->readWord(dst_addr);
 				    int16_t  result    = 0;
 
 				    if (instr & 0x8000) {
@@ -445,7 +443,7 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 				    if (dst_mode == 0)
 					    setRegister(dst_reg, false, result);
 				    else
-					    b -> writeWord(da, result);
+					    b->writeWord(dst_addr, result);
 
 				    return true;
 			    }
@@ -634,28 +632,26 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					 if (word_mode) // handled elsewhere
 						 return false;
 					 else {
-						 uint8_t t1 = 0, t2 = 0;
+						 uint16_t v = 0;
 
 						 if (dst_mode == 0) {
-							 uint16_t t = getRegister(dst_reg, false);
+							 v = getRegister(dst_reg, false);
 
-							 t1 = t >> 8;
-							 t2 = t & 255;
+							 v = ((v & 0xff) << 8) | (v >> 8);
 
-							 setRegister(dst_reg, false, (t2 << 8) | t1);
+							 setRegister(dst_reg, false, v);
 						 }
 						 else {
 							 uint16_t a = getGAMAddress(dst_mode, dst_reg, word_mode, false);
+							 v = b->readWord(a);
 
-							 t1 = b -> readByte(a);
-							 t2 = b -> readByte(a + 1);
+							 v = ((v & 0xff) << 8) | (v >> 8);
 
-							 b -> writeByte(a, t2);
-							 b -> writeByte(a + 1, t1);
+							 b->writeWord(a, v);
 						 }
 
-						 setPSW_n(t1 & 0x80);
-						 setPSW_z(t1 == 0);
+						 setPSW_n(v & 0x80);
+						 setPSW_z((v & 0xff) == 0);
 						 setPSW_v(false);
 						 setPSW_c(false);
 					 }
