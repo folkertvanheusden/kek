@@ -5,6 +5,12 @@ Run:
     make all
 to build.
 
+
+Required:
+* libtirpc-dev
+* libncursesw5-dev
+
+
 To run the test-cases:
 
     ./kek -m tc

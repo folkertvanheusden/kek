@@ -151,7 +151,7 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 			const int func = (v >> 1) & 7; // FUNCTION
 			int16_t wc = registers[(RK05_WC - RK05_BASE) / 2];
 			const size_t reclen = wc < 0 ? (-wc * 2) : wc * 2;
-			D(fprintf(stderr, "RK05 rec len %zd\n", reclen);)
+			D(fprintf(stderr, "RK05 rec len %zo\n", reclen);)
 
 			uint16_t dummy = registers[(RK05_DA - RK05_BASE) / 2];
 			uint8_t sector = dummy & 0b1111;
@@ -170,8 +170,7 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 
 			}
 			else if (func == 1) { // write
-				if (disk_write_acitivity)
-					*disk_write_acitivity = true;
+				*disk_write_acitivity = true;
 
 				D(fprintf(stderr, "RK05 invoke %d (write)\n", func);)
 				D(fprintf(stderr, "RK05 writing %zo bytes to offset %o (%d dec)\n", reclen, diskoffb, diskoffb);)
@@ -207,12 +206,10 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 
 				registers[(RK05_DA - RK05_BASE) / 2] = sector | (surface << 4) | (cylinder << 5);
 
-				if (disk_write_acitivity)
-					*disk_write_acitivity = false;
+				*disk_write_acitivity = false;
 			}
 			else if (func == 2) { // read
-				if (disk_read_acitivity)
-					*disk_read_acitivity = true;
+				*disk_read_acitivity = true;
 
 				D(fprintf(stderr, "RK05 invoke %d (read)\n", func);)
 				D(fprintf(stderr, "RK05 reading %zo bytes from offset %o (%d dec) to %o\n", reclen, diskoffb, diskoffb, memoff);)
@@ -264,8 +261,7 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 
 				registers[(RK05_DA - RK05_BASE) / 2] = sector | (surface << 4) | (cylinder << 5);
 
-				if (disk_read_acitivity)
-					*disk_read_acitivity = false;
+				*disk_read_acitivity = false;
 			}
 			else if (func == 4) {
 				D(fprintf(stderr, "RK05 invoke %d (seek)\n", func);)
