@@ -104,4 +104,6 @@ public:
 
 	uint16_t getRegister(const int nr) const { return getRegister(nr, false); } // FIXME remove
 	void setRegister(const int nr, const uint16_t v) { setRegister(nr, false, v); } // FIXME remove
+
+	void put_result(const uint16_t a, const uint8_t dst_mode, const uint8_t dst_reg, const bool word_mode, const uint16_t value);
 };

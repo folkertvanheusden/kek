@@ -85,6 +85,14 @@ void cpu::setRegisterLowByte(const int nr, const bool word_mode, const uint16_t 
 	}
 }
 
+void cpu::put_result(const uint16_t a, const uint8_t dst_mode, const uint8_t dst_reg, const bool word_mode, const uint16_t value)
+{
+	if (dst_mode == 0)
+		setRegisterLowByte(dst_reg, word_mode, value);
+	else
+		b->write(a, word_mode, value);
+}
+
 void cpu::addRegister(const int nr, const bool prev_mode, const uint16_t value)
 {
 	if (nr < 6)
@@ -338,14 +346,14 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 	const uint8_t src_mode  = (src >> 3) & 7;
 	const uint8_t src_reg   = src & 7;
 
+	uint16_t src_value      = operation == 0b110 ? 0 : getGAM(src_mode, src_reg, word_mode, false);
+
 	const uint8_t dst       = instr & 63;
 	const uint8_t dst_mode  = (dst >> 3) & 7;
 	const uint8_t dst_reg   = dst & 7;
 
 	switch(operation) {
 		case 0b001: { // MOV/MOVB Move Word/Byte
-				    uint16_t src_value = getGAM(src_mode, src_reg, word_mode, false);
-
 				    if (word_mode && dst_mode == 0)
 					    setRegister(dst_reg, false, int8_t(src_value));  // int8_t: sign extension
 				    else
@@ -359,7 +367,6 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 			    }
 
 		case 0b010: { // CMP/CMPB Compare Word/Byte
-				    uint16_t src_value = getGAM(src_mode, src_reg, word_mode, false);
 				    uint16_t dst_value = getGAM(dst_mode, dst_reg, word_mode, false);
 
 				    uint16_t temp      = (src_value - dst_value) & (word_mode ? 0xff : 0xffff);
@@ -373,7 +380,6 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 			    }
 
 		case 0b011: { // BIT/BITB Bit Test Word/Byte
-				    uint16_t src_value = getGAM(src_mode, src_reg, word_mode, false);
 				    uint16_t dst_value = getGAM(dst_mode, dst_reg, word_mode, false);
 				    uint16_t result    = (dst_value & src_value) & (word_mode ? 0xff : 0xffff);
 
@@ -385,15 +391,11 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 			    }
 
 		case 0b100: { // BIC/BICB Bit Clear Word/Byte
-				    uint16_t src_value = getGAM(src_mode, src_reg, word_mode, false);
-				    uint16_t a         = getGAMAddress(dst_mode, dst_reg, word_mode, false);
+				    uint16_t a      = getGAMAddress(dst_mode, dst_reg, word_mode, false);
 
-				    uint16_t result    = b->read(a, word_mode) & ~src_value;
+				    uint16_t result = b->read(a, word_mode) & ~src_value;
 
-				    if (dst_mode == 0)
-					    setRegisterLowByte(dst_reg, word_mode, result);
-				    else
-					    b -> write(a, word_mode, result);
+				    put_result(a, dst_mode, dst_reg, word_mode, result);
 
 				    setPSW_n(SIGN(result, word_mode));
 				    setPSW_z(result == 0);
@@ -403,15 +405,11 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 			    }
 
 		case 0b101: { // BIS/BISB Bit Set Word/Byte
-				    uint16_t src_value = getGAM(src_mode, src_reg, word_mode, false);
-				    uint16_t a         = getGAMAddress(dst_mode, dst_reg, word_mode, false);
+				    uint16_t a      = getGAMAddress(dst_mode, dst_reg, word_mode, false);
 
-				    uint16_t result    = b->read(a, word_mode) | src_value;
+				    uint16_t result = b->read(a, word_mode) | src_value;
 
-				    if (dst_mode == 0)
-					    setRegisterLowByte(dst_reg, word_mode, result);
-				    else
-					    b -> write(a, word_mode, result);
+				    put_result(a, dst_mode, dst_reg, word_mode, result);
 
 				    setPSW_n(SIGN(result, word_mode));
 				    setPSW_z(result == 0);
@@ -421,7 +419,8 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 			    }
 
 		case 0b110: { // ADD/SUB Add/Subtract Word
-				    int16_t  src_value = getGAM(src_mode, src_reg, false, false);
+				    src_value = getGAM(src_mode, src_reg, false, false);
+
 				    uint16_t dst_addr  = getGAMAddress(dst_mode, dst_reg, false, false);
 				    int16_t  dst_value = b->readWord(dst_addr);
 				    int16_t  result    = 0;
@@ -690,10 +689,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					  setPSW_v(false);
 					  setPSW_c(true);
 
-					  if (dst_mode == 0)
-						  setRegisterLowByte(dst_reg, word_mode, v);
-					  else
-						  b -> write(a, word_mode, v);
+					  put_result(a, dst_mode, dst_reg, word_mode, v);
 
 					  break;
 				  }
@@ -702,13 +698,13 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					  uint16_t  a = getGAMAddress(dst_mode, dst_reg, word_mode, false);
 					  uint16_t  v = b -> read(a, word_mode);
 					  int32_t  vl = (v + 1) & (word_mode ? 0xff : 0xffff);
+
 					  setPSW_n(word_mode ? vl > 127 : vl > 32767);
 					  setPSW_z(vl == 0);
 					  setPSW_v(word_mode ? v == 0x7f : v == 0x7fff);
-					  if (dst_mode == 0)
-						  setRegisterLowByte(dst_reg, word_mode, vl);
-					  else
-						  b -> write(a, word_mode, vl);
+
+					  put_result(a, dst_mode, dst_reg, word_mode, vl);
+
 					  break;
 				  }
 
@@ -721,10 +717,8 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					  setPSW_z(vl == 0);
 					  setPSW_v(word_mode ? v == 0x80 : v == 0x8000);
 
-					  if (dst_mode == 0)
-						  setRegisterLowByte(dst_reg, word_mode, vl);
-					  else
-						  b -> write(a, word_mode, vl);
+					  put_result(a, dst_mode, dst_reg, word_mode, vl);
+
 					  break;
 				  }
 
@@ -732,10 +726,9 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					  uint16_t a  = getGAMAddress(dst_mode, dst_reg, word_mode, false);
 					  uint16_t v  = b -> read(a, word_mode);
 					  int32_t  vl = word_mode ? uint8_t(-int8_t(v)) : -int16_t(v);
-					  if (dst_mode == 0)
-						  setRegisterLowByte(dst_reg, word_mode, vl);
-					  else
-						  b -> write(a, word_mode, vl);
+
+					  put_result(a, dst_mode, dst_reg, word_mode, vl);
+
 					  setPSW_n(SIGN(vl, word_mode));
 					  setPSW_z(vl == 0);
 					  setPSW_v(word_mode ? vl == 0x80 : vl == 0x8000);
@@ -748,10 +741,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					  uint16_t org  = b -> read(a, word_mode);
 					  uint16_t new_ = org + getPSW_c();
 
-					  if (dst_mode == 0)
-						  setRegisterLowByte(dst_reg, word_mode, new_);
-					  else
-						  b -> write(a, word_mode, new_);
+					  put_result(a, dst_mode, dst_reg, word_mode, new_);
 
 					  setPSW_n(SIGN(new_, word_mode));
 					  setPSW_z(new_ == 0);
@@ -765,10 +755,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					  uint16_t  v = b -> read(a, word_mode);
 					  int32_t  vl = (v - getPSW_c()) & (word_mode ? 0xff : 0xffff);
 
-					  if (dst_mode == 0)
-						  setRegisterLowByte(dst_reg, word_mode, vl);
-					  else
-						  b -> write(a, word_mode, vl);
+					  put_result(a, dst_mode, dst_reg, word_mode, vl);
 
 					  setPSW_n(SIGN(vl, word_mode));
 					  setPSW_z(vl == 0);
@@ -783,10 +770,12 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 		case 0b000101111: { // TST/TSTB
 					  uint16_t v = getGAM(dst_mode, dst_reg, word_mode, false);
+
 					  setPSW_n(SIGN(v, word_mode));
 					  setPSW_z(v == 0);
 					  setPSW_v(false);
 					  setPSW_c(false);
+
 					  break;
 				  }
 
@@ -798,21 +787,16 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					  uint16_t temp = 0;
 					  if (word_mode) {
 						  temp = (t >> 1) | (getPSW_c() << 7);
-						  if (dst_mode == 0)
-							  setRegisterLowByte(dst_reg, word_mode, temp);
-						  else
-							  b -> writeByte(a, temp);
+
+						  put_result(a, dst_mode, dst_reg, word_mode, temp);
 					  }
 					  else {
 						  temp = (t >> 1) | (getPSW_c() << 15);
-						  if (dst_mode == 0)
-							  setRegisterLowByte(dst_reg, word_mode, temp);
-						  else
-							  b -> writeWord(a, temp);
+
+						  put_result(a, dst_mode, dst_reg, word_mode, temp);
 					  }
 
 					  setPSW_c(new_carry);
-
 					  setPSW_n(SIGN(temp, word_mode));
 					  setPSW_z(temp == 0);
 					  setPSW_v(getPSW_c() ^ getPSW_n());
@@ -829,22 +813,17 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					  if (word_mode) {
 						  new_carry = t & 0x80;
 						  temp = ((t << 1) | getPSW_c()) & 0xff;
-						  if (dst_mode == 0)
-							  setRegisterLowByte(dst_reg, word_mode, temp);
-						  else
-							  b -> writeByte(a, temp);
+
+						  put_result(a, dst_mode, dst_reg, word_mode, temp);
 					  }
 					  else {
 						  new_carry = t & 0x8000;
 						  temp = (t << 1) | getPSW_c();
-						  if (dst_mode == 0)
-							  setRegisterLowByte(dst_reg, word_mode, temp);
-						  else
-							  b -> writeWord(a, temp);
+
+						  put_result(a, dst_mode, dst_reg, word_mode, temp);
 					  }
 
 					  setPSW_c(new_carry);
-
 					  setPSW_n(SIGN(temp, word_mode));
 					  setPSW_z(temp == 0);
 					  setPSW_v(getPSW_c() ^ getPSW_n());
@@ -860,19 +839,18 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 					  setPSW_c(vl & 1);
 					  vl >>= 1;
+
 					  if (word_mode)
 						  vl |= hb << 7;
 					  else
 						  vl |= hb << 15;
 
-					  if (dst_mode == 0)
-						  setRegisterLowByte(dst_reg, word_mode, vl);
-					  else
-						  b -> write(a, word_mode, vl);
+					  put_result(a, dst_mode, dst_reg, word_mode, vl);
 
 					  setPSW_n(SIGN(vl, word_mode));
 					  setPSW_z(vl == 0);
 					  setPSW_v(getPSW_n() ^ getPSW_c());
+
 					  break;
 				  }
 
@@ -880,14 +858,14 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					 uint16_t a  = getGAMAddress(dst_mode, dst_reg, word_mode, false);
 					 int32_t  vl = b -> read(a, word_mode);
 					 uint16_t v  = (vl << 1) & (word_mode ? 0xff : 0xffff);
+
 					 setPSW_n(word_mode ? v & 0x80 : v & 0x8000);
 					 setPSW_z(v == 0);
 					 setPSW_c(word_mode ? vl & 0x80 : vl & 0x8000);
 					 setPSW_v(getPSW_n() ^ getPSW_c());
-					 if (dst_mode == 0)
-						 setRegisterLowByte(dst_reg, word_mode, v);
-					 else
-						 b -> write(a, word_mode, v);
+
+					 put_result(a, dst_mode, dst_reg, word_mode, v);
+
 					 break;
 				 }
 
@@ -955,10 +933,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					 setPSW_z(getPSW_n() == false);
 					 setPSW_v(false);
 
-					 if (dst_mode == 0)
-						 putGAM(dst_mode, dst_reg, word_mode, vl, false);
-					 else
-						 b -> write(a, word_mode, vl);
+					 put_result(a, dst_mode, dst_reg, word_mode, vl);
 				 }
 				 break;
 
