@@ -13,8 +13,6 @@ constexpr const int t_height { 25 };
 class console
 {
 private:
-	std::atomic_bool *const terminate   { nullptr };
-
 	std::vector<char>       input_buffer;
 
 	char                    screen_buffer[t_height][t_width];
@@ -22,6 +20,8 @@ private:
 	uint8_t                 ty          { 0 };
 
 protected:
+	std::atomic_bool *const terminate   { nullptr };
+
 	bus              *const b           { nullptr };
 	std::thread            *th          { nullptr };
 	std::atomic_bool        disk_read_activity_flag  { false };

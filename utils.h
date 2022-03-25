@@ -9,4 +9,6 @@ int parity(int v);
 #define sign(a) ( ( (a) < 0 )  ?  -1   : ( (a) > 0 ) )
 
 std::string format(const char *const fmt, ...);
+
 unsigned long get_ms();
+void myusleep(uint64_t us);

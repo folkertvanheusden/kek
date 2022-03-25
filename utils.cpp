@@ -1,11 +1,13 @@
-// (C) 2018 by Folkert van Heusden
+// (C) 2018-2022 by Folkert van Heusden
 // Released under Apache License v2.0
 #if defined(ESP32)
 #include <Arduino.h>
 #endif
+#include <errno.h>
 #include <stdarg.h>
 #include <stdint.h>
 #include <string>
+#include <string.h>
 #include <sys/time.h>
 
 void setBit(uint16_t & v, const int bit, const bool vb)
@@ -50,3 +52,22 @@ int parity(int v)
 {
 	return __builtin_parity(v); // FIXME
 }
+
+void myusleep(uint64_t us)
+{
+	struct timespec req;
+
+	req.tv_sec = us / 1000000l;
+	req.tv_nsec = (us % 1000000l) * 1000l;
+
+	for(;;) {
+		struct timespec rem { 0, 0 };
+
+		int rc = nanosleep(&req, &rem);
+		if (rc == 0 || (rc == -1 && errno != EINTR))
+			break;
+
+		memcpy(&req, &rem, sizeof(struct timespec));
+	}
+}
+
