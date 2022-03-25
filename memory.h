@@ -16,9 +16,9 @@ public:
 
 	void reset();
 
-	uint16_t readByte(const uint16_t a) const { return m[a]; }
-	void writeByte(const uint16_t a, const uint16_t v) { m[a] = v; }
+	uint16_t readByte(const uint32_t a) const { return m[a]; }
+	void writeByte(const uint32_t a, const uint16_t v) { m[a] = v; }
 
-	uint16_t readWord(const uint16_t a) const { return m[a] | (m[a + 1] << 8); }
-	void writeWord(const uint16_t a, const uint16_t v) { m[a] = v; m[a + 1] = v >> 8; }
+	uint16_t readWord(const uint32_t a) const { return m[a] | (m[a + 1] << 8); }
+	void writeWord(const uint32_t a, const uint16_t v) { m[a] = v; m[a + 1] = v >> 8; }
 };
