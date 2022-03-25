@@ -432,7 +432,7 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 					    setPSW_c(uint16_t(dst_value) < uint16_t(src_value));
 				    }
 				    else {
-					    result = dst_value + src_value;
+					    result = (dst_value + src_value) & 0xffff;
 					    setPSW_v(sign(src_value) == sign(dst_value) && sign(dst_value) != sign(result));
 					    setPSW_c(uint16_t(result) < uint16_t(src_value));
 				    }
