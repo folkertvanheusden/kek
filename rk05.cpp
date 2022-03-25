@@ -141,9 +141,7 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 #endif
 
 	const int reg = (addr - RK05_BASE) / 2;
-	D(fprintf(stderr, "RK05 write %s/%o: %o\n", regnames[reg], addr, v);)
 
-	D(fprintf(stderr, "set register %o: %o\n", addr, v);)
 	registers[reg] = v;
 
 	if (addr == RK05_CS) {
@@ -151,14 +149,12 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 			const int func = (v >> 1) & 7; // FUNCTION
 			int16_t wc = registers[(RK05_WC - RK05_BASE) / 2];
 			const size_t reclen = wc < 0 ? (-wc * 2) : wc * 2;
-			D(fprintf(stderr, "RK05 rec len %zo\n", reclen);)
 
 			uint16_t dummy = registers[(RK05_DA - RK05_BASE) / 2];
 			uint8_t sector = dummy & 0b1111;
 			uint8_t surface = (dummy >> 4) & 1;
 			int track = (dummy >> 4) & 511;
 			uint16_t cylinder = (dummy >> 5) & 255;
-			D(fprintf(stderr, "RK05 position sec %d surf %d cyl %d\n", sector, surface, cylinder);)
 
 			const int diskoff = track * 12 + sector;
 
@@ -172,8 +168,7 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 			else if (func == 1) { // write
 				*disk_write_acitivity = true;
 
-				D(fprintf(stderr, "RK05 invoke %d (write)\n", func);)
-				D(fprintf(stderr, "RK05 writing %zo bytes to offset %o (%d dec)\n", reclen, diskoffb, diskoffb);)
+				D(fprintf(stderr, "RK05 position sec %d surf %d cyl %d, reclen %zo, WRITE to %o, mem: %o\n", sector, surface, cylinder, reclen, diskoffb, memoff);)
 
 				uint32_t p = reclen; // FIXME
 				for(size_t i=0; i<reclen; i++)
@@ -211,8 +206,7 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 			else if (func == 2) { // read
 				*disk_read_acitivity = true;
 
-				D(fprintf(stderr, "RK05 invoke %d (read)\n", func);)
-				D(fprintf(stderr, "RK05 reading %zo bytes from offset %o (%d dec) to %o\n", reclen, diskoffb, diskoffb, memoff);)
+				D(fprintf(stderr, "RK05 position sec %d surf %d cyl %d, reclen %zo, READ from %o, mem: %o\n", sector, surface, cylinder, reclen, diskoffb, memoff);)
 
 #if defined(ESP32)
 				if (!fh.seek(diskoffb))
@@ -264,12 +258,10 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 				*disk_read_acitivity = false;
 			}
 			else if (func == 4) {
-				D(fprintf(stderr, "RK05 invoke %d (seek)\n", func);)
-				D(fprintf(stderr, "RK05 seek to offset %o\n", diskoffb);)
+				D(fprintf(stderr, "RK05 invoke %d (seek) to %o\n", func, diskoffb);)
 			}
 			else if (func == 7) {
 				D(fprintf(stderr, "RK05 invoke %d (write lock)\n", func);)
-				D(fprintf(stderr, "RK05 write lock\n");)
 			}
 			else {
 				D(fprintf(stderr, "RK05 command %d UNHANDLED\n", func);)
