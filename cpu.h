@@ -19,7 +19,6 @@ private:
 	uint16_t psw   { 0 };
 	uint16_t fpsr  { 0 };
 	uint16_t stackLimitRegister { 0 };
-	bool resetFlag   { false };
 	bool runMode     { false };
 	bool emulateMFPT { false };
 
@@ -61,7 +60,6 @@ public:
 	void reset();
 
 	void step();
-	void resetReset() { resetFlag = false; }
 
 	void pushStack(const uint16_t v);
 	uint16_t popStack();

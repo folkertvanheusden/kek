@@ -50,6 +50,11 @@ void bus::clearmem()
 	m -> reset();
 }
 
+void bus::init()
+{
+	MMR0 = 0;
+}
+
 uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev)
 {
 	uint16_t temp = 0;
