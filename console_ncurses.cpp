@@ -92,6 +92,12 @@ void console_ncurses::resize_terminal()
 	endwin();
 	refresh();
 
+	init_pair(1, COLOR_RED,    COLOR_BLACK);
+	init_pair(2, COLOR_YELLOW, COLOR_BLACK);
+	init_pair(3, COLOR_BLUE,   COLOR_BLACK);
+	init_pair(4, COLOR_GREEN,  COLOR_BLACK);
+	init_pair(5, COLOR_CYAN,   COLOR_BLACK);
+
 	wclear(stdscr);
 
 	delete_window(w_main_b);
@@ -121,12 +127,14 @@ void console_ncurses::panel_update_thread()
 
 		uint16_t current_PSW   = c->getPSW();
 
-		//uint32_t led_color     = run_mode_led_color[current_PSW >> 14];
-
 		std::unique_lock<std::mutex> lck(ncurses_mutex);
+
+		wattron(w_panel->win, COLOR_PAIR(1 + (current_PSW >> 14)));
 
 		for(uint8_t b=0; b<22; b++)
 			mvwprintw(w_panel->win, 0, 1 + 22 - b,      "%c", full_addr     & (1 << b) ? '1' : '0');
+
+		wattron(w_panel->win, COLOR_PAIR(1));
 
 		for(uint8_t b=0; b<16; b++)
 			mvwprintw(w_panel->win, 1, 1 + 16 - b,      "%c", current_PSW   & (1 << b) ? '1' : '0');
@@ -134,10 +142,14 @@ void console_ncurses::panel_update_thread()
 		for(uint8_t b=0; b<16; b++)
 			mvwprintw(w_panel->win, 1, 1 + 16 - b + 17, "%c", current_instr & (1 << b) ? '1' : '0');
 
+		wattron(w_panel->win, COLOR_PAIR(5));
+
 		mvwprintw(w_panel->win, 1, 1 + 35, "%c%c%c",
 			running_flag             ? '+' : '-',
 			disk_read_activity_flag  ? '*' : 'o',
 			disk_write_activity_flag ? '*' : 'o');
+
+		wattron(w_panel->win, COLOR_PAIR(0));
 
 		wmove(w_main->win, ty, tx);
 
