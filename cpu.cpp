@@ -495,8 +495,8 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 
 				int32_t  quot   = R0R1 / divider;
 				uint16_t rem    = R0R1 % divider;
-				fprintf(stderr, "value: %d, divider: %d, gives: %d / %d\n", R0R1, divider, quot, rem);
-				fprintf(stderr, "value: %o, divider: %o, gives: %o / %o\n", R0R1, divider, quot, rem);
+				D(fprintf(stderr, "value: %d, divider: %d, gives: %d / %d\n", R0R1, divider, quot, rem);)
+				D(fprintf(stderr, "value: %o, divider: %o, gives: %o / %o\n", R0R1, divider, quot, rem);)
 
 				// TODO: handle results out of range
 
