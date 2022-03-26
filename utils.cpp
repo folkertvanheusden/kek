@@ -55,6 +55,9 @@ int parity(int v)
 
 void myusleep(uint64_t us)
 {
+#if defined(ESP32)
+	delayMicroseconds(us);
+#else
 	struct timespec req;
 
 	req.tv_sec = us / 1000000l;
@@ -69,5 +72,5 @@ void myusleep(uint64_t us)
 
 		memcpy(&req, &rem, sizeof(struct timespec));
 	}
+#endif
 }
-
