@@ -16,7 +16,7 @@
 // see also https://github.com/espressif/esp-idf/issues/1934
 constexpr int n_pages = 12;
 #else
-constexpr int n_pages = 512;
+constexpr int n_pages = 16;
 #endif
 
 bus::bus()
@@ -283,7 +283,7 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev)
 			return word_mode ? tty_ -> readByte(a) : tty_ -> readWord(a);
 
 		// LO size register field must be all 1s, so subtract 1
-		constexpr const uint32_t system_size = n_pages * 8192 - 4096 - 1;
+		const uint32_t system_size = n_pages * 8192 / 64 - 1;
 
 		if (a == 0177762)  // system size HI
 			return system_size >> 16;
