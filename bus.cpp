@@ -317,6 +317,8 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev)
 		c->schedule_trap(04);  // invalid address
 	}
 
+	D(fprintf(stderr, "BUS read from %o (pages: %o, run mode %d, apf %d)\n", m_offset, pages[run_mode][apf].par, run_mode, apf);)
+
 	if (word_mode)
 		temp = m -> readByte(m_offset);
 	else
@@ -476,6 +478,7 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 		}
 
 		/// MMU ///
+		// supervisor
 		if (a >= 0172200 && a < 0172220) {
 			uint16_t t = pages[001][((a & 017) >> 1)].pdr = value;
 			D(fprintf(stderr, "write supervisor I PDR for %d: %o\n", (a & 017) >> 1, t);)
@@ -497,6 +500,7 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 			return t;
 		}
 
+		// kernel
 		if (a >= 0172300 && a < 0172320) {
 			uint16_t t = pages[000][((a & 017) >> 1)].pdr = value;
 			D(fprintf(stderr, "write kernel I PDR for %d: %o\n", (a & 017) >> 1, t);)
@@ -518,6 +522,7 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 			return t;
 		}
 
+		// user
 		if (a >= 0177600 && a < 0177620) {
 			uint16_t t = pages[003][((a & 017) >> 1)].pdr = value;
 			D(fprintf(stderr, "write userspace I PDR for %d: %o\n", (a & 017) >> 1, t);)
@@ -584,6 +589,8 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 		D(fprintf(stderr, "bus::write %o >= %o\n", m_offset, n_pages * 8192);)
 		c->schedule_trap(04);  // invalid address
 	}
+
+	D(fprintf(stderr, "BUS write to %o (pages: %o, run mode %d, apf %d)\n", m_offset, pages[run_mode][apf].par, run_mode, apf);)
 
 	if (word_mode)
 		m->writeByte(m_offset, value);
