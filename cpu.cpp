@@ -1642,18 +1642,7 @@ void cpu::step()
 	if (misc_operations(instr))
 		return;
 
-	fprintf(stderr, "UNHANDLED instruction %o\n\n", instr);
-
-	{
-		FILE *fh = fopen("fail.dat", "wb");
-		if (fh) {
-			for(int i=0; i<256; i++)
-				fputc(b -> readByte(getPC() - 2 + i), fh);
-			fclose(fh);
-		}
-	}
+	fprintf(stderr, "UNHANDLED instruction %o\n", instr);
 
 	trap(010);
-
-	*event = 1;
 }
