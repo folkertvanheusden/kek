@@ -72,7 +72,7 @@ void console_esp32::panel_update_thread()
 
 	// initial animation
 	for(uint8_t i=0; i<n_leds; i++) {
-		pixels.setPixelColor(i, 255, 255, 255);
+		pixels.setPixelColor(i, brightness, brightness, brightness);
 
 		int p = i - 10;
 		if (p < 0)
