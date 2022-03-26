@@ -16,7 +16,7 @@
 // see also https://github.com/espressif/esp-idf/issues/1934
 constexpr int n_pages = 12;
 #else
-constexpr int n_pages = 16;
+constexpr int n_pages = 512;
 #endif
 
 bus::bus()
@@ -26,7 +26,7 @@ bus::bus()
 	memset(pages, 0x00, sizeof pages);
 
 	for(int rm=0; rm<4; rm++) {
-		for(int i=0; i<n_pages; i++) {
+		for(int i=0; i<16; i++) {
 			pages[rm][i].par = (i & 7) * 8192 / 64;
 			pages[rm][i].pdr = (3 << 1) | (0 << 4) | (0 << 6) | ((8192 / (32 * 2)) << 8);
 		}
