@@ -58,15 +58,15 @@ void console_esp32::panel_update_thread()
 
 	pixels.clear();
 
-	pixels.setBrightness(48);
 	pixels.show();
 
-	const uint32_t magenta = pixels.Color(255, 0, 255);
-	const uint32_t red     = pixels.Color(255, 0, 0);
-	const uint32_t green   = pixels.Color(0, 255, 0);
-	const uint32_t blue    = pixels.Color(0, 0, 255);
-	const uint32_t yellow  = pixels.Color(255, 255, 0);
-	const uint32_t white   = pixels.Color(255, 255, 255, 255);
+	constexpr uint8_t brightness = 32;
+	const uint32_t magenta = pixels.Color(brightness, 0,          brightness);
+	const uint32_t red     = pixels.Color(brightness, 0,          0);
+	const uint32_t green   = pixels.Color(0,          brightness, 0);
+	const uint32_t blue    = pixels.Color(0,          0,          brightness);
+	const uint32_t yellow  = pixels.Color(brightness, brightness, 0);
+	const uint32_t white   = pixels.Color(brightness, brightness, brightness, brightness);
 
 	const uint32_t run_mode_led_color[4] = { red, yellow, blue, green };
 
