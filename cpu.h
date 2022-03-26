@@ -19,6 +19,7 @@ private:
 	uint16_t psw   { 0 };
 	uint16_t fpsr  { 0 };
 	uint16_t stackLimitRegister { 0 };
+	uint8_t  scheduled_trap     { 0 };
 	bool runMode     { false };
 	bool emulateMFPT { false };
 
@@ -68,6 +69,7 @@ public:
 
 	void busError();
 	void trap(const uint16_t vector, const int new_ipl = -1);
+	void schedule_trap(const uint16_t vector);
 
 	void setEmulateMFPT(const bool v) { emulateMFPT = v; }
 

@@ -1187,6 +1187,11 @@ void cpu::busError()
 	trap(4);
 }
 
+void cpu::schedule_trap(const uint16_t vector)
+{
+	scheduled_trap = vector;
+}
+
 void cpu::trap(const uint16_t vector, const int new_ipl)
 {
 	uint16_t before_psw = getPSW();
@@ -1604,6 +1609,12 @@ void cpu::disassemble()
 void cpu::step()
 {
 	check_queued_interrupts();
+
+	if (scheduled_trap) {
+		trap(scheduled_trap, 7);
+
+		scheduled_trap = 0;
+	}
 
 	uint16_t temp_pc = getPC();
 
