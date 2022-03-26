@@ -18,9 +18,10 @@
 #include "utils.h"
 
 
-bool             withUI       { false };
-uint32_t         event        { 0 };
-std::atomic_bool terminate    { false };
+bool              withUI    { false };
+uint32_t          event     { 0 };
+std::atomic_bool  terminate { false };
+std::atomic_bool *running   { nullptr };
 
 void loadbin(bus *const b, uint16_t base, const char *const file)
 {
@@ -225,6 +226,8 @@ int main(int argc, char *argv[])
 		setBootLoader(b);
 	}
 
+	running = cnsl->get_running_flag();
+
 	tty *tty_ = new tty(cnsl);
 
 	b->add_tty(tty_);
@@ -253,6 +256,8 @@ int main(int argc, char *argv[])
 
 	const unsigned long start          = get_ms();
 	unsigned long       interval_start = start;
+
+	*running = true;
 
 	for(;;) {
 		c->step();
@@ -309,6 +314,8 @@ int main(int argc, char *argv[])
 			icount = 0;
 		}
 	}
+
+	*running = false;
 
 	terminate = true;
 
