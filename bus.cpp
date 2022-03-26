@@ -308,21 +308,29 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev)
 	else if (use_prev)
 		run_mode = (c->getPSW() >> 12) & 3;
 
-	uint32_t m_offset = pages[run_mode][apf].par * 64;
+	uint32_t m_offset = pages[run_mode][apf].par * 64;  // memory offset
 
-	m_offset += a & 8191;
+	uint16_t p_offset = a & 8191;  // page offset
 
-	if (m_offset >= n_pages * 8192) {
+	m_offset += p_offset;
+
+	uint16_t pdr_len = (((pages[run_mode][apf].pdr >> 8) & 127) + 1) * 64;
+
+	if (p_offset >= pdr_len && (MMR0 & 1)) {
+		D(fprintf(stderr, "bus::read::p_offset %o >= %o\n", p_offset, pdr_len);)
+		c->schedule_trap(04);  // invalid address
+	}
+	else if (m_offset >= n_pages * 8192) {
 		D(fprintf(stderr, "bus::read %o >= %o\n", m_offset, n_pages * 8192);)
 		c->schedule_trap(04);  // invalid address
 	}
-
-	D(fprintf(stderr, "BUS read from %o (pages: %o, run mode %d, apf %d)\n", m_offset, pages[run_mode][apf].par, run_mode, apf);)
 
 	if (word_mode)
 		temp = m -> readByte(m_offset);
 	else
 		temp = m -> readWord(m_offset);
+
+	D(fprintf(stderr, "BUS read from %o (pages: %o/%o/%o, run mode %d, apf %d, PDR: %06o): %06o\n", m_offset, pages[run_mode][apf].par, pages[run_mode][apf].par * 64, n_pages * 8192, run_mode, apf, pages[run_mode][apf].pdr, temp);)
 
 	return temp;
 }
@@ -583,14 +591,22 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 
 	pages[run_mode][apf].pdr |= 1 << 6; // page has been written to
 
-	m_offset += a & 8191;
+	uint16_t p_offset = a & 8191;  // page offset
 
-	if (m_offset >= n_pages * 8192) {
+	m_offset += p_offset;
+
+	uint16_t pdr_len = (((pages[run_mode][apf].pdr >> 8) & 127) + 1)* 64;
+
+	if (p_offset >= pdr_len && (MMR0 & 1)) {
+		D(fprintf(stderr, "bus::write::p_offset %o >= %o\n", p_offset, pdr_len);)
+		c->schedule_trap(04);  // invalid address
+	}
+	else if (m_offset >= n_pages * 8192) {
 		D(fprintf(stderr, "bus::write %o >= %o\n", m_offset, n_pages * 8192);)
 		c->schedule_trap(04);  // invalid address
 	}
 
-	D(fprintf(stderr, "BUS write to %o (pages: %o, run mode %d, apf %d)\n", m_offset, pages[run_mode][apf].par, run_mode, apf);)
+	D(fprintf(stderr, "BUS write to %o (pages: %o/%o/%o, run mode %d, apf %d, PDR: %06o): %06o\n", m_offset, pages[run_mode][apf].par, pages[run_mode][apf].par * 64, n_pages * 8192, run_mode, apf, pages[run_mode][apf].pdr, value);)
 
 	if (word_mode)
 		m->writeByte(m_offset, value);
