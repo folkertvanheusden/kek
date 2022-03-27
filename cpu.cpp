@@ -467,7 +467,7 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 				int32_t  result = R * getGAM(dst_mode, dst_reg, true, false);
 
 				if (reg & 1)
-					setRegister(reg, result >> 16);
+					setRegister(reg, result);
 				else {
 					setRegister(reg, result & 65535);
 					setRegister(reg + 1, result >> 16);
