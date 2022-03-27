@@ -304,9 +304,7 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev)
 
 	const uint8_t apf = a >> 13; // active page field
 
-	if (a < 01000)
-		run_mode = 0;
-	else if (use_prev)
+	if (use_prev)
 		run_mode = (c->getPSW() >> 12) & 3;
 
 	uint32_t m_offset = pages[run_mode][apf].par * 64;  // memory offset
@@ -596,9 +594,7 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 
 	const uint8_t apf = a >> 13; // active page field
 
-	if (a < 01000)
-		run_mode = 0;
-	else if (use_prev)
+	if (use_prev)
 		run_mode = (c->getPSW() >> 12) & 3;
 
 	uint32_t m_offset = pages[run_mode][apf].par * 64;
@@ -623,7 +619,7 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 	}
 	else if (m_offset >= n_pages * 8192) {
 		D(fprintf(stderr, "bus::write %o >= %o\n", m_offset, n_pages * 8192);)
-		c->schedule_trap(04);  // invalid address
+		c->schedule_trap(04);  // invalid address FIXME stop execution of that instruction: throw an exception caught in step()?
 
 		pages[run_mode][apf].pdr |= 1 << 7;
 

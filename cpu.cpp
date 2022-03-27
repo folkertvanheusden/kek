@@ -1197,6 +1197,13 @@ void cpu::trap(const uint16_t vector, const int new_ipl)
 	uint16_t before_psw = getPSW();
 	uint16_t before_pc  = getPC();
 
+	if (b->getMMR0() & 1) {
+		// make sure the trap vector is retrieved from kernel space
+		psw &= 037777;  // mask off 14/15
+	}
+
+	setPC(b->readWord(vector + 0));
+
 	// switch to kernel mode & update 'previous mode'
 	uint16_t new_psw = b->readWord(vector + 2) & 0147777;  // mask off old 'previous mode'
 	if (new_ipl != -1)
@@ -1206,8 +1213,6 @@ void cpu::trap(const uint16_t vector, const int new_ipl)
 
 	pushStack(before_psw);
 	pushStack(before_pc);
-
-	setPC(b->readWord(vector + 0));
 
 	D(fprintf(stderr, "TRAP %o: PC is now %06o, PSW is now %06o\n", vector, getPC(), new_psw);)
 }
