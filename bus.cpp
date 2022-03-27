@@ -323,7 +323,7 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev)
 
 		pages[run_mode][apf].pdr |= 1 << 7;
 
-		MMR2 = c->getPC();
+		throw 1;
 	}
 	else if (m_offset >= n_pages * 8192) {
 		D(fprintf(stderr, "bus::read %o >= %o\n", m_offset, n_pages * 8192);)
@@ -331,11 +331,8 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev)
 
 		pages[run_mode][apf].pdr |= 1 << 7;
 
-		MMR2 = c->getPC();
+		throw 1;
 	}
-
-	if (direction == false)  // 18 bit
-		m_offset &= 01777777777;
 
 	if (word_mode)
 		temp = m -> readByte(m_offset);
@@ -615,21 +612,18 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 
 		pages[run_mode][apf].pdr |= 1 << 7;
 
-		MMR2 = c->getPC();
+		throw 1;
 	}
 	else if (m_offset >= n_pages * 8192) {
 		D(fprintf(stderr, "bus::write %o >= %o\n", m_offset, n_pages * 8192);)
-		c->schedule_trap(04);  // invalid address FIXME stop execution of that instruction: throw an exception caught in step()?
+		c->schedule_trap(04);  // invalid address
 
 		pages[run_mode][apf].pdr |= 1 << 7;
 
-		MMR2 = c->getPC();
+		throw 1;
 	}
 
 	D(fprintf(stderr, "BUS write to %o (pages: %o/%o/%o, run mode %d, apf %d, PDR: %06o, b22: %d): %06o\n", m_offset, pages[run_mode][apf].par, pages[run_mode][apf].par * 64, n_pages * 8192, run_mode, apf, pages[run_mode][apf].pdr, MMR3 & 16, value);)
-
-	if (direction == false)  // 18 bit
-		m_offset &= 01777777777;
 
 	if (word_mode)
 		m->writeByte(m_offset, value);

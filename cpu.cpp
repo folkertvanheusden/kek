@@ -1629,25 +1629,32 @@ void cpu::step()
 	if (disas)
 		disassemble();
 
-	b->setMMR2(temp_pc);
+	try {
+		uint16_t instr = b->readWord(temp_pc);
 
-	uint16_t instr = b->readWord(temp_pc);
+		addRegister(7, false, 2);
 
-	addRegister(7, false, 2);
+		if (double_operand_instructions(instr))
+			return;
 
-	if (double_operand_instructions(instr))
-		return;
+		if (conditional_branch_instructions(instr))
+			return;
 
-	if (conditional_branch_instructions(instr))
-		return;
+		if (condition_code_operations(instr))
+			return;
 
-	if (condition_code_operations(instr))
-		return;
+		if (misc_operations(instr))
+			return;
 
-	if (misc_operations(instr))
-		return;
+		fprintf(stderr, "UNHANDLED instruction %o\n", instr);
 
-	fprintf(stderr, "UNHANDLED instruction %o\n", instr);
+		trap(010);
+	}
+	catch(const int exception) {
+		D(fprintf(stderr, "bus-trap during execution of command\n");)
 
-	trap(010);
+		// error half way instruction; make sure it is not fully executed
+
+		b->setMMR2(temp_pc);
+	}
 }
