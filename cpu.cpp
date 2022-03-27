@@ -1626,10 +1626,10 @@ void cpu::step()
 	if (temp_pc & 1)
 		busError();
 
-	if (disas)
-		disassemble();
-
 	try {
+		if (disas)
+			disassemble();
+
 		uint16_t instr = b->readWord(temp_pc);
 
 		addRegister(7, false, 2);

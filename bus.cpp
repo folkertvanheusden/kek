@@ -313,25 +313,27 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev)
 
 	m_offset += p_offset;
 
-	uint16_t pdr_len = (((pages[run_mode][apf].pdr >> 8) & 127) + 1) * 64;
+	if (MMR0 & 1) {
+		uint16_t pdr_len = (((pages[run_mode][apf].pdr >> 8) & 127) + 1) * 64;
 
-	bool direction = !!(pages[run_mode][apf].pdr & 8);
+		bool direction = pages[run_mode][apf].pdr & 8;
 
-	if ((p_offset >= pdr_len && (MMR0 & 1) && direction == false) || (p_offset < pdr_len && (MMR0 & 1) && direction == true)) {
-		D(fprintf(stderr, "bus::read::p_offset %o >= %o\n", p_offset, pdr_len);)
-		c->schedule_trap(0250);  // invalid access
+		if ((p_offset >= pdr_len && direction == false) || (p_offset < pdr_len && direction == true)) {
+			D(fprintf(stderr, "bus::read::p_offset %o >= %o\n", p_offset, pdr_len);)
+			c->schedule_trap(0250);  // invalid access
 
-		pages[run_mode][apf].pdr |= 1 << 7;
+			pages[run_mode][apf].pdr |= 1 << 7;
 
-		throw 1;
-	}
-	else if (m_offset >= n_pages * 8192) {
-		D(fprintf(stderr, "bus::read %o >= %o\n", m_offset, n_pages * 8192);)
-		c->schedule_trap(04);  // invalid address
+			throw 1;
+		}
+		else if (m_offset >= n_pages * 8192) {
+			D(fprintf(stderr, "bus::read %o >= %o\n", m_offset, n_pages * 8192);)
+			c->schedule_trap(04);  // invalid address
 
-		pages[run_mode][apf].pdr |= 1 << 7;
+			pages[run_mode][apf].pdr |= 1 << 7;
 
-		throw 1;
+			throw 1;
+		}
 	}
 
 	if (word_mode)
@@ -602,25 +604,27 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 
 	m_offset += p_offset;
 
-	uint16_t pdr_len = (((pages[run_mode][apf].pdr >> 8) & 127) + 1)* 64;
+	if (MMR0 & 1) {
+		uint16_t pdr_len = (((pages[run_mode][apf].pdr >> 8) & 127) + 1)* 64;
 
-	bool direction = !!(pages[run_mode][apf].pdr & 8);
+		bool direction = pages[run_mode][apf].pdr & 8;
 
-	if ((p_offset >= pdr_len && (MMR0 & 1) && direction == false) || (p_offset < pdr_len && (MMR0 & 1) && direction == true)) {
-		D(fprintf(stderr, "bus::write::p_offset %o >= %o\n", p_offset, pdr_len);)
-		c->schedule_trap(0250);  // invalid access
+		if ((p_offset >= pdr_len && direction == false) || (p_offset < pdr_len && direction == true)) {
+			D(fprintf(stderr, "bus::write::p_offset %o >= %o\n", p_offset, pdr_len);)
+			c->schedule_trap(0250);  // invalid access
 
-		pages[run_mode][apf].pdr |= 1 << 7;
+			pages[run_mode][apf].pdr |= 1 << 7;
 
-		throw 1;
-	}
-	else if (m_offset >= n_pages * 8192) {
-		D(fprintf(stderr, "bus::write %o >= %o\n", m_offset, n_pages * 8192);)
-		c->schedule_trap(04);  // invalid address
+			throw 1;
+		}
+		else if (m_offset >= n_pages * 8192) {
+			D(fprintf(stderr, "bus::write %o >= %o\n", m_offset, n_pages * 8192);)
+			c->schedule_trap(04);  // invalid address
 
-		pages[run_mode][apf].pdr |= 1 << 7;
+			pages[run_mode][apf].pdr |= 1 << 7;
 
-		throw 1;
+			throw 1;
+		}
 	}
 
 	D(fprintf(stderr, "BUS write to %o (pages: %o/%o/%o, run mode %d, apf %d, PDR: %06o, b22: %d): %06o\n", m_offset, pages[run_mode][apf].par, pages[run_mode][apf].par * 64, n_pages * 8192, run_mode, apf, pages[run_mode][apf].pdr, MMR3 & 16, value);)
