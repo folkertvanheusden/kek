@@ -1591,9 +1591,9 @@ void cpu::disassemble()
 		}
 
 		if ((instruction & 0b1111111000000000) == 0b0000100000000000) {
-			auto dst_text = addressing_to_string(src_register, (pc + 2) & 65535);
+			auto dst_text = addressing_to_string(dst_register, (pc + 2) & 65535);
 
-			text = std::string("JSR ") + dst_text.first;
+			text = format("JSR R%d,", src_register & 7) + dst_text.first;
 		}
 
 		if ((instruction & 0b1111111111111000) == 0b0000000010000000)
