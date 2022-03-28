@@ -262,26 +262,8 @@ int main(int argc, char *argv[])
 	for(;;) {
 		c->step();
 
-		if (event) {
-#if !defined(ESP32)
-			FILE *fh = fopen("halt.mac", "wb");
-			if (fh) {
-				uint16_t pc = 024320;
-				fprintf(fh, "\t.LINK %06o\n", pc);
-
-				for(int i=0; i<4096; i += 2)
-					fprintf(fh, "\t.DW %06o\n", b->readWord((pc + i) & 0xffff));
-
-				fprintf(fh, "\tmake_raw\n");
-
-				fclose(fh);
-			}
-#endif
-
-			//c->setRegister(7, 01000);
-			//c->resetHalt();
+		if (event)
 			break;
-		}
 
 		icount++;
 
@@ -300,12 +282,6 @@ int main(int argc, char *argv[])
 				refresh_interval = pdp_11_70_mips;
 
 			D(fprintf(stderr, "instructions_executed: %u, took_ms: %lu, new refresh_interval: %u\n", icount, took_ms, refresh_interval);)
-
-//			if (withUI) {
-//				mvwprintw(w_main_b -> win, 0, 24, "%.1f/s   ", icount * 1000.0 / took_ms);
-//				mvwprintw(w_main_b -> win, 0, 42, "%06o", b->get_switch_register());
-//				mydoupdate();
-//			}
 
 			if (terminate)
 				event = 1;
