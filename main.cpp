@@ -164,7 +164,7 @@ int main(int argc, char *argv[])
 
 	c -> setEmulateMFPT(true);
 
-	std::string rk05_file;
+	std::vector<std::string> rk05_files;
 	bool testCases = false;
 	int opt = -1;
 	while((opt = getopt(argc, argv, "hm:T:R:p:ndL:")) != -1)
@@ -196,7 +196,7 @@ int main(int argc, char *argv[])
 				break;
 
 			case 'R':
-				rk05_file = optarg;
+				rk05_files.push_back(optarg);
 				break;
 
 			case 'p':
@@ -220,8 +220,8 @@ int main(int argc, char *argv[])
 	else
 		cnsl = new console_posix(&terminate, b);
 
-	if (rk05_file.empty() == false) {
-		b->add_rk05(new rk05(rk05_file, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
+	if (rk05_files.empty() == false) {
+		b->add_rk05(new rk05(rk05_files, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
 
 		setBootLoader(b);
 	}

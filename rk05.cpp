@@ -1,4 +1,4 @@
-// (C) 2018 by Folkert van Heusden
+// (C) 2018-2022 by Folkert van Heusden
 // Released under Apache License v2.0
 #include <errno.h>
 #include <string.h>
@@ -24,7 +24,7 @@ const char * const regnames[] = {
 	"RK05_DATABUF      "
 	};
 
-rk05::rk05(const std::string & file, bus *const b, std::atomic_bool *const disk_read_acitivity, std::atomic_bool *const disk_write_acitivity) :
+rk05::rk05(const std::vector<std::string> & files, bus *const b, std::atomic_bool *const disk_read_acitivity, std::atomic_bool *const disk_write_acitivity) :
 	b(b),
 	disk_read_acitivity(disk_read_acitivity),
 	disk_write_acitivity(disk_write_acitivity)
@@ -64,9 +64,13 @@ rk05::rk05(const std::string & file, bus *const b, std::atomic_bool *const disk_
 		Serial.println(F("rk05: open failed"));
 	}
 #else
-	fh = fopen(file.c_str(), "rb");
-	if (!fh)
-		error_exit(true, "rk05: cannot open \"%s\"", file.c_str());
+	for(auto file : files) {
+		FILE *fh = fopen(file.c_str(), "rb");
+		if (!fh)
+			error_exit(true, "rk05: cannot open \"%s\"", file.c_str());
+
+		fhs.push_back(fh);
+	}
 #endif
 }
 
@@ -75,7 +79,8 @@ rk05::~rk05()
 #if defined(ESP32)
 	fh.close();
 #else
-	fclose(fh);
+	for(auto fh : fhs)
+		fclose(fh);
 #endif
 }
 
@@ -146,15 +151,16 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 
 	if (addr == RK05_CS) {
 		if (v & 1) { // GO
-			const int func = (v >> 1) & 7; // FUNCTION
-			int16_t wc = registers[(RK05_WC - RK05_BASE) / 2];
+			const int    func   = (v >> 1) & 7; // FUNCTION
+			int16_t      wc     = registers[(RK05_WC - RK05_BASE) / 2];
 			const size_t reclen = wc < 0 ? (-wc * 2) : wc * 2;
 
-			uint16_t dummy = registers[(RK05_DA - RK05_BASE) / 2];
-			uint8_t sector = dummy & 0b1111;
-			uint8_t surface = (dummy >> 4) & 1;
-			int track = (dummy >> 4) & 511;
-			uint16_t cylinder = (dummy >> 5) & 255;
+			uint16_t temp     = registers[(RK05_DA - RK05_BASE) / 2];
+			uint8_t  sector   = temp & 0b1111;
+			uint8_t  surface  = (temp >> 4) & 1;
+			int      track    = (temp >> 4) & 511;
+			uint16_t cylinder = (temp >> 5) & 255;
+			uint8_t  device   = temp >> 13;
 
 			const int diskoff = track * 12 + sector;
 
@@ -168,7 +174,7 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 			else if (func == 1) { // write
 				*disk_write_acitivity = true;
 
-				D(fprintf(stderr, "RK05 position sec %d surf %d cyl %d, reclen %zo, WRITE to %o, mem: %o\n", sector, surface, cylinder, reclen, diskoffb, memoff);)
+				D(fprintf(stderr, "RK05 drive %d position sec %d surf %d cyl %d, reclen %zo, WRITE to %o, mem: %o\n", device, sector, surface, cylinder, reclen, diskoffb, memoff);)
 
 				uint32_t p = reclen; // FIXME
 				for(size_t i=0; i<reclen; i++)
@@ -180,6 +186,7 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 				if (fh.write(xfer_buffer, reclen) != reclen)
                                         fprintf(stderr, "RK05 fwrite error %s\n", strerror(errno));
 #else
+				FILE *fh = fhs.at(device);
 				if (fseek(fh, diskoffb, SEEK_SET) == -1)
 					fprintf(stderr, "RK05 seek error %s\n", strerror(errno));
 				if (fwrite(xfer_buffer, 1, reclen, fh) != reclen)
@@ -206,12 +213,13 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 			else if (func == 2) { // read
 				*disk_read_acitivity = true;
 
-				D(fprintf(stderr, "RK05 position sec %d surf %d cyl %d, reclen %zo, READ from %o, mem: %o\n", sector, surface, cylinder, reclen, diskoffb, memoff);)
+				D(fprintf(stderr, "RK05 drive %d position sec %d surf %d cyl %d, reclen %zo, READ from %o, mem: %o\n", device, sector, surface, cylinder, reclen, diskoffb, memoff);)
 
 #if defined(ESP32)
 				if (!fh.seek(diskoffb))
 					fprintf(stderr, "RK05 seek error %s\n", strerror(errno));
 #else
+				FILE *fh = fhs.at(device);
 				if (fseek(fh, diskoffb, SEEK_SET) == -1)
 					fprintf(stderr, "RK05 seek error %s\n", strerror(errno));
 #endif
@@ -273,8 +281,12 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 			registers[(RK05_CS - RK05_BASE) / 2] |= 128;  // control ready
 
 			// bit 6, invoke interrupt when done vector address 220, see http://www.pdp-11.nl/peripherals/disk/rk05-info.html
-			if (v & 64)
+			if (v & 64) {
+				registers[(RK05_DS - RK05_BASE) / 2] &= ~(7 << 13);  // store id of the device that caused the interrupt
+				registers[(RK05_DS - RK05_BASE) / 2] |= device << 13;
+
 				b->getCpu()->queue_interrupt(5, 0220);
+			}
 		}
 	}
 
