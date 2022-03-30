@@ -97,11 +97,6 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev)
 			return 0x80;
 		}
 
-		if (a == 0177564) { // console tty status register
-			D(fprintf(stderr, "console tty status register\n");)
-			return 0x80;
-		}
-
 		/// MMU ///
 		if (a >= 0172200 && a < 0172220) {
 			uint16_t t = pages[001][((a & 017) >> 1)].pdr;
