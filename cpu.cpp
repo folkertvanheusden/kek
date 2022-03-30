@@ -659,8 +659,15 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 				 }
 
 		case 0b000101000: { // CLR/CLRB
-					  if (dst_mode == 0)
-						  putGAM(dst_mode, dst_reg, word_mode, 0, false);
+					  if (dst_mode == 0) {
+						  uint16_t r = 0;
+
+						  // CLRB only clears the least significant byte
+						  if (word_mode)
+							  r = getGAM(dst_mode, dst_reg, false, false) & 0xff00;
+
+						  putGAM(dst_mode, dst_reg, false, r, false);
+					  }
 					  else {
 						  uint16_t a = getGAMAddress(dst_mode, dst_reg, word_mode, false);
 
@@ -1222,8 +1229,6 @@ std::pair<std::string, int> cpu::addressing_to_string(const uint8_t mode_registe
 #if !defined(ESP32)
 	assert(mode_register < 64);
 
-	int         pc_offset = 0;
-
 	uint16_t    next_word = b->readWord(pc & 65535);
 
 	int         reg       = mode_register & 7;
@@ -1384,7 +1389,6 @@ void cpu::disassemble()
 	else if (do_opcode == 0b111) {
 		std::string src_text = format("R%d", (instruction >> 6) & 7);
 		auto        dst_text = addressing_to_string(dst_register, (pc + 2) & 65535);
-		uint8_t     dst      = instruction & 63;
 
 		switch(ado_opcode) {  // additional double operand
 			case 0:
