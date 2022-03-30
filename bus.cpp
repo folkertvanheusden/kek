@@ -63,6 +63,9 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev)
 	int run_mode = c->getPSW() >> 14;
 
 	if (a >= 0160000) {
+		if (word_mode)
+			fprintf(stderr, "READ I/O %06o in byte mode\n", a);
+
 		if (a == 0177750) { // MAINT
 			D(fprintf(stderr, "read MAINT\n");)
 			return 1; // POWER OK
@@ -85,6 +88,7 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev)
 
 		if (a == 0177546) { // line frequency clock and status register
 			D(fprintf(stderr, "read line freq clock\n");)
+			CSR |= 128;
 			return CSR;
 		}
 
@@ -318,17 +322,18 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev)
 
 		bool direction = pages[run_mode][apf].pdr & 8;
 
-		if ((p_offset >= pdr_len && direction == false) || (p_offset < pdr_len && direction == true)) {
-			D(fprintf(stderr, "bus::read::p_offset %o >= %o\n", p_offset, pdr_len);)
-			c->schedule_trap(0250);  // invalid access
+		if (m_offset >= n_pages * 8192) {
+			D(fprintf(stderr, "bus::read %o >= %o\n", m_offset, n_pages * 8192);)
+			c->schedule_trap(04);  // invalid address
 
 			pages[run_mode][apf].pdr |= 1 << 7;
 
 			throw 1;
 		}
-		else if (m_offset >= n_pages * 8192) {
-			D(fprintf(stderr, "bus::read %o >= %o\n", m_offset, n_pages * 8192);)
-			c->schedule_trap(04);  // invalid address
+
+		if ((p_offset >= pdr_len && direction == false) || (p_offset < pdr_len && direction == true)) {
+			D(fprintf(stderr, "bus::read::p_offset %o >= %o\n", p_offset, pdr_len);)
+			c->schedule_trap(0250);  // invalid access
 
 			pages[run_mode][apf].pdr |= 1 << 7;
 
@@ -341,7 +346,7 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev)
 	else
 		temp = m -> readWord(m_offset);
 
-	D(fprintf(stderr, "BUS read from %o (pages: %o/%o/%o, run mode %d, apf %d, PDR: %06o, b22: %d): %06o\n", m_offset, pages[run_mode][apf].par, pages[run_mode][apf].par * 64, n_pages * 8192, run_mode, apf, pages[run_mode][apf].pdr, MMR3 & 16, temp);)
+//	D(fprintf(stderr, "BUS read from %o (pages: %o/%o/%o, run mode %d, apf %d, PDR: %06o, b22: %d): %06o\n", m_offset, pages[run_mode][apf].par, pages[run_mode][apf].par * 64, n_pages * 8192, run_mode, apf, pages[run_mode][apf].pdr, MMR3 & 16, temp);)
 
 	return temp;
 }
@@ -609,6 +614,15 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 
 		bool direction = pages[run_mode][apf].pdr & 8;
 
+		if (m_offset >= n_pages * 8192) {
+			D(fprintf(stderr, "bus::write %o >= %o\n", m_offset, n_pages * 8192);)
+			c->schedule_trap(04);  // invalid address
+
+			pages[run_mode][apf].pdr |= 1 << 7;
+
+			throw 1;
+		}
+
 		if ((p_offset >= pdr_len && direction == false) || (p_offset < pdr_len && direction == true)) {
 			D(fprintf(stderr, "bus::write::p_offset %o >= %o\n", p_offset, pdr_len);)
 			c->schedule_trap(0250);  // invalid access
@@ -617,17 +631,9 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 
 			throw 1;
 		}
-		else if (m_offset >= n_pages * 8192) {
-			D(fprintf(stderr, "bus::write %o >= %o\n", m_offset, n_pages * 8192);)
-			c->schedule_trap(04);  // invalid address
-
-			pages[run_mode][apf].pdr |= 1 << 7;
-
-			throw 1;
-		}
 	}
 
-	D(fprintf(stderr, "BUS write to %o (pages: %o/%o/%o, run mode %d, apf %d, PDR: %06o, b22: %d): %06o\n", m_offset, pages[run_mode][apf].par, pages[run_mode][apf].par * 64, n_pages * 8192, run_mode, apf, pages[run_mode][apf].pdr, MMR3 & 16, value);)
+//	D(fprintf(stderr, "BUS write to %o (pages: %o/%o/%o, run mode %d, apf %d, PDR: %06o, b22: %d): %06o\n", m_offset, pages[run_mode][apf].par, pages[run_mode][apf].par * 64, n_pages * 8192, run_mode, apf, pages[run_mode][apf].pdr, MMR3 & 16, value);)
 
 	if (word_mode)
 		m->writeByte(m_offset, value);
