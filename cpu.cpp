@@ -683,95 +683,189 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 				  }
 
 		case 0b000101001: { // COM/COMB
-					  uint16_t a = getGAMAddress(dst_mode, dst_reg, word_mode, false);
-					  uint16_t v = b -> read(a, word_mode);
+					  if (dst_mode == 0) {
+						  uint16_t v = getRegister(dst_reg, false);
 
-					  if (word_mode)
-						  v ^= 0xff;
-					  else
-						  v ^= 0xffff;
+						  if (word_mode)
+							  v ^= 0xff;
+						  else
+							  v ^= 0xffff;
 
-					  setPSW_n(SIGN(v, word_mode));
-					  setPSW_z(v == 0);
-					  setPSW_v(false);
-					  setPSW_c(true);
+						  setPSW_n(SIGN(v, word_mode));
+						  setPSW_z(v == 0);
+						  setPSW_v(false);
+						  setPSW_c(true);
 
-					  put_result(a, dst_mode, dst_reg, word_mode, v);
+						  setRegister(dst_reg, false, v);
+					  }
+					  else {
+						  uint16_t a = getGAMAddress(dst_mode, dst_reg, word_mode, false);
+						  uint16_t v = b -> read(a, word_mode);
 
+						  if (word_mode)
+							  v ^= 0xff;
+						  else
+							  v ^= 0xffff;
+
+						  setPSW_n(SIGN(v, word_mode));
+						  setPSW_z(v == 0);
+						  setPSW_v(false);
+						  setPSW_c(true);
+
+						  put_result(a, dst_mode, dst_reg, word_mode, v);
+					  }
 					  break;
 				  }
 
 		case 0b000101010: { // INC/INCB
-					  uint16_t  a = getGAMAddress(dst_mode, dst_reg, word_mode, false);
-					  uint16_t  v = b -> read(a, word_mode);
-					  int32_t  vl = (v + 1) & (word_mode ? 0xff : 0xffff);
+					  if (dst_mode == 0) {
+						  uint16_t v   = getRegister(dst_reg, false);
+						  uint16_t add = word_mode ? v & 0xff00 : 0;
 
-					  setPSW_n(word_mode ? vl > 127 : vl > 32767);
-					  setPSW_z(vl == 0);
-					  setPSW_v(word_mode ? v == 0x7f : v == 0x7fff);
+						  v = (v + 1) & (word_mode ? 0xff : 0xffff);
 
-					  put_result(a, dst_mode, dst_reg, word_mode, vl);
+						  setPSW_n(word_mode ? v > 127 : v > 32767);
+						  setPSW_z(v == 0);
+						  setPSW_v(word_mode ? v == 0x80 : v == 0x8000);
+
+						  setRegister(dst_reg, false, v | add);
+					  }
+					  else {
+						  uint16_t a   = getGAMAddress(dst_mode, dst_reg, word_mode, false);
+						  uint16_t v   = b -> read(a, word_mode);
+						  int32_t  vl  = (v + 1) & (word_mode ? 0xff : 0xffff);
+
+						  setPSW_n(word_mode ? vl > 127 : vl > 32767);
+						  setPSW_z(vl == 0);
+						  setPSW_v(word_mode ? vl == 0x80 : v == 0x8000);
+
+						  put_result(a, dst_mode, dst_reg, word_mode, vl);
+					  }
 
 					  break;
 				  }
 
 		case 0b000101011: { // DEC/DECB
-					  uint16_t  a = getGAMAddress(dst_mode, dst_reg, word_mode, false);
-					  uint16_t  v = b -> read(a, word_mode);
-					  int32_t  vl = (v - 1) & (word_mode ? 0xff : 0xffff);
+					  if (dst_mode == 0) {
+						  uint16_t v   = getRegister(dst_reg, false);
+						  uint16_t add = word_mode ? v & 0xff00 : 0;
 
-					  setPSW_n(word_mode ? vl > 127 : vl > 32767);
-					  setPSW_z(vl == 0);
-					  setPSW_v(word_mode ? v == 0x80 : v == 0x8000);
+						  v = (v - 1) & (word_mode ? 0xff : 0xffff);
 
-					  put_result(a, dst_mode, dst_reg, word_mode, vl);
+						  setPSW_n(word_mode ? v > 127 : v > 32767);
+						  setPSW_z(v == 0);
+						  setPSW_v(word_mode ? v == 0x7f : v == 0x7fff);
+
+						  setRegister(dst_reg, false, v | add);
+					  }
+					  else {
+						  uint16_t a   = getGAMAddress(dst_mode, dst_reg, word_mode, false);
+						  uint16_t v   = b -> read(a, word_mode);
+						  int32_t  vl  = (v - 1) & (word_mode ? 0xff : 0xffff);
+
+						  setPSW_n(word_mode ? vl > 127 : vl > 32767);
+						  setPSW_z(vl == 0);
+						  setPSW_v(word_mode ? v == 0x7f : v == 0x7fff);
+
+						  put_result(a, dst_mode, dst_reg, word_mode, vl);
+					  }
+
 
 					  break;
 				  }
 
 		case 0b000101100: { // NEG/NEGB
-					  uint16_t a  = getGAMAddress(dst_mode, dst_reg, word_mode, false);
-					  uint16_t v  = b -> read(a, word_mode);
-					  int32_t  vl = word_mode ? uint8_t(-int8_t(v)) : -int16_t(v);
+					  if (dst_mode == 0) {
+						  uint16_t v   = getRegister(dst_reg, false);
+						  uint16_t add = word_mode ? v & 0xff00 : 0;
 
-					  put_result(a, dst_mode, dst_reg, word_mode, vl);
+						  v = (-v) & (word_mode ? 0xff : 0xffff);
 
-					  setPSW_n(SIGN(vl, word_mode));
-					  setPSW_z(vl == 0);
-					  setPSW_v(word_mode ? vl == 0x80 : vl == 0x8000);
-					  setPSW_c(vl);
+						  setPSW_n(word_mode ? v > 127 : v > 32767);
+						  setPSW_z(v == 0);
+						  setPSW_v(word_mode ? v == 0x80 : v == 0x8000);
+
+						  setRegister(dst_reg, false, v | add);
+					  }
+					  else {
+						  uint16_t a   = getGAMAddress(dst_mode, dst_reg, word_mode, false);
+						  uint16_t v   = b -> read(a, word_mode);
+						  int32_t  vl  = word_mode ? uint8_t(-v) : -v;
+
+						  put_result(a, dst_mode, dst_reg, word_mode, vl);
+
+						  setPSW_n(SIGN(vl, word_mode));
+						  setPSW_z(vl == 0);
+						  setPSW_v(word_mode ? vl == 0x80 : vl == 0x8000);
+						  setPSW_c(vl);
+					  }
 					  break;
 				  }
 
 		case 0b000101101: { // ADC/ADCB
-					  uint16_t a    = getGAMAddress(dst_mode, dst_reg, word_mode, false);
-					  uint16_t org  = b -> read(a, word_mode);
-					  uint16_t new_ = org + getPSW_c();
+					  if (dst_mode == 0) {
+						  uint16_t v   = getRegister(dst_reg, false);
+						  uint16_t add = word_mode ? v & 0xff00 : 0;
 
-					  put_result(a, dst_mode, dst_reg, word_mode, new_);
+						  bool org_c = getPSW_c();
 
-					  setPSW_n(SIGN(new_, word_mode));
-					  setPSW_z(new_ == 0);
-					  setPSW_v((word_mode ? org == 0x7f : org == 0x7fff) && getPSW_c());
-					  setPSW_c((word_mode ? org == 0xff : org == 0xffff) && getPSW_c());
+						  v = (v + org_c) & (word_mode ? 0xff : 0xffff);
+
+						  setPSW_n(SIGN(v, word_mode));
+						  setPSW_z(v == 0);
+						  setPSW_v((word_mode ? v == 0x80 : v == 0x8000) && org_c);
+						  setPSW_c((word_mode ? v == 0x00 : v == 0x0000) && org_c);
+
+						  setRegister(dst_reg, false, v | add);
+					  }
+					  else {
+						  uint16_t a    = getGAMAddress(dst_mode, dst_reg, false, false);
+						  uint16_t org  = b -> read(a, word_mode);
+						  uint16_t new_ = (org + getPSW_c()) & (word_mode ? 0x00ff : 0xffff);
+
+						  put_result(a, dst_mode, dst_reg, word_mode, new_);
+
+						  setPSW_n(SIGN(new_, word_mode));
+						  setPSW_z(new_ == 0);
+						  setPSW_v((word_mode ? org == 0x7f : org == 0x7fff) && getPSW_c());
+						  setPSW_c((word_mode ? org == 0xff : org == 0xffff) && getPSW_c());
+					  }
 					  break;
 				  }
 
 		case 0b000101110: { // SBC/SBCB
-					  uint16_t  a = getGAMAddress(dst_mode, dst_reg, word_mode, false);
-					  uint16_t  v = b -> read(a, word_mode);
-					  int32_t  vl = (v - getPSW_c()) & (word_mode ? 0xff : 0xffff);
+					  if (dst_mode == 0) {
+						  uint16_t v   = getRegister(dst_reg, false);
+						  uint16_t add = word_mode ? v & 0xff00 : 0;
 
-					  put_result(a, dst_mode, dst_reg, word_mode, vl);
+						  bool org_c = getPSW_c();
 
-					  setPSW_n(SIGN(vl, word_mode));
-					  setPSW_z(vl == 0);
-					  setPSW_v(vl == 0x8000);
+						  v = (v - org_c) & (word_mode ? 0xff : 0xffff);
 
-					  if (v == 0 && getPSW_c())
-						  setPSW_c(true);
-					  else
-						  setPSW_c(false);
+						  setPSW_n(SIGN(v, word_mode));
+						  setPSW_z(v == 0);
+						  setPSW_v((word_mode ? v == 0x7f : v == 0x7fff) && org_c);
+						  setPSW_c((word_mode ? v == 0xff : v == 0xffff) && org_c);
+
+						  setRegister(dst_reg, false, v | add);
+					  }
+					  else {
+						  uint16_t a   = getGAMAddress(dst_mode, dst_reg, word_mode, false);
+						  uint16_t v   = b -> read(a, word_mode);
+						  int32_t  vl  = (v - getPSW_c()) & (word_mode ? 0xff : 0xffff);
+						  uint16_t add = word_mode ? v & 0xff00 : 0;
+
+						  put_result(a, dst_mode, dst_reg, word_mode, vl | add);
+
+						  setPSW_n(SIGN(vl, word_mode));
+						  setPSW_z(vl == 0);
+						  setPSW_v(vl == 0x8000);
+
+						  if (v == 0 && getPSW_c())
+							  setPSW_c(true);
+						  else
+							  setPSW_c(false);
+					  }
 					  break;
 				  }
 
@@ -787,92 +881,179 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 				  }
 
 		case 0b000110000: { // ROR/RORB
-					  uint16_t a         = getGAMAddress(dst_mode, dst_reg, word_mode, false);
-					  uint16_t t         = b -> read(a, word_mode);
-					  bool     new_carry = t & 1;
+					  if (dst_mode == 0) {
+						  uint16_t v         = getRegister(dst_reg, false);
+						  bool     new_carry = v & 1;
 
-					  uint16_t temp = 0;
-					  if (word_mode) {
-						  temp = (t >> 1) | (getPSW_c() << 7);
+						  uint16_t temp = 0;
+						  if (word_mode) {
+							  uint16_t add = v & 0xff00;
 
-						  put_result(a, dst_mode, dst_reg, word_mode, temp);
+							  temp = (v >> 1) | (getPSW_c() <<  7) | add;
+						  }
+						  else {
+							  temp = (v >> 1) | (getPSW_c() << 15);
+						  }
+
+						  setRegister(dst_reg, false, temp);
+
+						  setPSW_c(new_carry);
+						  setPSW_n(SIGN(temp, word_mode));
+						  setPSW_z(temp == 0);
+						  setPSW_v(getPSW_c() ^ getPSW_n());
 					  }
 					  else {
-						  temp = (t >> 1) | (getPSW_c() << 15);
+						  uint16_t a         = getGAMAddress(dst_mode, dst_reg, false, false);
+						  uint16_t t         = b -> read(a, word_mode);
+						  bool     new_carry = t & 1;
 
-						  put_result(a, dst_mode, dst_reg, word_mode, temp);
+						  uint16_t temp = 0;
+						  if (word_mode) {
+							  temp = (t >> 1) | (getPSW_c() <<  7);
+
+							  put_result(a, dst_mode, dst_reg, false, temp | (t & 0xff00));
+						  }
+						  else {
+							  temp = (t >> 1) | (getPSW_c() << 15);
+
+							  put_result(a, dst_mode, dst_reg, false, temp);
+						  }
+
+						  setPSW_c(new_carry);
+						  setPSW_n(SIGN(temp, word_mode));
+						  setPSW_z(temp == 0);
+						  setPSW_v(getPSW_c() ^ getPSW_n());
 					  }
-
-					  setPSW_c(new_carry);
-					  setPSW_n(SIGN(temp, word_mode));
-					  setPSW_z(temp == 0);
-					  setPSW_v(getPSW_c() ^ getPSW_n());
-
 					  break;
 				  }
 
 		case 0b000110001: { // ROL/ROLB
-					  uint16_t a         = getGAMAddress(dst_mode, dst_reg, word_mode, false);
-					  uint16_t t         = b -> read(a, word_mode);
-					  bool     new_carry = false;
+					  if (dst_mode == 0) {
+						  uint16_t v         = getRegister(dst_reg, false);
+						  bool     new_carry = false;
 
-					  uint16_t temp = 0;
-					  if (word_mode) {
-						  new_carry = t & 0x80;
-						  temp = ((t << 1) | getPSW_c()) & 0xff;
+						  uint16_t temp = 0;
+						  if (word_mode) {
+							  new_carry = v & 0x80;
+							  temp = (((v << 1) | getPSW_c()) & 0xff) | (v & 0xff00);
+						  }
+						  else {
+							  new_carry = v & 0x8000;
+							  temp = (v << 1) | getPSW_c();
+						  }
 
-						  put_result(a, dst_mode, dst_reg, word_mode, temp);
+						  setRegister(dst_reg, false, temp);
+
+						  setPSW_c(new_carry);
+						  setPSW_n(SIGN(temp, word_mode));
+						  setPSW_z(temp == 0);
+						  setPSW_v(getPSW_c() ^ getPSW_n());
 					  }
 					  else {
-						  new_carry = t & 0x8000;
-						  temp = (t << 1) | getPSW_c();
+						  uint16_t a         = getGAMAddress(dst_mode, dst_reg, word_mode, false);
+						  uint16_t t         = b -> read(a, word_mode);
+						  bool     new_carry = false;
+
+						  uint16_t temp = 0;
+						  if (word_mode) {
+							  new_carry = t & 0x80;
+							  temp = ((t << 1) | getPSW_c()) & 0xff;
+						  }
+						  else {
+							  new_carry = t & 0x8000;
+							  temp = (t << 1) | getPSW_c();
+						  }
 
 						  put_result(a, dst_mode, dst_reg, word_mode, temp);
+
+						  setPSW_c(new_carry);
+						  setPSW_n(SIGN(temp, word_mode));
+						  setPSW_z(temp == 0);
+						  setPSW_v(getPSW_c() ^ getPSW_n());
 					  }
-
-					  setPSW_c(new_carry);
-					  setPSW_n(SIGN(temp, word_mode));
-					  setPSW_z(temp == 0);
-					  setPSW_v(getPSW_c() ^ getPSW_n());
-
 					  break;
 				  }
 
 		case 0b000110010: { // ASR/ASRB
-					  uint16_t a  = getGAMAddress(dst_mode, dst_reg, word_mode, false);
-					  int32_t  vl = b -> read(a, word_mode);
+					  if (dst_mode == 0) {
+						  uint16_t v  = getRegister(dst_reg, false);
 
-					  bool     hb = word_mode ? vl & 128 : vl & 32768;
+						  bool     hb = word_mode ? v & 128 : v & 32768;
 
-					  setPSW_c(vl & 1);
-					  vl >>= 1;
+						  setPSW_c(v & 1);
 
-					  if (word_mode)
-						  vl |= hb << 7;
-					  else
-						  vl |= hb << 15;
+						  if (word_mode) {
+							  uint16_t add = word_mode ? v & 0xff00 : 0;
 
-					  put_result(a, dst_mode, dst_reg, word_mode, vl);
+							  v = (v & 255) >> 1;
+							  v |= hb << 7;
+							  v |= add;
+						  }
+						  else {
+							  v >>= 1;
+							  v |= hb << 15;
+						  }
 
-					  setPSW_n(SIGN(vl, word_mode));
-					  setPSW_z(vl == 0);
-					  setPSW_v(getPSW_n() ^ getPSW_c());
+						  setRegister(dst_reg, false, v);
 
+						  setPSW_n(SIGN(v, word_mode));
+						  setPSW_z(v == 0);
+						  setPSW_v(getPSW_n() ^ getPSW_c());
+					  }
+					  else {
+						  uint16_t a   = getGAMAddress(dst_mode, dst_reg, word_mode, false);
+						  uint16_t v   = b -> read(a, word_mode);
+						  uint16_t add = word_mode ? v & 0xff00 : 0;
+
+						  bool     hb  = word_mode ? v & 128 : v & 32768;
+
+						  setPSW_c(v & 1);
+
+						  if (word_mode) {
+							  v = (v & 255) >> 1;
+							  v |= hb << 7;
+							  v |= add;
+						  }
+						  else {
+							  v >>= 1;
+							  v |= hb << 15;
+						  }
+
+						  put_result(a, dst_mode, dst_reg, word_mode, v);
+
+						  setPSW_n(SIGN(v, word_mode));
+						  setPSW_z(v == 0);
+						  setPSW_v(getPSW_n() ^ getPSW_c());
+					  }
 					  break;
 				  }
 
 		case 0b00110011: { // ASL/ASLB
-					 uint16_t a  = getGAMAddress(dst_mode, dst_reg, word_mode, false);
-					 int32_t  vl = b -> read(a, word_mode);
-					 uint16_t v  = (vl << 1) & (word_mode ? 0xff : 0xffff);
+					 if (dst_mode == 0) {
+						 int32_t  vl  = getRegister(dst_reg, false);
+						 uint16_t v   = (vl << 1) & (word_mode ? 0xff : 0xffff);
+						 uint16_t add = word_mode ? v & 0xff00 : 0;
 
-					 setPSW_n(word_mode ? v & 0x80 : v & 0x8000);
-					 setPSW_z(v == 0);
-					 setPSW_c(word_mode ? vl & 0x80 : vl & 0x8000);
-					 setPSW_v(getPSW_n() ^ getPSW_c());
+						 setPSW_n(word_mode ? v & 0x80 : v & 0x8000);
+						 setPSW_z(v == 0);
+						 setPSW_c(word_mode ? vl & 0x80 : vl & 0x8000);
+						 setPSW_v(getPSW_n() ^ getPSW_c());
 
-					 put_result(a, dst_mode, dst_reg, word_mode, v);
+						 setRegister(dst_reg, false, v | add);
+					 }
+					 else {
+						 uint16_t a   = getGAMAddress(dst_mode, dst_reg, word_mode, false);
+						 int32_t  vl  = b -> read(a, word_mode);
+						 uint16_t v   = (vl << 1) & (word_mode ? 0xff : 0xffff);
+						 uint16_t add = word_mode ? v & 0xff00 : 0;
 
+						 setPSW_n(word_mode ? v & 0x80 : v & 0x8000);
+						 setPSW_z(v == 0);
+						 setPSW_c(word_mode ? vl & 0x80 : vl & 0x8000);
+						 setPSW_v(getPSW_n() ^ getPSW_c());
+
+						 put_result(a, dst_mode, dst_reg, word_mode, v | add);
+					 }
 					 break;
 				 }
 
