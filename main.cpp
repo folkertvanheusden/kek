@@ -249,59 +249,20 @@ int main(int argc, char *argv[])
 	sigaction(SIGTERM, &sa, nullptr);
 	sigaction(SIGINT , &sa, nullptr);
 
-	uint32_t icount           = 0;
-	uint64_t total_icount     = 0;
-	uint32_t refresh_interval = 262144;
-	constexpr uint32_t pdp_11_70_mips  = 1000000000 / 300;  // 300ns cache
-
-	const unsigned long start          = get_ms();
-	unsigned long       interval_start = start;
-
 	*running = true;
 
 	c->emulation_start();  // for statistics
 
-	for(;;) {
+	while(!event && !terminate)
 		c->step();
-
-		if (event)
-			break;
-
-		icount++;
-
-		if (icount >= refresh_interval) {
-			total_icount += icount;
-
-			unsigned long now = get_ms();
-
-			unsigned long took_ms = std::max(1ul, now - interval_start);
-
-			refresh_interval = (1000 * icount) / took_ms;
-
-			if (refresh_interval == 0)
-				refresh_interval = 65536;
-			else if (refresh_interval > pdp_11_70_mips)
-				refresh_interval = pdp_11_70_mips;
-
-			D(fprintf(stderr, "instructions_executed: %u, took_ms: %lu, new refresh_interval: %u\n", icount, took_ms, refresh_interval);)
-
-			if (terminate)
-				event = 1;
-
-			interval_start = now;
-			icount = 0;
-		}
-	}
 
 	*running = false;
 
 	terminate = true;
 
-	delete b;
-
 	delete cnsl;
 
-	fprintf(stderr, "Instructions per second: %.3f\n\n", total_icount * 1000.0 / (get_ms() - start));
+	delete b;
 
 	return 0;
 }
