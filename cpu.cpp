@@ -996,7 +996,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						  setPSW_c(v & 1);
 
 						  if (word_mode) {
-							  uint16_t add = word_mode ? v & 0xff00 : 0;
+							  uint16_t add = v & 0xff00;
 
 							  v = (v & 255) >> 1;
 							  v |= hb << 7;
