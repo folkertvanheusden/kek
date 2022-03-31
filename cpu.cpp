@@ -1045,14 +1045,13 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						 uint16_t a   = getGAMAddress(dst_mode, dst_reg, word_mode, false);
 						 int32_t  vl  = b -> read(a, word_mode);
 						 uint16_t v   = (vl << 1) & (word_mode ? 0xff : 0xffff);
-						 uint16_t add = word_mode ? v & 0xff00 : 0;
 
 						 setPSW_n(word_mode ? v & 0x80 : v & 0x8000);
 						 setPSW_z(v == 0);
 						 setPSW_c(word_mode ? vl & 0x80 : vl & 0x8000);
 						 setPSW_v(getPSW_n() ^ getPSW_c());
 
-						 put_result(a, dst_mode, dst_reg, word_mode, v | add);
+						 put_result(a, dst_mode, dst_reg, word_mode, v);
 					 }
 					 break;
 				 }
