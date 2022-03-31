@@ -116,8 +116,12 @@ void console_ncurses::panel_update_thread()
 {
 	cpu *const c = b->getCpu();
 
+	uint64_t prev_instr_cnt = c->get_instructions_executed_count();
+
+	constexpr int refresh_rate = 50;
+
 	while(!*terminate) {
-		myusleep(1000000 / 50);  // 50 updates/sec
+		myusleep(1000000 / refresh_rate);
 
 		// note that these are approximately as there's no mutex on the emulation
 		uint16_t current_PC    = c->getPC();
@@ -150,6 +154,12 @@ void console_ncurses::panel_update_thread()
 			disk_write_activity_flag ? '*' : 'o');
 
 		wattron(w_panel->win, COLOR_PAIR(0));
+
+		uint64_t cur_instr_cnt = c->get_instructions_executed_count();
+
+		mvwprintw(w_panel->win, 1, 1 + 39, "%8ld", (cur_instr_cnt - prev_instr_cnt) * refresh_rate);
+
+		prev_instr_cnt = cur_instr_cnt;
 
 		wmove(w_main->win, ty, tx);
 

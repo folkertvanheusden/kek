@@ -23,6 +23,19 @@ cpu::~cpu()
 {
 }
 
+void cpu::emulation_start()
+{
+	running_since = get_ms();
+}
+
+uint64_t cpu::get_instructions_executed_count()
+{
+	// this may wreck havoc as it is not protected by a mutex
+	// but a mutex would slow things down too much (as would
+	// do an atomic)
+	return instruction_count;
+}
+
 void cpu::reset()
 {
 	memset(regs0_5, 0x00, sizeof regs0_5);
@@ -1800,6 +1813,8 @@ void cpu::disassemble()
 
 void cpu::step()
 {
+	instruction_count++;
+
 	check_queued_interrupts();
 
 	if (scheduled_trap) {

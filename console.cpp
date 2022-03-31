@@ -102,6 +102,7 @@ void console::operator()()
 		if (c == 3)  // ^c
 			*terminate = true;
 		else if (c == 12) {  // ^l
+			// FIXME for other consoles (e.g. ncurses) this doesn't work too well
 			put_string_ll(format("\033[2J\033[?7l"));
 
 			fprintf(stderr, "%d %d\n", tx, ty);

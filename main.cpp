@@ -259,6 +259,8 @@ int main(int argc, char *argv[])
 
 	*running = true;
 
+	c->emulation_start();  // for statistics
+
 	for(;;) {
 		c->step();
 

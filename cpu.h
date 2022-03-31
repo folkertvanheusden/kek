@@ -20,8 +20,10 @@ private:
 	uint16_t fpsr  { 0 };
 	uint16_t stackLimitRegister { 0 };
 	uint8_t  scheduled_trap     { 0 };
-	bool runMode     { false };
-	bool emulateMFPT { false };
+	bool     runMode     { false };
+	bool     emulateMFPT { false };
+	uint64_t instruction_count { 0 };
+	uint64_t running_since     { 0 };
 
 	// level, vector
 	std::map<uint8_t, std::set<uint8_t> > queued_interrupts;
@@ -57,6 +59,9 @@ public:
 	void setDisassemble(const bool state);
 
 	bus *getBus() { return b; }
+
+	void emulation_start();
+	uint64_t get_instructions_executed_count();
 
 	void reset();
 
