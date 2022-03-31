@@ -355,15 +355,15 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 	if (operation == 0b111)
 		return additional_double_operand_instructions(instr);
 
-	const uint8_t src       = (instr >> 6) & 63;
-	const uint8_t src_mode  = (src >> 3) & 7;
-	const uint8_t src_reg   = src & 7;
+	const uint8_t src        = (instr >> 6) & 63;
+	const uint8_t src_mode   = (src >> 3) & 7;
+	const uint8_t src_reg    = src & 7;
 
-	uint16_t src_value      = operation == 0b110 ? 0 : getGAM(src_mode, src_reg, word_mode, false);
+	const uint16_t src_value = operation == 0b110 ? 0 : getGAM(src_mode, src_reg, word_mode, false);
 
-	const uint8_t dst       = instr & 63;
-	const uint8_t dst_mode  = (dst >> 3) & 7;
-	const uint8_t dst_reg   = dst & 7;
+	const uint8_t dst        = instr & 63;
+	const uint8_t dst_mode   = (dst >> 3) & 7;
+	const uint8_t dst_reg    = dst & 7;
 
 	switch(operation) {
 		case 0b001: { // MOV/MOVB Move Word/Byte
@@ -432,21 +432,21 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 			    }
 
 		case 0b110: { // ADD/SUB Add/Subtract Word
-				    src_value = getGAM(src_mode, src_reg, false, false);
+				    int16_t  ssrc_value = getGAM(src_mode, src_reg, false, false);
 
-				    uint16_t dst_addr  = getGAMAddress(dst_mode, dst_reg, false, false);
-				    int16_t  dst_value = b->readWord(dst_addr);
-				    int16_t  result    = 0;
+				    uint16_t dst_addr   = getGAMAddress(dst_mode, dst_reg, false, false);
+				    int16_t  dst_value  = b->readWord(dst_addr);
+				    int16_t  result     = 0;
 
 				    if (instr & 0x8000) {
-					    result = (dst_value - src_value) & 0xffff;
-					    setPSW_v(sign(src_value) != sign(dst_value) && sign(src_value) == sign(result));
-					    setPSW_c(uint16_t(dst_value) < uint16_t(src_value));
+					    result = (dst_value - ssrc_value) & 0xffff;
+					    setPSW_v(sign(ssrc_value) != sign(dst_value) && sign(ssrc_value) == sign(result));
+					    setPSW_c(uint16_t(dst_value) < uint16_t(ssrc_value));
 				    }
 				    else {
-					    result = (dst_value + src_value) & 0xffff;
-					    setPSW_v(sign(src_value) == sign(dst_value) && sign(dst_value) != sign(result));
-					    setPSW_c(uint16_t(result) < uint16_t(src_value));
+					    result = (dst_value + ssrc_value) & 0xffff;
+					    setPSW_v(sign(ssrc_value) == sign(dst_value) && sign(dst_value) != sign(result));
+					    setPSW_c(uint16_t(result) < uint16_t(ssrc_value));
 				    }
 
 				    setPSW_n(result < 0);
@@ -556,7 +556,7 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 
 				setPSW_n(R < 0);
 				setPSW_z(R == 0);
-				setPSW_v(sign(R) != sign(oldR));
+				setPSW_v(SIGN(R, false) != SIGN(oldR, false));
 
 				setRegister(reg, R);
 
