@@ -95,7 +95,7 @@ public:
 	void setBitPSW(const int bit, const bool v);
 
 	uint16_t getPSW() const { return psw; }
-	void setPSW(const uint16_t v);
+	void setPSW(const uint16_t v, const bool limited);
 
 	uint16_t getStackLimitRegister() { return stackLimitRegister; }
 	void setStackLimitRegister(const uint16_t v) { stackLimitRegister = v; }

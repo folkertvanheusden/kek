@@ -375,7 +375,7 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 				else
 					vtemp = (vtemp & 0xff00) | value;
 
-				c -> setPSW(vtemp);
+				c -> setPSW(vtemp, false);
 
 				return value;
 			}
@@ -396,7 +396,7 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 		else {
 			if (a == 0177776) { // PSW
 				D(fprintf(stderr, "write PSW %o\n", value);)
-					c -> setPSW(value);
+					c -> setPSW(value, false);
 				return value;
 			}
 

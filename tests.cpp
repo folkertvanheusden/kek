@@ -60,11 +60,11 @@ void test__registers(cpu *const c)
 	assert(c -> getStackPointer(0) == 3);
 	assert(c -> getStackPointer(1) == 4);
 	assert(c -> getStackPointer(3) == 5);
-	c -> setPSW(0);
+	c -> setPSW(0, false);
 	assert(c -> getRegister(6) == 3);
-	c -> setPSW(0b0100000000000000);
+	c -> setPSW(0b0100000000000000, false);
 	assert(c -> getRegister(6) == 4);
-	c -> setPSW(0b1100000000000000);
+	c -> setPSW(0b1100000000000000, false);
 	assert(c -> getRegister(6) == 5);
 
 	// PSW
@@ -1112,7 +1112,7 @@ void test_bic(cpu *const c)
 	c -> reset();
 	c -> setRegister(0, 01234);
 	c -> setRegister(1, 01111);
-	c -> setPSW(15);
+	c -> setPSW(15, false);
 	b -> writeWord(0, 0040001); // bic r0,r1
 	do_test(c, 1);
 
@@ -2013,17 +2013,17 @@ void test_mfp(cpu *const c)
 	fprintf(stderr, "---\n");
 	b -> write(0100, false, 07711, false);
 	b -> writeWord(0177640, 0); // setup memory kernel
-	c -> setPSW(3 << 14);
+	c -> setPSW(3 << 14, false);
 	// write a word 0123 to 0100 in current mode which is user
 	fprintf(stderr, "===\n");
 	b -> write(0100, false, 0123, false);
 	// go back to kernel mode
-	c -> setPSW(0 << 14);
+	c -> setPSW(0 << 14, false);
 	fprintf(stderr, "+++\n");
 
 	c -> setRegister(0, 0100);
 	c -> setRegister(6, 02000);
-	c -> setPSW((0 << 14) | (3 << 12));
+	c -> setPSW((0 << 14) | (3 << 12), false);
 	b -> writeWord(0, 006510); // MFPD (R0)
 	do_test(c, 1);
 
@@ -2031,11 +2031,11 @@ void test_mfp(cpu *const c)
 	assert(c -> getRegister(6) == 01776);
 	// FIXME flags
 
-	c -> setPSW(3 << 14);
+	c -> setPSW(3 << 14, false);
 	//fprintf(stderr, "%o == 07711\n", b -> read(0100, false, false)); fflush(NULL);
 	assert(b -> read(0100, false, false) == 0123);
 
-	c -> setPSW(0 << 14);
+	c -> setPSW(0 << 14, false);
 	fprintf(stderr, "%o == 0123\n", b -> read(0100, false, false)); fflush(NULL);
 	assert(b -> read(0100, false, false) == 07711);
 }
