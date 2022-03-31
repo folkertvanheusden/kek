@@ -1789,10 +1789,11 @@ void cpu::disassemble()
 	if (text.empty())
 		text = "???";
 
-	fprintf(stderr, "R0: %06o, R1: %06o, R2: %06o, R3: %06o, R4: %06o, R5: %06o, SP: %06o, PC: %06o, PSW: %d%d|%d|%d|%d%d%d%d%d, instr: %06o: %s\n",
+	fprintf(stderr, "R0: %06o, R1: %06o, R2: %06o, R3: %06o, R4: %06o, R5: %06o, SP: %06o, PC: %06o, PSW: %d%d|%d|%d|%c%c%c%c%c, instr: %06o: %s\n",
 			getRegister(0), getRegister(1), getRegister(2), getRegister(3), getRegister(4), getRegister(5),
 			sp[psw >> 14], pc,
-			psw >> 14, (psw >> 12) & 3, (psw >> 11) & 1, (psw >> 5) & 7, !!(psw & 16), !!(psw & 8), !!(psw & 4), !!(psw & 2), psw & 1,
+			psw >> 14, (psw >> 12) & 3, (psw >> 11) & 1, (psw >> 5) & 7,
+			psw & 16?'t':'-', psw & 8?'n':'-', psw & 4?'z':'-', psw & 2 ? 'v':'-', psw & 1 ? 'c':'-',
 			instruction, text.c_str());
 #endif
 }
