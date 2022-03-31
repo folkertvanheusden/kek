@@ -786,21 +786,22 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						  setPSW_n(SIGN(v, word_mode));
 						  setPSW_z(v == 0);
 						  setPSW_v(word_mode ? (v & 0xff) == 0x80 : v == 0x8000);
+						  setPSW_c(v);
 
 						  setRegister(dst_reg, false, v);
 					  }
 					  else {
-						  uint16_t a   = getGAMAddress(dst_mode, dst_reg, word_mode, false);
-						  uint16_t v   = b -> read(a, word_mode);
-						  int32_t  vl  = word_mode ? uint8_t(-v) : -v;
+						  uint16_t a  = getGAMAddress(dst_mode, dst_reg, word_mode, false);
+						  uint16_t v  = -b -> read(a, word_mode);
 
-						  b->write(a, word_mode, vl);
+						  b->write(a, word_mode, v);
 
-						  setPSW_n(SIGN(vl, word_mode));
-						  setPSW_z(vl == 0);
-						  setPSW_v(word_mode ? vl == 0x80 : vl == 0x8000);
-						  setPSW_c(vl);
+						  setPSW_n(SIGN(v, word_mode));
+						  setPSW_z(v == 0);
+						  setPSW_v(word_mode ? (v & 0xff) == 0x80 : v == 0x8000);
+						  setPSW_c(v);
 					  }
+
 					  break;
 				  }
 
