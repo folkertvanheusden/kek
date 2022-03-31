@@ -15,10 +15,6 @@ class console
 private:
 	std::vector<char>       input_buffer;
 
-	char                    screen_buffer[t_height][t_width];
-	uint8_t                 tx          { 0 };
-	uint8_t                 ty          { 0 };
-
 protected:
 	std::atomic_bool *const terminate   { nullptr };
 
@@ -28,7 +24,11 @@ protected:
 	std::atomic_bool        disk_write_activity_flag { false };
 	std::atomic_bool        running_flag             { false };
 
-	virtual int wait_for_char(const int timeout) = 0;
+	char                    screen_buffer[t_height][t_width];
+	uint8_t                 tx          { 0 };
+	uint8_t                 ty          { 0 };
+
+	virtual int wait_for_char(const short timeout) = 0;
 
 	virtual void put_char_ll(const char c) = 0;
 
@@ -47,6 +47,8 @@ public:
 	void    debug(const std::string fmt, ...);
 
 	virtual void resize_terminal() = 0;
+
+	virtual void refresh_virtual_terminal() = 0;
 
 	void    operator()();
 

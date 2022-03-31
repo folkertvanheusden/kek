@@ -52,7 +52,7 @@ console_ncurses::~console_ncurses()
 	endwin();
 }
 
-int console_ncurses::wait_for_char(const int timeout)
+int console_ncurses::wait_for_char(const short timeout)
 {
 	struct pollfd fds[] = { { STDIN_FILENO, POLLIN, 0 } };
 
@@ -165,4 +165,14 @@ void console_ncurses::panel_update_thread()
 
 		mydoupdate();
 	}
+}
+
+void console_ncurses::refresh_virtual_terminal()
+{
+	wclear(w_main->win);
+
+	for(int row=0; row<t_height; row++)
+		mvwprintw(w_main->win, row + 1, 0, std::string(screen_buffer[row], t_width).c_str());
+
+	mydoupdate();
 }

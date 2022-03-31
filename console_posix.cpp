@@ -35,7 +35,7 @@ console_posix::~console_posix()
 
 }
 
-int console_posix::wait_for_char(const int timeout)
+int console_posix::wait_for_char(const short timeout)
 {
 	struct pollfd fds[] = { { STDIN_FILENO, POLLIN, timeout } };
 
@@ -58,4 +58,12 @@ void console_posix::resize_terminal()
 
 void console_posix::panel_update_thread()
 {
+}
+
+void console_posix::refresh_virtual_terminal()
+{
+	printf("%c\n", 12);  // form feed
+
+	for(int row=0; row<t_height; row++)
+		printf("%s\n", std::string(screen_buffer[row], t_width).c_str());
 }

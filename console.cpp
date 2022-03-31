@@ -101,23 +101,10 @@ void console::operator()()
 
 		if (c == 3)  // ^c
 			*terminate = true;
-		else if (c == 12) {  // ^l
-			// FIXME for other consoles (e.g. ncurses) this doesn't work too well
-			put_string_ll(format("\033[2J\033[?7l"));
-
-			fprintf(stderr, "%d %d\n", tx, ty);
-
-			for(int row=0; row<t_height; row++) {
-				put_string_ll(format("\033[%dH", row + 1));
-
-				put_string_ll(std::string(screen_buffer[row], t_width));
-			}
-
-			put_string_ll(format("\033[%d;%dH\033[?7h", ty + 1, tx + 1));
-		}
-		else {
+		else if (c == 12)  // ^l
+			refresh_virtual_terminal();
+		else
 			input_buffer.push_back(c);
-		}
 	}
 
 	D(fprintf(stderr, "Console thread terminating\n");)
