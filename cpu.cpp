@@ -1044,7 +1044,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					 }
 					 else {
 						 uint16_t a   = getGAMAddress(dst_mode, dst_reg, word_mode, false);
-						 int32_t  vl  = b -> read(a, word_mode);
+						 uint16_t vl  = b -> read(a, word_mode);
 						 uint16_t v   = (vl << 1) & (word_mode ? 0xff : 0xffff);
 
 						 setPSW_n(SIGN(v, word_mode));
