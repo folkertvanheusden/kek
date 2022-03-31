@@ -103,9 +103,9 @@ void console_ncurses::resize_terminal()
 	delete_window(w_main_b);
 	delete_window(w_main);
 
-	create_win_border(0, 0, max_x - 2, max_y - 6, "window", &w_main_b, &w_main, false);
+	create_win_border(0, 0, 80, 25, "terminal", &w_main_b, &w_main, false);
 
-	create_win_border(0, max_y - 4, max_x - 2, 2, "panel", &w_panel_b, &w_panel, false);
+	create_win_border(0, 26, 80, 3, "panel", &w_panel_b, &w_panel, false);
 
 	scrollok(w_main -> win, TRUE);
 

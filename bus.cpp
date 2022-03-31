@@ -362,6 +362,9 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 	int run_mode = c->getPSW() >> 14;
 
 	if (a >= 0160000) {
+		if (word_mode)
+			fprintf(stderr, "WRITE I/O %06o in byte mode\n", a);
+
 		if (word_mode) {
 			if (a == 0177776 || a == 0177777) { // PSW
 				D(fprintf(stderr, "writeb PSW %s\n", a & 1 ? "MSB" : "LSB");)

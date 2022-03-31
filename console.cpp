@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "console.h"
+#include "gen.h"
 #include "utils.h"
 
 
@@ -84,13 +85,13 @@ void console::put_char(const char c)
 
 void console::put_string_ll(const std::string & what)
 {
-	for(int x=0; x<what.size(); x++)
+	for(size_t x=0; x<what.size(); x++)
 		put_char_ll(what.at(x));
 }
 
 void console::operator()()
 {
-	debug("Console thread started");
+	D(fprintf(stderr, "Console thread started\n");)
 
 	while(!*terminate) {
 		int c = wait_for_char(500);
@@ -118,5 +119,5 @@ void console::operator()()
 		}
 	}
 
-	debug("Console thread terminating");
+	D(fprintf(stderr, "Console thread terminating\n");)
 }
