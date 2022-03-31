@@ -160,7 +160,7 @@ void setup() {
 	// setup_wifi_stations();
 
 	Serial.println(F("Load RK05"));
-	b->add_rk05(new rk05("", b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
+	b->add_rk05(new rk05({ }, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
 	setBootLoader(b);
 
 	Serial.print(F("Free RAM after init: "));

@@ -25,9 +25,9 @@ console_esp32::~console_esp32()
 	}
 }
 
-int console_esp32::wait_for_char(const int timeout)
+int console_esp32::wait_for_char(const short timeout)
 {
-	for(int i=0; i<timeout / 10; i++) {
+	for(short i=0; i<timeout / 10; i++) {
 		if (Serial.available())
 			return Serial.read();
 
@@ -43,6 +43,10 @@ void console_esp32::put_char_ll(const char c)
 }
 
 void console_esp32::resize_terminal()
+{
+}
+
+void console_esp32::refresh_virtual_terminal()
 {
 }
 
