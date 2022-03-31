@@ -752,12 +752,13 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						  uint16_t add = word_mode ? v & 0xff00 : 0;
 
 						  v = (v - 1) & (word_mode ? 0xff : 0xffff);
+						  v |= add;
 
 						  setPSW_n(SIGN(v, word_mode));
 						  setPSW_z(v == 0);
 						  setPSW_v(word_mode ? v == 0x7f : v == 0x7fff);
 
-						  setRegister(dst_reg, false, v | add);
+						  setRegister(dst_reg, false, v);
 					  }
 					  else {
 						  uint16_t a   = getGAMAddress(dst_mode, dst_reg, word_mode, false);
@@ -780,12 +781,13 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						  uint16_t add = word_mode ? v & 0xff00 : 0;
 
 						  v = (-v) & (word_mode ? 0xff : 0xffff);
+						  v |= add;
 
 						  setPSW_n(SIGN(v, word_mode));
 						  setPSW_z(v == 0);
 						  setPSW_v(word_mode ? v == 0x80 : v == 0x8000);
 
-						  setRegister(dst_reg, false, v | add);
+						  setRegister(dst_reg, false, v);
 					  }
 					  else {
 						  uint16_t a   = getGAMAddress(dst_mode, dst_reg, word_mode, false);
@@ -810,13 +812,14 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						  bool org_c = getPSW_c();
 
 						  v = (v + org_c) & (word_mode ? 0xff : 0xffff);
+						  v |= add;
 
 						  setPSW_n(SIGN(v, word_mode));
 						  setPSW_z(v == 0);
 						  setPSW_v((word_mode ? v == 0x80 : v == 0x8000) && org_c);
 						  setPSW_c((word_mode ? v == 0x00 : v == 0x0000) && org_c);
 
-						  setRegister(dst_reg, false, v | add);
+						  setRegister(dst_reg, false, v);
 					  }
 					  else {
 						  uint16_t a    = getGAMAddress(dst_mode, dst_reg, word_mode, false);
@@ -841,13 +844,14 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						  bool org_c = getPSW_c();
 
 						  v = (v - org_c) & (word_mode ? 0xff : 0xffff);
+						  v |= add;
 
 						  setPSW_n(SIGN(v, word_mode));
 						  setPSW_z(v == 0);
 						  setPSW_v((word_mode ? v == 0x7f : v == 0x7fff) && org_c);
 						  setPSW_c((word_mode ? v == 0xff : v == 0xffff) && org_c);
 
-						  setRegister(dst_reg, false, v | add);
+						  setRegister(dst_reg, false, v);
 					  }
 					  else {
 						  uint16_t a   = getGAMAddress(dst_mode, dst_reg, word_mode, false);
@@ -1025,16 +1029,18 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 		case 0b00110011: { // ASL/ASLB
 					 if (dst_mode == 0) {
-						 int32_t  vl  = getRegister(dst_reg, false);
+						 uint16_t vl  = getRegister(dst_reg, false);
+						 uint16_t add = word_mode ? vl & 0xff00 : 0;
+
 						 uint16_t v   = (vl << 1) & (word_mode ? 0xff : 0xffff);
-						 uint16_t add = word_mode ? v & 0xff00 : 0;
+						 v |= add;
 
 						 setPSW_n(SIGN(v, word_mode));
 						 setPSW_z(v == 0);
 						 setPSW_c(word_mode ? vl & 0x80 : vl & 0x8000);
 						 setPSW_v(getPSW_n() ^ getPSW_c());
 
-						 setRegister(dst_reg, false, v | add);
+						 setRegister(dst_reg, false, v);
 					 }
 					 else {
 						 uint16_t a   = getGAMAddress(dst_mode, dst_reg, word_mode, false);
