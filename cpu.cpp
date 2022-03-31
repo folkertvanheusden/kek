@@ -727,7 +727,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 						  setPSW_n(SIGN(v, word_mode));
 						  setPSW_z(v == 0);
-						  setPSW_v(word_mode ? v == 0x80 : v == 0x8000);
+						  setPSW_v(word_mode ? (v & 0xff) == 0x80 : v == 0x8000);
 
 						  setRegister(dst_reg, false, v);
 					  }
@@ -756,7 +756,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 						  setPSW_n(SIGN(v, word_mode));
 						  setPSW_z(v == 0);
-						  setPSW_v(word_mode ? v == 0x7f : v == 0x7fff);
+						  setPSW_v(word_mode ? (v & 0xff) == 0x7f : v == 0x7fff);
 
 						  setRegister(dst_reg, false, v);
 					  }
@@ -785,7 +785,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 						  setPSW_n(SIGN(v, word_mode));
 						  setPSW_z(v == 0);
-						  setPSW_v(word_mode ? v == 0x80 : v == 0x8000);
+						  setPSW_v(word_mode ? (v & 0xff) == 0x80 : v == 0x8000);
 
 						  setRegister(dst_reg, false, v);
 					  }
@@ -816,8 +816,8 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 						  setPSW_n(SIGN(v, word_mode));
 						  setPSW_z(v == 0);
-						  setPSW_v((word_mode ? v == 0x80 : v == 0x8000) && org_c);
-						  setPSW_c((word_mode ? v == 0x00 : v == 0x0000) && org_c);
+						  setPSW_v((word_mode ? (v & 0xff) == 0x80 : v == 0x8000) && org_c);
+						  setPSW_c((word_mode ? (v & 0xff) == 0x00 : v == 0x0000) && org_c);
 
 						  setRegister(dst_reg, false, v);
 					  }
@@ -848,8 +848,8 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 						  setPSW_n(SIGN(v, word_mode));
 						  setPSW_z(v == 0);
-						  setPSW_v((word_mode ? v == 0x7f : v == 0x7fff) && org_c);
-						  setPSW_c((word_mode ? v == 0xff : v == 0xffff) && org_c);
+						  setPSW_v((word_mode ? (v & 0xff) == 0x7f : v == 0x7fff) && org_c);
+						  setPSW_c((word_mode ? (v & 0xff) == 0xff : v == 0xffff) && org_c);
 
 						  setRegister(dst_reg, false, v);
 					  }
@@ -1037,7 +1037,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 						 setPSW_n(SIGN(v, word_mode));
 						 setPSW_z(v == 0);
-						 setPSW_c(word_mode ? vl & 0x80 : vl & 0x8000);
+						 setPSW_c(SIGN(vl, word_mode));
 						 setPSW_v(getPSW_n() ^ getPSW_c());
 
 						 setRegister(dst_reg, false, v);
@@ -1049,7 +1049,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 						 setPSW_n(SIGN(v, word_mode));
 						 setPSW_z(v == 0);
-						 setPSW_c(word_mode ? vl & 0x80 : vl & 0x8000);
+						 setPSW_c(SIGN(vl, word_mode));
 						 setPSW_v(getPSW_n() ^ getPSW_c());
 
 						 b->write(a, word_mode, v);
