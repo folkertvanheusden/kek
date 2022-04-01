@@ -865,36 +865,35 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 		case 0b000101110: { // SBC/SBCB
 					  if (dst_mode == 0) {
-						  uint16_t v   = getRegister(dst_reg, false);
-						  uint16_t add = word_mode ? v & 0xff00 : 0;
-
-						  bool org_c = getPSW_c();
+						  uint16_t       v     = getRegister(dst_reg, false);
+						  const uint16_t vo    = v;
+						  uint16_t       add   = word_mode ? v & 0xff00 : 0;
+						  bool           org_c = getPSW_c();
 
 						  v = (v - org_c) & (word_mode ? 0xff : 0xffff);
 						  v |= add;
 
 						  setPSW_n(SIGN(v, word_mode));
 						  setPSW_z(IS_0(v, word_mode));
-						  setPSW_v((word_mode ? (v & 0xff) == 0x7f : v == 0x7fff) && org_c);
-						  setPSW_c((word_mode ? (v & 0xff) == 0xff : v == 0xffff) && org_c);
+						  setPSW_v(word_mode ? (v & 0xff) == 0x80 : v == 0x8000);
 
-						  setRegister(dst_reg, false, v);
+						  if (IS_0(vo, word_mode) && org_c)
+							  setPSW_c(true);
 					  }
 					  else {
-						  uint16_t a   = getGAMAddress(dst_mode, dst_reg, word_mode, false);
-						  uint16_t v   = b -> read(a, word_mode);
-						  int32_t  vl  = (v - getPSW_c()) & (word_mode ? 0xff : 0xffff);
+						  uint16_t       a     = getGAMAddress(dst_mode, dst_reg, word_mode, false);
+						  const uint16_t vo    = b -> read(a, word_mode);
+						  bool           org_c = getPSW_c();
+						  uint16_t       v     = (vo - org_c) & (word_mode ? 0xff : 0xffff);
 
-						  b->write(a, word_mode, vl);
+						  b->write(a, word_mode, v);
 
-						  setPSW_n(SIGN(vl, word_mode));
-						  setPSW_z(IS_0(vl, word_mode));
-						  setPSW_v(vl == 0x8000);  // FIXME? v/c flags?
+						  setPSW_n(SIGN(v, word_mode));
+						  setPSW_z(IS_0(v, word_mode));
+						  setPSW_v(word_mode? (v & 0xff) == 0x80 : v == 0x8000);  // FIXME? v/c flags?
 
-						  if (v == 0 && getPSW_c())
+						  if (IS_0(vo, word_mode) && org_c)
 							  setPSW_c(true);
-						  else
-							  setPSW_c(false);
 					  }
 					  break;
 				  }
