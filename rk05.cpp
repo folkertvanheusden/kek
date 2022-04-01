@@ -215,18 +215,31 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 
 				D(fprintf(stderr, "RK05 drive %d position sec %d surf %d cyl %d, reclen %zo, READ from %o, mem: %o\n", device, sector, surface, cylinder, reclen, diskoffb, memoff);)
 
+				bool proceed = true;
+
 #if defined(ESP32)
-				if (!fh.seek(diskoffb))
+				if (!fh.seek(diskoffb)) {
 					fprintf(stderr, "RK05 seek error %s\n", strerror(errno));
+					proceed = false;
+				}
 #else
-				FILE *fh = fhs.at(device);
-				if (fseek(fh, diskoffb, SEEK_SET) == -1)
-					fprintf(stderr, "RK05 seek error %s\n", strerror(errno));
+				FILE *fh = nullptr;
+
+				if (device >= fhs.size())
+					proceed = false;
+				else {
+					fh = fhs.at(device);
+
+					if (fseek(fh, diskoffb, SEEK_SET) == -1) {
+						fprintf(stderr, "RK05 seek error %s\n", strerror(errno));
+						proceed = false;
+					}
+				}
 #endif
-				
+
 				uint32_t temp = reclen;
 				uint32_t p = memoff;
-				while(temp > 0) {
+				while(proceed && temp > 0) {
 					uint32_t cur = std::min(uint32_t(sizeof xfer_buffer), temp);
 
 #if defined(ESP32)
