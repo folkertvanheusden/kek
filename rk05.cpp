@@ -167,6 +167,8 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 			const int diskoffb = diskoff * 512; // RK05 is high density
 			const uint16_t memoff = registers[(RK05_BA - RK05_BASE) / 2];
 
+			registers[(RK05_CS - RK05_BASE) / 2] &= ~(1 << 13); // reset search complete
+
 			if (func == 0) { // controller reset
 				D(fprintf(stderr, "RK05 invoke %d (controller reset)\n", func);)
 
@@ -280,6 +282,8 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 			}
 			else if (func == 4) {
 				D(fprintf(stderr, "RK05 invoke %d (seek) to %o\n", func, diskoffb);)
+
+				registers[(RK05_CS - RK05_BASE) / 2] |= 1 << 13; // search complete
 			}
 			else if (func == 7) {
 				D(fprintf(stderr, "RK05 invoke %d (write lock)\n", func);)
