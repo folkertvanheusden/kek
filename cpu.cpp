@@ -1084,7 +1084,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					 uint16_t a = getGAMAddress(dst_mode, dst_reg, false, false);
 					 uint16_t v = b -> read(a, false, true);
 
-					 setPSW_n(SIGN(v, word_mode));
+					 setPSW_n(SIGN(v, false));
 					 setPSW_z(v == 0);
 					 setPSW_v(false);
 
@@ -1099,7 +1099,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					 // retrieve word from '15/14'-stack
 					 uint16_t v = popStack();
 
-					 setPSW_n(SIGN(v, word_mode));
+					 setPSW_n(SIGN(v, false));
 					 setPSW_z(v == 0);
 					 setPSW_v(false);
 
@@ -1145,6 +1145,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 					 put_result(a, dst_mode, dst_reg, word_mode, vl);
 				 }
+
 				 break;
 
 		default:
