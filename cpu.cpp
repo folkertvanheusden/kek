@@ -192,7 +192,7 @@ void cpu::setPSW(const uint16_t v, const bool limited)
 	if (limited) {
 		psw |= v & 0174000;  // current & previous mode can only be increased, 11 can only be set
 
-		psw  = 0174000;  // retain upper 5 bit
+		psw &= 0174000;  // retain upper 5 bit
 		psw |= v & ~0174000;
 	}
 	else {
@@ -392,6 +392,8 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 
 				    uint16_t temp      = (src_value - dst_value) & (word_mode ? 0xff : 0xffff);
 
+				    // D(fprintf(stderr, "CMP%s %o,%o: %o\n", word_mode?"B":"", src_value, dst_value, temp);)
+
 				    setPSW_n(SIGN(temp, word_mode));
 				    setPSW_z(temp == 0);
 				    setPSW_v(SIGN((src_value ^ dst_value) & (~dst_value ^ temp), word_mode));
@@ -402,6 +404,7 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 
 		case 0b011: { // BIT/BITB Bit Test Word/Byte
 				    uint16_t dst_value = getGAM(dst_mode, dst_reg, word_mode, false);
+				    //D(fprintf(stderr, "BIT%s: dst_value %o, src_val: %o\n", word_mode?"B":"", dst_value, src_value);)
 				    uint16_t result    = (dst_value & src_value) & (word_mode ? 0xff : 0xffff);
 
 				    setPSW_n(SIGN(result, word_mode));
@@ -1157,9 +1160,9 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 bool cpu::conditional_branch_instructions(const uint16_t instr)
 {
-	const uint8_t opcode = (instr >> 8) & 255;
-	const int8_t offset = instr & 255;
-	bool take = false;
+	const uint8_t opcode = instr >> 8;
+	const int8_t  offset = instr;
+	bool          take   = false;
 
 	switch(opcode) {
 		case 0b00000001: // BR
