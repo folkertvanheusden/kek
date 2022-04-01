@@ -37,7 +37,9 @@ console_ncurses::~console_ncurses()
 
 	std::unique_lock<std::mutex> lck(ncurses_mutex);
 
+	wattron(w_main->win, A_BOLD);
 	wprintw(w_main->win, "\n\n *** PRESS ENTER TO TERMINATE ***\n");
+
 	mydoupdate();
 
 	while(getch() != 13) {
