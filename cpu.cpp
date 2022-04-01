@@ -833,33 +833,35 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 		case 0b000101101: { // ADC/ADCB
 					  if (dst_mode == 0) {
-						  uint16_t v   = getRegister(dst_reg, false);
-						  uint16_t add = word_mode ? v & 0xff00 : 0;
-
-						  bool org_c = getPSW_c();
+						  const uint16_t vo    = getRegister(dst_reg, false);
+						  uint16_t       v     = vo;
+						  uint16_t       add   = word_mode ? v & 0xff00 : 0;
+						  bool           org_c = getPSW_c();
 
 						  v = (v + org_c) & (word_mode ? 0xff : 0xffff);
 						  v |= add;
 
 						  setPSW_n(SIGN(v, word_mode));
 						  setPSW_z(IS_0(v, word_mode));
-						  setPSW_v((word_mode ? (v & 0xff) == 0x80 : v == 0x8000) && org_c);
-						  setPSW_c((word_mode ? (v & 0xff) == 0x00 : v == 0x0000) && org_c);
+						  setPSW_v((word_mode ? (vo & 0xff) == 0x80 : vo == 0x8000) && org_c);
+						  setPSW_c((word_mode ? (vo & 0xff) == 0xff : vo == 0xffff) && org_c);
 
 						  setRegister(dst_reg, false, v);
 					  }
 					  else {
-						  uint16_t a    = getGAMAddress(dst_mode, dst_reg, word_mode, false);
-						  uint16_t org  = b -> read(a, word_mode);
-						  uint16_t new_ = (org + getPSW_c()) & (word_mode ? 0x00ff : 0xffff);
+						  uint16_t       a     = getGAMAddress(dst_mode, dst_reg, word_mode, false);
+						  const uint16_t vo    = b -> read(a, word_mode);
+						  bool           org_c = getPSW_c();
+						  uint16_t       v     = (vo + org_c) & (word_mode ? 0x00ff : 0xffff);
 
-						  b->write(a, word_mode, new_);
+						  b->write(a, word_mode, v);
 
-						  setPSW_n(SIGN(new_, word_mode));
-						  setPSW_z(IS_0(new_, word_mode));
-						  setPSW_v((word_mode ? org == 0x7f : org == 0x7fff) && getPSW_c());
-						  setPSW_c((word_mode ? org == 0xff : org == 0xffff) && getPSW_c());
+						  setPSW_n(SIGN(v, word_mode));
+						  setPSW_z(IS_0(v, word_mode));
+						  setPSW_v((word_mode ? (vo & 0xff) == 0x80 : vo == 0x8000) && org_c);
+						  setPSW_c((word_mode ? (vo & 0xff) == 0xff : vo == 0xffff) && org_c);
 					  }
+
 					  break;
 				  }
 
