@@ -1304,7 +1304,6 @@ bool cpu::misc_operations(const uint16_t instr)
 {
 	switch(instr) {
 		case 0b0000000000000000: // HALT
-			// pretend HALT is not executed, proceed
 			*event = 1;
 			return true;
 

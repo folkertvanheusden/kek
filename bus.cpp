@@ -64,7 +64,7 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev)
 
 	if (a >= 0160000) {
 		if (word_mode)
-			fprintf(stderr, "READ I/O %06o in byte mode\n", a);
+			D(fprintf(stderr, "READ I/O %06o in byte mode\n", a);)
 
 		if (a == 0177750) { // MAINT
 			D(fprintf(stderr, "read MAINT\n");)
@@ -363,7 +363,7 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 
 	if (a >= 0160000) {
 		if (word_mode)
-			fprintf(stderr, "WRITE I/O %06o in byte mode\n", a);
+			D(fprintf(stderr, "WRITE I/O %06o in byte mode\n", a);)
 
 		if (word_mode) {
 			if (a == 0177776 || a == 0177777) { // PSW
