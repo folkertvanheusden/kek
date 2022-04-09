@@ -1086,14 +1086,16 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 				 }
 
 		case 0b00110101: { // MFPD/MFPI
-					 // for MFPD versus MFPI
+					 // calculate address in current address space
 					 uint16_t a = getGAMAddress(dst_mode, dst_reg, false, false);
+					 // reed from previous space
 					 uint16_t v = b -> read(a, false, true);
 
 					 setPSW_n(SIGN(v, false));
 					 setPSW_z(v == 0);
 					 setPSW_v(false);
 
+					 // put on current stack
 					 pushStack(v);
 
 					 break;
