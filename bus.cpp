@@ -301,18 +301,20 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev)
 		return -1;
 	}
 
-	const uint8_t apf = a >> 13; // active page field
-
-	if (use_prev)
-		run_mode = (c->getPSW() >> 12) & 3;
-
-	uint32_t m_offset = pages[run_mode][apf].par * 64;  // memory offset
-
-	uint16_t p_offset = a & 8191;  // page offset
-
-	m_offset += p_offset;
+	uint32_t m_offset = 0;
 
 	if (MMR0 & 1) {
+		const uint8_t apf = a >> 13; // active page field
+
+		if (use_prev)
+			run_mode = (c->getPSW() >> 12) & 3;
+
+		m_offset = pages[run_mode][apf].par * 64;  // memory offset
+
+		uint16_t p_offset = a & 8191;  // page offset
+
+		m_offset += p_offset;
+
 		uint16_t pdr_len = (((pages[run_mode][apf].pdr >> 8) & 127) + 1) * 64;
 
 		bool direction = pages[run_mode][apf].pdr & 8;
@@ -334,14 +336,18 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev)
 
 			throw 1;
 		}
+
+		D(fprintf(stderr, "READ from physical address %07o (run_mode: %d, par: %o)\n", m_offset, run_mode, pages[run_mode][apf].par);)
+	}
+	else {
+		m_offset = a;
+		D(fprintf(stderr, "READ from physical address %07o\n", m_offset);)
 	}
 
 	if (word_mode)
 		temp = m -> readByte(m_offset);
 	else
 		temp = m -> readWord(m_offset);
-
-//	D(fprintf(stderr, "BUS read from %o (pages: %o/%o/%o, run mode %d, apf %d, PDR: %06o, b22: %d): %06o\n", m_offset, pages[run_mode][apf].par, pages[run_mode][apf].par * 64, n_pages * 8192, run_mode, apf, pages[run_mode][apf].pdr, MMR3 & 16, temp);)
 
 	return temp;
 }
@@ -594,27 +600,29 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 		return value;
 	}
 
-	const uint8_t apf = a >> 13; // active page field
-
-	if (use_prev)
-		run_mode = (c->getPSW() >> 12) & 3;
-
-	uint32_t m_offset = pages[run_mode][apf].par * 64;
-
-	pages[run_mode][apf].pdr |= 1 << 6; // page has been written to
-
-	uint16_t p_offset = a & 8191;  // page offset
-
-	m_offset += p_offset;
+	uint32_t m_offset = 0;
 
 	if (MMR0 & 1) {
+		const uint8_t apf = a >> 13; // active page field
+
+		if (use_prev)
+			run_mode = (c->getPSW() >> 12) & 3;
+
+		m_offset = pages[run_mode][apf].par * 64;
+
+		pages[run_mode][apf].pdr |= 1 << 6; // page has been written to
+
+		uint16_t p_offset = a & 8191;  // page offset
+
+		m_offset += p_offset;
+
 		uint16_t pdr_len = (((pages[run_mode][apf].pdr >> 8) & 127) + 1)* 64;
 
 		bool direction = pages[run_mode][apf].pdr & 8;
 
 		if (m_offset >= n_pages * 8192) {
 			D(fprintf(stderr, "bus::write %o >= %o\n", m_offset, n_pages * 8192);)
-			c->schedule_trap(04);  // invalid address
+				c->schedule_trap(04);  // invalid address
 
 			pages[run_mode][apf].pdr |= 1 << 7;
 
@@ -623,15 +631,20 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 
 		if ((p_offset >= pdr_len && direction == false) || (p_offset < pdr_len && direction == true)) {
 			D(fprintf(stderr, "bus::write::p_offset %o >= %o\n", p_offset, pdr_len);)
-			c->schedule_trap(0250);  // invalid access
+				c->schedule_trap(0250);  // invalid access
 
 			pages[run_mode][apf].pdr |= 1 << 7;
 
 			throw 1;
 		}
-	}
 
-//	D(fprintf(stderr, "BUS write to %o (pages: %o/%o/%o, run mode %d, apf %d, PDR: %06o, b22: %d): %06o\n", m_offset, pages[run_mode][apf].par, pages[run_mode][apf].par * 64, n_pages * 8192, run_mode, apf, pages[run_mode][apf].pdr, MMR3 & 16, value);)
+		D(fprintf(stderr, "WRITE to physical address %07o: %o (run mode %d, PAR: %o)\n", m_offset, value, run_mode, pages[run_mode][apf].par);)
+	}
+	else {
+		m_offset = a;
+
+		D(fprintf(stderr, "WRITE to physical address %07o: %o\n", m_offset, value);)
+	}
 
 	if (word_mode)
 		m->writeByte(m_offset, value);
