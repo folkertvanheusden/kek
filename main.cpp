@@ -212,7 +212,7 @@ int main(int argc, char *argv[])
 				  return 1;
 		}
 	}
-	
+
 	console *cnsl = nullptr;
 
 	if (withUI)
@@ -250,6 +250,9 @@ int main(int argc, char *argv[])
 	sigaction(SIGINT , &sa, nullptr);
 
 	*running = true;
+
+//	loadbin(b, 0, "test.dat");
+//	c->setRegister(7, 0);
 
 	c->emulation_start();  // for statistics
 
