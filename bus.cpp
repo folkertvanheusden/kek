@@ -25,16 +25,6 @@ bus::bus()
 
 	memset(pages, 0x00, sizeof pages);
 
-	for(int rm=0; rm<4; rm++) {
-		for(int i=0; i<8; i++) {
-			pages[rm][0][i].par =
-			pages[rm][1][i].par = i * 8192 / 64;
-
-			pages[rm][0][i].pdr =
-			pages[rm][1][i].pdr = (3 << 1) | (0 << 4) | (0 << 6) | ((8192 / (32 * 2)) << 8);
-		}
-	}
-
 	CPUERR = MMR0 = MMR1 = MMR2 = MMR3 = PIR = CSR = 0;
 }
 
@@ -339,7 +329,7 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev)
 			throw 1;
 		}
 
-		D(fprintf(stderr, "READ from physical address %07o (run_mode: %d, par: %o)\n", m_offset, run_mode, pages[run_mode][0][apf].par);)  // TODO: D/I
+		D(fprintf(stderr, "READ from physical address %07o (run_mode: %d, par: %07o)\n", m_offset, run_mode, pages[run_mode][0][apf].par * 64);)  // TODO: D/I
 	}
 	else {
 		m_offset = a;
@@ -672,7 +662,7 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 			throw 1;
 		}
 
-		D(fprintf(stderr, "WRITE to physical address %07o: %o (run mode %d, PAR: %o)\n", m_offset, value, run_mode, pages[run_mode][0][apf].par);)  // TODO: D/I
+		D(fprintf(stderr, "WRITE to physical address %07o: %o (run mode %d, PAR: %07o)\n", m_offset, value, run_mode, pages[run_mode][0][apf].par * 64);)  // TODO: D/I
 	}
 	else {
 		m_offset = a;
