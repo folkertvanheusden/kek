@@ -101,64 +101,62 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev)
 		if (a >= 0172200 && a < 0172220) {
 			uint16_t t = pages[001][((a & 017) >> 1)].pdr;
 			D(fprintf(stderr, "read supervisor I PDR for %d: %o\n", (a & 017) >> 1, t);)
-			return t;
+			return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
 		}
-		if (a >= 0172220 && a < 0172240) {
+		else if (a >= 0172220 && a < 0172240) {
 			uint16_t t = pages[001][((a & 017) >> 1) + 8].pdr;
 			D(fprintf(stderr, "read supervisor D PDR for %d: %o\n", (a & 017) >> 1, t);)
-			return t;
+			return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
 		}
-		if (a >= 0172240 && a < 0172260) {
+		else if (a >= 0172240 && a < 0172260) {
 			uint16_t t = pages[001][((a & 017) >> 1)].par;
 			D(fprintf(stderr, "read supervisor I PAR for %d: %o\n", (a & 017) >> 1, t);)
-			return t;
+			return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
 		}
-		if (a >= 0172260 && a < 0172300) {
+		else if (a >= 0172260 && a < 0172300) {
 			uint16_t t = pages[001][((a & 017) >> 1) + 8].par;
 			D(fprintf(stderr, "read supervisor D PAR for %d: %o\n", (a & 017) >> 1, t);)
-			return t;
+			return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
 		}
-
-		if (a >= 0172300 && a < 0172320) {
+		else if (a >= 0172300 && a < 0172320) {
 			uint16_t t = pages[000][((a & 017) >> 1)].pdr;
 			D(fprintf(stderr, "read kernel I PDR for %d: %o\n", (a & 017) >> 1, t);)
-			return t;
+			return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
 		}
-		if (a >= 0172320 && a < 0172340) {
+		else if (a >= 0172320 && a < 0172340) {
 			uint16_t t = pages[000][((a & 017) >> 1) + 8].pdr;
 			D(fprintf(stderr, "read kernel D PDR for %d: %o\n", (a & 017) >> 1, t);)
-			return t;
+			return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
 		}
-		if (a >= 0172340 && a < 0172360) {
+		else if (a >= 0172340 && a < 0172360) {
 			uint16_t t = pages[000][((a & 017) >> 1)].par;
 			D(fprintf(stderr, "read kernel I PAR for %d: %o\n", (a & 017) >> 1, t);)
-			return t;
+			return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
 		}
-		if (a >= 0172360 && a < 0172400) {
+		else if (a >= 0172360 && a < 0172400) {
 			uint16_t t = pages[000][((a & 017) >> 1) + 8].par;
 			D(fprintf(stderr, "read kernel D PAR for %d: %o\n", (a & 017) >> 1, t);)
-			return t;
+			return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
 		}
-
-		if (a >= 0177600 && a < 0177620) {
+		else if (a >= 0177600 && a < 0177620) {
 			uint16_t t = pages[003][((a & 017) >> 1)].pdr;
 			D(fprintf(stderr, "read userspace I PDR for %d: %o\n", (a & 017) >> 1, t);)
-			return t;
+			return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
 		}
-		if (a >= 0177620 && a < 0177640) {
+		else if (a >= 0177620 && a < 0177640) {
 			uint16_t t = pages[003][((a & 017) >> 1) + 8].pdr;
 			D(fprintf(stderr, "read userspace D PDR for %d: %o\n", (a & 017) >> 1, t);)
-			return t;
+			return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
 		}
-		if (a >= 0177640 && a < 0177660) {
+		else if (a >= 0177640 && a < 0177660) {
 			uint16_t t = pages[003][((a & 017) >> 1)].par;
 			D(fprintf(stderr, "read userspace I PAR for %d: %o\n", (a & 017) >> 1, t);)
-			return t;
+			return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
 		}
-		if (a >= 0177660 && a < 0177700) {
+		else if (a >= 0177660 && a < 0177700) {
 			uint16_t t = pages[003][((a & 017) >> 1) + 8].par;
 			D(fprintf(stderr, "read userspace D PAR for %d: %o\n", (a & 017) >> 1, t);)
-			return t;
+			return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
 		}
 		///////////
 
@@ -368,8 +366,10 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 	int run_mode = c->getPSW() >> 14;
 
 	if (a >= 0160000) {
-		if (word_mode)
+		if (word_mode) {
+			assert(value < 256);
 			D(fprintf(stderr, "WRITE I/O %06o in byte mode\n", a);)
+		}
 
 		if (word_mode) {
 			if (a == 0177776 || a == 0177777) { // PSW
@@ -507,69 +507,99 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 
 		/// MMU ///
 		// supervisor
-		if (a >= 0172200 && a < 0172220) {
-			uint16_t t = pages[001][((a & 017) >> 1)].pdr = value;
-			D(fprintf(stderr, "write supervisor I PDR for %d: %o\n", (a & 017) >> 1, t);)
-			return t;
+		if (a >= 0172200 && a < 0172240) {
+			bool is_d = a & 16;
+
+			if (word_mode) {
+				a & 1 ? (pages[001][((a & 017) >> 1) + (is_d ? 8 : 0)].pdr &= 0xff,   pages[001][((a & 017) >> 1) + (is_d ? 8 : 0)].pdr |= value << 8) :
+					(pages[001][((a & 017) >> 1) + (is_d ? 8 : 0)].pdr &= 0xff00, pages[001][((a & 017) >> 1) + (is_d ? 8 : 0)].pdr |= value);
+			}
+			else {
+				pages[001][((a & 017) >> 1) + (is_d ? 8 : 0)].pdr = value;
+			}
+
+			D(fprintf(stderr, "write supervisor %c PDR for %d: %o\n", is_d ? 'D' : 'I', (a & 017) >> 1, value);)
+
+			return value;
 		}
-		if (a >= 0172220 && a < 0172240) {
-			uint16_t t = pages[001][((a & 017) >> 1) + 8].pdr = value;
-			D(fprintf(stderr, "write supervisor D PDR for %d: %o\n", (a & 017) >> 1, t);)
-			return t;
-		}
-		if (a >= 0172240 && a < 0172260) {
-			uint16_t t = pages[001][((a & 017) >> 1)].par = value;
-			D(fprintf(stderr, "write supervisor I PAR for %d: %o\n", (a & 017) >> 1, t);)
-			return t;
-		}
-		if (a >= 0172260 && a < 0172300) {
-			uint16_t t = pages[001][((a & 017) >> 1) + 8].par = value;
-			D(fprintf(stderr, "write supervisor D PAR for %d: %o\n", (a & 017) >> 1, t);)
-			return t;
+		if (a >= 0172240 && a < 0172300) {
+			bool is_d = a & 16;
+
+			if (word_mode) {
+				a & 1 ? (pages[001][((a & 017) >> 1) + (is_d ? 8 : 0)].par &= 0xff,   pages[001][((a & 017) >> 1) + (is_d ? 8 : 0)].par |= value << 8) :
+					(pages[001][((a & 017) >> 1) + (is_d ? 8 : 0)].par &= 0xff00, pages[001][((a & 017) >> 1) + (is_d ? 8 : 0)].par |= value);
+			}
+			else {
+				pages[001][((a & 017) >> 1) + (is_d ? 8 : 0)].par = value;
+			}
+
+			D(fprintf(stderr, "write supervisor %c PAR for %d: %o\n", is_d ? 'D' : 'I', (a & 017) >> 1, value);)
+
+			return value;
 		}
 
 		// kernel
-		if (a >= 0172300 && a < 0172320) {
-			uint16_t t = pages[000][((a & 017) >> 1)].pdr = value;
-			D(fprintf(stderr, "write kernel I PDR for %d: %o\n", (a & 017) >> 1, t);)
-			return t;
+		if (a >= 0172300 && a < 0172340) {
+			bool is_d = a & 16;
+
+			if (word_mode) {
+				a & 1 ? (pages[000][((a & 017) >> 1) + (is_d ? 8 : 0)].pdr &= 0xff,   pages[000][((a & 017) >> 1) + (is_d ? 8 : 0)].pdr |= value << 8) :
+					(pages[000][((a & 017) >> 1) + (is_d ? 8 : 0)].pdr &= 0xff00, pages[000][((a & 017) >> 1) + (is_d ? 8 : 0)].pdr |= value);
+			}
+			else {
+				pages[000][((a & 017) >> 1) + (is_d ? 8 : 0)].pdr = value;
+			}
+
+			D(fprintf(stderr, "write kernel %c PDR for %d: %o\n", is_d ? 'D' : 'I', (a & 017) >> 1, value);)
+
+			return value;
 		}
-		if (a >= 0172320 && a < 0172340) {
-			uint16_t t = pages[000][((a & 017) >> 1) + 8].pdr = value;
-			D(fprintf(stderr, "write kernel D PDR for %d: %o\n", (a & 017) >> 1, t);)
-			return t;
-		}
-		if (a >= 0172340 && a < 0172360) {
-			uint16_t t = pages[000][((a & 017) >> 1)].par = value;
-			D(fprintf(stderr, "write kernel I PAR for %d: %o\n", (a & 017) >> 1, t);)
-			return t;
-		}
-		if (a >= 0172360 && a < 0172400) {
-			uint16_t t = pages[000][((a & 017) >> 1) + 8].par = value;
-			D(fprintf(stderr, "write kernel D PAR for %d: %o\n", (a & 017) >> 1, t);)
-			return t;
+		if (a >= 0172340 && a < 0172400) {
+			bool is_d = a & 16;
+
+			if (word_mode) {
+				a & 1 ? (pages[000][((a & 017) >> 1) + (is_d ? 8 : 0)].par &= 0xff,   pages[000][((a & 017) >> 1) + (is_d ? 8 : 0)].par |= value << 8) :
+					(pages[000][((a & 017) >> 1) + (is_d ? 8 : 0)].par &= 0xff00, pages[000][((a & 017) >> 1) + (is_d ? 8 : 0)].par |= value);
+			}
+			else {
+				pages[000][((a & 017) >> 1) + (is_d ? 8 : 0)].par = value;
+			}
+
+			D(fprintf(stderr, "write kernel %c PAR for %d: %o\n", is_d ? 'D' : 'I', (a & 017) >> 1, value);)
+
+			return value;
 		}
 
 		// user
-		if (a >= 0177600 && a < 0177620) {
-			uint16_t t = pages[003][((a & 017) >> 1)].pdr = value;
-			D(fprintf(stderr, "write userspace I PDR for %d: %o\n", (a & 017) >> 1, t);)
-			return t;
+		if (a >= 0177600 && a < 0177640) {
+			bool is_d = a & 16;
+
+			if (word_mode) {
+				a & 1 ? (pages[003][((a & 017) >> 1) + (is_d ? 8 : 0)].pdr &= 0xff,   pages[003][((a & 017) >> 1) + (is_d ? 8 : 0)].pdr |= value << 8) :
+					(pages[003][((a & 017) >> 1) + (is_d ? 8 : 0)].pdr &= 0xff00, pages[003][((a & 017) >> 1) + (is_d ? 8 : 0)].pdr |= value);
+			}
+			else {
+				pages[003][((a & 017) >> 1) + (is_d ? 8 : 0)].pdr = value;
+			}
+
+			D(fprintf(stderr, "write user %c PDR for %d: %o\n", is_d ? 'D' : 'I', (a & 017) >> 1, value);)
+
+			return value;
 		}
-		if (a >= 0177620 && a < 0177640) {
-			uint16_t t = pages[003][((a & 017) >> 1) + 8].pdr = value;
-			D(fprintf(stderr, "write userspace D PDR for %d: %o\n", (a & 017) >> 1, t);)
-			return t;
-		}
-		if (a >= 0177640 && a < 0177660) {
-			uint16_t t = pages[003][((a & 017) >> 1)].par = value;
-			D(fprintf(stderr, "write userspace I PAR for %d: %o\n", (a & 017) >> 1, t);)
-			return t;
-		}
-		if (a >= 0177660 && a < 0177700) {
-			uint16_t t = pages[003][((a & 017) >> 1) + 8].par = value;
-			D(fprintf(stderr, "write userspace D PAR for %d: %o\n", (a & 017) >> 1, t);)
-			return t;
+		if (a >= 0177640 && a < 0177700) {
+			bool is_d = a & 16;
+
+			if (word_mode) {
+				a & 1 ? (pages[003][((a & 017) >> 1) + (is_d ? 8 : 0)].par &= 0xff,   pages[003][((a & 017) >> 1) + (is_d ? 8 : 0)].par |= value << 8) :
+					(pages[003][((a & 017) >> 1) + (is_d ? 8 : 0)].par &= 0xff00, pages[003][((a & 017) >> 1) + (is_d ? 8 : 0)].par |= value);
+			}
+			else {
+				pages[003][((a & 017) >> 1) + (is_d ? 8 : 0)].par = value;
+			}
+
+			D(fprintf(stderr, "write user %c PAR for %d: %o\n", is_d ? 'D' : 'I', (a & 017) >> 1, value);)
+
+			return value;
 		}
 		////
 
