@@ -88,12 +88,12 @@ uint16_t loadTape(bus *const b, const char *const file)
 
 		if (count == 6) { // eg no data
 			if (p != 1) {
-				fprintf(stderr, "Setting start address to %o\n", p);
+				D(fprintf(stderr, "Setting start address to %o\n", p);)
 				start = p;
 			}
 		}
 
-		fprintf(stderr, "%ld] reading %d (dec) bytes to %o (oct)\n", ftell(fh), count - 6, p);
+		D(fprintf(stderr, "%ld] reading %d (dec) bytes to %o (oct)\n", ftell(fh), count - 6, p);)
 
 		for(int i=0; i<count - 6; i++) {
 			if (feof(fh)) {
@@ -154,10 +154,6 @@ int main(int argc, char *argv[])
 {
 	//setlocale(LC_ALL, "");
 
-	fprintf(stderr, "This PDP-11 emulator is called \"kek\" (reason for that is forgotten) and was written by Folkert van Heusden.\n");
-
-	fprintf(stderr, "Build on: " __DATE__ " " __TIME__ "\n");
-
 	bus *b = new bus();
 	cpu *c = new cpu(b, &event);
 	b->add_cpu(c);
@@ -217,8 +213,13 @@ int main(int argc, char *argv[])
 
 	if (withUI)
 		cnsl = new console_ncurses(&terminate, b);
-	else
+	else {
+		fprintf(stderr, "This PDP-11 emulator is called \"kek\" (reason for that is forgotten) and was written by Folkert van Heusden.\n");
+
+		fprintf(stderr, "Built on: " __DATE__ " " __TIME__ "\n");
+
 		cnsl = new console_posix(&terminate, b);
+	}
 
 	if (rk05_files.empty() == false) {
 		b->add_rk05(new rk05(rk05_files, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
@@ -235,7 +236,7 @@ int main(int argc, char *argv[])
 	if (testCases)
 		tests(c);
 
-	fprintf(stderr, "Start running at %o\n", c->getRegister(7));
+	D(fprintf(stderr, "Start running at %o\n", c->getRegister(7));)
 
 	struct sigaction sa { };
 	sa.sa_handler = sw_handler;
