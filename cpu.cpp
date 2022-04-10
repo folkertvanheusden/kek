@@ -1086,6 +1086,9 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 				 }
 
 		case 0b00110101: { // MFPD/MFPI
+					 // always words: word_mode-bit is to select between MTPI and MTPD
+					 assert(!word_mode);  // TODO
+
 					 // calculate address in current address space
 					 uint16_t a = getGAMAddress(dst_mode, dst_reg, false, false);
 					 // reed from previous space
@@ -1103,6 +1106,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 		case 0b00110110: { // MTPI/MTPD
 					 // always words: word_mode-bit is to select between MTPI and MTPD
+					 assert(!word_mode);  // TODO
 
 					 // retrieve word from '15/14'-stack
 					 uint16_t v = popStack();
