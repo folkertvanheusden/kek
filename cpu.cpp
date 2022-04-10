@@ -1115,14 +1115,8 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					 setPSW_z(v == 0);
 					 setPSW_v(false);
 
-					 if (dst_mode == 0)
-						 putGAM(dst_mode, dst_reg, false, v, true);
-					 else {
-						 uint16_t a = getGAMAddress(dst_mode, dst_reg, false, false);
-
-						 // put in '13/12' address space
-						 b -> write(a, false, v, true);
-					 }
+					 uint16_t a = getGAMAddress(dst_mode, dst_reg, false, false);
+					 b -> write(a, false, v, true);  // put in '13/12' address space
 
 					 break;
 				 }
