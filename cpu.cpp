@@ -1086,7 +1086,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 				 }
 
 		case 0b00110101: { // MFPD/MFPI
-					 // always words: word_mode-bit is to select between MTPI and MTPD
+					 // always words: word_mode-bit is to select between MFPI and MFPD
 					 assert(!word_mode);  // TODO
 
 					 // calculate address in current address space
