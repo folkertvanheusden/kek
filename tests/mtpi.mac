@@ -1,0 +1,62 @@
+; make sure current run-mode is kernel and previous is user
+	MOV	#0177776,R0
+	MOV	#030000,(R0)
+	NOP
+
+; initialize kernel- and user stackpointers
+; kernel
+	MOV	#1000,R6
+;; user
+;	MOV	#0177717,R0
+;	MOV	#1000,(R0)
+
+; user: 020000-040000 will be mapped to physical address 060000
+	MOV	#0177642,R0
+; 060000 / 0100 (0100 => 64 decimal)
+	MOV	#0600,(R0)
+	NOP
+
+; user: make sure write- and read-access is possible
+	MOV	#0177602,R0
+	MOV	#077406,(R0)
+
+; kernel: flat mapping
+; 0-010000 -> 0
+	MOV	#0172340,R0
+	MOV	#0000,(R0)
+; 060000-0100000 -> 060000
+	MOV	#0172346,R0
+	MOV	#0600,(R0)
+	NOP
+
+; kernel: make sure write- and read-access is possible
+; 0-010000
+	MOV	#0172300,R0
+	MOV	#077406,(R0)
+; 060000-0100000
+	MOV	#0172306,R0
+	MOV	#077406,(R0)
+
+; MRR0
+	MOV	#0177572,R0
+; enable MMU traps
+	BIS	#512,(R0)
+; enable MMU
+	BIS	#1,(R0)
+
+; write word on stack that will be checked for to be at the
+; remapped address
+	MOV	#01234,-(SP)
+; this address in kernel space should be 060000 in userspace
+	MOV	#020000,R0
+	MTPI	(R0)
+	NOP
+
+; check for 01234 at 060000 in kernel space
+	MOV	#060000,R0
+	CMP	#01234,(R0)
+	NOP
+
+	HALT
+
+	make_raw
