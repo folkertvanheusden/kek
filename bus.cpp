@@ -389,12 +389,12 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 
 			if (a == 0177774 || a == 0177775) { // stack limit register
 				D(fprintf(stderr, "writeb Set stack limit register: %o\n", value);)
-					uint16_t v = c -> getStackLimitRegister();
+				uint16_t v = c -> getStackLimitRegister();
 
 				if (a & 1)
-					v = (v & 0xff00) | value;
-				else
 					v = (v & 0x00ff) | (value << 8);
+				else
+					v = (v & 0xff00) | value;
 
 				c -> setStackLimitRegister(v);
 				return v;
@@ -403,7 +403,7 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 		else {
 			if (a == 0177776) { // PSW
 				D(fprintf(stderr, "write PSW %o\n", value);)
-					c -> setPSW(value, false);
+				c -> setPSW(value, false);
 				return value;
 			}
 
