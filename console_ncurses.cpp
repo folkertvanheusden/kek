@@ -126,16 +126,17 @@ void console_ncurses::panel_update_thread()
 		myusleep(1000000 / refresh_rate);
 
 		// note that these are approximately as there's no mutex on the emulation
+		uint16_t current_PSW   = c->getPSW();
+		int      run_mode      = current_PSW >> 14;
+
 		uint16_t current_PC    = c->getPC();
-		uint32_t full_addr     = b->calculate_full_address(current_PC);
+		uint32_t full_addr     = b->calculate_physical_address(run_mode, current_PC, false);
 
 		uint16_t current_instr = b->readWord(current_PC);
 
-		uint16_t current_PSW   = c->getPSW();
-
 		std::unique_lock<std::mutex> lck(ncurses_mutex);
 
-		wattron(w_panel->win, COLOR_PAIR(1 + (current_PSW >> 14)));
+		wattron(w_panel->win, COLOR_PAIR(1 + run_mode));
 
 		for(uint8_t b=0; b<22; b++)
 			mvwprintw(w_panel->win, 0, 1 + 22 - b,      "%c", full_addr     & (1 << b) ? '1' : '0');

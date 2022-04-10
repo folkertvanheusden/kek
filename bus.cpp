@@ -53,8 +53,6 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev)
 {
 	uint16_t temp = 0;
 
-	int run_mode = c->getPSW() >> 14;
-
 	if (a >= 0160000) {
 		if (word_mode)
 			D(fprintf(stderr, "READ I/O %06o in byte mode\n", a);)
@@ -92,63 +90,75 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev)
 
 		/// MMU ///
 		if (a >= 0172200 && a < 0172220) {
-			uint16_t t = pages[001][0][(a & 017) >> 1].pdr;
-			D(fprintf(stderr, "read supervisor I PDR for %d: %o\n", (a & 017) >> 1, t);)
+			int      page = (a >> 1) & 7;
+			uint16_t t    = pages[001][0][page].pdr;
+			D(fprintf(stderr, "read supervisor I PDR for %d: %o\n", page, t);)
 			return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
 		}
 		else if (a >= 0172220 && a < 0172240) {
-			uint16_t t = pages[001][1][(a & 017) >> 1].pdr;
-			D(fprintf(stderr, "read supervisor D PDR for %d: %o\n", (a & 017) >> 1, t);)
+			int      page = (a >> 1) & 7;
+			uint16_t t    = pages[001][1][page].pdr;
+			D(fprintf(stderr, "read supervisor D PDR for %d: %o\n", page, t);)
 			return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
 		}
 		else if (a >= 0172240 && a < 0172260) {
-			uint16_t t = pages[001][0][(a & 017) >> 1].par;
-			D(fprintf(stderr, "read supervisor I PAR for %d: %o\n", (a & 017) >> 1, t);)
+			int      page = (a >> 1) & 7;
+			uint16_t t    = pages[001][0][page].par;
+			D(fprintf(stderr, "read supervisor I PAR for %d: %o (phys: %07o)\n", page, t, t * 64);)
 			return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
 		}
 		else if (a >= 0172260 && a < 0172300) {
-			uint16_t t = pages[001][1][(a & 017) >> 1].par;
-			D(fprintf(stderr, "read supervisor D PAR for %d: %o\n", (a & 017) >> 1, t);)
+			int      page = (a >> 1) & 7;
+			uint16_t t    = pages[001][1][page].par;
+			D(fprintf(stderr, "read supervisor D PAR for %d: %o (phys: %07o)\n", page, t, t * 64);)
 			return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
 		}
 		else if (a >= 0172300 && a < 0172320) {
-			uint16_t t = pages[000][0][(a & 017) >> 1].pdr;
-			D(fprintf(stderr, "read kernel I PDR for %d: %o\n", (a & 017) >> 1, t);)
+			int      page = (a >> 1) & 7;
+			uint16_t t    = pages[000][0][page].pdr;
+			D(fprintf(stderr, "read kernel I PDR for %d: %o\n", page, t);)
 			return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
 		}
 		else if (a >= 0172320 && a < 0172340) {
-			uint16_t t = pages[000][1][(a & 017) >> 1].pdr;
-			D(fprintf(stderr, "read kernel D PDR for %d: %o\n", (a & 017) >> 1, t);)
+			int      page = (a >> 1) & 7;
+			uint16_t t    = pages[000][1][page].pdr;
+			D(fprintf(stderr, "read kernel D PDR for %d: %o\n", page, t);)
 			return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
 		}
 		else if (a >= 0172340 && a < 0172360) {
-			uint16_t t = pages[000][0][(a & 017) >> 1].par;
-			D(fprintf(stderr, "read kernel I PAR for %d: %o\n", (a & 017) >> 1, t);)
+			int      page = (a >> 1) & 7;
+			uint16_t t    = pages[000][0][page].par;
+			D(fprintf(stderr, "read kernel I PAR for %d: %o (phys: %07o)\n", page, t, t * 64);)
 			return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
 		}
 		else if (a >= 0172360 && a < 0172400) {
-			uint16_t t = pages[000][1][(a & 017) >> 1].par;
-			D(fprintf(stderr, "read kernel D PAR for %d: %o\n", (a & 017) >> 1, t);)
+			int      page = (a >> 1) & 7;
+			uint16_t t    = pages[000][1][page].par;
+			D(fprintf(stderr, "read kernel D PAR for %d: %o (phys: %07o)\n", page, t, t * 64);)
 			return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
 		}
 		else if (a >= 0177600 && a < 0177620) {
-			uint16_t t = pages[003][0][(a & 017) >> 1].pdr;
-			D(fprintf(stderr, "read userspace I PDR for %d: %o\n", (a & 017) >> 1, t);)
+			int      page = (a >> 1) & 7;
+			uint16_t t    = pages[003][0][page].pdr;
+			D(fprintf(stderr, "read userspace I PDR for %d: %o\n", page, t);)
 			return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
 		}
 		else if (a >= 0177620 && a < 0177640) {
-			uint16_t t = pages[003][1][(a & 017) >> 1].pdr;
-			D(fprintf(stderr, "read userspace D PDR for %d: %o\n", (a & 017) >> 1, t);)
+			int      page = (a >> 1) & 7;
+			uint16_t t    = pages[003][1][page].pdr;
+			D(fprintf(stderr, "read userspace D PDR for %d: %o\n", page, t);)
 			return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
 		}
 		else if (a >= 0177640 && a < 0177660) {
-			uint16_t t = pages[003][0][(a & 017) >> 1].par;
-			D(fprintf(stderr, "read userspace I PAR for %d: %o\n", (a & 017) >> 1, t);)
+			int      page = (a >> 1) & 7;
+			uint16_t t    = pages[003][0][page].par;
+			D(fprintf(stderr, "read userspace I PAR for %d: %o (phys: %07o)\n", page, t, t * 64);)
 			return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
 		}
 		else if (a >= 0177660 && a < 0177700) {
-			uint16_t t = pages[003][1][(a & 017) >> 1].par;
-			D(fprintf(stderr, "read userspace D PAR for %d: %o\n", (a & 017) >> 1, t);)
+			int      page = (a >> 1) & 7;
+			uint16_t t    = pages[003][1][page].par;
+			D(fprintf(stderr, "read userspace D PAR for %d: %o (phys: %07o)\n", page, t, t * 64);)
 			return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
 		}
 		///////////
@@ -292,13 +302,26 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev)
 		return -1;
 	}
 
+	int run_mode = (c->getPSW() >> (use_prev ? 12 : 14)) & 3;
+
+	uint32_t m_offset = calculate_physical_address(run_mode, a, true);
+
+	if (word_mode)
+		temp = m -> readByte(m_offset);
+	else
+		temp = m -> readWord(m_offset);
+
+	D(fprintf(stderr, "READ from %06o/%07o: %o\n", a, m_offset, temp);)
+
+	return temp;
+}
+
+uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, const bool trap_on_failure)
+{
 	uint32_t m_offset = 0;
 
 	if (MMR0 & 1) {
 		const uint8_t apf = a >> 13; // active page field
-
-		if (use_prev)
-			run_mode = (c->getPSW() >> 12) & 3;
 
 		// TODO: D/I
 		m_offset = pages[run_mode][0][apf].par * 64;  // memory offset
@@ -311,54 +334,38 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev)
 
 		bool direction = pages[run_mode][0][apf].pdr & 8;  // TODO: D/I
 
-		if (m_offset >= n_pages * 8192) {
-			D(fprintf(stderr, "bus::read %o >= %o\n", m_offset, n_pages * 8192);)
-			c->schedule_trap(04);  // invalid address
+		if (trap_on_failure) {
+			if (m_offset >= n_pages * 8192) {
+				D(fprintf(stderr, "bus::calculate_physical_address %o >= %o\n", m_offset, n_pages * 8192);)
+				c->schedule_trap(04);  // invalid address
 
-			pages[run_mode][0][apf].pdr |= 1 << 7;  // TODO: D/I
+				pages[run_mode][0][apf].pdr |= 1 << 7;  // TODO: D/I
 
-			throw 1;
+				throw 1;
+			}
+
+			if ((p_offset >= pdr_len && direction == false) || (p_offset < pdr_len && direction == true)) {
+				D(fprintf(stderr, "bus::calculate_physical_address::p_offset %o >= %o\n", p_offset, pdr_len);)
+				c->schedule_trap(0250);  // invalid access
+
+				pages[run_mode][0][apf].pdr |= 1 << 7;  // TODO: D/I
+
+				throw 1;
+			}
 		}
 
-		if ((p_offset >= pdr_len && direction == false) || (p_offset < pdr_len && direction == true)) {
-			D(fprintf(stderr, "bus::read::p_offset %o >= %o\n", p_offset, pdr_len);)
-			c->schedule_trap(0250);  // invalid access
-
-			pages[run_mode][0][apf].pdr |= 1 << 7;  // TODO: D/I
-
-			throw 1;
-		}
-
-		D(fprintf(stderr, "READ from physical address %07o (run_mode: %d, par: %07o)\n", m_offset, run_mode, pages[run_mode][0][apf].par * 64);)  // TODO: D/I
+		D(fprintf(stderr, "virtual address %06o maps to physical address %07o (run_mode: %d, par: %07o)\n", a, m_offset, run_mode, pages[run_mode][0][apf].par * 64);)  // TODO: D/I
 	}
 	else {
 		m_offset = a;
-		D(fprintf(stderr, "READ from physical address %07o\n", m_offset);)
+		D(fprintf(stderr, "virtual address %06o maps to physical address %07o\n", a, m_offset);)
 	}
 
-	if (word_mode)
-		temp = m -> readByte(m_offset);
-	else
-		temp = m -> readWord(m_offset);
-
-	return temp;
-}
-
-uint32_t bus::calculate_full_address(const uint16_t a)
-{
-	const uint8_t apf = a >> 13; // active page field
-
-	int run_mode = c->getPSW() >> 14;
-
-	uint32_t m_offset = pages[run_mode][0][apf].par * 64;  // TODO: D/I
-
-	return m_offset + (a & 8191);
+	return m_offset;
 }
 
 uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bool use_prev)
 {
-	int run_mode = c->getPSW() >> 14;
-
 	if (a >= 0160000) {
 		if (word_mode) {
 			assert(value < 256);
@@ -503,31 +510,33 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 		// supervisor
 		if (a >= 0172200 && a < 0172240) {
 			bool is_d = a & 16;
+			int  page = (a >> 1) & 7;
 
 			if (word_mode) {
-				a & 1 ? (pages[001][is_d][(a & 017) >> 1].pdr &= 0xff,   pages[001][is_d][(a & 017) >> 1].pdr |= value << 8) :
-					(pages[001][is_d][(a & 017) >> 1].pdr &= 0xff00, pages[001][is_d][(a & 017) >> 1].pdr |= value);
+				a & 1 ? (pages[001][is_d][page].pdr &= 0xff,   pages[001][is_d][page].pdr |= value << 8) :
+					(pages[001][is_d][page].pdr &= 0xff00, pages[001][is_d][page].pdr |= value);
 			}
 			else {
-				pages[001][is_d][(a & 017) >> 1].pdr = value;
+				pages[001][is_d][page].pdr = value;
 			}
 
-			D(fprintf(stderr, "write supervisor %c PDR for %d: %o\n", is_d ? 'D' : 'I', (a & 017) >> 1, word_mode ? value & 0xff : value);)
+			D(fprintf(stderr, "write supervisor %c PDR for %d: %o\n", is_d ? 'D' : 'I', page, word_mode ? value & 0xff : value);)
 
 			return value;
 		}
 		if (a >= 0172240 && a < 0172300) {
 			bool is_d = a & 16;
+			int  page = (a >> 1) & 7;
 
 			if (word_mode) {
-				a & 1 ? (pages[001][is_d][(a & 017) >> 1].par &= 0xff,   pages[001][is_d][(a & 017) >> 1].par |= value << 8) :
-					(pages[001][is_d][(a & 017) >> 1].par &= 0xff00, pages[001][is_d][(a & 017) >> 1].par |= value);
+				a & 1 ? (pages[001][is_d][page].par &= 0xff,   pages[001][is_d][page].par |= value << 8) :
+					(pages[001][is_d][page].par &= 0xff00, pages[001][is_d][page].par |= value);
 			}
 			else {
-				pages[001][is_d][(a & 017) >> 1].par = value;
+				pages[001][is_d][page].par = value;
 			}
 
-			D(fprintf(stderr, "write supervisor %c PAR for %d: %o\n", is_d ? 'D' : 'I', (a & 017) >> 1, word_mode ? value & 0xff : value);)
+			D(fprintf(stderr, "write supervisor %c PAR for %d: %o (%07o)\n", is_d ? 'D' : 'I', page, word_mode ? value & 0xff : value, pages[001][is_d][page].par * 64);)
 
 			return value;
 		}
@@ -535,31 +544,33 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 		// kernel
 		if (a >= 0172300 && a < 0172340) {
 			bool is_d = a & 16;
+			int  page = (a >> 1) & 7;
 
 			if (word_mode) {
-				a & 1 ? (pages[000][is_d][(a & 017) >> 1].pdr &= 0xff,   pages[000][is_d][(a & 017) >> 1].pdr |= value << 8) :
-					(pages[000][is_d][(a & 017) >> 1].pdr &= 0xff00, pages[000][is_d][(a & 017) >> 1].pdr |= value);
+				a & 1 ? (pages[000][is_d][page].pdr &= 0xff,   pages[000][is_d][page].pdr |= value << 8) :
+					(pages[000][is_d][page].pdr &= 0xff00, pages[000][is_d][page].pdr |= value);
 			}
 			else {
-				pages[000][is_d][(a & 017) >> 1].pdr = value;
+				pages[000][is_d][page].pdr = value;
 			}
 
-			D(fprintf(stderr, "write kernel %c PDR for %d: %o\n", is_d ? 'D' : 'I', (a & 017) >> 1, word_mode ? value & 0xff : value);)
+			D(fprintf(stderr, "write kernel %c PDR for %d: %o\n", is_d ? 'D' : 'I', page, word_mode ? value & 0xff : value);)
 
 			return value;
 		}
 		if (a >= 0172340 && a < 0172400) {
 			bool is_d = a & 16;
+			int  page = (a >> 1) & 7;
 
 			if (word_mode) {
-				a & 1 ? (pages[000][is_d][(a & 017) >> 1].par &= 0xff,   pages[000][is_d][(a & 017) >> 1].par |= value << 8) :
-					(pages[000][is_d][(a & 017) >> 1].par &= 0xff00, pages[000][is_d][(a & 017) >> 1].par |= value);
+				a & 1 ? (pages[000][is_d][page].par &= 0xff,   pages[000][is_d][page].par |= value << 8) :
+					(pages[000][is_d][page].par &= 0xff00, pages[000][is_d][page].par |= value);
 			}
 			else {
-				pages[000][is_d][(a & 017) >> 1].par = value;
+				pages[000][is_d][page].par = value;
 			}
 
-			D(fprintf(stderr, "write kernel %c PAR for %d: %o\n", is_d ? 'D' : 'I', (a & 017) >> 1, word_mode ? value & 0xff : value);)
+			D(fprintf(stderr, "write kernel %c PAR for %d: %o (%07o)\n", is_d ? 'D' : 'I', page, word_mode ? value & 0xff : value, pages[000][is_d][page].par * 64);)
 
 			return value;
 		}
@@ -567,31 +578,33 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 		// user
 		if (a >= 0177600 && a < 0177640) {
 			bool is_d = a & 16;
+			int  page = (a >> 1) & 7;
 
 			if (word_mode) {
-				a & 1 ? (pages[003][is_d][(a & 017) >> 1].pdr &= 0xff,   pages[003][is_d][(a & 017) >> 1].pdr |= value << 8) :
-					(pages[003][is_d][(a & 017) >> 1].pdr &= 0xff00, pages[003][is_d][(a & 017) >> 1].pdr |= value);
+				a & 1 ? (pages[003][is_d][page].pdr &= 0xff,   pages[003][is_d][page].pdr |= value << 8) :
+					(pages[003][is_d][page].pdr &= 0xff00, pages[003][is_d][page].pdr |= value);
 			}
 			else {
-				pages[003][is_d][(a & 017) >> 1].pdr = value;
+				pages[003][is_d][page].pdr = value;
 			}
 
-			D(fprintf(stderr, "write user %c PDR for %d: %o\n", is_d ? 'D' : 'I', (a & 017) >> 1, word_mode ? value & 0xff : value);)
+			D(fprintf(stderr, "write user %c PDR for %d: %o\n", is_d ? 'D' : 'I', page, word_mode ? value & 0xff : value);)
 
 			return value;
 		}
 		if (a >= 0177640 && a < 0177700) {
 			bool is_d = a & 16;
+			int  page = (a >> 1) & 7;
 
 			if (word_mode) {
-				a & 1 ? (pages[003][is_d][(a & 017) >> 1].par &= 0xff,   pages[003][is_d][(a & 017) >> 1].par |= value << 8) :
-					(pages[003][is_d][(a & 017) >> 1].par &= 0xff00, pages[003][is_d][(a & 017) >> 1].par |= value);
+				a & 1 ? (pages[003][is_d][page].par &= 0xff,   pages[003][is_d][page].par |= value << 8) :
+					(pages[003][is_d][page].par &= 0xff00, pages[003][is_d][page].par |= value);
 			}
 			else {
-				pages[003][is_d][(a & 017) >> 1].par = value;
+				pages[003][is_d][page].par = value;
 			}
 
-			D(fprintf(stderr, "write user %c PAR for %d: %o\n", is_d ? 'D' : 'I', (a & 017) >> 1, word_mode ? value & 0xff : value);)
+			D(fprintf(stderr, "write user %c PAR for %d: %o (%07o)\n", is_d ? 'D' : 'I', page, word_mode ? value & 0xff : value, pages[003][is_d][page].par * 64);)
 
 			return value;
 		}
@@ -624,51 +637,11 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 		return value;
 	}
 
-	uint32_t m_offset = 0;
+	int run_mode = (c->getPSW() >> (use_prev ? 12 : 14)) & 3;
 
-	if (MMR0 & 1) {
-		const uint8_t apf = a >> 13; // active page field
+	uint32_t m_offset = calculate_physical_address(run_mode, a, true);
 
-		if (use_prev)
-			run_mode = (c->getPSW() >> 12) & 3;
-
-		m_offset = pages[run_mode][0][apf].par * 64;  // TODO: D/I
-
-		pages[run_mode][0][apf].pdr |= 1 << 6; // page has been written to  // TODO: D/I
-
-		uint16_t p_offset = a & 8191;  // page offset
-
-		m_offset += p_offset;
-
-		uint16_t pdr_len = (((pages[run_mode][0][apf].pdr >> 8) & 127) + 1)* 64;  // TODO: D/I
-
-		bool direction = pages[run_mode][0][apf].pdr & 8;  // TODO: D/I
-
-		if (m_offset >= n_pages * 8192) {
-			D(fprintf(stderr, "bus::write %o >= %o\n", m_offset, n_pages * 8192);)
-				c->schedule_trap(04);  // invalid address
-
-			pages[run_mode][0][apf].pdr |= 1 << 7;  // TODO: D/I
-
-			throw 1;
-		}
-
-		if ((p_offset >= pdr_len && direction == false) || (p_offset < pdr_len && direction == true)) {
-			D(fprintf(stderr, "bus::write::p_offset %o >= %o\n", p_offset, pdr_len);)
-				c->schedule_trap(0250);  // invalid access
-
-			pages[run_mode][0][apf].pdr |= 1 << 7;  // TODO: D/I
-
-			throw 1;
-		}
-
-		D(fprintf(stderr, "WRITE to physical address %07o: %o (run mode %d, PAR: %07o)\n", m_offset, value, run_mode, pages[run_mode][0][apf].par * 64);)  // TODO: D/I
-	}
-	else {
-		m_offset = a;
-
-		D(fprintf(stderr, "WRITE to physical address %07o: %o\n", m_offset, value);)
-	}
+	D(fprintf(stderr, "WRITE to %06o/%07o: %o\n", a, m_offset, value);)
 
 	if (word_mode)
 		m->writeByte(m_offset, value);
