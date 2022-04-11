@@ -21,15 +21,15 @@ private:
 	int          ty        { 0 };
 
 protected:
-	int wait_for_char(const short timeout) override;
+	int wait_for_char_ll(const short timeout) override;
 
 	void put_char_ll(const char c) override;
 
 public:
-	console_ncurses(std::atomic_bool *const terminate, bus *const b);
+	console_ncurses(std::atomic_bool *const terminate, std::atomic_bool *const interrupt_emulation, bus *const b);
 	virtual ~console_ncurses();
 
-	void start_thread() override;
+	void put_string_lf(const std::string & what) override;
 
 	void resize_terminal() override;
 

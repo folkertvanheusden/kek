@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <string>
 #include <string.h>
+#include <vector>
 #include <sys/time.h>
 
 void setBit(uint16_t & v, const int bit, const bool vb)
@@ -72,5 +73,43 @@ void myusleep(uint64_t us)
 
 		memcpy(&req, &rem, sizeof(struct timespec));
 	}
+#endif
+}
+
+std::vector<std::string> split(std::string in, std::string splitter)
+{
+	std::vector<std::string> out;
+	size_t splitter_size = splitter.size();
+
+	for(;;)
+	{
+		size_t pos = in.find(splitter);
+		if (pos == std::string::npos)
+			break;
+
+		std::string before = in.substr(0, pos);
+		if (!before.empty())
+			out.push_back(before);
+
+		size_t bytes_left = in.size() - (pos + splitter_size);
+		if (bytes_left == 0)
+			return out;
+
+		in = in.substr(pos + splitter_size);
+	}
+
+	if (in.size() > 0)
+		out.push_back(in);
+
+	return out;
+}
+
+void set_thread_name(std::string name)
+{
+#if !defined(ESP32)
+	if (name.length() > 15)
+		name = name.substr(0, 15);
+
+	pthread_setname_np(pthread_self(), name.c_str());
 #endif
 }

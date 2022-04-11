@@ -9,30 +9,24 @@
 #include "utils.h"
 
 
-console_ncurses::console_ncurses(std::atomic_bool *const terminate, bus *const b) :
-	console(terminate, b)
+console_ncurses::console_ncurses(std::atomic_bool *const terminate, std::atomic_bool *const interrupt_emulation, bus *const b) :
+	console(terminate, interrupt_emulation, b)
 {
 	init_ncurses(true);
 
 	resize_terminal();
-
-	th       = new std::thread(std::ref(*this));
 
 	th_panel = new std::thread(&console_ncurses::panel_update_thread, this);
 }
 
 console_ncurses::~console_ncurses()
 {
+	stop_thread();
+
 	if (th_panel) {
 		th_panel->join();
 
 		delete th_panel;
-	}
-
-	if (th) {
-		th->join();
-
-		delete th;
 	}
 
 	std::unique_lock<std::mutex> lck(ncurses_mutex);
@@ -54,12 +48,7 @@ console_ncurses::~console_ncurses()
 	endwin();
 }
 
-void console_ncurses::start_thread()
-{
-	th = new std::thread(std::ref(*this));
-}
-
-int console_ncurses::wait_for_char(const short timeout)
+int console_ncurses::wait_for_char_ll(const short timeout)
 {
 	struct pollfd fds[] = { { STDIN_FILENO, POLLIN, 0 } };
 
@@ -88,6 +77,13 @@ void console_ncurses::put_char_ll(const char c)
 
 		mydoupdate();
 	}
+}
+
+void console_ncurses::put_string_lf(const std::string & what)
+{
+	put_string(what);
+
+	put_string("\n");
 }
 
 void console_ncurses::resize_terminal()
@@ -126,6 +122,8 @@ void console_ncurses::resize_terminal()
 
 void console_ncurses::panel_update_thread()
 {
+	set_thread_name("kek:c-panel");
+
 	cpu *const c = b->getCpu();
 
 	uint64_t prev_instr_cnt = c->get_instructions_executed_count();

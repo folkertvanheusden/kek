@@ -37,9 +37,10 @@ uint32_t start_ts  = 0;
 
 SdFat32  sd;
 
-std::atomic_bool terminate { false };
+std::atomic_bool terminate           { false };
+std::atomic_bool interrupt_emulation { false };
 
-std::atomic_bool *running  { nullptr };
+std::atomic_bool *running            { nullptr };
 
 // std::atomic_bool on_wifi   { false };
 
@@ -185,7 +186,7 @@ void setup() {
 	c->setEmulateMFPT(true);
 
 	Serial.println(F("Init console"));
-	cnsl = new console_esp32(&terminate, b);
+	cnsl = new console_esp32(&terminate, &interrupt_emulation, b);
 
 	running = cnsl->get_running_flag();
 
@@ -215,7 +216,7 @@ void setup() {
 	Serial.println(F("Press <enter> to start"));
 
 	for(;;) {
-		int c = cnsl->wait_for_char(1000);
+		int c = cnsl->wait_char(1000);
 		if (c == 13 || c == 10)
 				break;
 	}

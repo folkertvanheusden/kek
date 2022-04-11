@@ -9,15 +9,13 @@ private:
 	struct termios org_tty_opts { 0 };
 
 protected:
-	int wait_for_char(const short timeout) override;
+	int wait_for_char_ll(const short timeout) override;
 
 	void put_char_ll(const char c) override;
 
 public:
-	console_posix(std::atomic_bool *const terminate, bus *const b);
+	console_posix(std::atomic_bool *const terminate, std::atomic_bool *const interrupt_emulation, bus *const b);
 	virtual ~console_posix();
-
-	void start_thread() override;
 
 	void resize_terminal() override;
 

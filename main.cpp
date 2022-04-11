@@ -127,6 +127,40 @@ uint16_t loadTape(bus *const b, const char *const file)
 	return start;
 }
 
+void disassemble(cpu *const c, console *const cnsl)
+{
+#if !defined(ESP32)
+	auto data      = c->disassemble(c->getPC());
+
+	auto registers = data["registers"];
+	auto psw       = data["psw"][0];
+
+	std::string instruction_values;
+	for(auto iv : data["instruction-values"])
+		instruction_values += (instruction_values.empty() ? "" : ",") + iv;
+
+	std::string work_values;
+	for(auto wv : data["work-values"])
+		work_values += (work_values.empty() ? "" : ",") + wv;
+
+	std::string instruction = data["instruction-text"].at(0);
+
+	std::string result = format("R0: %s, R1: %s, R2: %s, R3: %s, R4: %s, R5: %s, SP: %s, PC: %s, PSW: %s, instr: %s: %s - %s",
+				registers[0].c_str(), registers[1].c_str(), registers[2].c_str(), registers[3].c_str(), registers[4].c_str(), registers[5].c_str(),
+				registers[6].c_str(), registers[7].c_str(), 
+				psw.c_str(),
+				instruction_values.c_str(),
+				instruction.c_str(),
+				work_values.c_str()
+				);
+
+	if (cnsl)
+		cnsl->debug(result);
+	else
+		fprintf(stderr, "%s\n", result.c_str());
+#endif
+}
+
 volatile bool sw = false;
 void sw_handler(int s)
 {
@@ -167,7 +201,7 @@ int main(int argc, char *argv[])
 	bool debugger  = false;
 	bool tracing   = false;
 	int  opt       = -1;
-	while((opt = getopt(argc, argv, "hm:T:R:p:ndL:")) != -1)
+	while((opt = getopt(argc, argv, "hm:T:R:p:ndtL:")) != -1)
 	{
 		switch(opt) {
 			case 'h':
@@ -220,14 +254,16 @@ int main(int argc, char *argv[])
 
 	console *cnsl = nullptr;
 
+	std::atomic_bool interrupt_emulation { false };
+
 	if (withUI)
-		cnsl = new console_ncurses(&terminate, b);
+		cnsl = new console_ncurses(&terminate, &interrupt_emulation, b);
 	else {
 		fprintf(stderr, "This PDP-11 emulator is called \"kek\" (reason for that is forgotten) and was written by Folkert van Heusden.\n");
 
 		fprintf(stderr, "Built on: " __DATE__ " " __TIME__ "\n");
 
-		cnsl = new console_posix(&terminate, b);
+		cnsl = new console_posix(&terminate, &interrupt_emulation, b);
 	}
 
 	if (rk05_files.empty() == false) {
@@ -252,9 +288,8 @@ int main(int argc, char *argv[])
 	sigemptyset(&sa.sa_mask);
 	sa.sa_flags = SA_RESTART;
 
-	if (withUI) {
+	if (withUI)
 		sigaction(SIGWINCH, &sa, nullptr);
-	}
 
 	sigaction(SIGTERM, &sa, nullptr);
 	sigaction(SIGINT , &sa, nullptr);
@@ -264,22 +299,72 @@ int main(int argc, char *argv[])
 //	loadbin(b, 0, "test.dat");
 //	c->setRegister(7, 0);
 
-	cnsl->start_thread();
-
 	c->emulation_start();  // for statistics
 
+	cnsl->start_thread();
+
 	if (debugger) {
-		while(!event && !terminate) {
-			if (tracing)
-				c->disassemble();
+		bool single_step = false;
 
-			if (c->check_breakpoint())
+		while(!terminate) {
+			bool        temp  = terminate;
+			std::string cmd   = cnsl->read_line(format("%d%d", event, temp));
+			auto        parts = split(cmd, " ");
+
+			if (cmd == "go")
+				single_step = false;
+			else if (cmd == "single" || cmd == "s")
+				single_step = true;
+			else if (cmd == "disassemble" || cmd == "d") {
+				disassemble(c, single_step ? cnsl : nullptr);
+				continue;
+			}
+			else if (cmd == "reset" || cmd == "r") {
+				terminate = false;
+
+				event = 0;
+
+				c->reset();
+
+				continue;
+			}
+			else if (cmd == "quit" || cmd == "q")
 				break;
+			else if (cmd == "help") {
+				cnsl->put_string_lf("disassemble/d - show current instruction");
+				cnsl->put_string_lf("go            - run until trap or ^e");
+				cnsl->put_string_lf("quit/q        - stop emulator");
+				cnsl->put_string_lf("reset/r       - reset cpu/bus/etc");
+				cnsl->put_string_lf("single/s      - run 1 instruction (implicit 'disassemble' command)");
 
-			c->step();
+				continue;
+			}
+			else {
+				cnsl->put_string_lf("?");
+				continue;
+			}
+
+			while(!event && !terminate && !interrupt_emulation) {
+				if (tracing || single_step)
+					disassemble(c, single_step ? cnsl : nullptr);
+
+				if (c->check_breakpoint() && !single_step)
+					break;
+
+				c->step();
+
+				if (single_step)
+					break;
+			}
+
+			if (interrupt_emulation) {
+				single_step = true;
+
+				event = 0;
+
+				interrupt_emulation = false;
+			}
 		}
-
-		// TODO: some menu
 	}
 	else {
 		while(!event && !terminate)

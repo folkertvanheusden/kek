@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <condition_variable>
 #include <thread>
 #include <vector>
 
@@ -14,38 +15,45 @@ class console
 {
 private:
 	std::vector<char>       input_buffer;
+	std::condition_variable have_data;
+	std::mutex              input_lock;
 
 protected:
-	std::atomic_bool *const terminate   { nullptr };
+	std::atomic_bool *const terminate           { nullptr };
+	std::atomic_bool *const interrupt_emulation { nullptr };
 
-	bus              *const b           { nullptr };
-	std::thread            *th          { nullptr };
+	bus              *const b                { nullptr };
+	std::thread            *th               { nullptr };
 	std::atomic_bool        disk_read_activity_flag  { false };
 	std::atomic_bool        disk_write_activity_flag { false };
-	std::atomic_bool        running_flag             { false };
+	std::atomic_bool        running_flag     { false };
+
+	bool                    stop_thread_flag { false };
 
 	char                    screen_buffer[t_height][t_width];
-	uint8_t                 tx          { 0 };
-	uint8_t                 ty          { 0 };
+	uint8_t                 tx               { 0 };
+	uint8_t                 ty               { 0 };
+
+	virtual int  wait_for_char_ll(const short timeout) = 0;
 
 	virtual void put_char_ll(const char c) = 0;
 
 public:
-	console(std::atomic_bool *const terminate, bus *const b);
+	console(std::atomic_bool *const terminate, std::atomic_bool *const interrupt_emulation, bus *const b);
 	virtual ~console();
 
-	virtual void start_thread() = 0;
-
-	virtual int  wait_for_char(const short timeout) = 0;
+	void         start_thread();
+	void         stop_thread();
 
 	bool         poll_char();
-	uint8_t      get_char();
+	int          get_char();
+	int          wait_char(const int timeout_ms);
 	std::string  read_line(const std::string & prompt);
 	void         flush_input();
 
 	void         put_char(const char c);
 	void         put_string(const std::string & what);
-	virtual void put_string_lf(const std::string & what);
+	virtual void put_string_lf(const std::string & what) = 0;
 
 	void         debug(const std::string fmt, ...);
 

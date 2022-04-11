@@ -6,15 +6,13 @@
 class console_esp32 : public console
 {
 protected:
-	int wait_for_char(const short timeout) override;
+	int wait_for_char_ll(const short timeout) override;
 
 	void put_char_ll(const char c) override;
 
 public:
-	console_esp32(std::atomic_bool *const terminate, bus *const b);
+	console_esp32(std::atomic_bool *const terminate, std::atomic_bool *const interrupt_emulation, bus *const b);
 	virtual ~console_esp32();
-
-	void start_thread() override;
 
 	void put_string_lf(const std::string & what) override;
 

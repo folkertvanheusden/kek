@@ -1922,35 +1922,6 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 	return out;
 }
 
-void cpu::disassemble() const
-{
-#if !defined(ESP32)
-	auto data      = disassemble(pc);
-
-	auto registers = data["registers"];
-	auto psw       = data["psw"][0];
-
-	std::string instruction_values;
-	for(auto iv : data["instruction-values"])
-		instruction_values += (instruction_values.empty() ? "" : ",") + iv;
-
-	std::string work_values;
-	for(auto wv : data["work-values"])
-		work_values += (work_values.empty() ? "" : ",") + wv;
-
-	std::string instruction = data["instruction-text"].at(0);
-
-	D(fprintf(stderr, "R0: %s, R1: %s, R2: %s, R3: %s, R4: %s, R5: %s, SP: %s, PC: %s, PSW: %s, instr: %s: %s - %s\n",
-				registers[0].c_str(), registers[1].c_str(), registers[2].c_str(), registers[3].c_str(), registers[4].c_str(), registers[5].c_str(),
-				registers[6].c_str(), registers[7].c_str(), 
-				psw.c_str(),
-				instruction_values.c_str(),
-				instruction.c_str(),
-				work_values.c_str()
-				);)
-#endif
-}
-
 void cpu::step()
 {
 	instruction_count++;

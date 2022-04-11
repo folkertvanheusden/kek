@@ -7,8 +7,8 @@
 #include "error.h"
 
 
-console_posix::console_posix(std::atomic_bool *const terminate, bus *const b) :
-	console(terminate, b)
+console_posix::console_posix(std::atomic_bool *const terminate, std::atomic_bool *const interrupt_emulation, bus *const b) :
+	console(terminate, interrupt_emulation, b)
 {
 	if (tcgetattr(STDIN_FILENO, &org_tty_opts) == -1)
 		error_exit(true, "console_posix: tcgetattr failed");
@@ -18,29 +18,17 @@ console_posix::console_posix(std::atomic_bool *const terminate, bus *const b) :
 
 	if (tcsetattr(STDIN_FILENO, TCSANOW, &tty_opts_raw) == -1)
 		error_exit(true, "console_posix: tcsetattr failed");
-
-	th = new std::thread(std::ref(*this));
 }
 
 console_posix::~console_posix()
 {
-	if (th) {
-		th->join();
-
-		delete th;
-	}
+	stop_thread();
 
 	if (tcsetattr(STDIN_FILENO, TCSANOW, &org_tty_opts) == -1)
 		error_exit(true, "~console_posix: tcsetattr failed");
-
 }
 
-void console_posix::start_thread()
-{
-	th = new std::thread(std::ref(*this));
-}
-
-int console_posix::wait_for_char(const short timeout)
+int console_posix::wait_for_char_ll(const short timeout)
 {
 	struct pollfd fds[] = { { STDIN_FILENO, POLLIN, timeout } };
 
@@ -61,7 +49,7 @@ void console_posix::put_string_lf(const std::string & what)
 {
 	put_string(what);
 
-	put_string("\n");
+	put_string("\r\n");
 }
 
 void console_posix::resize_terminal()

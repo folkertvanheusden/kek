@@ -1,3 +1,4 @@
+#include <chrono>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,8 +10,9 @@
 #include "utils.h"
 
 
-console::console(std::atomic_bool *const terminate, bus *const b) :
+console::console(std::atomic_bool *const terminate, std::atomic_bool *const interrupt_emulation, bus *const b) :
 	terminate(terminate),
+	interrupt_emulation(interrupt_emulation),
 	b(b)
 {
 	memset(screen_buffer, ' ', sizeof screen_buffer);
@@ -20,21 +22,61 @@ console::~console()
 {
 }
 
+void console::start_thread()
+{
+	stop_thread_flag = false;
+
+	th = new std::thread(std::ref(*this));
+}
+
+void console::stop_thread()
+{
+	if (th) {
+		stop_thread_flag = true;
+
+		th->join();
+		delete th;
+
+		th = nullptr;
+	}
+}
+
 bool console::poll_char()
 {
+	std::unique_lock<std::mutex> lck(input_lock);
+
 	return input_buffer.empty() == false;
 }
 
-uint8_t console::get_char()
+int console::get_char()
 {
+	std::unique_lock<std::mutex> lck(input_lock);
+
 	if (input_buffer.empty())
-		return 0x00;
+		return -1;
 
 	char c = input_buffer.at(0);
 
 	input_buffer.erase(input_buffer.begin() + 0);
 
 	return c;
+}
+
+int console::wait_char(const int timeout_ms)
+{
+	std::unique_lock<std::mutex> lck(input_lock);
+
+	using namespace std::chrono_literals;
+
+	if (input_buffer.empty() == false || have_data.wait_for(lck, timeout_ms * 1ms) == std::cv_status::no_timeout) {
+		int c = input_buffer.at(0);
+
+		input_buffer.erase(input_buffer.begin() + 0);
+
+		return c;
+	}
+
+	return -1;
 }
 
 void console::flush_input()
@@ -50,7 +92,7 @@ std::string console::read_line(const std::string & prompt)
 	std::string str;
 
 	for(;;) {
-		char c = wait_for_char(500);
+		char c = wait_char(500);
 
 		if (c == -1)
 			continue;
@@ -134,29 +176,29 @@ void console::put_string(const std::string & what)
 		put_char(what.at(x));
 }
 
-void console::put_string_lf(const std::string & what)
-{
-	put_string(what);
-
-	put_string("\n");
-}
-
 void console::operator()()
 {
 	D(fprintf(stderr, "Console thread started\n");)
 
-	while(!*terminate) {
-		int c = wait_for_char(500);
+	set_thread_name("kek:console");
+
+	while(!*terminate && !stop_thread_flag) {
+		int c = wait_for_char_ll(100);
 
 		if (c == -1)
 			continue;
 
 		if (c == 3)  // ^c
 			*terminate = true;
+		else if (c == 5)  // ^e
+			*interrupt_emulation = true;
 		else if (c == 12)  // ^l
 			refresh_virtual_terminal();
-		else
+		else {
 			input_buffer.push_back(c);
+
+			have_data.notify_all();
+		}
 	}
 
 	D(fprintf(stderr, "Console thread terminating\n");)
