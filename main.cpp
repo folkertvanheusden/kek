@@ -273,8 +273,13 @@ int main(int argc, char *argv[])
 			if (tracing)
 				c->disassemble();
 
+			if (c->check_breakpoint())
+				break;
+
 			c->step();
 		}
+
+		// TODO: some menu
 	}
 	else {
 		while(!event && !terminate)

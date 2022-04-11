@@ -30,6 +30,21 @@ void cpu::emulation_start()
 	running_since = get_ms();
 }
 
+bool cpu::check_breakpoint()
+{
+	return breakpoints.find(getPC()) != breakpoints.end();
+}
+
+void cpu::set_breakpoint(const uint16_t addr)
+{
+	breakpoints.insert(addr);
+}
+
+void cpu::remove_breakpoint(const uint16_t addr)
+{
+	breakpoints.erase(addr);
+}
+
 uint64_t cpu::get_instructions_executed_count()
 {
 	// this may wreck havoc as it is not protected by a mutex

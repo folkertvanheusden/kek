@@ -28,6 +28,8 @@ private:
 	// level, vector
 	std::map<uint8_t, std::set<uint8_t> > queued_interrupts;
 
+	std::set<uint16_t> breakpoints;
+
 	bus *const b { nullptr };
 
 	uint32_t *const event { nullptr };
@@ -61,6 +63,10 @@ private:
 public:
 	explicit cpu(bus *const b, uint32_t *const event);
 	~cpu();
+
+	bool check_breakpoint();
+	void set_breakpoint(const uint16_t addr);
+	void remove_breakpoint(const uint16_t addr);
 
 	void disassemble(void) const;
 	std::map<std::string, std::vector<std::string> > disassemble(const uint16_t addr) const;
