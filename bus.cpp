@@ -49,7 +49,7 @@ void bus::init()
 	MMR3 = 0;
 }
 
-uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev)
+uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, const bool peek_only)
 {
 	uint16_t temp = 0;
 
@@ -304,7 +304,7 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev)
 
 	int run_mode = (c->getPSW() >> (use_prev ? 12 : 14)) & 3;
 
-	uint32_t m_offset = calculate_physical_address(run_mode, a, true);
+	uint32_t m_offset = calculate_physical_address(run_mode, a, !peek_only);
 
 	if (word_mode)
 		temp = m -> readByte(m_offset);
@@ -653,7 +653,12 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 
 uint16_t bus::readWord(const uint16_t a)
 {
-	return read(a, false, false);
+	return read(a, false, false, false);
+}
+
+uint16_t bus::peekWord(const uint16_t a)
+{
+	return read(a, false, false, true);
 }
 
 uint16_t bus::writeWord(const uint16_t a, const uint16_t value)
