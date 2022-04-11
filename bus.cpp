@@ -658,7 +658,7 @@ uint16_t bus::readWord(const uint16_t a)
 
 uint16_t bus::writeWord(const uint16_t a, const uint16_t value)
 {
-	return write(a, false, value);
+	return write(a, false, value, false);
 }
 
 uint16_t bus::readUnibusByte(const uint16_t a)

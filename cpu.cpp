@@ -105,7 +105,7 @@ void cpu::put_result(const uint16_t a, const uint8_t dst_mode, const uint8_t dst
 	if (dst_mode == 0)
 		setRegisterLowByte(dst_reg, word_mode, value);
 	else
-		b->write(a, word_mode, value);
+		b->write(a, word_mode, value, false);
 }
 
 void cpu::addRegister(const int nr, const bool prev_mode, const uint16_t value)
@@ -281,33 +281,33 @@ void cpu::putGAM(const uint8_t mode, const int reg, const bool word_mode, const 
 			setRegister(reg, prev_mode, value);
 			break;
 		case 1:
-			b -> write(getRegister(reg, prev_mode), word_mode, value);
+			b -> write(getRegister(reg, prev_mode), word_mode, value, false);
 			break;
 		case 2:
-			b -> write(getRegister(reg, prev_mode), word_mode, value);
+			b -> write(getRegister(reg, prev_mode), word_mode, value, false);
 			addRegister(reg, prev_mode, !word_mode || reg == 7 || reg == 6 ? 2 : 1);
 			break;
 		case 3:
-			b -> write(b -> readWord(getRegister(reg, prev_mode)), word_mode, value);
+			b -> write(b -> readWord(getRegister(reg, prev_mode)), word_mode, value, false);
 			addRegister(reg, prev_mode, 2);
 			break;
 		case 4:
 			addRegister(reg, prev_mode, !word_mode || reg == 7 || reg == 6 ? -2 : -1);
-			b -> write(getRegister(reg, prev_mode), word_mode, value);
+			b -> write(getRegister(reg, prev_mode), word_mode, value, false);
 			break;
 		case 5:
 			addRegister(reg, prev_mode, -2);
-			b -> write(b -> readWord(getRegister(reg, prev_mode)), word_mode, value);
+			b -> write(b -> readWord(getRegister(reg, prev_mode)), word_mode, value, false);
 			break;
 		case 6:
 			next_word = b -> readWord(getPC());
 			addRegister(7, prev_mode, 2);
-			b -> write(getRegister(reg, prev_mode) + next_word, word_mode, value);
+			b -> write(getRegister(reg, prev_mode) + next_word, word_mode, value, false);
 			break;
 		case 7:
 			next_word = b -> readWord(getPC());
 			addRegister(7, prev_mode, 2);
-			b -> write(b -> readWord(getRegister(reg, prev_mode) + next_word), word_mode, value);
+			b -> write(b -> readWord(getRegister(reg, prev_mode) + next_word), word_mode, value, false);
 			break;
 
 		default:
@@ -619,7 +619,7 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 				if (dst_mode == 0)
 					putGAM(dst_mode, dst_reg, false, vl, false);
 				else
-					b->write(a, false, vl);
+					b->write(a, false, vl, false);
 
 				setPSW_n(vl & 0x8000);
 				setPSW_z(vl == 0);
@@ -697,7 +697,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					  else {
 						  uint16_t a = getGAMAddress(dst_mode, dst_reg, word_mode, false);
 
-						  b -> write(a, word_mode, 0);
+						  b -> write(a, word_mode, 0, false);
 					  }
 
 					  setPSW_n(false);
@@ -738,7 +738,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						  setPSW_v(false);
 						  setPSW_c(true);
 
-						  b->write(a, word_mode, v);
+						  b->write(a, word_mode, v, false);
 					  }
 					  break;
 				  }
@@ -766,7 +766,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						  setPSW_z(IS_0(vl, word_mode));
 						  setPSW_v(word_mode ? vl == 0x80 : v == 0x8000);
 
-						  b->write(a, word_mode, vl);
+						  b->write(a, word_mode, vl, false);
 					  }
 
 					  break;
@@ -795,7 +795,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						  setPSW_z(IS_0(vl, word_mode));
 						  setPSW_v(word_mode ? vl == 0x7f : vl == 0x7fff);
 
-						  b->write(a, word_mode, vl);
+						  b->write(a, word_mode, vl, false);
 					  }
 
 					  break;
@@ -820,7 +820,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						  uint16_t a  = getGAMAddress(dst_mode, dst_reg, word_mode, false);
 						  uint16_t v  = -b -> read(a, word_mode, false);
 
-						  b->write(a, word_mode, v);
+						  b->write(a, word_mode, v, false);
 
 						  setPSW_n(SIGN(v, word_mode));
 						  setPSW_z(IS_0(v, word_mode));
@@ -854,7 +854,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						  bool           org_c = getPSW_c();
 						  uint16_t       v     = (vo + org_c) & (word_mode ? 0x00ff : 0xffff);
 
-						  b->write(a, word_mode, v);
+						  b->write(a, word_mode, v, false);
 
 						  setPSW_n(SIGN(v, word_mode));
 						  setPSW_z(IS_0(v, word_mode));
@@ -888,7 +888,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						  bool           org_c = getPSW_c();
 						  uint16_t       v     = (vo - org_c) & (word_mode ? 0xff : 0xffff);
 
-						  b->write(a, word_mode, v);
+						  b->write(a, word_mode, v, false);
 
 						  setPSW_n(SIGN(v, word_mode));
 						  setPSW_z(IS_0(v, word_mode));
@@ -944,7 +944,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						  else
 							  temp = (t >> 1) | (getPSW_c() << 15);
 
-						  b->write(a, word_mode, temp);
+						  b->write(a, word_mode, temp, false);
 
 						  setPSW_c(new_carry);
 						  setPSW_n(SIGN(temp, word_mode));
@@ -991,7 +991,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 							  temp = (t << 1) | getPSW_c();
 						  }
 
-						  b->write(a, word_mode, temp);
+						  b->write(a, word_mode, temp, false);
 
 						  setPSW_c(new_carry);
 						  setPSW_n(SIGN(temp, word_mode));
@@ -1046,7 +1046,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 							  v |= hb << 15;
 						  }
 
-						  b->write(a, word_mode, v);
+						  b->write(a, word_mode, v, false);
 
 						  setPSW_n(SIGN(v, word_mode));
 						  setPSW_z(IS_0(v, word_mode));
@@ -1080,7 +1080,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						 setPSW_c(SIGN(vl, word_mode));
 						 setPSW_v(getPSW_n() ^ getPSW_c());
 
-						 b->write(a, word_mode, v);
+						 b->write(a, word_mode, v, false);
 					 }
 					 break;
 				 }
