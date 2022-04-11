@@ -58,14 +58,14 @@ private:
 	};
 
 	operand_parameters addressing_to_string(const uint8_t mode_register, const uint16_t pc, const bool word_mode) const;
-	std::map<std::string, std::vector<std::string> > disassemble(const uint16_t addr) const;
-	void disassemble(void) const;
 
 public:
 	explicit cpu(bus *const b, uint32_t *const event);
 	~cpu();
 
 	void setDisassemble(const bool state);
+	void disassemble(void) const;
+	std::map<std::string, std::vector<std::string> > disassemble(const uint16_t addr) const;
 
 	bus *getBus() { return b; }
 
