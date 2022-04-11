@@ -54,8 +54,8 @@ public:
 
 	void init();  // invoked by 'RESET' command
 
-	uint16_t read(const uint16_t a, const bool word_mode, const bool use_prev=false);
-	uint16_t readByte(const uint16_t a) { return read(a, true); }
+	uint16_t read(const uint16_t a, const bool word_mode, const bool use_prev);
+	uint16_t readByte(const uint16_t a) { return read(a, true, false); }
 	uint16_t readWord(const uint16_t a);
 
 	uint16_t readUnibusByte(const uint16_t a);

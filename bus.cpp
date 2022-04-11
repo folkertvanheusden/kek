@@ -653,7 +653,7 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 
 uint16_t bus::readWord(const uint16_t a)
 {
-	return read(a, false);
+	return read(a, false, false);
 }
 
 uint16_t bus::writeWord(const uint16_t a, const uint16_t value)
