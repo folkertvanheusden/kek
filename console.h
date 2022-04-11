@@ -28,29 +28,32 @@ protected:
 	uint8_t                 tx          { 0 };
 	uint8_t                 ty          { 0 };
 
-	virtual int wait_for_char(const short timeout) = 0;
-
 	virtual void put_char_ll(const char c) = 0;
-
-	void put_string_ll(const std::string & what);
 
 public:
 	console(std::atomic_bool *const terminate, bus *const b);
 	virtual ~console();
 
-	bool    poll_char();
+	virtual void start_thread() = 0;
 
-	uint8_t get_char();
+	virtual int  wait_for_char(const short timeout) = 0;
 
-	void    put_char(const char c);
+	bool         poll_char();
+	uint8_t      get_char();
+	std::string  read_line(const std::string & prompt);
+	void         flush_input();
 
-	void    debug(const std::string fmt, ...);
+	void         put_char(const char c);
+	void         put_string(const std::string & what);
+	virtual void put_string_lf(const std::string & what);
+
+	void         debug(const std::string fmt, ...);
 
 	virtual void resize_terminal() = 0;
 
 	virtual void refresh_virtual_terminal() = 0;
 
-	void    operator()();
+	void         operator()();
 
 	std::atomic_bool * get_running_flag()             { return &running_flag; }
 	std::atomic_bool * get_disk_read_activity_flag()  { return &disk_read_activity_flag; }

@@ -35,8 +35,7 @@ private:
 	uint16_t registers[7];
 	uint8_t xfer_buffer[512];
 #if defined(ESP32)
-	SdFat32 sd;
-	File32 fh;
+	std::vector<File32 *> fhs;
 #else
 	std::vector<FILE *> fhs;
 #endif

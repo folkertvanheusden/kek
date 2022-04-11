@@ -37,6 +37,48 @@ uint8_t console::get_char()
 	return c;
 }
 
+void console::flush_input()
+{
+	input_buffer.clear();
+}
+
+std::string console::read_line(const std::string & prompt)
+{
+	put_string(prompt);
+	put_string(">");
+
+	std::string str;
+
+	for(;;) {
+		char c = wait_for_char(500);
+
+		if (c == -1)
+			continue;
+
+		if (c == 13 || c == 10)
+			break;
+
+		if (c == 8) {
+			if (!str.empty()) {
+				str = str.substr(0, str.size() - 1);
+
+				put_char(8);
+				put_char(' ');
+				put_char(8);
+			}
+		}
+		else if (c >= 32 && c < 127) {
+			str += c;
+
+			put_char(c);
+		}
+	}
+
+	put_string_lf("");
+
+	return str;
+}
+
 void console::debug(const std::string fmt, ...)
 {
 	char *buffer = nullptr;
@@ -44,12 +86,11 @@ void console::debug(const std::string fmt, ...)
         va_list ap;
         va_start(ap, fmt);
 
-        int len = vasprintf(&buffer, fmt.c_str(), ap);
+        vasprintf(&buffer, fmt.c_str(), ap);
 
         va_end(ap);
 
-	for(int i=0; i<len; i++)
-		put_char(buffer[i]);
+	put_string_lf(buffer);
 
 	free(buffer);
 }
@@ -64,6 +105,10 @@ void console::put_char(const char c)
 		tx = 0;
 	else if (c == 10)
 		ty++;
+	else if (c == 8) {  // backspace
+		if (tx > 0)
+			tx--;
+	}
 	else {
 		screen_buffer[ty][tx++] = c;
 
@@ -83,10 +128,17 @@ void console::put_char(const char c)
 	}
 }
 
-void console::put_string_ll(const std::string & what)
+void console::put_string(const std::string & what)
 {
 	for(size_t x=0; x<what.size(); x++)
-		put_char_ll(what.at(x));
+		put_char(what.at(x));
+}
+
+void console::put_string_lf(const std::string & what)
+{
+	put_string(what);
+
+	put_string("\n");
 }
 
 void console::operator()()

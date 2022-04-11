@@ -6,9 +6,6 @@
 #include "bus.h"
 #include "cpu.h"
 #include "error.h"
-#if defined(ESP32)
-#include "esp32.h"
-#endif
 #include "gen.h"
 #include "rk05.h"
 #include "utils.h"
@@ -32,56 +29,34 @@ rk05::rk05(const std::vector<std::string> & files, bus *const b, std::atomic_boo
 	memset(registers, 0x00, sizeof registers);
 	memset(xfer_buffer, 0x00, sizeof xfer_buffer);
 
-#if defined(ESP32)
-	Serial.print(F("MISO: "));
-	Serial.println(int(MISO));
-	Serial.print(F("MOSI: "));
-	Serial.println(int(MOSI));
-	Serial.print(F("SCK : "));
-	Serial.println(int(SCK));
-	Serial.print(F("SS  : "));
-	Serial.println(int(SS));
-
-	Serial.println(F("Files on SD-card:"));
-
-	if (!sd.begin(SS, SD_SCK_MHZ(15)))
-		sd.initErrorHalt();
-
-	for(;;) {
-		sd.ls("/", LS_DATE | LS_SIZE | LS_R);
-
-		while(Serial.available())
-			Serial.read();
-
-		std::string selected_file = read_terminal_line("Enter filename: ");
-
-		Serial.print(F("Opening file: "));
-		Serial.println(selected_file.c_str());
-
-		if (fh.open(selected_file.c_str(), O_RDWR))
-			break;
-
-		Serial.println(F("rk05: open failed"));
-	}
-#else
 	for(auto file : files) {
+#if defined(ESP32)
+		File32 *fh = new File32();
+
+		if (!fh->open(file.c_str(), O_RDWR)) {
+			delete fh;
+			error_exit(true, "rk05: cannot open \"%s\"", file.c_str());
+		}
+#else
 		FILE *fh = fopen(file.c_str(), "rb");
 		if (!fh)
 			error_exit(true, "rk05: cannot open \"%s\"", file.c_str());
+#endif
 
 		fhs.push_back(fh);
 	}
-#endif
 }
 
 rk05::~rk05()
 {
+	for(auto fh : fhs) {
 #if defined(ESP32)
-	fh.close();
+		fh->close();
+		delete fh;
 #else
-	for(auto fh : fhs)
 		fclose(fh);
 #endif
+	}
 }
 
 uint8_t rk05::readByte(const uint16_t addr)
@@ -183,9 +158,10 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 					xfer_buffer[i] = b->readUnibusByte(memoff + i);
 
 #if defined(ESP32)
-				if (!fh.seek(diskoffb))
+				File32 *fh = fhs.at(device);
+				if (!fh->seek(diskoffb))
 					fprintf(stderr, "RK05 seek error %s\n", strerror(errno));
-				if (fh.write(xfer_buffer, reclen) != reclen)
+				if (fh->write(xfer_buffer, reclen) != reclen)
                                         fprintf(stderr, "RK05 fwrite error %s\n", strerror(errno));
 #else
 				FILE *fh = fhs.at(device);
@@ -220,7 +196,8 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 				bool proceed = true;
 
 #if defined(ESP32)
-				if (!fh.seek(diskoffb)) {
+				File32 *fh = fhs.at(device);
+				if (!fh->seek(diskoffb)) {
 					fprintf(stderr, "RK05 seek error %s\n", strerror(errno));
 					proceed = false;
 				}
@@ -247,7 +224,7 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 #if defined(ESP32)
 					yield();
 
-					if (fh.read(xfer_buffer, cur) != size_t(cur))
+					if (fh->read(xfer_buffer, cur) != size_t(cur))
 						D(fprintf(stderr, "RK05 fread error: %s\n", strerror(errno));)
 #else
 					if (fread(xfer_buffer, 1, cur, fh) != size_t(cur))

@@ -9,10 +9,16 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
+#if defined(ESP32)
+#include <SPI.h>
+#define USE_SDFAT
+#define SD_FAT_TYPE 1
+#include <SdFat.h>
+#endif
+
 #include "console_esp32.h"
 #include "cpu.h"
 #include "error.h"
-#include "esp32.h"
 #include "memory.h"
 #include "tty.h"
 #include "utils.h"
@@ -28,6 +34,8 @@ uint32_t event     = 0;
 uint16_t exec_addr = 0;
 
 uint32_t start_ts  = 0;
+
+SdFat32  sd;
 
 std::atomic_bool terminate { false };
 
@@ -115,6 +123,40 @@ void setup_wifi_stations()
 #endif
 }
 
+std::vector<std::string> select_disk_files(console *const c)
+{
+	c->debug("MISO: %d", int(MISO));
+	c->debug("MOSI: %d", int(MOSI));
+	c->debug("SCK : %d", int(SCK ));
+	c->debug("SS  : %d", int(SS  ));
+
+	c->put_string_lf("Files on SD-card:");
+
+	if (!sd.begin(SS, SD_SCK_MHZ(15)))
+		sd.initErrorHalt();
+
+	for(;;) {
+		sd.ls("/", LS_DATE | LS_SIZE | LS_R);
+
+		c->flush_input();
+
+		std::string selected_file = c->read_line("Enter filename: ");
+
+		c->put_string("Opening file: ");
+		c->put_string_lf(selected_file.c_str());
+
+		File32 fh;
+
+		if (fh.open(selected_file.c_str(), O_RDWR)) {
+			fh.close();
+
+			return { selected_file };
+		}
+
+		c->put_string_lf("open failed");
+	}
+}
+
 void setup() {
 	Serial.begin(115200);
 
@@ -160,7 +202,7 @@ void setup() {
 	// setup_wifi_stations();
 
 	Serial.println(F("Load RK05"));
-	b->add_rk05(new rk05({ }, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
+	b->add_rk05(new rk05(select_disk_files(cnsl), b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
 	setBootLoader(b);
 
 	Serial.print(F("Free RAM after init: "));
@@ -173,10 +215,12 @@ void setup() {
 	Serial.println(F("Press <enter> to start"));
 
 	for(;;) {
-		int c = cnsl->get_char();
+		int c = cnsl->wait_for_char(1000);
 		if (c == 13 || c == 10)
 				break;
 	}
+
+	cnsl->start_thread();
 
 	Serial.println(F("Emulation starting!"));
 

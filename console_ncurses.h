@@ -29,6 +29,8 @@ public:
 	console_ncurses(std::atomic_bool *const terminate, bus *const b);
 	virtual ~console_ncurses();
 
+	void start_thread() override;
+
 	void resize_terminal() override;
 
 	void refresh_virtual_terminal() override;

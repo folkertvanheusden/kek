@@ -257,6 +257,8 @@ int main(int argc, char *argv[])
 //	loadbin(b, 0, "test.dat");
 //	c->setRegister(7, 0);
 
+	cnsl->start_thread();
+
 	c->emulation_start();  // for statistics
 
 	while(!event && !terminate)

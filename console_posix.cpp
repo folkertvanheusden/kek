@@ -35,6 +35,11 @@ console_posix::~console_posix()
 
 }
 
+void console_posix::start_thread()
+{
+	th = new std::thread(std::ref(*this));
+}
+
 int console_posix::wait_for_char(const short timeout)
 {
 	struct pollfd fds[] = { { STDIN_FILENO, POLLIN, timeout } };
@@ -50,6 +55,13 @@ void console_posix::put_char_ll(const char c)
 	printf("%c", c);
 
 	fflush(nullptr);
+}
+
+void console_posix::put_string_lf(const std::string & what)
+{
+	put_string(what);
+
+	put_string("\n");
 }
 
 void console_posix::resize_terminal()

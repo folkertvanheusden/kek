@@ -14,6 +14,10 @@ public:
 	console_esp32(std::atomic_bool *const terminate, bus *const b);
 	virtual ~console_esp32();
 
+	void start_thread() override;
+
+	void put_string_lf(const std::string & what) override;
+
 	void resize_terminal() override;
 
 	void refresh_virtual_terminal() override;

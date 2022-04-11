@@ -13,7 +13,6 @@
 console_esp32::console_esp32(std::atomic_bool *const terminate, bus *const b) :
 	console(terminate, b)
 {
-	th = new std::thread(std::ref(*this));
 }
 
 console_esp32::~console_esp32()
@@ -23,6 +22,11 @@ console_esp32::~console_esp32()
 
 		delete th;
 	}
+}
+
+void console_esp32::start_thread()
+{
+	th = new std::thread(std::ref(*this));
 }
 
 int console_esp32::wait_for_char(const short timeout)
@@ -40,6 +44,13 @@ int console_esp32::wait_for_char(const short timeout)
 void console_esp32::put_char_ll(const char c)
 {
 	Serial.print(c);
+}
+
+void console_esp32::put_string_lf(const std::string & what)
+{
+	put_string(what);
+
+	put_string("\r\n");
 }
 
 void console_esp32::resize_terminal()

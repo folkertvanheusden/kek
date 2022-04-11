@@ -54,6 +54,11 @@ console_ncurses::~console_ncurses()
 	endwin();
 }
 
+void console_ncurses::start_thread()
+{
+	th = new std::thread(std::ref(*this));
+}
+
 int console_ncurses::wait_for_char(const short timeout)
 {
 	struct pollfd fds[] = { { STDIN_FILENO, POLLIN, 0 } };
@@ -61,7 +66,12 @@ int console_ncurses::wait_for_char(const short timeout)
 	if (poll(fds, 1, timeout) == 1 && fds[0].revents) {
 		std::unique_lock<std::mutex> lck(ncurses_mutex);
 
-		return getch();
+		int c = getch();
+
+		if (c == ERR)
+			return -1;
+
+		return c;
 	}
 
 	return -1;
