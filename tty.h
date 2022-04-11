@@ -25,7 +25,6 @@ private:
 	bool     have_char_1  { false };  // RCVR BUSY bit high (11)
 	bool     have_char_2  { false };  // RCVR DONE bit high (7)
 	uint16_t registers[4] { 0 };
-	bool     withUI       { false };
 
 public:
 	tty(console *const c);
