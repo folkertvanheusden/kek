@@ -9,16 +9,10 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
-#if defined(ESP32)
-#include <SPI.h>
-#define USE_SDFAT
-#define SD_FAT_TYPE 1
-#include <SdFat.h>
-#endif
-
 #include "console_esp32.h"
 #include "cpu.h"
 #include "error.h"
+#include "esp32.h"
 #include "memory.h"
 #include "tty.h"
 #include "utils.h"
@@ -67,11 +61,18 @@ void setBootLoader(bus *const b) {
 	c->setRegister(7, offset);
 }
 
-void console_thread_wrapper(void *const c)
+void console_thread_wrapper_panel(void *const c)
 {
 	console *const cnsl = reinterpret_cast<console *>(c);
 
 	cnsl->panel_update_thread();
+}
+
+void console_thread_wrapper_io(void *const c)
+{
+	console *const cnsl = reinterpret_cast<console *>(c);
+
+	cnsl->operator()();
 }
 
 void setup_wifi_stations()
@@ -198,12 +199,17 @@ void setup() {
 	Serial.print(F("Starting panel (on CPU 0, main emulator runs on CPU "));
 	Serial.print(xPortGetCoreID());
 	Serial.println(F(")"));
-	xTaskCreatePinnedToCore(&console_thread_wrapper, "panel", 2048, cnsl, 1, nullptr, 0);
+	xTaskCreatePinnedToCore(&console_thread_wrapper_panel, "panel", 2048, cnsl, 1, nullptr, 0);
+
+	xTaskCreatePinnedToCore(&console_thread_wrapper_io,    "c-io",  2048, cnsl, 1, nullptr, 0);
 
 	// setup_wifi_stations();
 
 	Serial.println(F("Load RK05"));
-	b->add_rk05(new rk05(select_disk_files(cnsl), b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
+	auto disk_files = select_disk_files(cnsl);
+
+	b->add_rk05(new rk05(disk_files, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
+
 	setBootLoader(b);
 
 	Serial.print(F("Free RAM after init: "));
@@ -258,26 +264,6 @@ void dump_state(bus *const b) {
 
 	Serial.print(F("Uptime (ms): "));
 	Serial.println(t_diff);
-}
-
-bool poll_char()
-{
-	return Serial.available() > 0;
-}
-
-char get_char()
-{
-	char c = Serial.read();
-
-	if (c == 5)
-		dump_state(b);
-
-	return c;
-}
-
-void put_char(char c)
-{
-	Serial.print(c);
 }
 
 void loop() {

@@ -26,7 +26,9 @@ void console::start_thread()
 {
 	stop_thread_flag = false;
 
+#if !defined(ESP32)
 	th = new std::thread(std::ref(*this));
+#endif
 }
 
 void console::stop_thread()
@@ -69,11 +71,13 @@ int console::wait_char(const int timeout_ms)
 	using namespace std::chrono_literals;
 
 	if (input_buffer.empty() == false || have_data.wait_for(lck, timeout_ms * 1ms) == std::cv_status::no_timeout) {
-		int c = input_buffer.at(0);
+		if (input_buffer.empty() == false) {
+			int c = input_buffer.at(0);
 
-		input_buffer.erase(input_buffer.begin() + 0);
+			input_buffer.erase(input_buffer.begin() + 0);
 
-		return c;
+			return c;
+		}
 	}
 
 	return -1;

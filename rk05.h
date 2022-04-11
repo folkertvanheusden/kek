@@ -9,11 +9,9 @@
 #include <vector>
 
 #if defined(ESP32)
-#include <SPI.h>
-#define USE_SDFAT
-#define SD_FAT_TYPE 1
-#include <SdFat.h>
+#include "esp32.h"
 #endif
+
 
 // FIXME namen van defines
 #define RK05_DS		0177400	// drive status
