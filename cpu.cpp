@@ -1433,7 +1433,7 @@ void cpu::trap(const uint16_t vector, const int new_ipl)
 	D(fprintf(stderr, "TRAP %o: PC is now %06o, PSW is now %06o\n", vector, getPC(), new_psw);)
 }
 
-std::tuple<std::string, int, std::optional<uint16_t>, uint16_t> cpu::addressing_to_string(const uint8_t mode_register, const uint16_t pc, const bool word_mode)
+std::tuple<std::string, int, std::optional<uint16_t>, uint16_t> cpu::addressing_to_string(const uint8_t mode_register, const uint16_t pc, const bool word_mode) const
 {
 	assert(mode_register < 64);
 
@@ -1492,9 +1492,9 @@ std::tuple<std::string, int, std::optional<uint16_t>, uint16_t> cpu::addressing_
 	return { "??", 0, { }, 0123456 };
 }
 
-std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t addr)
+std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t addr) const
 {
-	bool old_debug_output = debug_output;
+	bool old_debug_output     = debug_output;
 	debug_output = false;
 
 	uint16_t    pc            = getPC();
@@ -1912,8 +1912,9 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 	return out;
 }
 
-void cpu::disassemble()
+void cpu::disassemble() const
 {
+#if !defined(ESP32)
 	auto data      = disassemble(pc);
 
 	auto registers = data["registers"];
@@ -1937,6 +1938,7 @@ void cpu::disassemble()
 				instruction.c_str(),
 				work_values.c_str()
 				);)
+#endif
 }
 
 void cpu::step()
@@ -1957,10 +1959,8 @@ void cpu::step()
 		busError();
 
 	try {
-#if !defined(ESP32)
 		if (disas)
 			disassemble();
-#endif
 
 		uint16_t instr = b->readWord(temp_pc);
 

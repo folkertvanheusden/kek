@@ -51,9 +51,9 @@ private:
 	bool condition_code_operations(const uint16_t instr);
 	bool misc_operations(const uint16_t instr);
 
-	std::tuple<std::string, int, std::optional<uint16_t>, uint16_t> addressing_to_string(const uint8_t mode_register, const uint16_t pc, const bool word_mode);
-	std::map<std::string, std::vector<std::string> > disassemble(const uint16_t addr);
-	void disassemble(void);
+	std::tuple<std::string, int, std::optional<uint16_t>, uint16_t> addressing_to_string(const uint8_t mode_register, const uint16_t pc, const bool word_mode) const;
+	std::map<std::string, std::vector<std::string> > disassemble(const uint16_t addr) const;
+	void disassemble(void) const;
 
 public:
 	explicit cpu(bus *const b, uint32_t *const event);
