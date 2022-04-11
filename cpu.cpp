@@ -48,11 +48,6 @@ void cpu::reset()
 	runMode = false;
 }
 
-void cpu::setDisassemble(const bool state)
-{
-	disas = state;
-}
-
 uint16_t cpu::getRegister(const int nr, const bool prev_mode) const
 {
 	if (nr < 6)
@@ -1494,8 +1489,8 @@ cpu::operand_parameters cpu::addressing_to_string(const uint8_t mode_register, c
 
 std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t addr) const
 {
-	bool old_debug_output     = debug_output;
-	debug_output = false;
+	bool old_trace_output     = trace_output;
+	trace_output = false;
 
 	uint16_t    pc            = getPC();
 	uint16_t    instruction   = b->peekWord(pc);
@@ -1907,7 +1902,7 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 		work_values_str.push_back(format("%06o", v));
 	out.insert({ "work-values", work_values_str });
 
-	debug_output = old_debug_output;
+	trace_output = old_trace_output;
 
 	return out;
 }
@@ -1959,9 +1954,6 @@ void cpu::step()
 		busError();
 
 	try {
-		if (disas)
-			disassemble();
-
 		uint16_t instr = b->readWord(temp_pc);
 
 		addRegister(7, false, 2);

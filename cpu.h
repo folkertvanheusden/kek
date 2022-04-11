@@ -13,7 +13,6 @@
 class cpu
 {
 private:
-	bool     disas { false };
 	uint16_t regs0_5[2][6]; // R0...5, selected by bit 11 in PSW, 
 	uint16_t sp[3 + 1]; // stackpointers, MF../MT.. select via 12/13 from PSW, others via 14/15
 	uint16_t pc    { 0 };
@@ -63,7 +62,6 @@ public:
 	explicit cpu(bus *const b, uint32_t *const event);
 	~cpu();
 
-	void setDisassemble(const bool state);
 	void disassemble(void) const;
 	std::map<std::string, std::vector<std::string> > disassemble(const uint16_t addr) const;
 

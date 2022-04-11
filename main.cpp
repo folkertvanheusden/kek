@@ -22,7 +22,7 @@ bool              withUI       { false };
 uint32_t          event        { 0 };
 std::atomic_bool  terminate    { false };
 std::atomic_bool *running      { nullptr };
-bool              debug_output { false };
+bool              trace_output { false };
 
 void loadbin(bus *const b, uint16_t base, const char *const file)
 {
@@ -148,7 +148,8 @@ void help()
 	printf("-p 123   set CPU start pointer to decimal(!) value\n");
 	printf("-L f.bin load file into memory at address given by -p (and run it)\n");
 	printf("-n       ncurses UI\n");
-	printf("-d       enable disassemble\n");
+	printf("-d       enable debugger\n");
+	printf("-t       enable tracing (disassemble to stderr, requires -d as well)\n");
 }
 
 int main(int argc, char *argv[])
@@ -163,7 +164,9 @@ int main(int argc, char *argv[])
 
 	std::vector<std::string> rk05_files;
 	bool testCases = false;
-	int opt = -1;
+	bool debugger  = false;
+	bool tracing   = false;
+	int  opt       = -1;
 	while((opt = getopt(argc, argv, "hm:T:R:p:ndL:")) != -1)
 	{
 		switch(opt) {
@@ -172,8 +175,12 @@ int main(int argc, char *argv[])
 				return 1;
 
 			case 'd':
-				c->setDisassemble(true);
-				debug_output = true;
+				debugger = true;
+				break;
+
+			case 't':
+				tracing      = true;
+				trace_output = true;
 				break;
 
 			case 'n':
@@ -261,8 +268,18 @@ int main(int argc, char *argv[])
 
 	c->emulation_start();  // for statistics
 
-	while(!event && !terminate)
-		c->step();
+	if (debugger) {
+		while(!event && !terminate) {
+			if (tracing)
+				c->disassemble();
+
+			c->step();
+		}
+	}
+	else {
+		while(!event && !terminate)
+			c->step();
+	}
 
 	*running = false;
 
