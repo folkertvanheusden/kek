@@ -173,13 +173,9 @@ void setup() {
 	Serial.println(F("Press <enter> to start"));
 
 	for(;;) {
-		if (Serial.available()) {
-			int c = Serial.read();
-			if (c == 13 || c == 10)
+		int c = cnsl->get_char();
+		if (c == 13 || c == 10)
 				break;
-		}
-
-		delay(1);
 	}
 
 	Serial.println(F("Emulation starting!"));
