@@ -4,7 +4,6 @@
 
 #include <assert.h>
 #include <map>
-#include <optional>
 #include <set>
 #include <stdint.h>
 #include <vector>
@@ -51,7 +50,14 @@ private:
 	bool condition_code_operations(const uint16_t instr);
 	bool misc_operations(const uint16_t instr);
 
-	std::tuple<std::string, int, std::optional<uint16_t>, uint16_t> addressing_to_string(const uint8_t mode_register, const uint16_t pc, const bool word_mode) const;
+	struct operand_parameters {
+		std::string operand;
+		int         length;
+		int         instruction_part;
+		uint16_t    work_value;
+	};
+
+	operand_parameters addressing_to_string(const uint8_t mode_register, const uint16_t pc, const bool word_mode) const;
 	std::map<std::string, std::vector<std::string> > disassemble(const uint16_t addr) const;
 	void disassemble(void) const;
 
