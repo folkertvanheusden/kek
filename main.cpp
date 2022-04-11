@@ -18,10 +18,11 @@
 #include "utils.h"
 
 
-bool              withUI    { false };
-uint32_t          event     { 0 };
-std::atomic_bool  terminate { false };
-std::atomic_bool *running   { nullptr };
+bool              withUI       { false };
+uint32_t          event        { 0 };
+std::atomic_bool  terminate    { false };
+std::atomic_bool *running      { nullptr };
+bool              debug_output { false };
 
 void loadbin(bus *const b, uint16_t base, const char *const file)
 {
@@ -172,6 +173,7 @@ int main(int argc, char *argv[])
 
 			case 'd':
 				c->setDisassemble(true);
+				debug_output = true;
 				break;
 
 			case 'n':
