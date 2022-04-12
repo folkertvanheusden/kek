@@ -98,6 +98,9 @@ std::string console::read_line(const std::string & prompt)
 	for(;;) {
 		char c = wait_char(500);
 
+		if (*terminate || stop_thread_flag)
+			return "";
+
 		if (c == -1)
 			continue;
 
@@ -193,7 +196,7 @@ void console::operator()()
 			continue;
 
 		if (c == 3)  // ^c
-			*terminate = true;
+			*interrupt_emulation = *terminate = true;
 		else if (c == 5)  // ^e
 			*interrupt_emulation = true;
 		else if (c == 12)  // ^l

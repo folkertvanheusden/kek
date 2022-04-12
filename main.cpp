@@ -274,8 +274,14 @@ int main(int argc, char *argv[])
 	else {
 		c->emulation_start();  // for statistics
 
-		while(!event && !terminate)
+		while(!event) {
+			if (interrupt_emulation) {
+				if (terminate)
+					break;
+			}
+
 			c->step();
+		}
 	}
 
 	*running = false;

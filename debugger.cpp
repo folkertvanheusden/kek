@@ -170,7 +170,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_bool *const interru
 
 		c->emulation_start();
 
-		while(!event && !terminate && !*interrupt_emulation) {
+		while(!event && !*interrupt_emulation) {
 			if (tracing || single_step)
 				disassemble(c, single_step ? cnsl : nullptr, c->getPC(), false);
 
