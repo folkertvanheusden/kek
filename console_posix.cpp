@@ -47,9 +47,7 @@ void console_posix::put_char_ll(const char c)
 
 void console_posix::put_string_lf(const std::string & what)
 {
-	put_string(what);
-
-	put_string("\r\n");
+	put_string(what + "\r\n");
 }
 
 void console_posix::resize_terminal()

@@ -67,6 +67,7 @@ public:
 	bool check_breakpoint();
 	void set_breakpoint(const uint16_t addr);
 	void remove_breakpoint(const uint16_t addr);
+	std::set<uint16_t> list_breakpoints();
 
 	void disassemble(void) const;
 	std::map<std::string, std::vector<std::string> > disassemble(const uint16_t addr) const;

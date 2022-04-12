@@ -3,6 +3,7 @@
 #include <atomic>
 #include <signal.h>
 #include <stdlib.h>
+#include <string>
 #include <string.h>
 #include <unistd.h>
 
@@ -127,10 +128,10 @@ uint16_t loadTape(bus *const b, const char *const file)
 	return start;
 }
 
-void disassemble(cpu *const c, console *const cnsl)
+// returns size of instruction (in bytes)
+int disassemble(cpu *const c, console *const cnsl, const int pc, const bool instruction_only)
 {
-#if !defined(ESP32)
-	auto data      = c->disassemble(c->getPC());
+	auto data      = c->disassemble(pc);
 
 	auto registers = data["registers"];
 	auto psw       = data["psw"][0];
@@ -145,9 +146,19 @@ void disassemble(cpu *const c, console *const cnsl)
 
 	std::string instruction = data["instruction-text"].at(0);
 
-	std::string result = format("R0: %s, R1: %s, R2: %s, R3: %s, R4: %s, R5: %s, SP: %s, PC: %s, PSW: %s, instr: %s: %s - %s",
+	std::string result;
+
+	if (instruction_only)
+		result = format("PC: %06o, instr: %s\t%s\t%s",
+				pc,
+				instruction_values.c_str(),
+				instruction.c_str(),
+				work_values.c_str()
+				);
+	else
+		result = format("R0: %s, R1: %s, R2: %s, R3: %s, R4: %s, R5: %s, SP: %s, PC: %06o, PSW: %s, instr: %s: %s - %s",
 				registers[0].c_str(), registers[1].c_str(), registers[2].c_str(), registers[3].c_str(), registers[4].c_str(), registers[5].c_str(),
-				registers[6].c_str(), registers[7].c_str(), 
+				registers[6].c_str(), pc, 
 				psw.c_str(),
 				instruction_values.c_str(),
 				instruction.c_str(),
@@ -158,7 +169,24 @@ void disassemble(cpu *const c, console *const cnsl)
 		cnsl->debug(result);
 	else
 		fprintf(stderr, "%s\n", result.c_str());
-#endif
+
+	return data["instruction-values"].size() * 2;
+}
+
+std::map<std::string, std::string> split(const std::vector<std::string> & kv_array, const std::string & splitter)
+{
+	std::map<std::string, std::string> out;
+
+	for(auto pair : kv_array) {
+		auto kv = split(pair, splitter);
+
+		if (kv.size() == 1)
+			out.insert({ kv[0], "" });
+		else if (kv.size() == 2)
+			out.insert({ kv[0], kv[1] });
+	}
+
+	return out;
 }
 
 volatile bool sw = false;
@@ -310,13 +338,43 @@ int main(int argc, char *argv[])
 			bool        temp  = terminate;
 			std::string cmd   = cnsl->read_line(format("%d%d", event, temp));
 			auto        parts = split(cmd, " ");
+			auto        kv    = split(parts, "=");
 
 			if (cmd == "go")
 				single_step = false;
 			else if (cmd == "single" || cmd == "s")
 				single_step = true;
-			else if (cmd == "disassemble" || cmd == "d") {
-				disassemble(c, single_step ? cnsl : nullptr);
+			else if ((cmd == "sbp" || cmd == "cbp") && parts.size() == 2){
+				uint16_t pc = std::stoi(parts.at(1).c_str());
+
+				if (cmd == "sbp") {
+					c->set_breakpoint(pc);
+
+					cnsl->put_string_lf(format("Set breakpoint at %06o", pc));
+				}
+				else {
+					c->remove_breakpoint(pc);
+
+					cnsl->put_string_lf(format("Clear breakpoint at %06o", pc));
+				}
+
+				continue;
+			}
+			else if (cmd == "lbp") {
+				auto bps = c->list_breakpoints();
+
+				cnsl->put_string_lf("Breakpoints:");
+
+				for(auto pc : bps)
+					cnsl->put_string_lf(format("   %06o", pc));
+			}
+			else if (parts[0] == "disassemble" || parts[0] == "d") {
+				int pc = kv.find("pc") != kv.end() ? std::stoi(kv.find("pc")->second, nullptr, 8)  : c->getPC();
+				int n  = kv.find("n")  != kv.end() ? std::stoi(kv.find("n") ->second, nullptr, 10) : 1;
+
+				for(int i=0; i<n; i++)
+					pc += disassemble(c, cnsl, pc, true);
+
 				continue;
 			}
 			else if (cmd == "reset" || cmd == "r") {
@@ -331,11 +389,12 @@ int main(int argc, char *argv[])
 			else if (cmd == "quit" || cmd == "q")
 				break;
 			else if (cmd == "help") {
-				cnsl->put_string_lf("disassemble/d - show current instruction");
+				cnsl->put_string_lf("disassemble/d - show current instruction (pc=/n=)");
 				cnsl->put_string_lf("go            - run until trap or ^e");
 				cnsl->put_string_lf("quit/q        - stop emulator");
 				cnsl->put_string_lf("reset/r       - reset cpu/bus/etc");
 				cnsl->put_string_lf("single/s      - run 1 instruction (implicit 'disassemble' command)");
+				cnsl->put_string_lf("sbp/cbp/lbp   - set/clear/list breakpoint(s)");
 
 				continue;
 			}
@@ -346,7 +405,7 @@ int main(int argc, char *argv[])
 
 			while(!event && !terminate && !interrupt_emulation) {
 				if (tracing || single_step)
-					disassemble(c, single_step ? cnsl : nullptr);
+					disassemble(c, single_step ? cnsl : nullptr, c->getPC(), false);
 
 				if (c->check_breakpoint() && !single_step)
 					break;

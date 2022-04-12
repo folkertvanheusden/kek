@@ -45,6 +45,11 @@ void cpu::remove_breakpoint(const uint16_t addr)
 	breakpoints.erase(addr);
 }
 
+std::set<uint16_t> cpu::list_breakpoints()
+{
+	return breakpoints;
+}
+
 uint64_t cpu::get_instructions_executed_count()
 {
 	// this may wreck havoc as it is not protected by a mutex
@@ -1507,8 +1512,7 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 	bool old_trace_output     = trace_output;
 	trace_output = false;
 
-	uint16_t    pc            = getPC();
-	uint16_t    instruction   = b->peekWord(pc);
+	uint16_t    instruction   = b->peekWord(addr);
 
 	bool        word_mode     = !!(instruction & 0x8000);
 	std::string word_mode_str = word_mode ? "B" : "";
@@ -1531,7 +1535,7 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 	// TODO: 100000011
 
 	if (do_opcode == 0b000) {
-		auto dst_text { addressing_to_string(dst_register, (pc + 2) & 65535, word_mode) };
+		auto dst_text { addressing_to_string(dst_register, (addr + 2) & 65535, word_mode) };
 
 		auto next_word = dst_text.instruction_part;
 		if (next_word != -1)
@@ -1619,7 +1623,7 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 	}
 	else if (do_opcode == 0b111) {
 		std::string src_text = format("R%d", (instruction >> 6) & 7);
-		auto        dst_text { addressing_to_string(dst_register, (pc + 2) & 65535, word_mode) };
+		auto        dst_text { addressing_to_string(dst_register, (addr + 2) & 65535, word_mode) };
 
 		auto next_word = dst_text.instruction_part;
 		if (next_word != -1)
@@ -1687,7 +1691,7 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 		}
 
 		// source
-		auto src_text { addressing_to_string(src_register, (pc + 2) & 65535, word_mode) };
+		auto src_text { addressing_to_string(src_register, (addr + 2) & 65535, word_mode) };
 
 		auto next_word_src = src_text.instruction_part;
 		if (next_word_src != -1)
@@ -1696,7 +1700,7 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 		work_values.push_back(src_text.work_value);
 
 		// destination
-		auto dst_text { addressing_to_string(dst_register, (pc + src_text.length) & 65535, word_mode) };
+		auto dst_text { addressing_to_string(dst_register, (addr + src_text.length) & 65535, word_mode) };
 
 		auto next_word_dst = dst_text.instruction_part;
 		if (next_word_dst != -1)
@@ -1710,7 +1714,7 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 	if (text.empty()) {  // conditional branch instructions
 		uint8_t  cb_opcode = (instruction >> 8) & 255;
 		int8_t   offset    = instruction & 255;
-		uint16_t new_pc    = (pc + 2 + offset * 2) & 65535;
+		uint16_t new_pc    = (addr + 2 + offset * 2) & 65535;
 
 		switch(cb_opcode) {
 			case 0b00000001:
@@ -1847,7 +1851,7 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 			text = format("TRAP %o", instruction & 255);
 
 		if ((instruction & ~0b111111) == 0b0000000001000000) {
-			auto dst_text { addressing_to_string(dst_register, (pc + 2) & 65535, word_mode) };
+			auto dst_text { addressing_to_string(dst_register, (addr + 2) & 65535, word_mode) };
 
 			auto next_word = dst_text.instruction_part;
 			if (next_word != -1)
@@ -1859,7 +1863,7 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 		}
 
 		if ((instruction & 0b1111111000000000) == 0b0000100000000000) {
-			auto dst_text { addressing_to_string(dst_register, (pc + 2) & 65535, word_mode) };
+			auto dst_text { addressing_to_string(dst_register, (addr + 2) & 65535, word_mode) };
 
 			auto next_word = dst_text.instruction_part;
 			if (next_word != -1)
@@ -1901,7 +1905,7 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 		else if (i == 6)
 			registers.push_back(format("%06o", sp[psw >> 14]));
 		else
-			registers.push_back(format("%06o", pc));
+			registers.push_back(format("%06o", addr));
 	}
 
 	out.insert({ "registers", registers });
