@@ -9,30 +9,24 @@
 #include "utils.h"
 
 
-console_ncurses::console_ncurses(std::atomic_bool *const terminate, bus *const b) :
-	console(terminate, b)
+console_ncurses::console_ncurses(std::atomic_bool *const terminate, std::atomic_bool *const interrupt_emulation, bus *const b) :
+	console(terminate, interrupt_emulation, b)
 {
 	init_ncurses(true);
 
 	resize_terminal();
-
-	th       = new std::thread(std::ref(*this));
 
 	th_panel = new std::thread(&console_ncurses::panel_update_thread, this);
 }
 
 console_ncurses::~console_ncurses()
 {
+	stop_thread();
+
 	if (th_panel) {
 		th_panel->join();
 
 		delete th_panel;
-	}
-
-	if (th) {
-		th->join();
-
-		delete th;
 	}
 
 	std::unique_lock<std::mutex> lck(ncurses_mutex);
@@ -54,14 +48,19 @@ console_ncurses::~console_ncurses()
 	endwin();
 }
 
-int console_ncurses::wait_for_char(const short timeout)
+int console_ncurses::wait_for_char_ll(const short timeout)
 {
 	struct pollfd fds[] = { { STDIN_FILENO, POLLIN, 0 } };
 
 	if (poll(fds, 1, timeout) == 1 && fds[0].revents) {
 		std::unique_lock<std::mutex> lck(ncurses_mutex);
 
-		return getch();
+		int c = getch();
+
+		if (c == ERR)
+			return -1;
+
+		return c;
 	}
 
 	return -1;
@@ -78,6 +77,13 @@ void console_ncurses::put_char_ll(const char c)
 
 		mydoupdate();
 	}
+}
+
+void console_ncurses::put_string_lf(const std::string & what)
+{
+	put_string(what);
+
+	put_string("\n");
 }
 
 void console_ncurses::resize_terminal()
@@ -107,7 +113,7 @@ void console_ncurses::resize_terminal()
 
 	create_win_border(0, 0, 80, 25, "terminal", &w_main_b, &w_main, false);
 
-	create_win_border(0, 27, 80, 3, "panel", &w_panel_b, &w_panel, false);
+	create_win_border(0, 27, 100, 4, "panel", &w_panel_b, &w_panel, false);
 
 	scrollok(w_main -> win, TRUE);
 
@@ -116,6 +122,8 @@ void console_ncurses::resize_terminal()
 
 void console_ncurses::panel_update_thread()
 {
+	set_thread_name("kek:c-panel");
+
 	cpu *const c = b->getCpu();
 
 	uint64_t prev_instr_cnt = c->get_instructions_executed_count();
@@ -134,8 +142,13 @@ void console_ncurses::panel_update_thread()
 
 		uint16_t current_instr = b->readWord(current_PC);
 
+		auto data = c->disassemble(current_PC);
+
 		std::unique_lock<std::mutex> lck(ncurses_mutex);
 
+		werase(w_panel->win);
+
+		//
 		wattron(w_panel->win, COLOR_PAIR(1 + run_mode));
 
 		for(uint8_t b=0; b<22; b++)
@@ -158,12 +171,38 @@ void console_ncurses::panel_update_thread()
 
 		wattron(w_panel->win, COLOR_PAIR(0));
 
+		// disassembler
+		auto registers = data["registers"];
+		auto psw       = data["psw"][0];
+
+		std::string instruction_values;
+		for(auto iv : data["instruction-values"])
+			instruction_values += (instruction_values.empty() ? "" : ",") + iv;
+
+		std::string work_values;
+		for(auto wv : data["work-values"])
+			work_values += (work_values.empty() ? "" : ",") + wv;
+
+		std::string instruction = data["instruction-text"].at(0);
+
+		mvwprintw(w_panel->win, 2, 1, "R0: %s, R1: %s, R2: %s, R3: %s, R4: %s, R5: %s, SP: %s, PC: %s",
+				registers[0].c_str(), registers[1].c_str(), registers[2].c_str(), registers[3].c_str(), registers[4].c_str(), registers[5].c_str(),
+				registers[6].c_str(), registers[7].c_str()); 
+		mvwprintw(w_panel->win, 3, 1, "PSW: %s, instr: %s",
+				psw.c_str(),
+				instruction_values.c_str());
+		mvwprintw(w_panel->win, 3, 46, "%s - %s",
+				instruction.c_str(),
+				work_values.c_str());
+
+		// speed
 		uint64_t cur_instr_cnt = c->get_instructions_executed_count();
 
 		mvwprintw(w_panel->win, 1, 1 + 39, "%8ld", (cur_instr_cnt - prev_instr_cnt) * refresh_rate);
 
 		prev_instr_cnt = cur_instr_cnt;
 
+		// ncurses
 		wmove(w_main->win, ty, tx);
 
 		mydoupdate();

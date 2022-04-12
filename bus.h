@@ -54,14 +54,15 @@ public:
 
 	void init();  // invoked by 'RESET' command
 
-	uint16_t read(const uint16_t a, const bool word_mode, const bool use_prev=false);
-	uint16_t readByte(const uint16_t a) { return read(a, true); }
+	uint16_t read(const uint16_t a, const bool word_mode, const bool use_prev, const bool peek_only=false);
+	uint16_t readByte(const uint16_t a) { return read(a, true, false); }
 	uint16_t readWord(const uint16_t a);
+	uint16_t peekWord(const uint16_t a);
 
 	uint16_t readUnibusByte(const uint16_t a);
 
-	uint16_t write(const uint16_t a, const bool word_mode, uint16_t value, const bool use_prev=false);
-	uint8_t writeByte(const uint16_t a, const uint8_t value) { return write(a, true, value); }
+	uint16_t write(const uint16_t a, const bool word_mode, uint16_t value, const bool use_prev);
+	uint8_t writeByte(const uint16_t a, const uint8_t value) { return write(a, true, value, false); }
 	uint16_t writeWord(const uint16_t a, const uint16_t value);
 
 	void writeUnibusByte(const uint16_t a, const uint8_t value);

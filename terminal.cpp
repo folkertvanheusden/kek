@@ -53,7 +53,7 @@ void init_ncurses(bool init_mouse)
         noecho();
         nonl();
         refresh();
-        nodelay(stdscr, FALSE);
+        nodelay(stdscr, TRUE);
         meta(stdscr, TRUE);     /* enable 8-bit input */
         raw();  /* to be able to catch ctrl+c */
 	leaveok(stdscr, FALSE);

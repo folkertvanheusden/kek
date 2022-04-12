@@ -6,13 +6,13 @@
 #include <map>
 #include <set>
 #include <stdint.h>
+#include <vector>
 
 #include "bus.h"
 
 class cpu
 {
 private:
-	bool     disas { false };
 	uint16_t regs0_5[2][6]; // R0...5, selected by bit 11 in PSW, 
 	uint16_t sp[3 + 1]; // stackpointers, MF../MT.. select via 12/13 from PSW, others via 14/15
 	uint16_t pc    { 0 };
@@ -28,11 +28,13 @@ private:
 	// level, vector
 	std::map<uint8_t, std::set<uint8_t> > queued_interrupts;
 
+	std::set<uint16_t> breakpoints;
+
 	bus *const b { nullptr };
 
 	uint32_t *const event { nullptr };
 
-	void check_queued_interrupts();
+	bool check_queued_interrupts();
 
 	uint16_t getRegister(const int nr, const bool MF_MT) const;
 	void setRegister(const int nr, const bool MF_MT, const uint16_t value);
@@ -49,19 +51,32 @@ private:
 	bool condition_code_operations(const uint16_t instr);
 	bool misc_operations(const uint16_t instr);
 
-	std::pair<std::string, int> addressing_to_string(const uint8_t mode_register, const uint16_t pc);
-	void disassemble();
+	struct operand_parameters {
+		std::string operand;
+		int         length;
+		int         instruction_part;
+		uint16_t    work_value;
+	};
+
+	operand_parameters addressing_to_string(const uint8_t mode_register, const uint16_t pc, const bool word_mode) const;
 
 public:
 	explicit cpu(bus *const b, uint32_t *const event);
 	~cpu();
 
-	void setDisassemble(const bool state);
+	bool check_breakpoint();
+	void set_breakpoint(const uint16_t addr);
+	void remove_breakpoint(const uint16_t addr);
+	std::set<uint16_t> list_breakpoints();
+
+	void disassemble(void) const;
+	std::map<std::string, std::vector<std::string> > disassemble(const uint16_t addr) const;
 
 	bus *getBus() { return b; }
 
 	void emulation_start();
 	uint64_t get_instructions_executed_count();
+	std::pair<double, double> get_mips_rel_speed();
 
 	void reset();
 

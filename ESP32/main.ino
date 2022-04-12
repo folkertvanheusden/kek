@@ -11,6 +11,7 @@
 
 #include "console_esp32.h"
 #include "cpu.h"
+#include "debugger.h"
 #include "error.h"
 #include "esp32.h"
 #include "memory.h"
@@ -29,9 +30,14 @@ uint16_t exec_addr = 0;
 
 uint32_t start_ts  = 0;
 
-std::atomic_bool terminate { false };
+SdFat32  sd;
 
-std::atomic_bool *running  { nullptr };
+std::atomic_bool terminate           { false };
+std::atomic_bool interrupt_emulation { false };
+
+std::atomic_bool *running            { nullptr };
+
+bool              trace_output       { false };
 
 // std::atomic_bool on_wifi   { false };
 
@@ -58,11 +64,18 @@ void setBootLoader(bus *const b) {
 	c->setRegister(7, offset);
 }
 
-void console_thread_wrapper(void *const c)
+void console_thread_wrapper_panel(void *const c)
 {
 	console *const cnsl = reinterpret_cast<console *>(c);
 
 	cnsl->panel_update_thread();
+}
+
+void console_thread_wrapper_io(void *const c)
+{
+	console *const cnsl = reinterpret_cast<console *>(c);
+
+	cnsl->operator()();
 }
 
 void setup_wifi_stations()
@@ -115,6 +128,40 @@ void setup_wifi_stations()
 #endif
 }
 
+std::vector<std::string> select_disk_files(console *const c)
+{
+	c->debug("MISO: %d", int(MISO));
+	c->debug("MOSI: %d", int(MOSI));
+	c->debug("SCK : %d", int(SCK ));
+	c->debug("SS  : %d", int(SS  ));
+
+	c->put_string_lf("Files on SD-card:");
+
+	if (!sd.begin(SS, SD_SCK_MHZ(15)))
+		sd.initErrorHalt();
+
+	for(;;) {
+		sd.ls("/", LS_DATE | LS_SIZE | LS_R);
+
+		c->flush_input();
+
+		std::string selected_file = c->read_line("Enter filename: ");
+
+		c->put_string("Opening file: ");
+		c->put_string_lf(selected_file.c_str());
+
+		File32 fh;
+
+		if (fh.open(selected_file.c_str(), O_RDWR)) {
+			fh.close();
+
+			return { selected_file };
+		}
+
+		c->put_string_lf("open failed");
+	}
+}
+
 void setup() {
 	Serial.begin(115200);
 
@@ -143,7 +190,7 @@ void setup() {
 	c->setEmulateMFPT(true);
 
 	Serial.println(F("Init console"));
-	cnsl = new console_esp32(&terminate, b);
+	cnsl = new console_esp32(&terminate, &interrupt_emulation, b);
 
 	running = cnsl->get_running_flag();
 
@@ -155,12 +202,17 @@ void setup() {
 	Serial.print(F("Starting panel (on CPU 0, main emulator runs on CPU "));
 	Serial.print(xPortGetCoreID());
 	Serial.println(F(")"));
-	xTaskCreatePinnedToCore(&console_thread_wrapper, "panel", 2048, cnsl, 1, nullptr, 0);
+	xTaskCreatePinnedToCore(&console_thread_wrapper_panel, "panel", 2048, cnsl, 1, nullptr, 0);
+
+	xTaskCreatePinnedToCore(&console_thread_wrapper_io,    "c-io",  2048, cnsl, 1, nullptr, 0);
 
 	// setup_wifi_stations();
 
 	Serial.println(F("Load RK05"));
-	b->add_rk05(new rk05({ }, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
+	auto disk_files = select_disk_files(cnsl);
+
+	b->add_rk05(new rk05(disk_files, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
+
 	setBootLoader(b);
 
 	Serial.print(F("Free RAM after init: "));
@@ -170,17 +222,7 @@ void setup() {
 
 	Serial.flush();
 
-	Serial.println(F("Press <enter> to start"));
-
-	for(;;) {
-		if (Serial.available()) {
-			int c = Serial.read();
-			if (c == 13 || c == 10)
-				break;
-		}
-
-		delay(1);
-	}
+	cnsl->start_thread();
 
 	Serial.println(F("Emulation starting!"));
 
@@ -189,79 +231,8 @@ void setup() {
 	*running = true;
 }
 
-uint32_t icount = 0;
-
-void dump_state(bus *const b) {
-	cpu *const c = b->getCpu();
-
-	uint32_t now = millis();
-	uint32_t t_diff = now - start_ts;
-
-	double mips = icount / (1000.0 * t_diff);
-
-	// see https://retrocomputing.stackexchange.com/questions/6960/what-was-the-clock-speed-and-ips-for-the-original-pdp-11
-	constexpr double pdp11_clock_cycle = 150;  // ns, for the 11/70
-	constexpr double pdp11_mhz = 1000.0 / pdp11_clock_cycle; 
-	constexpr double pdp11_avg_cycles_per_instruction = (1 + 5) / 2.0;
-	constexpr double pdp11_estimated_mips = pdp11_mhz / pdp11_avg_cycles_per_instruction;
-
-	Serial.print(F("MIPS: "));
-	Serial.println(mips);
-
-	Serial.print(F("emulation speed (aproximately): "));
-	Serial.print(mips * 100 / pdp11_estimated_mips);
-	Serial.println('%');
-
-	Serial.print(F("PC: "));
-	Serial.println(c->getPC());
-
-	Serial.print(F("Uptime (ms): "));
-	Serial.println(t_diff);
-}
-
-bool poll_char()
-{
-	return Serial.available() > 0;
-}
-
-char get_char()
-{
-	char c = Serial.read();
-
-	if (c == 5)
-		dump_state(b);
-
-	return c;
-}
-
-void put_char(char c)
-{
-	Serial.print(c);
-}
-
 void loop() {
-	icount++;
+	debugger(cnsl, b, &interrupt_emulation, false);
 
-	c->step();
-
-	if (event || terminate) {
-		*running = false;
-
-		Serial.println(F(""));
-		Serial.println(F(" *** EMULATION STOPPED *** "));
-		dump_state(b);
-		delay(3000);
-		Serial.println(F(" *** EMULATION RESTARTING *** "));
-
-		c->reset();
-		c->setRegister(7, exec_addr);
-
-		start_ts = millis();
-		icount = 0;
-
-		terminate = false;
-		event     = 0;
-
-		*running   = true;
-	}
+	c->reset();
 }

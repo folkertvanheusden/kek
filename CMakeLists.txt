@@ -13,6 +13,7 @@ add_executable(
   console_ncurses.cpp
   console_posix.cpp
   cpu.cpp
+  debugger.cpp
   error.cpp
   main.cpp
   memory.cpp

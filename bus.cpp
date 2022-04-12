@@ -49,7 +49,7 @@ void bus::init()
 	MMR3 = 0;
 }
 
-uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev)
+uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, const bool peek_only)
 {
 	uint16_t temp = 0;
 
@@ -304,7 +304,7 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev)
 
 	int run_mode = (c->getPSW() >> (use_prev ? 12 : 14)) & 3;
 
-	uint32_t m_offset = calculate_physical_address(run_mode, a, true);
+	uint32_t m_offset = calculate_physical_address(run_mode, a, !peek_only);
 
 	if (word_mode)
 		temp = m -> readByte(m_offset);
@@ -389,12 +389,12 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 
 			if (a == 0177774 || a == 0177775) { // stack limit register
 				D(fprintf(stderr, "writeb Set stack limit register: %o\n", value);)
-					uint16_t v = c -> getStackLimitRegister();
+				uint16_t v = c -> getStackLimitRegister();
 
 				if (a & 1)
-					v = (v & 0xff00) | value;
-				else
 					v = (v & 0x00ff) | (value << 8);
+				else
+					v = (v & 0xff00) | value;
 
 				c -> setStackLimitRegister(v);
 				return v;
@@ -403,7 +403,7 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 		else {
 			if (a == 0177776) { // PSW
 				D(fprintf(stderr, "write PSW %o\n", value);)
-					c -> setPSW(value, false);
+				c -> setPSW(value, false);
 				return value;
 			}
 
@@ -653,12 +653,17 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 
 uint16_t bus::readWord(const uint16_t a)
 {
-	return read(a, false);
+	return read(a, false, false, false);
+}
+
+uint16_t bus::peekWord(const uint16_t a)
+{
+	return read(a, false, false, true);
 }
 
 uint16_t bus::writeWord(const uint16_t a, const uint16_t value)
 {
-	return write(a, false, value);
+	return write(a, false, value, false);
 }
 
 uint16_t bus::readUnibusByte(const uint16_t a)

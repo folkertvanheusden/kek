@@ -9,11 +9,9 @@
 #include <vector>
 
 #if defined(ESP32)
-#include <SPI.h>
-#define USE_SDFAT
-#define SD_FAT_TYPE 1
-#include <SdFat.h>
+#include "esp32.h"
 #endif
+
 
 // FIXME namen van defines
 #define RK05_DS		0177400	// drive status
@@ -35,8 +33,7 @@ private:
 	uint16_t registers[7];
 	uint8_t xfer_buffer[512];
 #if defined(ESP32)
-	SdFat32 sd;
-	File32 fh;
+	std::vector<File32 *> fhs;
 #else
 	std::vector<FILE *> fhs;
 #endif

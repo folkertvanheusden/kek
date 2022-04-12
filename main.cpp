@@ -3,6 +3,7 @@
 #include <atomic>
 #include <signal.h>
 #include <stdlib.h>
+#include <string>
 #include <string.h>
 #include <unistd.h>
 
@@ -10,6 +11,7 @@
 #include "console_ncurses.h"
 #include "console_posix.h"
 #include "cpu.h"
+#include "debugger.h"
 #include "gen.h"
 #include "memory.h"
 #include "terminal.h"
@@ -18,10 +20,11 @@
 #include "utils.h"
 
 
-bool              withUI    { false };
-uint32_t          event     { 0 };
-std::atomic_bool  terminate { false };
-std::atomic_bool *running   { nullptr };
+bool              withUI       { false };
+uint32_t          event        { 0 };
+std::atomic_bool  terminate    { false };
+std::atomic_bool *running      { nullptr };
+bool              trace_output { false };
 
 void loadbin(bus *const b, uint16_t base, const char *const file)
 {
@@ -147,7 +150,8 @@ void help()
 	printf("-p 123   set CPU start pointer to decimal(!) value\n");
 	printf("-L f.bin load file into memory at address given by -p (and run it)\n");
 	printf("-n       ncurses UI\n");
-	printf("-d       enable disassemble\n");
+	printf("-d       enable debugger\n");
+	printf("-t       enable tracing (disassemble to stderr, requires -d as well)\n");
 }
 
 int main(int argc, char *argv[])
@@ -161,9 +165,11 @@ int main(int argc, char *argv[])
 	c -> setEmulateMFPT(true);
 
 	std::vector<std::string> rk05_files;
-	bool testCases = false;
-	int opt = -1;
-	while((opt = getopt(argc, argv, "hm:T:R:p:ndL:")) != -1)
+	bool testCases    = false;
+	bool run_debugger = false;
+	bool tracing      = false;
+	int  opt          = -1;
+	while((opt = getopt(argc, argv, "hm:T:R:p:ndtL:")) != -1)
 	{
 		switch(opt) {
 			case 'h':
@@ -171,7 +177,12 @@ int main(int argc, char *argv[])
 				return 1;
 
 			case 'd':
-				c->setDisassemble(true);
+				run_debugger = true;
+				break;
+
+			case 't':
+				tracing      = true;
+				trace_output = true;
 				break;
 
 			case 'n':
@@ -211,14 +222,16 @@ int main(int argc, char *argv[])
 
 	console *cnsl = nullptr;
 
+	std::atomic_bool interrupt_emulation { false };
+
 	if (withUI)
-		cnsl = new console_ncurses(&terminate, b);
+		cnsl = new console_ncurses(&terminate, &interrupt_emulation, b);
 	else {
 		fprintf(stderr, "This PDP-11 emulator is called \"kek\" (reason for that is forgotten) and was written by Folkert van Heusden.\n");
 
 		fprintf(stderr, "Built on: " __DATE__ " " __TIME__ "\n");
 
-		cnsl = new console_posix(&terminate, b);
+		cnsl = new console_posix(&terminate, &interrupt_emulation, b);
 	}
 
 	if (rk05_files.empty() == false) {
@@ -243,9 +256,8 @@ int main(int argc, char *argv[])
 	sigemptyset(&sa.sa_mask);
 	sa.sa_flags = SA_RESTART;
 
-	if (withUI) {
+	if (withUI)
 		sigaction(SIGWINCH, &sa, nullptr);
-	}
 
 	sigaction(SIGTERM, &sa, nullptr);
 	sigaction(SIGINT , &sa, nullptr);
@@ -255,10 +267,16 @@ int main(int argc, char *argv[])
 //	loadbin(b, 0, "test.dat");
 //	c->setRegister(7, 0);
 
-	c->emulation_start();  // for statistics
+	cnsl->start_thread();
 
-	while(!event && !terminate)
-		c->step();
+	if (run_debugger)
+		debugger(cnsl, b, &interrupt_emulation, tracing);
+	else {
+		c->emulation_start();  // for statistics
+
+		while(!event && !terminate)
+			c->step();
+	}
 
 	*running = false;
 

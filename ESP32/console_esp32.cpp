@@ -10,22 +10,17 @@
 
 #define NEOPIXELS_PIN	25
 
-console_esp32::console_esp32(std::atomic_bool *const terminate, bus *const b) :
-	console(terminate, b)
+console_esp32::console_esp32(std::atomic_bool *const terminate, std::atomic_bool *const interrupt_emulation, bus *const b) :
+	console(terminate, interrupt_emulation, b)
 {
-	th = new std::thread(std::ref(*this));
 }
 
 console_esp32::~console_esp32()
 {
-	if (th) {
-		th->join();
-
-		delete th;
-	}
+	stop_thread();
 }
 
-int console_esp32::wait_for_char(const short timeout)
+int console_esp32::wait_for_char_ll(const short timeout)
 {
 	for(short i=0; i<timeout / 10; i++) {
 		if (Serial.available())
@@ -40,6 +35,13 @@ int console_esp32::wait_for_char(const short timeout)
 void console_esp32::put_char_ll(const char c)
 {
 	Serial.print(c);
+}
+
+void console_esp32::put_string_lf(const std::string & what)
+{
+	put_string(what);
+
+	put_string("\r\n");
 }
 
 void console_esp32::resize_terminal()
