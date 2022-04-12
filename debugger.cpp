@@ -135,22 +135,23 @@ void debugger(console *const cnsl, bus *const b, std::atomic_bool *const interru
 			continue;
 		}
 		else if (cmd == "reset" || cmd == "r") {
+#if defined(ESP32)
+			ESP.restart();
+#else
 			terminate = false;
 
 			event = 0;
 
 			c->reset();
-
-#if defined(ESP32)
-			setBootLoader(b);
 #endif
-
 			continue;
 		}
-#if !defined(ESP32)
-		else if (cmd == "quit" || cmd == "q")
-			break;
+		else if (cmd == "quit" || cmd == "q") {
+#if defined(ESP32)
+			ESP.restart();
 #endif
+			break;
+		}
 		else if (cmd == "help" || cmd == "h" || cmd == "?") {
 			cnsl->put_string_lf("disassemble/d - show current instruction (pc=/n=)");
 			cnsl->put_string_lf("go            - run until trap or ^e");
