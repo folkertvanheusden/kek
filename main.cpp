@@ -340,14 +340,17 @@ int main(int argc, char *argv[])
 			auto        parts = split(cmd, " ");
 			auto        kv    = split(parts, "=");
 
+			if (parts.empty())
+				continue;
+
 			if (cmd == "go")
 				single_step = false;
 			else if (cmd == "single" || cmd == "s")
 				single_step = true;
-			else if ((cmd == "sbp" || cmd == "cbp") && parts.size() == 2){
-				uint16_t pc = std::stoi(parts.at(1).c_str());
+			else if ((parts[0] == "sbp" || parts[0] == "cbp") && parts.size() == 2){
+				uint16_t pc = std::stoi(parts[1].c_str(), nullptr, 8);
 
-				if (cmd == "sbp") {
+				if (parts[0] == "sbp") {
 					c->set_breakpoint(pc);
 
 					cnsl->put_string_lf(format("Set breakpoint at %06o", pc));
@@ -365,8 +368,13 @@ int main(int argc, char *argv[])
 
 				cnsl->put_string_lf("Breakpoints:");
 
-				for(auto pc : bps)
+				for(auto pc : bps) {
 					cnsl->put_string_lf(format("   %06o", pc));
+
+					pc += disassemble(c, cnsl, pc, true);
+				}
+
+				continue;
 			}
 			else if (parts[0] == "disassemble" || parts[0] == "d") {
 				int pc = kv.find("pc") != kv.end() ? std::stoi(kv.find("pc")->second, nullptr, 8)  : c->getPC();
@@ -407,8 +415,10 @@ int main(int argc, char *argv[])
 				if (tracing || single_step)
 					disassemble(c, single_step ? cnsl : nullptr, c->getPC(), false);
 
-				if (c->check_breakpoint() && !single_step)
+				if (c->check_breakpoint() && !single_step) {
+					cnsl->put_string_lf("Breakpoint");
 					break;
+				}
 
 				c->step();
 
