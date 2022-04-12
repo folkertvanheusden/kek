@@ -124,8 +124,13 @@ void debugger(console *const cnsl, bus *const b, std::atomic_bool *const interru
 			int pc = kv.find("pc") != kv.end() ? std::stoi(kv.find("pc")->second, nullptr, 8)  : c->getPC();
 			int n  = kv.find("n")  != kv.end() ? std::stoi(kv.find("n") ->second, nullptr, 10) : 1;
 
-			for(int i=0; i<n; i++)
-				pc += disassemble(c, cnsl, pc, true);
+			bool show_registers = kv.find("pc") == kv.end();
+
+			for(int i=0; i<n; i++) {
+				pc += disassemble(c, cnsl, pc, !show_registers);
+
+				show_registers = false;
+			}
 
 			continue;
 		}
