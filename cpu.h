@@ -34,7 +34,7 @@ private:
 
 	uint32_t *const event { nullptr };
 
-	void check_queued_interrupts();
+	bool check_queued_interrupts();
 
 	uint16_t getRegister(const int nr, const bool MF_MT) const;
 	void setRegister(const int nr, const bool MF_MT, const uint16_t value);

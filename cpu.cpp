@@ -234,11 +234,12 @@ void cpu::setPSW(const uint16_t v, const bool limited)
 	}
 }
 
-void cpu::check_queued_interrupts()
+bool cpu::check_queued_interrupts()
 {
 	uint8_t current_level = getPSW_spl();
 
-	uint8_t start_level = current_level <= 3 ? 0 : current_level + 1;
+	// uint8_t start_level = current_level <= 3 ? 0 : current_level + 1;
+	uint8_t start_level = current_level + 1;
 
 	for(uint8_t i=start_level; i < 8; i++) {
 		auto interrupts = queued_interrupts.find(i);
@@ -252,9 +253,11 @@ void cpu::check_queued_interrupts()
 
 			trap(*vector, i);
 
-			break;
+			return true;
 		}
 	}
+	
+	return false;
 }
 
 void cpu::queue_interrupt(const uint8_t level, const uint8_t vector)
@@ -1947,12 +1950,15 @@ void cpu::step()
 {
 	instruction_count++;
 
-	check_queued_interrupts();
+	if (check_queued_interrupts())
+	       return;
 
 	if (scheduled_trap) {
 		trap(scheduled_trap, 7);
 
 		scheduled_trap = 0;
+
+		return;
 	}
 
 	uint16_t temp_pc = getPC();
