@@ -157,7 +157,7 @@ void cpu::addRegister(const int nr, const bool prev_mode, const uint16_t value)
 
 bool cpu::getBitPSW(const int bit) const
 {
-	return !!(psw & (1 << bit));
+	return (psw >> bit) & 1;
 }
 
 bool cpu::getPSW_c() const
