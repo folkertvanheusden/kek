@@ -27,6 +27,8 @@ cpu::~cpu()
 
 void cpu::emulation_start()
 {
+	instruction_count = 0;
+
 	running_since = get_ms();
 }
 
@@ -56,6 +58,21 @@ uint64_t cpu::get_instructions_executed_count()
 	// but a mutex would slow things down too much (as would
 	// do an atomic)
 	return instruction_count;
+}
+
+std::pair<double, double> cpu::get_mips_rel_speed()
+{
+        uint32_t t_diff = get_ms() - running_since;
+
+        double mips = get_instructions_executed_count() / (1000.0 * t_diff);
+
+        // see https://retrocomputing.stackexchange.com/questions/6960/what-was-the-clock-speed-and-ips-for-the-original-pdp-11
+        constexpr double pdp11_clock_cycle = 150;  // ns, for the 11/70
+        constexpr double pdp11_mhz = 1000.0 / pdp11_clock_cycle;
+        constexpr double pdp11_avg_cycles_per_instruction = (1 + 5) / 2.0;
+        constexpr double pdp11_estimated_mips = pdp11_mhz / pdp11_avg_cycles_per_instruction;
+
+	return { mips, mips * 100 / pdp11_estimated_mips };
 }
 
 void cpu::reset()

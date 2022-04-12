@@ -163,6 +163,8 @@ void debugger(console *const cnsl, bus *const b, std::atomic_bool *const interru
 			continue;
 		}
 
+		c->emulation_start();
+
 		while(!event && !terminate && !*interrupt_emulation) {
 			if (tracing || single_step)
 				disassemble(c, single_step ? cnsl : nullptr, c->getPC(), false);
@@ -176,6 +178,11 @@ void debugger(console *const cnsl, bus *const b, std::atomic_bool *const interru
 
 			if (single_step)
 				break;
+		}
+
+		if (!single_step) {
+			auto speed = c->get_mips_rel_speed();
+			cnsl->debug("MIPS: %.2f, relative speed: %.2f%%", speed.first, speed.second);
 		}
 
 		if (*interrupt_emulation) {

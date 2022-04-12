@@ -76,6 +76,7 @@ public:
 
 	void emulation_start();
 	uint64_t get_instructions_executed_count();
+	std::pair<double, double> get_mips_rel_speed();
 
 	void reset();
 

@@ -267,13 +267,13 @@ int main(int argc, char *argv[])
 //	loadbin(b, 0, "test.dat");
 //	c->setRegister(7, 0);
 
-	c->emulation_start();  // for statistics
-
 	cnsl->start_thread();
 
 	if (run_debugger)
 		debugger(cnsl, b, &interrupt_emulation, tracing);
 	else {
+		c->emulation_start();  // for statistics
+
 		while(!event && !terminate)
 			c->step();
 	}
