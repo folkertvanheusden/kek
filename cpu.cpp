@@ -1312,7 +1312,7 @@ bool cpu::misc_operations(const uint16_t instr)
 
 		case 0b0000000000000010: // RTI
 			setPC(popStack());
-			setPSW(popStack(), !!(getPSW() >> 12));
+			setPSW(popStack(), !!((getPSW() >> 12) & 3));
 			return true;
 
 		case 0b0000000000000011: // BPT
@@ -1325,7 +1325,7 @@ bool cpu::misc_operations(const uint16_t instr)
 
 		case 0b0000000000000110: // RTT
 			setPC(popStack());
-			setPSW(popStack(), !!(getPSW() >> 12));
+			setPSW(popStack(), !!((getPSW() >> 12) & 3));
 			return true;
 
 		case 0b0000000000000111: // MFPT
