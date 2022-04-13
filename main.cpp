@@ -262,8 +262,6 @@ int main(int argc, char *argv[])
 	sigaction(SIGTERM, &sa, nullptr);
 	sigaction(SIGINT , &sa, nullptr);
 
-	*running = true;
-
 //	loadbin(b, 0, "test.dat");
 //	c->setRegister(7, 0);
 
@@ -274,6 +272,8 @@ int main(int argc, char *argv[])
 	else {
 		c->emulation_start();  // for statistics
 
+		*running = true;
+
 		while(!event) {
 			if (interrupt_emulation) {
 				if (terminate)
@@ -282,9 +282,9 @@ int main(int argc, char *argv[])
 
 			c->step();
 		}
-	}
 
-	*running = false;
+		*running = false;
+	}
 
 	terminate = true;
 

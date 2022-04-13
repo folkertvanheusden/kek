@@ -195,11 +195,13 @@ void console::operator()()
 		if (c == -1)
 			continue;
 
-		if (c == 3)  // ^c
+		bool running_flag = *get_running_flag();
+
+		if (running_flag == false && c == 3)  // ^c
 			*interrupt_emulation = *terminate = true;
-		else if (c == 5)  // ^e
+		else if (running_flag == true && c == 5)  // ^e
 			*interrupt_emulation = true;
-		else if (c == 12)  // ^l
+		else if (running_flag == false && c == 12)  // ^l
 			refresh_virtual_terminal();
 		else {
 			input_buffer.push_back(c);

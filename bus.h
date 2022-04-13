@@ -77,5 +77,5 @@ public:
 
 	uint16_t get_switch_register() const { return switch_register; }
 
-	uint32_t calculate_physical_address(const int run_mode, const uint16_t a, const bool trap_on_failure);
+	uint32_t calculate_physical_address(const int run_mode, const uint16_t a, const bool trap_on_failure, const bool is_write);
 };

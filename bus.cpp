@@ -305,7 +305,7 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 
 	int run_mode = (c->getPSW() >> (use_prev ? 12 : 14)) & 3;
 
-	uint32_t m_offset = calculate_physical_address(run_mode, a, !peek_only);
+	uint32_t m_offset = calculate_physical_address(run_mode, a, !peek_only, false);
 
 	if (word_mode)
 		temp = m -> readByte(m_offset);
@@ -317,7 +317,7 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 	return temp;
 }
 
-uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, const bool trap_on_failure)
+uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, const bool trap_on_failure, const bool is_write)
 {
 	uint32_t m_offset = 0;
 
@@ -331,11 +331,30 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 
 		m_offset += p_offset;
 
-		uint16_t pdr_len = (((pages[run_mode][0][apf].pdr >> 8) & 127) + 1) * 64;  // TODO: D/I
-
-		bool direction = pages[run_mode][0][apf].pdr & 8;  // TODO: D/I
-
 		if (trap_on_failure) {
+			int access_control = pages[run_mode][0][apf].pdr & 7;
+
+			if (is_write && access_control != 6) {  // write
+				c->schedule_trap(04);  // invalid address
+
+				pages[run_mode][0][apf].pdr |= 1 << 7;  // TODO: D/I
+
+				throw 1;
+			}
+			else if (!is_write) { // read
+				if (access_control == 0 || access_control == 1 || access_control == 3 || access_control == 4 || access_control == 7) {
+					c->schedule_trap(04);  // invalid address
+
+					pages[run_mode][0][apf].pdr |= 1 << 7;  // TODO: D/I
+
+					throw 1;
+				}
+			}
+
+			uint16_t pdr_len = (((pages[run_mode][0][apf].pdr >> 8) & 127) + 1) * 64;  // TODO: D/I
+
+			bool direction = pages[run_mode][0][apf].pdr & 8;  // TODO: D/I
+
 			if (m_offset >= n_pages * 8192) {
 				D(fprintf(stderr, "bus::calculate_physical_address %o >= %o\n", m_offset, n_pages * 8192);)
 				c->schedule_trap(04);  // invalid address
@@ -640,7 +659,7 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 
 	int run_mode = (c->getPSW() >> (use_prev ? 12 : 14)) & 3;
 
-	uint32_t m_offset = calculate_physical_address(run_mode, a, true);
+	uint32_t m_offset = calculate_physical_address(run_mode, a, true, true);
 
 	D(fprintf(stderr, "WRITE to %06o/%07o: %o\n", a, m_offset, value);)
 
