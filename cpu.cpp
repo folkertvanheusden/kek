@@ -275,6 +275,19 @@ void cpu::queue_interrupt(const uint8_t level, const uint8_t vector)
 	D(fprintf(stderr, "Queueing interrupt vector %o (IPL %d, current: %d), n: %zu\n", vector, level, getPSW_spl(), it->second.size());)
 }
 
+void cpu::addToMMR1(const uint8_t mode, const uint8_t reg, const bool word_mode)
+{
+	if (mode == 0 || mode == 1 || (b->getMMR1() & 0160000 /* bits frozen? */))
+		return;
+
+	bool neg = mode == 4 || mode == 5;
+
+	if (!word_mode || reg >= 6 || mode == 6 || mode == 7)
+		b->addToMMR1(neg ? -2 : 2, reg);
+	else
+		b->addToMMR1(neg ? -1 : 1, reg);
+}
+
 // GAM = general addressing modes
 uint16_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const bool word_mode, const bool prev_mode)
 {
@@ -418,10 +431,14 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 
 	switch(operation) {
 		case 0b001: { // MOV/MOVB Move Word/Byte
+				    addToMMR1(src_mode, src_reg, word_mode);
+
 				    if (word_mode && dst_mode == 0)
 					    setRegister(dst_reg, false, int8_t(src_value));  // int8_t: sign extension
 				    else
 					    putGAM(dst_mode, dst_reg, word_mode, src_value, false);
+
+				    addToMMR1(dst_mode, dst_reg, word_mode);
 
 				    setPSW_n(SIGN(src_value, word_mode));
 				    setPSW_z(IS_0(src_value, word_mode));
@@ -431,9 +448,13 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 			    }
 
 		case 0b010: { // CMP/CMPB Compare Word/Byte
+				    addToMMR1(src_mode, src_reg, word_mode);
+
 				    uint16_t dst_value = getGAM(dst_mode, dst_reg, word_mode, false);
 
 				    uint16_t temp      = (src_value - dst_value) & (word_mode ? 0xff : 0xffff);
+
+				    addToMMR1(dst_mode, dst_reg, word_mode);
 
 				    // D(fprintf(stderr, "CMP%s %o,%o: %o\n", word_mode?"B":"", src_value, dst_value, temp);)
 
@@ -1130,6 +1151,9 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					 // always words: word_mode-bit is to select between MFPI and MFPD
 					 assert(!word_mode);  // TODO
 
+					 if ((b->getMMR1() & 0160000) == 0)
+						 b->addToMMR1(-2, 6);
+
 					 // calculate address in current address space
 					 uint16_t a = getGAMAddress(dst_mode, dst_reg, false, false);
 					 // reed from previous space
@@ -1148,6 +1172,9 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 		case 0b00110110: { // MTPI/MTPD
 					 // always words: word_mode-bit is to select between MTPI and MTPD
 					 assert(!word_mode);  // TODO
+
+					 if ((b->getMMR1() & 0160000) == 0)
+						 b->addToMMR1(2, 6);
 
 					 // retrieve word from '15/14'-stack
 					 uint16_t v = popStack();
@@ -1381,11 +1408,23 @@ bool cpu::misc_operations(const uint16_t instr)
 	}
 
 	if ((instr >> 8) == 0b10001000) { // EMT
+		if ((b->getMMR1() & 0160000) == 0) {
+			b->setMMR2(030);
+			b->addToMMR1(-2, 6);
+			b->addToMMR1(-2, 6);
+		}
+
 		trap(030);
 		return true;
 	}
 
 	if ((instr >> 8) == 0b10001001) { // TRAP
+		if ((b->getMMR1() & 0160000) == 0) {
+			b->setMMR2(034);
+			b->addToMMR1(-2, 6);
+			b->addToMMR1(-2, 6);
+		}
+
 		trap(034);
 		return true;
 	}
@@ -1955,6 +1994,9 @@ void cpu::step()
 {
 	instruction_count++;
 
+	if ((b->getMMR1() & 0160000) == 0)
+		b->clearMMR1();
+
 	if (check_queued_interrupts())
 	       return;
 
@@ -1967,6 +2009,7 @@ void cpu::step()
 	}
 
 	uint16_t temp_pc = getPC();
+	b->setMMR2(temp_pc);
 
 	if (temp_pc & 1)
 		busError();
@@ -1994,9 +2037,5 @@ void cpu::step()
 	}
 	catch(const int exception) {
 		D(fprintf(stderr, "bus-trap during execution of command\n");)
-
-		// error half way instruction; make sure it is not fully executed
-
-		b->setMMR2(temp_pc);
 	}
 }

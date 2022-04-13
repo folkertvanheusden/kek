@@ -340,7 +340,9 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 
 					pages[run_mode][0][apf].pdr |= 1 << 7;  // TODO: D/I
 
-					MMR0 |= 1 << 12;
+					MMR0 |= 1 << 13;  // read-only
+
+					MMR0 |= 1 << 12;  // trap
 
 					MMR0 &= ~(3 << 5);
 					MMR0 |= run_mode << 5;  // TODO: kernel-mode or user-mode when a trap occurs in user-mode?
@@ -353,7 +355,9 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 
 						pages[run_mode][0][apf].pdr |= 1 << 7;  // TODO: D/I
 
-						MMR0 |= 1 << 12;
+						MMR0 |= 1 << 13;  // read-only
+
+						MMR0 |= 1 << 12;  // trap
 
 						MMR0 &= ~(3 << 5);
 						MMR0 |= run_mode << 5;
@@ -371,6 +375,8 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 				D(fprintf(stderr, "bus::calculate_physical_address %o >= %o\n", m_offset, n_pages * 8192);)
 				c->schedule_trap(04);  // invalid address
 
+				MMR0 |= 1 << 15;  // non-resident
+
 				pages[run_mode][0][apf].pdr |= 1 << 7;  // TODO: D/I
 
 				throw 1;
@@ -379,6 +385,8 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 			if ((p_offset >= pdr_len && direction == false) || (p_offset < pdr_len && direction == true)) {
 				D(fprintf(stderr, "bus::calculate_physical_address::p_offset %o >= %o\n", p_offset, pdr_len);)
 				c->schedule_trap(0250);  // invalid access
+
+				MMR0 |= 1 << 14;  // length
 
 				pages[run_mode][0][apf].pdr |= 1 << 7;  // TODO: D/I
 
@@ -394,6 +402,19 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 	}
 
 	return m_offset;
+}
+
+void bus::clearMMR1()
+{
+	MMR1 = 0;
+}
+
+void bus::addToMMR1(const int8_t delta, const uint8_t reg)
+{
+	MMR1 <<= 8;
+
+	MMR1 |= (delta & 5) << 3;
+	MMR1 |= reg;
 }
 
 uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bool use_prev)
@@ -493,21 +514,14 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 			return MMR3;
 		}
 
-		if (a == 0177576) { // MMR2
-			D(fprintf(stderr, "write set MMR2: %o\n", value);)
-			MMR2 = value;
-			return MMR2;
-		}
-
-		if (a == 0177574) { // MMR1
-			D(fprintf(stderr, "write set MMR1: %o\n", value);)
-			MMR1 = value;
-			return MMR1;
-		}
-
 		if (a == 0177572) { // MMR0
 			D(fprintf(stderr, "write set MMR0: %o\n", value);)
+
 			MMR0 = value & ~(3 << 10);  // bit 10 & 11 always read as 0
+
+			if (value & 1)
+				MMR0 = value & ~(7 << 13);  // reset error bits
+
 			return MMR0;
 		}
 

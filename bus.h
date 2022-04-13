@@ -72,8 +72,10 @@ public:
 	void writeUnibusByte(const uint16_t a, const uint8_t value);
 
 	uint16_t getMMR0() { return MMR0; }
-
-	void setMMR2(const uint16_t value) { MMR2 = value; }
+	uint16_t getMMR1() { return MMR1; }
+	void     clearMMR1();
+	void     addToMMR1(const int8_t delta, const uint8_t reg);
+	void     setMMR2(const uint16_t value) { MMR2 = value; }  // address
 
 	uint16_t get_switch_register() const { return switch_register; }
 
