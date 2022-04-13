@@ -146,19 +146,19 @@ void cpu::put_result(const uint16_t a, const uint8_t dst_mode, const uint8_t dst
 		b->write(a, word_mode, value, false);
 }
 
-void cpu::addRegister(const int nr, const bool prev_mode, const uint16_t value)
+uint16_t cpu::addRegister(const int nr, const bool prev_mode, const uint16_t value)
 {
 	if (nr < 6)
-		regs0_5[getBitPSW(11)][nr] += value;
-	else if (nr == 6) {
+		return regs0_5[getBitPSW(11)][nr] += value;
+
+	if (nr == 6) {
 		if (prev_mode)
-			sp[(getPSW() >> 12) & 3] += value;
-		else
-			sp[getPSW() >> 14] += value;
+			return sp[(getPSW() >> 12) & 3] += value;
+
+		return sp[getPSW() >> 14] += value;
 	}
-	else {
-		pc += value;
-	}
+
+	return pc += value;
 }
 
 bool cpu::getBitPSW(const int bit) const
@@ -1324,9 +1324,7 @@ void cpu::pushStack(const uint16_t v)
 		exit(1);
 	}
 
-	addRegister(6, false, -2);
-
-	uint16_t a = getRegister(6, false);
+	uint16_t a = addRegister(6, false, -2);
 
 	b -> writeWord(a, v);
 }

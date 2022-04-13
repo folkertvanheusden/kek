@@ -38,7 +38,7 @@ private:
 
 	uint16_t getRegister(const int nr, const bool MF_MT) const;
 	void setRegister(const int nr, const bool MF_MT, const uint16_t value);
-	void addRegister(const int nr, const bool MF_MT, const uint16_t value);
+	uint16_t addRegister(const int nr, const bool MF_MT, const uint16_t value);
 
 	uint16_t getGAMAddress(const uint8_t mode, const int reg, const bool word_mode, const bool MF_MT);
 	uint16_t getGAM(const uint8_t mode, const uint8_t reg, const bool word_mode, const bool MF_MT);
