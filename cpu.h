@@ -85,6 +85,7 @@ public:
 	void pushStack(const uint16_t v);
 	uint16_t popStack();
 
+	void init_interrupt_queue();
 	void queue_interrupt(const uint8_t level, const uint8_t vector);
 
 	void busError();

@@ -15,14 +15,19 @@
 
 cpu::cpu(bus *const b, uint32_t *const event) : b(b), event(event)
 {
-	for(int level=0; level<8; level++)
-		queued_interrupts.insert({ level, { } });
-
 	reset();
 }
 
 cpu::~cpu()
 {
+}
+
+void cpu::init_interrupt_queue()
+{
+	queued_interrupts.clear();
+
+	for(int level=0; level<8; level++)
+		queued_interrupts.insert({ level, { } });
 }
 
 void cpu::emulation_start()
@@ -83,6 +88,7 @@ void cpu::reset()
 	psw = 7 << 5;
 	fpsr = 0;
 	runMode = false;
+	init_interrupt_queue();
 }
 
 uint16_t cpu::getRegister(const int nr, const bool prev_mode) const
@@ -1372,6 +1378,7 @@ bool cpu::misc_operations(const uint16_t instr)
 
 		case 0b0000000000000101: // RESET
 			b->init();
+			init_interrupt_queue();
 			return true;
 	}
 
