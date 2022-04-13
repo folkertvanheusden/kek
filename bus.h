@@ -21,26 +21,30 @@ typedef struct
 class bus
 {
 private:
-	cpu    *c     { nullptr };
-	tm_11  *tm11  { nullptr };
-	rk05   *rk05_ { nullptr };
-	rx02   *rx02_ { nullptr };
-	tty    *tty_  { nullptr };
+	cpu     *c     { nullptr };
+	tm_11   *tm11  { nullptr };
+	rk05    *rk05_ { nullptr };
+	rx02    *rx02_ { nullptr };
+	tty     *tty_  { nullptr };
 
-	memory *m     { nullptr };
+	memory  *m     { nullptr };
 
 	// 8 pages, D/I, 3 modes and 1 invalid mode
-	page_t  pages[4][2][8];
+	page_t   pages[4][2][8];
 
 	uint16_t MMR0 { 0 }, MMR1 { 0 }, MMR2 { 0 }, MMR3 { 0 }, CPUERR { 0 }, PIR { 0 }, CSR { 0 };
 
 	uint16_t switch_register { 0 };
+
+	bool     debug_mode { false };
 
 public:
 	bus();
 	~bus();
 
 	void clearmem();
+
+	void set_debug_mode(const bool state) { debug_mode = state; }
 
 	void add_cpu(cpu *const c) { this -> c = c; }
 	void add_tm11(tm_11 *tm11) { this -> tm11 = tm11; } 

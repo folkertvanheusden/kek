@@ -76,6 +76,8 @@ void debugger(console *const cnsl, bus *const b, std::atomic_bool *const interru
 {
 	cpu *const c = b->getCpu();
 
+	b->set_debug_mode(true);
+
 	bool single_step = false;
 
 	while(!terminate) {
