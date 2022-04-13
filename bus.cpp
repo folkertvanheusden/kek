@@ -332,22 +332,34 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 		m_offset += p_offset;
 
 		if (trap_on_failure) {
-			int access_control = pages[run_mode][0][apf].pdr & 7;
+			if (MMR0 & (1 << 9)) {
+				int access_control = pages[run_mode][0][apf].pdr & 7;
 
-			if (is_write && access_control != 6) {  // write
-				c->schedule_trap(04);  // invalid address
-
-				pages[run_mode][0][apf].pdr |= 1 << 7;  // TODO: D/I
-
-				throw 1;
-			}
-			else if (!is_write) { // read
-				if (access_control == 0 || access_control == 1 || access_control == 3 || access_control == 4 || access_control == 7) {
+				if (is_write && access_control != 6) {  // write
 					c->schedule_trap(04);  // invalid address
 
 					pages[run_mode][0][apf].pdr |= 1 << 7;  // TODO: D/I
 
+					MMR0 |= 1 << 12;
+
+					MMR0 &= ~(3 << 5);
+					MMR0 |= run_mode << 5;  // TODO: kernel-mode or user-mode when a trap occurs in user-mode?
+
 					throw 1;
+				}
+				else if (!is_write) { // read
+					if (access_control == 0 || access_control == 1 || access_control == 3 || access_control == 4 || access_control == 7) {
+						c->schedule_trap(04);  // invalid address
+
+						pages[run_mode][0][apf].pdr |= 1 << 7;  // TODO: D/I
+
+						MMR0 |= 1 << 12;
+
+						MMR0 &= ~(3 << 5);
+						MMR0 |= run_mode << 5;
+
+						throw 1;
+					}
 				}
 			}
 
