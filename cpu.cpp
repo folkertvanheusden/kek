@@ -1408,23 +1408,11 @@ bool cpu::misc_operations(const uint16_t instr)
 	}
 
 	if ((instr >> 8) == 0b10001000) { // EMT
-		if ((b->getMMR1() & 0160000) == 0) {
-			b->setMMR2(030);
-			b->addToMMR1(-2, 6);
-			b->addToMMR1(-2, 6);
-		}
-
 		trap(030);
 		return true;
 	}
 
 	if ((instr >> 8) == 0b10001001) { // TRAP
-		if ((b->getMMR1() & 0160000) == 0) {
-			b->setMMR2(034);
-			b->addToMMR1(-2, 6);
-			b->addToMMR1(-2, 6);
-		}
-
 		trap(034);
 		return true;
 	}
@@ -1495,6 +1483,13 @@ void cpu::trap(const uint16_t vector, const int new_ipl)
 	if (b->getMMR0() & 1) {
 		// make sure the trap vector is retrieved from kernel space
 		psw &= 037777;  // mask off 14/15
+	}
+
+	if ((b->getMMR1() & 0160000) == 0) {
+		D(fprintf(stderr, "trap: register vector/2xregister-undo\n");)
+		b->setMMR2(vector);
+		b->addToMMR1(-2, 6);
+		b->addToMMR1(-2, 6);
 	}
 
 	setPC(b->readWord(vector + 0));
@@ -1997,9 +1992,6 @@ void cpu::step()
 	if ((b->getMMR1() & 0160000) == 0)
 		b->clearMMR1();
 
-	if (check_queued_interrupts())
-	       return;
-
 	if (scheduled_trap) {
 		trap(scheduled_trap, 7);
 
@@ -2007,6 +1999,9 @@ void cpu::step()
 
 		return;
 	}
+
+	if (check_queued_interrupts())
+	       return;
 
 	uint16_t temp_pc = getPC();
 	b->setMMR2(temp_pc);
