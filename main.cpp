@@ -168,13 +168,18 @@ int main(int argc, char *argv[])
 	bool testCases    = false;
 	bool run_debugger = false;
 	bool tracing      = false;
+	bool bootloader   = false;
 	int  opt          = -1;
-	while((opt = getopt(argc, argv, "hm:T:R:p:ndtL:")) != -1)
+	while((opt = getopt(argc, argv, "hm:T:R:p:ndtL:b")) != -1)
 	{
 		switch(opt) {
 			case 'h':
 				help();
 				return 1;
+
+			case 'b':
+				bootloader   = true;
+				break;
 
 			case 'd':
 				run_debugger = true;
@@ -234,11 +239,11 @@ int main(int argc, char *argv[])
 		cnsl = new console_posix(&terminate, &interrupt_emulation, b);
 	}
 
-	if (rk05_files.empty() == false) {
+	if (rk05_files.empty() == false)
 		b->add_rk05(new rk05(rk05_files, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
 
+	if (bootloader)
 		setBootLoader(b);
-	}
 
 	running = cnsl->get_running_flag();
 
