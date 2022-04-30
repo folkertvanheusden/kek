@@ -176,6 +176,8 @@ void debugger(console *const cnsl, bus *const b, std::atomic_bool *const interru
 		*cnsl->get_running_flag() = true;
 
 		while(!event && !*interrupt_emulation) {
+			c->step_a();
+
 			if (tracing || single_step)
 				disassemble(c, single_step ? cnsl : nullptr, c->getPC(), false);
 
@@ -184,7 +186,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_bool *const interru
 				break;
 			}
 
-			c->step();
+			c->step_b();
 
 			if (single_step)
 				break;

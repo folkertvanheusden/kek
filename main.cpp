@@ -285,7 +285,8 @@ int main(int argc, char *argv[])
 					break;
 			}
 
-			c->step();
+			c->step_a();
+			c->step_b();
 		}
 
 		*running = false;

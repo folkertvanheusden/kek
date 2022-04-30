@@ -13,8 +13,10 @@ void do_test(cpu *const c, const int nInstr)
 		fputc(c -> getBus() -> readByte(i), fh);
 	fclose(fh);
 
-	for(int i=0; i<nInstr; i++)
-		c -> step();
+	for(int i=0; i<nInstr; i++) {
+		c->step_a();
+		c->step_b();
+	}
 }
 
 void test__initial(cpu *const c)

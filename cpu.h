@@ -81,7 +81,8 @@ public:
 
 	void reset();
 
-	void step();
+	void step_a();
+	void step_b();
 
 	void pushStack(const uint16_t v);
 	uint16_t popStack();

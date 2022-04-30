@@ -1985,10 +1985,8 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 	return out;
 }
 
-void cpu::step()
+void cpu::step_a()
 {
-	instruction_count++;
-
 	if ((b->getMMR1() & 0160000) == 0)
 		b->clearMMR1();
 
@@ -2002,6 +2000,11 @@ void cpu::step()
 
 	if (check_queued_interrupts())
 	       return;
+}
+
+void cpu::step_b()
+{
+	instruction_count++;
 
 	uint16_t temp_pc = getPC();
 	b->setMMR2(temp_pc);
