@@ -149,6 +149,7 @@ void help()
 	printf("-R d.rk  load file as a RK05 disk device\n");
 	printf("-p 123   set CPU start pointer to decimal(!) value\n");
 	printf("-L f.bin load file into memory at address given by -p (and run it)\n");
+	printf("-b       enable bootloader (build-in)\n");
 	printf("-n       ncurses UI\n");
 	printf("-d       enable debugger\n");
 	printf("-t       enable tracing (disassemble to stderr, requires -d as well)\n");
