@@ -12,14 +12,14 @@ Required:
 
 To run a disk image:
 
-    ./kek -R filename.rk 2> /dev/null
+    ./kek -R filename.rk -b 2> /dev/null
 
 Kek emulates an RK05.
 
 
 To run a tape image:
 
-    ./kek -T filename.bin 2> /dev/null
+    ./kek -T filename.bin -b 2> /dev/null
 
 
 
