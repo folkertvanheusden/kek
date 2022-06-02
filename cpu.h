@@ -43,7 +43,8 @@ private:
 	void     addToMMR1(const uint8_t mode, const uint8_t reg, const bool word_mode);
 	uint16_t getGAMAddress(const uint8_t mode, const int reg, const bool word_mode, const bool MF_MT);
 	uint16_t getGAM(const uint8_t mode, const uint8_t reg, const bool word_mode, const bool MF_MT);
-	void     putGAM(const uint8_t mode, const int reg, const bool word_mode, const uint16_t value, const bool MF_FT);
+	// returns false when flag registers should not be updated
+	bool     putGAM(const uint8_t mode, const int reg, const bool word_mode, const uint16_t value, const bool MF_FT);
 
 	bool double_operand_instructions(const uint16_t instr);
 	bool additional_double_operand_instructions(const uint16_t instr);
@@ -130,5 +131,5 @@ public:
 	uint16_t getRegister(const int nr) const { return getRegister(nr, false); } // FIXME remove
 	void setRegister(const int nr, const uint16_t v) { setRegister(nr, false, v); } // FIXME remove
 
-	void put_result(const uint16_t a, const uint8_t dst_mode, const uint8_t dst_reg, const bool word_mode, const uint16_t value);
+	bool put_result(const uint16_t a, const uint8_t dst_mode, const uint8_t dst_reg, const bool word_mode, const uint16_t value);
 };
