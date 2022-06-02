@@ -126,6 +126,8 @@ void debugger(console *const cnsl, bus *const b, std::atomic_bool *const interru
 			int pc = kv.find("pc") != kv.end() ? std::stoi(kv.find("pc")->second, nullptr, 8)  : c->getPC();
 			int n  = kv.find("n")  != kv.end() ? std::stoi(kv.find("n") ->second, nullptr, 10) : 1;
 
+			cnsl->put_string_lf(format("Disassemble %d instructions starting at %o", n, pc));
+
 			bool show_registers = kv.find("pc") == kv.end();
 
 			for(int i=0; i<n; i++) {
@@ -135,6 +137,24 @@ void debugger(console *const cnsl, bus *const b, std::atomic_bool *const interru
 			}
 
 			continue;
+		}
+		else if (parts[0] == "examine" || parts[0] == "e") {
+			if (parts.size() != 3)
+				cnsl->put_string_lf("parameter missing");
+			else {
+				int addr = std::stoi(parts[2], nullptr, 8);
+				int val  = -1;
+
+				if (parts[1] == "B" || parts[1] == "b")
+					val = b->read(addr, true, false, true);
+				else if (parts[1] == "W" || parts[1] == "w")
+					val = b->read(addr, false, false, true);
+				else
+					cnsl->put_string_lf("expected b or w");
+
+				if (val != -1)
+					cnsl->put_string_lf(format("value at %06o, octal: %o, hex: %x, dec: %d\n", addr, val, val, val));
+			}
 		}
 		else if (cmd == "reset" || cmd == "r") {
 #if defined(ESP32)
@@ -160,6 +180,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_bool *const interru
 #if !defined(ESP32)
 			cnsl->put_string_lf("quit/q        - stop emulator");
 #endif
+			cnsl->put_string_lf("examine/e     - show memory address (<b|w> <octal address>)");
 			cnsl->put_string_lf("reset/r       - reset cpu/bus/etc");
 			cnsl->put_string_lf("single/s      - run 1 instruction (implicit 'disassemble' command)");
 			cnsl->put_string_lf("sbp/cbp/lbp   - set/clear/list breakpoint(s)");
