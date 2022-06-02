@@ -431,18 +431,27 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 
 	switch(operation) {
 		case 0b001: { // MOV/MOVB Move Word/Byte
+			      	    bool set_flags = true;
+
 				    addToMMR1(src_mode, src_reg, word_mode);
 
 				    if (word_mode && dst_mode == 0)
 					    setRegister(dst_reg, false, int8_t(src_value));  // int8_t: sign extension
-				    else
-					    putGAM(dst_mode, dst_reg, word_mode, src_value, false);
+				    else {
+					    uint16_t addr = getGAMAddress(dst_mode, dst_reg, word_mode, false);
+
+				    	    set_flags = addr != 0177776;
+
+					    b->write(addr, word_mode, src_value, false);
+			    	    }
 
 				    addToMMR1(dst_mode, dst_reg, word_mode);
 
-				    setPSW_n(SIGN(src_value, word_mode));
-				    setPSW_z(IS_0(src_value, word_mode));
-				    setPSW_v(false);
+				    if (set_flags) {
+					    setPSW_n(SIGN(src_value, word_mode));
+					    setPSW_z(IS_0(src_value, word_mode));
+					    setPSW_v(false);
+				    }
 
 				    return true;
 			    }
