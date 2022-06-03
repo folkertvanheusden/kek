@@ -1281,9 +1281,19 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					 break;
 				 }
 
-		case 0b000110100: // MTPS (put something in PSW)
-				 psw &= 0xff00;  // only alter lower 8 bits
-				 psw |= getGAM(dst_mode, dst_reg, word_mode, false) & 0xef;  // can't change bit 4
+		case 0b000110100: // MARK/MTPS (put something in PSW)
+				 if (word_mode) {  // MTPS
+					 psw &= 0xff00;  // only alter lower 8 bits
+					 psw |= getGAM(dst_mode, dst_reg, word_mode, false) & 0xef;  // can't change bit 4
+				 }
+				 else {
+					 setRegister(6, getPC() + dst * 2);
+
+					 setPC(getRegister(5));
+
+					 setRegister(5, popStack());
+				 }
+
 				 break;
 
 		case 0b000110111: // MFPS (get PSW to something) / SXT
