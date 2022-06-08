@@ -636,18 +636,26 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 
 		case 2: { // ASH
 				uint32_t R     = getRegister(reg), oldR = R;
-				uint16_t shift = getGAM(dst_mode, dst_reg, false, false);
+				uint16_t shift = getGAM(dst_mode, dst_reg, false, false) & 077;
+				bool     sign  = SIGN(R, false);
+
+//				fprintf(stderr, "R: %06o, shift: %d, sign: %d, ", R, shift, sign);
 
 				// extend sign-bit
-				if (R & 0x8000)
+				if (sign)
 					R |= 0xffff0000;
 				
-				if (shift == 0)
+				if (shift == 0) {
 					setPSW_c(false);
+				}
 				else if (shift < 32) {
-					R <<= shift - 1;
-					setPSW_c(R & 0x8000);
-					R <<= 1;
+					R <<= shift;
+					setPSW_c(R & 0x10000);
+				}
+				else if (shift == 32) {
+					R = -sign;
+
+					setPSW_c(sign);
 				}
 				else {
 					int shift_n = (64 - shift) - 1;
@@ -659,11 +667,19 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 					R >>= 1;
 				}
 
-				setPSW_n(R < 0);
+				R &= 0xffff;
+
+				setPSW_n(SIGN(R, false));
 				setPSW_z(R == 0);
 				setPSW_v(SIGN(R, false) != SIGN(oldR, false));
 
 				setRegister(reg, R);
+
+//				uint16_t psw = getPSW();
+//	std::string psw_str = format("%d%d|%d|%d|%c%c%c%c%c", psw >> 14, (psw >> 12) & 3, (psw >> 11) & 1, (psw >> 5) & 7,
+//                        psw & 16?'t':'-', psw & 8?'n':'-', psw & 4?'z':'-', psw & 2 ? 'v':'-', psw & 1 ? 'c':'-');
+//				// printf("flags: %06o\r\n", getPSW());
+//				fprintf(stderr, "%s > %06o, R OUT: %06o\r\n", psw_str.c_str(), psw, R);
 
 				return true;
 			}
