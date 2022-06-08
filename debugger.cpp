@@ -72,8 +72,10 @@ std::map<std::string, std::string> split(const std::vector<std::string> & kv_arr
 	return out;
 }
 
-void debugger(console *const cnsl, bus *const b, std::atomic_bool *const interrupt_emulation, const bool tracing)
+void debugger(console *const cnsl, bus *const b, std::atomic_bool *const interrupt_emulation, const bool tracing_in)
 {
+	bool tracing = tracing_in;
+
 	cpu *const c = b->getCpu();
 
 	b->set_debug_mode(true);
@@ -138,6 +140,11 @@ void debugger(console *const cnsl, bus *const b, std::atomic_bool *const interru
 
 			continue;
 		}
+		else if (parts[0] == "trace" || parts[0] == "t") {
+			tracing = !tracing;
+
+			cnsl->put_string_lf(format("Tracing set to %s", tracing ? "ON" : "OFF"));
+		}
 		else if (parts[0] == "examine" || parts[0] == "e") {
 			if (parts.size() != 3)
 				cnsl->put_string_lf("parameter missing");
@@ -184,6 +191,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_bool *const interru
 			cnsl->put_string_lf("reset/r       - reset cpu/bus/etc");
 			cnsl->put_string_lf("single/s      - run 1 instruction (implicit 'disassemble' command)");
 			cnsl->put_string_lf("sbp/cbp/lbp   - set/clear/list breakpoint(s)");
+			cnsl->put_string_lf("trace/t       - toggle tracing");
 
 			continue;
 		}
