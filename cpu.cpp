@@ -607,7 +607,7 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 					return true;
 				}
 
-				int32_t R0R1    = (getRegister(reg) << 16) | getRegister(reg + 1);
+				int32_t R0R1    = (getRegister(reg) << 16) | getRegister(reg | 1);
 
 				int32_t  quot   = R0R1 / divider;
 				uint16_t rem    = R0R1 % divider;
@@ -627,7 +627,7 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 				}
 
 				setRegister(reg, quot);
-				setRegister(reg + 1, rem);
+				setRegister(reg | 1, rem);
 
 				setPSW_v(false);
 
@@ -685,7 +685,7 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 			}
 
 		case 3: { // ASHC
-				uint32_t R0R1  = (getRegister(reg) << 16) | getRegister(reg + 1);
+				uint32_t R0R1  = (getRegister(reg) << 16) | getRegister(reg | 1);
 				uint16_t shift = getGAM(dst_mode, dst_reg, false, false) & 077;
 				bool     sign  = R0R1 & 0x80000000;
 
@@ -699,6 +699,11 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 					setPSW_c(R0R1 >> 31);
 
 					R0R1 <<= 1;
+				}
+				else if (shift == 32) {
+					R0R1 = -sign;
+
+					setPSW_c(sign);
 				}
 				else {
 					int shift_n = (64 - shift) - 1;
@@ -725,7 +730,7 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 				setPSW_v(sign != new_sign);
 
 				setRegister(reg, R0R1 >> 16);
-				setRegister(reg + 1, R0R1 & 65535);
+				setRegister(reg | 1, R0R1 & 65535);
 
 				setPSW_n(R0R1 & 0x80000000);
 				setPSW_z(R0R1 == 0);
