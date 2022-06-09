@@ -11,6 +11,13 @@
 #include "utils.h"
 
 
+static const char * const regnames[] = { 
+	"control status",
+	"bus address   ",
+	"disk address  ",
+	"multipurpose  "
+	};
+
 rl02::rl02(const std::vector<std::string> & files, bus *const b, std::atomic_bool *const disk_read_acitivity, std::atomic_bool *const disk_write_acitivity) :
 	b(b),
 	disk_read_acitivity(disk_read_acitivity),
@@ -63,11 +70,13 @@ uint16_t rl02::readWord(const uint16_t addr)
 {
 	const int reg = (addr - RK05_BASE) / 2;
 
+	uint16_t value = 0;
+
 	// TODO
 
-	D(fprintf(stderr, "RK05 read %s/%o: %06o\n", reg[regnames], addr, vtemp);)
+	D(fprintf(stderr, "RK05 read %s/%o: %06o\n", reg[regnames], addr, value);)
 
-	return vtemp;
+	return value;
 }
 
 void rl02::writeByte(const uint16_t addr, const uint8_t v)

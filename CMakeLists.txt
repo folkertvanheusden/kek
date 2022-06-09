@@ -20,7 +20,6 @@ add_executable(
   memory.cpp
   rk05.cpp
   rl02.cpp
-  rx02.cpp
   terminal.cpp
   tests.cpp
   tm-11.cpp

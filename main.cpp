@@ -170,12 +170,15 @@ int main(int argc, char *argv[])
 	c -> setEmulateMFPT(true);
 
 	std::vector<std::string> rk05_files;
+	std::vector<std::string> rl02_files;
+
 	bool testCases    = false;
 	bool run_debugger = false;
 	bool tracing      = false;
 	bool bootloader   = false;
+
 	int  opt          = -1;
-	while((opt = getopt(argc, argv, "hm:T:R:p:ndtL:b")) != -1)
+	while((opt = getopt(argc, argv, "hm:T:r:R:p:ndtL:b")) != -1)
 	{
 		switch(opt) {
 			case 'h':
@@ -216,6 +219,10 @@ int main(int argc, char *argv[])
 				rk05_files.push_back(optarg);
 				break;
 
+			case 'r':
+				rl02_files.push_back(optarg);
+				break;
+
 			case 'p':
 				c->setRegister(7, atoi(optarg));
 				break;
@@ -246,6 +253,9 @@ int main(int argc, char *argv[])
 
 	if (rk05_files.empty() == false)
 		b->add_rk05(new rk05(rk05_files, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
+
+	if (rl02_files.empty() == false)
+		b->add_rl02(new rl02(rl02_files, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
 
 	if (bootloader)
 		setBootLoader(b);
@@ -305,6 +315,8 @@ int main(int argc, char *argv[])
 	delete cnsl;
 
 	delete b;
+
+	delete lf;
 
 	return 0;
 }

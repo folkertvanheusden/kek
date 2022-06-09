@@ -1,4 +1,4 @@
-// (C) 2018 by Folkert van Heusden
+// (C) 2018-2022 by Folkert van Heusden
 // Released under Apache License v2.0
 #include <assert.h>
 #include <stdio.h>
@@ -19,6 +19,7 @@ constexpr int n_pages = 12;
 constexpr int n_pages = 16;
 #endif
 
+
 bus::bus()
 {
 	m = new memory(n_pages * 8192);
@@ -33,7 +34,7 @@ bus::~bus()
 	delete c;
 	delete tm11;
 	delete rk05_;
-	delete rx02_;
+	delete rl02_;
 	delete tty_;
 	delete m;
 }
@@ -543,6 +544,11 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 
 		if (rk05_ && a >= RK05_BASE && a < RK05_END) {
 			word_mode ? rk05_ -> writeByte(a, value) : rk05_ -> writeWord(a, value);
+			return value;
+		}
+
+		if (rl02_ && a >= RL02_BASE && a < RL02_END) {
+			word_mode ? rl02_ -> writeByte(a, value) : rl02_ -> writeWord(a, value);
 			return value;
 		}
 

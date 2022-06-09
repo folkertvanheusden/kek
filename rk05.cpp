@@ -11,7 +11,7 @@
 #include "utils.h"
 
 
-const char * const regnames[] = { 
+static const char * const regnames[] = { 
 	"RK05_DS drivestatus",
 	"RK05_ERROR        ",
 	"RK05_CS ctrlstatus",

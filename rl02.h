@@ -12,6 +12,12 @@
 #include "esp32.h"
 #endif
 
+#define RL02_CSR 0174400  // control status register
+#define RL02_BAR 0174402  // bus address register
+#define RL02_DAR 0174404  // disk address register
+#define RL02_MPR 0174406  // multi purpose register
+#define RL02_BASE  RL02_CSR
+#define RL02_END  (RL02_MPR + 2)
 
 class bus;
 
