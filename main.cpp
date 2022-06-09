@@ -284,15 +284,18 @@ int main(int argc, char *argv[])
 
 		*running = true;
 
+		// TODO combine event, interrupt_emulation and terminate into one thing
 		while(!event) {
-			if (interrupt_emulation) {
-				if (terminate)
-					break;
-			}
+			if (interrupt_emulation)
+				break;
 
 			c->step_a();
 			c->step_b();
 		}
+
+		auto stats = c->get_mips_rel_speed();
+
+		printf("MIPS: %.2f, running speed: %.2f%%\n", stats.first, stats.second);
 
 		*running = false;
 	}
