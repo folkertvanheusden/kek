@@ -686,8 +686,8 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 
 		case 3: { // ASHC
 				uint32_t R0R1  = (getRegister(reg) << 16) | getRegister(reg + 1);
-				uint16_t a     = getGAMAddress(dst_mode, dst_reg, false, false);
-				int16_t  shift = b->read(a, false, false) & 077; // mask of lower 6 bit
+				uint16_t shift = getGAM(dst_mode, dst_reg, false, false) & 077;
+				bool     sign  = R0R1 >> 31;
 
 				if (shift == 0) {
 					setPSW_c(false);
@@ -711,10 +711,14 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 					R0R1 >>= 1;
 				}
 
+				bool new_sign = R0R1 >> 31;
+
+				setPSW_v(sign != new_sign);
+
 				setRegister(reg, R0R1 >> 16);
 				setRegister(reg + 1, R0R1 & 65535);
 
-				setPSW_n(R0R1 >> 31);
+				setPSW_n(R0R1 & 0x80000000);
 				setPSW_z(R0R1 == 0);
 
 				return true;
