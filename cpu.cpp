@@ -585,8 +585,8 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 				if (reg & 1)
 					setRegister(reg, result);
 				else {
-					setRegister(reg, result & 65535);
-					setRegister(reg + 1, result >> 16);
+					setRegister(reg + 1, result & 65535);
+					setRegister(reg, result >> 16);
 				}
 
 				setPSW_n(result < 0);
