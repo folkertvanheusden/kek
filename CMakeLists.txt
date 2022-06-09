@@ -15,6 +15,7 @@ add_executable(
   cpu.cpp
   debugger.cpp
   error.cpp
+  kw11-l.cpp
   main.cpp
   memory.cpp
   rk05.cpp

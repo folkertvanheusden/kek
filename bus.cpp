@@ -80,8 +80,7 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 
 		if (a == 0177546) { // line frequency clock and status register
 			D(fprintf(stderr, "read line freq clock\n");)
-			CSR |= 128;
-			return CSR;
+			return lf_csr;
 		}
 
 		if (a == 0177514) { // printer, CSR register, LP11
@@ -533,8 +532,8 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 
 		if (a == 0177546) { // line frequency clock and status register
 			D(fprintf(stderr, "write set LFC/SR: %o\n", value);)
-			CSR = value;
-			return CSR;
+			lf_csr = value;
+			return lf_csr;
 		}
 
 		if (tm11 && a >= TM_11_BASE && a < TM_11_END) {
@@ -720,4 +719,14 @@ uint16_t bus::readUnibusByte(const uint16_t a)
 void bus::writeUnibusByte(const uint16_t a, const uint8_t v)
 {
 	m->writeByte(a, v);
+}
+
+void bus::set_lf_crs_b7()
+{
+	lf_csr |= 128;
+}
+
+uint8_t bus::get_lf_crs()
+{
+	return lf_csr;
 }

@@ -36,6 +36,8 @@ private:
 
 	uint16_t switch_register { 0 };
 
+	uint16_t lf_csr { 0 };
+
 	bool     debug_mode { false };
 
 public:
@@ -57,6 +59,9 @@ public:
 	tty *getTty() { return this->tty_; }
 
 	void init();  // invoked by 'RESET' command
+
+	void    set_lf_crs_b7();
+	uint8_t get_lf_crs();
 
 	uint16_t read(const uint16_t a, const bool word_mode, const bool use_prev, const bool peek_only=false);
 	uint16_t readByte(const uint16_t a) { return read(a, true, false); }

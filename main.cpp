@@ -13,6 +13,7 @@
 #include "cpu.h"
 #include "debugger.h"
 #include "gen.h"
+#include "kw11-l.h"
 #include "memory.h"
 #include "terminal.h"
 #include "tests.h"
@@ -160,8 +161,11 @@ int main(int argc, char *argv[])
 	//setlocale(LC_ALL, "");
 
 	bus *b = new bus();
+
 	cpu *c = new cpu(b, &event);
 	b->add_cpu(c);
+
+	kw11_l *lf = new kw11_l(b);
 
 	c -> setEmulateMFPT(true);
 

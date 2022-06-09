@@ -247,6 +247,8 @@ void cpu::setPSW(const uint16_t v, const bool limited)
 
 bool cpu::check_queued_interrupts()
 {
+	std::unique_lock<std::mutex> lck(qi_lock);
+
 	uint8_t current_level = getPSW_spl();
 
 	// uint8_t start_level = current_level <= 3 ? 0 : current_level + 1;
@@ -273,6 +275,8 @@ bool cpu::check_queued_interrupts()
 
 void cpu::queue_interrupt(const uint8_t level, const uint8_t vector)
 {
+	std::unique_lock<std::mutex> lck(qi_lock);
+
 	auto it = queued_interrupts.find(level);
 
 	it->second.insert(vector);

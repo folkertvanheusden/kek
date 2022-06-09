@@ -4,6 +4,7 @@
 
 #include <assert.h>
 #include <map>
+#include <mutex>
 #include <set>
 #include <stdint.h>
 #include <vector>
@@ -27,6 +28,7 @@ private:
 
 	// level, vector
 	std::map<uint8_t, std::set<uint8_t> > queued_interrupts;
+	std::mutex qi_lock;
 
 	std::set<uint16_t> breakpoints;
 
