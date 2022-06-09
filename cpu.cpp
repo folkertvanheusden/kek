@@ -579,18 +579,16 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 
 	switch(operation) {
 		case 0: { // MUL
-				uint16_t R      = getRegister(reg);
-				int32_t  result = R * getGAM(dst_mode, dst_reg, true, false);
+				int16_t R1     = getRegister(reg);
+				int16_t R2     = getGAM(dst_mode, dst_reg, true, false);
+				int32_t result = R1 * R2;
 
-				if (reg & 1)
-					setRegister(reg, result);
-				else {
-					setRegister(reg + 1, result & 65535);
-					setRegister(reg, result >> 16);
-				}
+				setRegister(reg, result >> 16);
+				setRegister(reg | 1, result & 65535);
 
 				setPSW_n(result < 0);
 				setPSW_z(result == 0);
+				setPSW_v(false);
 				setPSW_c(result < -32768 || result > 32767);
 				return true;
 			}
