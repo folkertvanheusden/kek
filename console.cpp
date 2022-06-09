@@ -218,7 +218,7 @@ void console::operator()()
 
 		bool running_flag = *get_running_flag();
 
-		printf("%d %d\n", running_flag, c);
+//		printf("%d %d\n", running_flag, c);
 
 		if (running_flag == false && c == 3)  // ^c
 			*interrupt_emulation = *terminate = true;
