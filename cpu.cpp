@@ -687,11 +687,12 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 		case 3: { // ASHC
 				uint32_t R0R1  = (getRegister(reg) << 16) | getRegister(reg + 1);
 				uint16_t shift = getGAM(dst_mode, dst_reg, false, false) & 077;
-				bool     sign  = R0R1 >> 31;
+				bool     sign  = R0R1 & 0x80000000;
 
-				if (shift == 0) {
+				setPSW_v(false);
+
+				if (shift == 0)
 					setPSW_c(false);
-				}
 				else if (shift < 32) {
 					R0R1 <<= shift - 1;
 
@@ -700,19 +701,27 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 					R0R1 <<= 1;
 				}
 				else {
+					int shift_n = (64 - shift) - 1;
+
 					// extend sign-bit
-					if (R0R1 & 0x80000000)  // convert to unsigned 64b int & extend sign
-						R0R1 = (uint64_t(R0R1) | 0xffffffff00000000ll) >> (64 - (shift + 1));
-					else
-						R0R1 >>= 64 - (shift + 1);
+					if (sign)  // convert to unsigned 64b int & extend sign
+					{
+						R0R1 = (uint64_t(R0R1) | 0xffffffff00000000ll) >> shift_n;
 
-					setPSW_c(R0R1 & 1);
+						setPSW_c(R0R1 & 1);
 
-					R0R1 >>= 1;
+						R0R1 = (uint64_t(R0R1) | 0xffffffff00000000ll) >> 1;
+					}
+					else {
+						R0R1 >>= shift_n;
+
+						setPSW_c(R0R1 & 1);
+
+						R0R1 >>= 1;
+					}
 				}
 
-				bool new_sign = R0R1 >> 31;
-
+				bool new_sign = R0R1 & 0x80000000;
 				setPSW_v(sign != new_sign);
 
 				setRegister(reg, R0R1 >> 16);
