@@ -51,6 +51,7 @@ public:
 	std::string  read_line(const std::string & prompt);
 	void         flush_input();
 
+	void         emit_backspace();
 	void         put_char(const char c);
 	void         put_string(const std::string & what);
 	virtual void put_string_lf(const std::string & what) = 0;

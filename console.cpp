@@ -88,6 +88,13 @@ void console::flush_input()
 	input_buffer.clear();
 }
 
+void console::emit_backspace()
+{
+	put_char(8);
+	put_char(' ');
+	put_char(8);
+}
+
 std::string console::read_line(const std::string & prompt)
 {
 	put_string(prompt);
@@ -107,14 +114,18 @@ std::string console::read_line(const std::string & prompt)
 		if (c == 13 || c == 10)
 			break;
 
-		if (c == 8) {
+		if (c == 8 || c == 127) {  // backspace
 			if (!str.empty()) {
 				str = str.substr(0, str.size() - 1);
 
-				put_char(8);
-				put_char(' ');
-				put_char(8);
+				emit_backspace();
 			}
+		}
+		else if (c == 21) {  // ^u
+			for(size_t i=0; i<str.size(); i++)
+				emit_backspace();
+
+			str.clear();
 		}
 		else if (c >= 32 && c < 127) {
 			str += c;
