@@ -34,6 +34,8 @@ protected:
 	uint8_t                 tx               { 0 };
 	uint8_t                 ty               { 0 };
 
+	std::string             debug_buffer;
+
 	virtual int  wait_for_char_ll(const short timeout) = 0;
 
 	virtual void put_char_ll(const char c) = 0;

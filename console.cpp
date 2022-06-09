@@ -163,8 +163,15 @@ void console::put_char(const char c)
 	}
 	else if (c == 13)
 		tx = 0;
-	else if (c == 10)
+	else if (c == 10) {
+		if (debug_buffer.empty() == false) {
+			D(fprintf(stderr, "TTY: %s\n", debug_buffer.c_str());)
+
+			debug_buffer.clear();
+		}
+
 		ty++;
+	}
 	else if (c == 8) {  // backspace
 		if (tx > 0)
 			tx--;
@@ -177,6 +184,9 @@ void console::put_char(const char c)
 
 			ty++;
 		}
+
+		if (debug_buffer.size() < 4096)
+			debug_buffer += c;
 	}
 
 	if (ty == t_height) {
@@ -207,6 +217,8 @@ void console::operator()()
 			continue;
 
 		bool running_flag = *get_running_flag();
+
+		printf("%d %d\n", running_flag, c);
 
 		if (running_flag == false && c == 3)  // ^c
 			*interrupt_emulation = *terminate = true;
