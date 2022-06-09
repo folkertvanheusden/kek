@@ -74,7 +74,8 @@ std::map<std::string, std::string> split(const std::vector<std::string> & kv_arr
 
 void debugger(console *const cnsl, bus *const b, std::atomic_bool *const interrupt_emulation, const bool tracing_in)
 {
-	bool tracing = tracing_in;
+	int32_t trace_start_addr = -1;
+	bool    tracing          = tracing_in;
 
 	cpu *const c = b->getCpu();
 
@@ -144,6 +145,22 @@ void debugger(console *const cnsl, bus *const b, std::atomic_bool *const interru
 			tracing = !tracing;
 
 			cnsl->put_string_lf(format("Tracing set to %s", tracing ? "ON" : "OFF"));
+
+			continue;
+		}
+		else if (parts[0] == "strace") {
+			if (parts.size() != 2) {
+				trace_start_addr = -1;
+
+				cnsl->put_string_lf("Tracing start address reset");
+			}
+			else {
+				trace_start_addr = std::stoi(parts[1], nullptr, 8);
+
+				cnsl->put_string_lf(format("Tracing start address set to %06o", trace_start_addr));
+			}
+
+			continue;
 		}
 		else if (parts[0] == "examine" || parts[0] == "e") {
 			if (parts.size() != 3)
@@ -192,6 +209,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_bool *const interru
 			cnsl->put_string_lf("single/s      - run 1 instruction (implicit 'disassemble' command)");
 			cnsl->put_string_lf("sbp/cbp/lbp   - set/clear/list breakpoint(s)");
 			cnsl->put_string_lf("trace/t       - toggle tracing");
+			cnsl->put_string_lf("strace        - start tracing from address - invoke without address to disable");
 
 			continue;
 		}
@@ -206,6 +224,9 @@ void debugger(console *const cnsl, bus *const b, std::atomic_bool *const interru
 
 		while(!event && !*interrupt_emulation) {
 			c->step_a();
+
+			if (trace_start_addr != -1 && c->getPC() == trace_start_addr)
+				tracing = true;
 
 			if (tracing || single_step)
 				disassemble(c, single_step ? cnsl : nullptr, c->getPC(), false);
