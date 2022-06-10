@@ -1275,12 +1275,20 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					 if ((b->getMMR1() & 0160000) == 0)
 						 b->addToMMR1(-2, 6);
 
-					 // calculate address in current address space
-					 uint16_t a = getGAMAddress(dst_mode, dst_reg, false, false);
-					 // reed from previous space
-					 uint16_t v = b -> read(a, false, true);
+					 bool     set_flags = true;
+					 uint16_t v         = 0xffff;
 
-					 bool set_flags = a != 0177776;
+					 if (dst_mode == 0)
+						 v = getRegister(dst_reg, true);
+					 else {
+						 // calculate address in current address space
+						 uint16_t a = getGAMAddress(dst_mode, dst_reg, false, false);
+
+						 set_flags = a != 0177776;
+
+						 // read from previous space
+						 v = b -> read(a, false, true);
+					 }
 
 					 if (set_flags) {
 						 setPSW_n(SIGN(v, false));
@@ -1304,9 +1312,17 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					 // retrieve word from '15/14'-stack
 					 uint16_t v = popStack();
 
-					 uint16_t a = getGAMAddress(dst_mode, dst_reg, false, false);
+					 uint16_t a = 0xffff;
 
-					 bool set_flags = a != 0177776;
+					 bool set_flags = true;
+
+					 if (dst_mode == 0)
+						setRegister(dst_reg, true, v);
+					 else {
+						a = getGAMAddress(dst_mode, dst_reg, false, false);
+
+						set_flags = a != 0177776;
+					 }
 
 					 if (set_flags) {
 						 setPSW_n(SIGN(v, false));
@@ -1314,7 +1330,8 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						 setPSW_v(false);
 					 }
 
-					 b -> write(a, false, v, true);  // put in '13/12' address space
+					 if (dst_mode != 0)
+						 b -> write(a, false, v, true);  // put in '13/12' address space
 
 					 break;
 				 }
