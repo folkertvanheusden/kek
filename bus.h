@@ -7,7 +7,7 @@
 
 #include "tm-11.h"
 #include "rk05.h"
-#include "rx02.h"
+#include "rl02.h"
 
 class cpu;
 class memory;
@@ -24,7 +24,7 @@ private:
 	cpu     *c     { nullptr };
 	tm_11   *tm11  { nullptr };
 	rk05    *rk05_ { nullptr };
-	rx02    *rx02_ { nullptr };
+	rl02    *rl02_ { nullptr };
 	tty     *tty_  { nullptr };
 
 	memory  *m     { nullptr };
@@ -51,7 +51,7 @@ public:
 	void add_cpu(cpu *const c) { this -> c = c; }
 	void add_tm11(tm_11 *tm11) { this -> tm11 = tm11; } 
 	void add_rk05(rk05 *rk05_) { this -> rk05_ = rk05_; } 
-	void add_rx02(rx02 *rx02_) { this -> rx02_ = rx02_; }
+	void add_rl02(rl02 *rl02_) { this -> rl02_ = rl02_; }
 	void add_tty(tty *tty_) { this -> tty_ = tty_; }
 
 	cpu *getCpu() { return this->c; }

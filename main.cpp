@@ -21,6 +21,8 @@
 #include "utils.h"
 
 
+typedef enum { BL_NONE, BL_RK05, BL_RL02 } bootloader_t;
+
 bool              withUI       { false };
 uint32_t          event        { 0 };
 std::atomic_bool  terminate    { false };
@@ -37,32 +39,85 @@ void loadbin(bus *const b, uint16_t base, const char *const file)
 	fclose(fh);
 }
 
-void setBootLoader(bus *const b)
+void setBootLoader(bus *const b, const bootloader_t which)
 {
-	cpu *const c = b -> getCpu();
+	cpu *const c      = b -> getCpu();
 
-	const uint16_t offset = 01000;
-	constexpr uint16_t bootrom[] = {
-		0012700,
-		0177406,
-		0012710,
-		0177400,
-		0012740,
-		0000005,
-		0105710,
-		0100376,
-		0005007
-	};
+	uint16_t         offset = 0;
+	const uint16_t  *bl     = nullptr;
+	int              size   = 0;
 
-	FILE *fh = fopen("boot.dat", "wb");
+	if (which == BL_RK05) {
+		offset = 01000;
 
-	for(size_t i=0; i<sizeof bootrom / 2; i++) {
-		b -> writeWord(offset + i * 2, bootrom[i]);
-		fputc(bootrom[i] & 255, fh);
-		fputc(bootrom[i] >> 8, fh);
+		static uint16_t rk05_code[] = {
+			0012700,
+			0177406,
+			0012710,
+			0177400,
+			0012740,
+			0000005,
+			0105710,
+			0100376,
+			0005007
+		};
+
+		bl = rk05_code;
+
+		size = 9;
+	}
+	else if (which == BL_RL02) {
+		offset = 01000;
+
+		/* from https://www.pdp-11.nl/peripherals/disk/rl-info.html
+		static uint16_t rl02_code[] = {
+			0012701,
+			0174400,
+			0012761,
+			0000013,
+			0000004,
+			0012711,
+			0000004,
+			0105711,
+			0100376,
+			0005061,
+			0000002,
+			0005061,
+			0000004,
+			0012761,
+			0177400,
+			0000006,
+			0012711,
+			0000014,
+			0105711,
+			0100376,
+			0005007
+		};
+
+		size = 21;
+		*/
+
+		// from http://gunkies.org/wiki/RL11_disk_controller
+		static uint16_t rl02_code[] = {
+			0012700,
+			0174400,
+			0012760,
+			0177400,
+			0000006,
+			0012710,
+			0000014,
+			0105710,
+			0100376,
+			0005007,
+		};
+
+		size = 10;
+
+		bl = rl02_code;
 	}
 
-	fclose(fh);
+	for(int i=0; i<size; i++)
+		b -> writeWord(offset + i * 2, bl[i]);
 
 	c -> setRegister(7, offset);
 }
@@ -130,6 +185,44 @@ uint16_t loadTape(bus *const b, const char *const file)
 	return start;
 }
 
+void load_p11_x11(bus *const b, const std::string & file)
+{
+	FILE *fh = fopen(file.c_str(), "rb");
+	if (!fh)
+		error_exit(true, "Cannot open %s", file.c_str());
+
+	uint16_t addr    = 0;
+	int      n = 0;
+
+	while(!feof(fh)) {
+		char buffer[4096];
+
+		if (!fgets(buffer, sizeof buffer, fh))
+			break;
+
+		if (n) {
+			uint8_t byte = strtol(buffer, NULL, 16);
+
+			b->writeByte(addr, byte);
+
+			n--;
+
+			addr++;
+		}
+		else {
+			std::vector<std::string> parts = split(buffer, " ");
+
+			addr = strtol(parts[0].c_str(), NULL, 16);
+			n    = strtol(parts[1].c_str(), NULL, 16);
+		}
+	}
+
+	fclose(fh);
+
+	cpu *const c      = b -> getCpu();
+	c -> setRegister(7, 0);
+}
+
 volatile bool sw = false;
 void sw_handler(int s)
 {
@@ -150,7 +243,7 @@ void help()
 	printf("-R d.rk  load file as a RK05 disk device\n");
 	printf("-p 123   set CPU start pointer to decimal(!) value\n");
 	printf("-L f.bin load file into memory at address given by -p (and run it)\n");
-	printf("-b       enable bootloader (build-in)\n");
+	printf("-b x     enable bootloader (build-in), parameter must be \"rk05\" or \"rl02\"\n");
 	printf("-n       ncurses UI\n");
 	printf("-d       enable debugger\n");
 	printf("-t       enable tracing (disassemble to stderr, requires -d as well)\n");
@@ -170,12 +263,16 @@ int main(int argc, char *argv[])
 	c -> setEmulateMFPT(true);
 
 	std::vector<std::string> rk05_files;
+	std::vector<std::string> rl02_files;
+
 	bool testCases    = false;
 	bool run_debugger = false;
 	bool tracing      = false;
-	bool bootloader   = false;
+
+	bootloader_t  bootloader = BL_NONE;
+
 	int  opt          = -1;
-	while((opt = getopt(argc, argv, "hm:T:R:p:ndtL:b")) != -1)
+	while((opt = getopt(argc, argv, "hm:T:r:R:p:ndtL:b:")) != -1)
 	{
 		switch(opt) {
 			case 'h':
@@ -183,7 +280,13 @@ int main(int argc, char *argv[])
 				return 1;
 
 			case 'b':
-				bootloader   = true;
+				if (strcasecmp(optarg, "rk05") == 0)
+					bootloader = BL_RK05;
+				else if (strcasecmp(optarg, "rl02") == 0)
+					bootloader = BL_RL02;
+				else
+					error_exit(false, "Bootload \"%s\" not recognized", optarg);
+
 				break;
 
 			case 'd':
@@ -214,6 +317,10 @@ int main(int argc, char *argv[])
 
 			case 'R':
 				rk05_files.push_back(optarg);
+				break;
+
+			case 'r':
+				rl02_files.push_back(optarg);
 				break;
 
 			case 'p':
@@ -247,8 +354,11 @@ int main(int argc, char *argv[])
 	if (rk05_files.empty() == false)
 		b->add_rk05(new rk05(rk05_files, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
 
-	if (bootloader)
-		setBootLoader(b);
+	if (rl02_files.empty() == false)
+		b->add_rl02(new rl02(rl02_files, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
+
+	if (bootloader != BL_NONE)
+		setBootLoader(b, bootloader);
 
 	running = cnsl->get_running_flag();
 
@@ -274,6 +384,8 @@ int main(int argc, char *argv[])
 
 //	loadbin(b, 0, "test.dat");
 //	c->setRegister(7, 0);
+
+//load_p11_x11(b, "/home/folkert/Projects/PDP-11/work/p11-2.10i/Tests/mtpi.x11");
 
 	cnsl->start_thread();
 
@@ -305,6 +417,8 @@ int main(int argc, char *argv[])
 	delete cnsl;
 
 	delete b;
+
+	delete lf;
 
 	return 0;
 }
