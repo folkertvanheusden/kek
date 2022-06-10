@@ -10,8 +10,8 @@
 
 #define NEOPIXELS_PIN	25
 
-console_esp32::console_esp32(std::atomic_bool *const terminate, std::atomic_bool *const interrupt_emulation, bus *const b) :
-	console(terminate, interrupt_emulation, b)
+console_esp32::console_esp32(std::atomic_uint32_t *const stop_event, bus *const b) :
+	console(stop_event, b)
 {
 }
 

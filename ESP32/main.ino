@@ -14,6 +14,7 @@
 #include "debugger.h"
 #include "error.h"
 #include "esp32.h"
+#include "gen.h"
 #include "memory.h"
 #include "tty.h"
 #include "utils.h"
@@ -24,20 +25,17 @@ cpu     *c    = nullptr;
 tty     *tty_ = nullptr;
 console *cnsl = nullptr;
 
-uint32_t event     = 0;
-
 uint16_t exec_addr = 0;
 
 uint32_t start_ts  = 0;
 
 SdFat32  sd;
 
-std::atomic_bool terminate           { false };
-std::atomic_bool interrupt_emulation { false };
+std::atomic_uint32_t stop_event      { EVENT_NONE };
 
-std::atomic_bool *running            { nullptr };
+std::atomic_bool    *running         { nullptr };
 
-bool              trace_output       { false };
+bool                 trace_output    { false };
 
 // std::atomic_bool on_wifi   { false };
 
@@ -182,7 +180,7 @@ void setup() {
 	b = new bus();
 
 	Serial.println(F("Init CPU"));
-	c = new cpu(b, &event);
+	c = new cpu(b, &stop_event);
 
 	Serial.println(F("Connect CPU to BUS"));
 	b->add_cpu(c);
@@ -190,7 +188,7 @@ void setup() {
 	c->setEmulateMFPT(true);
 
 	Serial.println(F("Init console"));
-	cnsl = new console_esp32(&terminate, &interrupt_emulation, b);
+	cnsl = new console_esp32(&stop_event, b);
 
 	running = cnsl->get_running_flag();
 
@@ -232,7 +230,7 @@ void setup() {
 }
 
 void loop() {
-	debugger(cnsl, b, &interrupt_emulation, false);
+	debugger(cnsl, b, &stop_event, false);
 
 	c->reset();
 }
