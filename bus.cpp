@@ -281,6 +281,9 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 		if (rk05_ && a >= RK05_BASE && a < RK05_END)
 			return word_mode ? rk05_ -> readByte(a) : rk05_ -> readWord(a);
 
+		if (rl02_ && a >= RL02_BASE && a < RL02_END)
+			return word_mode ? rl02_ -> readByte(a) : rl02_ -> readWord(a);
+
 		if (tty_ && a >= PDP11TTY_BASE && a < PDP11TTY_END)
 			return word_mode ? tty_ -> readByte(a) : tty_ -> readWord(a);
 

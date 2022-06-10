@@ -24,16 +24,20 @@ class bus;
 class rl02
 {
 private:
-	bus *const b;
-	uint16_t registers[7];
-	uint8_t xfer_buffer[512];
+	bus      *const b;
+	uint16_t        registers[4];
+	uint8_t         xfer_buffer[512];
+
 #if defined(ESP32)
 	std::vector<File32 *> fhs;
 #else
 	std::vector<FILE *> fhs;
 #endif
+
 	std::atomic_bool *const disk_read_acitivity  { nullptr };
 	std::atomic_bool *const disk_write_acitivity { nullptr };
+
+	uint32_t calcOffset(uint16_t);
 
 public:
 	rl02(const std::vector<std::string> & files, bus *const b, std::atomic_bool *const disk_read_acitivity, std::atomic_bool *const disk_write_acitivity);
