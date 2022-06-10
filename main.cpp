@@ -185,6 +185,44 @@ uint16_t loadTape(bus *const b, const char *const file)
 	return start;
 }
 
+void load_p11_x11(bus *const b, const std::string & file)
+{
+	FILE *fh = fopen(file.c_str(), "rb");
+	if (!fh)
+		error_exit(true, "Cannot open %s", file.c_str());
+
+	uint16_t addr    = 0;
+	int      n = 0;
+
+	while(!feof(fh)) {
+		char buffer[4096];
+
+		if (!fgets(buffer, sizeof buffer, fh))
+			break;
+
+		if (n) {
+			uint8_t byte = strtol(buffer, NULL, 16);
+
+			b->writeByte(addr, byte);
+
+			n--;
+
+			addr++;
+		}
+		else {
+			std::vector<std::string> parts = split(buffer, " ");
+
+			addr = strtol(parts[0].c_str(), NULL, 16);
+			n    = strtol(parts[1].c_str(), NULL, 16);
+		}
+	}
+
+	fclose(fh);
+
+	cpu *const c      = b -> getCpu();
+	c -> setRegister(7, 0);
+}
+
 volatile bool sw = false;
 void sw_handler(int s)
 {
@@ -346,6 +384,8 @@ int main(int argc, char *argv[])
 
 //	loadbin(b, 0, "test.dat");
 //	c->setRegister(7, 0);
+
+//load_p11_x11(b, "/home/folkert/Projects/PDP-11/work/p11-2.10i/Tests/mtpi.x11");
 
 	cnsl->start_thread();
 
