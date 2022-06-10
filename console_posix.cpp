@@ -7,8 +7,8 @@
 #include "error.h"
 
 
-console_posix::console_posix(std::atomic_bool *const terminate, std::atomic_bool *const interrupt_emulation, bus *const b) :
-	console(terminate, interrupt_emulation, b)
+console_posix::console_posix(std::atomic_uint32_t *const stop_event, bus *const b) :
+	console(stop_event, b)
 {
 	if (tcgetattr(STDIN_FILENO, &org_tty_opts) == -1)
 		error_exit(true, "console_posix: tcgetattr failed");

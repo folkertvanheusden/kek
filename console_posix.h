@@ -14,7 +14,7 @@ protected:
 	void put_char_ll(const char c) override;
 
 public:
-	console_posix(std::atomic_bool *const terminate, std::atomic_bool *const interrupt_emulation, bus *const b);
+	console_posix(std::atomic_uint32_t *const stop_event, bus *const b);
 	virtual ~console_posix();
 
 	void resize_terminal() override;

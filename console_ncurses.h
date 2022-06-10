@@ -26,7 +26,7 @@ protected:
 	void put_char_ll(const char c) override;
 
 public:
-	console_ncurses(std::atomic_bool *const terminate, std::atomic_bool *const interrupt_emulation, bus *const b);
+	console_ncurses(std::atomic_uint32_t *const stop_event, bus *const b);
 	virtual ~console_ncurses();
 
 	void put_string_lf(const std::string & what) override;

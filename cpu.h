@@ -34,7 +34,7 @@ private:
 
 	bus *const b { nullptr };
 
-	uint32_t *const event { nullptr };
+	std::atomic_uint32_t *const event { nullptr };
 
 	bool check_queued_interrupts();
 
@@ -65,7 +65,7 @@ private:
 	operand_parameters addressing_to_string(const uint8_t mode_register, const uint16_t pc, const bool word_mode) const;
 
 public:
-	explicit cpu(bus *const b, uint32_t *const event);
+	explicit cpu(bus *const b, std::atomic_uint32_t *const event);
 	~cpu();
 
 	bool check_breakpoint();

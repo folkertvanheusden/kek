@@ -13,7 +13,7 @@
 
 #define IS_0(x, wm) ((wm) ? ((x) & 0xff) == 0 : (x) == 0)
 
-cpu::cpu(bus *const b, uint32_t *const event) : b(b), event(event)
+cpu::cpu(bus *const b, std::atomic_uint32_t *const event) : b(b), event(event)
 {
 	reset();
 }
@@ -1528,7 +1528,7 @@ bool cpu::misc_operations(const uint16_t instr)
 {
 	switch(instr) {
 		case 0b0000000000000000: // HALT
-			*event = 1;
+			*event = EVENT_HALT;
 			return true;
 
 		case 0b0000000000000001: // WAIT

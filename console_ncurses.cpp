@@ -6,11 +6,12 @@
 #include "console_ncurses.h"
 #include "cpu.h"
 #include "error.h"
+#include "gen.h"
 #include "utils.h"
 
 
-console_ncurses::console_ncurses(std::atomic_bool *const terminate, std::atomic_bool *const interrupt_emulation, bus *const b) :
-	console(terminate, interrupt_emulation, b)
+console_ncurses::console_ncurses(std::atomic_uint32_t *const stop_event, bus *const b) :
+	console(stop_event, b)
 {
 	init_ncurses(true);
 
@@ -130,7 +131,7 @@ void console_ncurses::panel_update_thread()
 
 	constexpr int refresh_rate = 50;
 
-	while(!*terminate) {
+	while(*stop_event != EVENT_TERMINATE) {
 		myusleep(1000000 / refresh_rate);
 
 		// note that these are approximately as there's no mutex on the emulation

@@ -1,15 +1,13 @@
 #include "bus.h"
 #include "console.h"
 #include "cpu.h"
+#include "gen.h"
 #include "utils.h"
 
 
 #if defined(ESP32)
 void setBootLoader(bus *const b);
 #endif
-
-extern uint32_t         event;
-extern std::atomic_bool terminate;
 
 // returns size of instruction (in bytes)
 int disassemble(cpu *const c, console *const cnsl, const int pc, const bool instruction_only)
@@ -72,7 +70,7 @@ std::map<std::string, std::string> split(const std::vector<std::string> & kv_arr
 	return out;
 }
 
-void debugger(console *const cnsl, bus *const b, std::atomic_bool *const interrupt_emulation, const bool tracing_in)
+void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const stop_event, const bool tracing_in)
 {
 	int32_t trace_start_addr = -1;
 	bool    tracing          = tracing_in;
@@ -83,9 +81,8 @@ void debugger(console *const cnsl, bus *const b, std::atomic_bool *const interru
 
 	bool single_step = false;
 
-	while(!terminate) {
-		bool        temp  = terminate;
-		std::string cmd   = cnsl->read_line(format("%d%d", event, temp));
+	while(*stop_event != EVENT_TERMINATE) {
+		std::string cmd   = cnsl->read_line(format("%d", stop_event->load()));
 		auto        parts = split(cmd, " ");
 		auto        kv    = split(parts, "=");
 
@@ -184,9 +181,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_bool *const interru
 #if defined(ESP32)
 			ESP.restart();
 #else
-			terminate = false;
-
-			event = 0;
+			*stop_event = EVENT_NONE;
 
 			c->reset();
 #endif
@@ -222,7 +217,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_bool *const interru
 
 		*cnsl->get_running_flag() = true;
 
-		while(!event && !*interrupt_emulation) {
+		while(*stop_event == EVENT_NONE) {
 			c->step_a();
 
 			if (trace_start_addr != -1 && c->getPC() == trace_start_addr)
@@ -249,12 +244,10 @@ void debugger(console *const cnsl, bus *const b, std::atomic_bool *const interru
 			cnsl->debug("MIPS: %.2f, relative speed: %.2f%%", speed.first, speed.second);
 		}
 
-		if (*interrupt_emulation) {
+		if (*stop_event == EVENT_INTERRUPT) {
 			single_step = true;
 
-			event = 0;
-
-			*interrupt_emulation = false;
+			*stop_event = EVENT_NONE;
 		}
 	}
 }

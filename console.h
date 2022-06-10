@@ -19,8 +19,7 @@ private:
 	std::mutex              input_lock;
 
 protected:
-	std::atomic_bool *const terminate           { nullptr };
-	std::atomic_bool *const interrupt_emulation { nullptr };
+	std::atomic_uint32_t *const stop_event    { nullptr };
 
 	bus              *const b                { nullptr };
 	std::thread            *th               { nullptr };
@@ -41,7 +40,7 @@ protected:
 	virtual void put_char_ll(const char c) = 0;
 
 public:
-	console(std::atomic_bool *const terminate, std::atomic_bool *const interrupt_emulation, bus *const b);
+	console(std::atomic_uint32_t *const stop_event, bus *const b);
 	virtual ~console();
 
 	void         start_thread();

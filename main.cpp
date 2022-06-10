@@ -24,8 +24,7 @@
 typedef enum { BL_NONE, BL_RK05, BL_RL02 } bootloader_t;
 
 bool              withUI       { false };
-uint32_t          event        { 0 };
-std::atomic_bool  terminate    { false };
+std::atomic_uint32_t event     { 0 };
 std::atomic_bool *running      { nullptr };
 bool              trace_output { false };
 
@@ -231,7 +230,7 @@ void sw_handler(int s)
 	else {
 		fprintf(stderr, "Terminating...\n");
 
-		terminate = true;
+		event = EVENT_TERMINATE;
 	}
 }
 
@@ -342,13 +341,13 @@ int main(int argc, char *argv[])
 	std::atomic_bool interrupt_emulation { false };
 
 	if (withUI)
-		cnsl = new console_ncurses(&terminate, &interrupt_emulation, b);
+		cnsl = new console_ncurses(&event, b);
 	else {
 		fprintf(stderr, "This PDP-11 emulator is called \"kek\" (reason for that is forgotten) and was written by Folkert van Heusden.\n");
 
 		fprintf(stderr, "Built on: " __DATE__ " " __TIME__ "\n");
 
-		cnsl = new console_posix(&terminate, &interrupt_emulation, b);
+		cnsl = new console_posix(&event, b);
 	}
 
 	if (rk05_files.empty() == false)
@@ -390,19 +389,22 @@ int main(int argc, char *argv[])
 	cnsl->start_thread();
 
 	if (run_debugger)
-		debugger(cnsl, b, &interrupt_emulation, tracing);
+		debugger(cnsl, b, &event, tracing);
 	else {
 		c->emulation_start();  // for statistics
 
 		*running = true;
 
-		// TODO combine event, interrupt_emulation and terminate into one thing
-		while(!event) {
-			if (interrupt_emulation)
-				break;
+		for(;;) {
+			while(!event) {
+				c->step_a();
+				c->step_b();
+			}
 
-			c->step_a();
-			c->step_b();
+			uint32_t stop_event = event.exchange(EVENT_NONE);
+
+			if (stop_event == EVENT_HALT || stop_event == EVENT_INTERRUPT || stop_event == EVENT_TERMINATE)
+				break;
 		}
 
 		auto stats = c->get_mips_rel_speed();
@@ -412,7 +414,7 @@ int main(int argc, char *argv[])
 		*running = false;
 	}
 
-	terminate = true;
+	event = EVENT_TERMINATE;
 
 	delete cnsl;
 

@@ -10,9 +10,8 @@
 #include "utils.h"
 
 
-console::console(std::atomic_bool *const terminate, std::atomic_bool *const interrupt_emulation, bus *const b) :
-	terminate(terminate),
-	interrupt_emulation(interrupt_emulation),
+console::console(std::atomic_uint32_t *const stop_event, bus *const b) :
+	stop_event(stop_event),
 	b(b)
 {
 	memset(screen_buffer, ' ', sizeof screen_buffer);
@@ -105,7 +104,7 @@ std::string console::read_line(const std::string & prompt)
 	for(;;) {
 		char c = wait_char(500);
 
-		if (*terminate || stop_thread_flag)
+		if (*stop_event == EVENT_TERMINATE)
 			return "";
 
 		if (c == -1)
@@ -208,9 +207,9 @@ void console::operator()()
 {
 	D(fprintf(stderr, "Console thread started\n");)
 
-	set_thread_name("kek:console");
+	set_thread_name("kek::console");
 
-	while(!*terminate && !stop_thread_flag) {
+	while(*stop_event != EVENT_TERMINATE && !stop_thread_flag) {
 		int c = wait_for_char_ll(100);
 
 		if (c == -1)
@@ -221,9 +220,9 @@ void console::operator()()
 //		printf("%d %d\n", running_flag, c);
 
 		if (running_flag == false && c == 3)  // ^c
-			*interrupt_emulation = *terminate = true;
+			*stop_event = EVENT_TERMINATE;
 		else if (running_flag == true && c == 5)  // ^e
-			*interrupt_emulation = true;
+			*stop_event = EVENT_INTERRUPT;
 		else if (running_flag == false && c == 12)  // ^l
 			refresh_virtual_terminal();
 		else {
