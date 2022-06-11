@@ -123,6 +123,9 @@ std::pair<std::vector<std::string>, std::vector<std::string> > select_disk_files
 
 		std::string selected_file = c->read_line("Enter filename: ");
 
+		if (selected_file.empty())
+			continue;
+
 		c->put_string("1. RK05, 2. RL02, 3. re-select file");
 
 		int ch = -1;
