@@ -50,7 +50,7 @@ unsigned long get_ms()
 #endif
 }
 
-uint32_t long get_us()
+uint64_t get_us()
 {
 #if defined(ESP32)
 	return micros();
