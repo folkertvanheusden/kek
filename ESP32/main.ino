@@ -132,6 +132,8 @@ std::pair<std::vector<std::string>, std::vector<std::string> > select_disk_files
 		if (ch == '3')
 			continue;
 
+		c->put_string_lf(format("%c", ch));
+
 		c->put_string("Opening file: ");
 		c->put_string_lf(selected_file.c_str());
 
