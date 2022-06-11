@@ -2,6 +2,7 @@
 #include "console.h"
 #include "cpu.h"
 #include "gen.h"
+#include "log.h"
 #include "utils.h"
 
 
@@ -49,7 +50,7 @@ int disassemble(cpu *const c, console *const cnsl, const int pc, const bool inst
 	if (cnsl)
 		cnsl->debug(result);
 	else
-		fprintf(stderr, "%s\n", result.c_str());
+		DOLOG(debug, true, "%s", result.c_str());
 
 	return data["instruction-values"].size() * 2;
 }
