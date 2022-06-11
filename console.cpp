@@ -111,7 +111,7 @@ std::string console::read_line(const std::string & prompt)
 		if (*stop_event == EVENT_TERMINATE)
 			return "";
 
-		if (c == -1)
+		if (c == -1 || c == 255 /* ESP32 has unsigned char? */)
 			continue;
 
 		if (c == 13 || c == 10)
