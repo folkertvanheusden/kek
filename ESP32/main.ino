@@ -28,8 +28,6 @@ console *cnsl = nullptr;
 
 uint16_t exec_addr = 0;
 
-uint32_t start_ts  = 0;
-
 SdFat32  sd;
 
 std::atomic_uint32_t stop_event      { EVENT_NONE };
@@ -220,12 +218,6 @@ void setup() {
 	Serial.flush();
 
 	cnsl->start_thread();
-
-	Serial.println(F("Emulation starting!"));
-
-	start_ts = millis();
-
-	*running = true;
 }
 
 void loop() {
