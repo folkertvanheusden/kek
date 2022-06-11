@@ -15,6 +15,7 @@
 #include "error.h"
 #include "esp32.h"
 #include "gen.h"
+#include "loaders.h"
 #include "memory.h"
 #include "tty.h"
 #include "utils.h"
@@ -38,29 +39,6 @@ std::atomic_bool    *running         { nullptr };
 bool                 trace_output    { false };
 
 // std::atomic_bool on_wifi   { false };
-
-void setBootLoader(bus *const b) {
-	cpu     *const c      = b->getCpu();
-
-	const uint16_t offset = 01000;
-
-	constexpr uint16_t bootrom[] = {
-		0012700,
-		0177406,
-		0012710,
-		0177400,
-		0012740,
-		0000005,
-		0105710,
-		0100376,
-		0005007
-	};
-
-	for(size_t i=0; i<sizeof bootrom / 2; i++)
-		b->writeWord(offset + i * 2, bootrom[i]);
-
-	c->setRegister(7, offset);
-}
 
 void console_thread_wrapper_panel(void *const c)
 {
@@ -126,7 +104,8 @@ void setup_wifi_stations()
 #endif
 }
 
-std::vector<std::string> select_disk_files(console *const c)
+// RK05, RL02 files
+std::pair<std::vector<std::string>, std::vector<std::string> > select_disk_files(console *const c)
 {
 	c->debug("MISO: %d", int(MISO));
 	c->debug("MOSI: %d", int(MOSI));
@@ -145,6 +124,15 @@ std::vector<std::string> select_disk_files(console *const c)
 
 		std::string selected_file = c->read_line("Enter filename: ");
 
+		c->put_string("1. RK05, 2. RL02, 3. re-select file");
+
+		int ch = -1;
+		while(ch == -1 && ch != '1' && ch != '2' && ch != '3')
+			ch = c->wait_char(500);
+
+		if (ch == '3')
+			continue;
+
 		c->put_string("Opening file: ");
 		c->put_string_lf(selected_file.c_str());
 
@@ -153,7 +141,11 @@ std::vector<std::string> select_disk_files(console *const c)
 		if (fh.open(selected_file.c_str(), O_RDWR)) {
 			fh.close();
 
-			return { selected_file };
+			if (ch == '1')
+				return { { selected_file }, { } };
+
+			if (ch == '2')
+				return { { }, { selected_file } };
 		}
 
 		c->put_string_lf("open failed");
@@ -209,9 +201,16 @@ void setup() {
 	Serial.println(F("Load RK05"));
 	auto disk_files = select_disk_files(cnsl);
 
-	b->add_rk05(new rk05(disk_files, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
+	if (disk_files.first.empty() == false)
+		b->add_rk05(new rk05(disk_files.first, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
 
-	setBootLoader(b);
+	if (disk_files.second.empty() == false)
+		b->add_rl02(new rl02(disk_files.second, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
+
+	if (disk_files.first.empty() == false)
+		setBootLoader(b, BL_RK05);
+	else
+		setBootLoader(b, BL_RL02);
 
 	Serial.print(F("Free RAM after init: "));
 	Serial.println(ESP.getFreeHeap());
