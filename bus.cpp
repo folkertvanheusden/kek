@@ -187,11 +187,11 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 
 			if (a >= 0177700 && a <= 0177705) { // kernel R0-R5
 				DOLOG(debug, !peek_only, "readb kernel R%d", a - 0177700);
-				return c -> getRegister(false, a - 0177700) & 0xff;
+				return c -> getRegister(a - 0177700, 0, false) & 0xff;
 			}
 			if (a >= 0177710 && a <= 0177715) { // user R0-R5
 				DOLOG(debug, !peek_only, "readb user R%d", a - 0177710);
-				return c -> getRegister(true, a - 0177710) & 0xff;
+				return c -> getRegister(a - 0177710, 3, false) & 0xff;
 			}
 			if (a == 0177706) { // kernel SP
 				DOLOG(debug, !peek_only, "readb kernel sp");
@@ -247,11 +247,11 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 
 			if (a >= 0177700 && a <= 0177705) { // kernel R0-R5
 				DOLOG(debug, !peek_only, "read kernel R%d", a - 0177700);
-				return c -> getRegister(false, a - 0177700);
+				return c -> getRegister(a - 0177700, 0, false);
 			}
 			if (a >= 0177710 && a <= 0177715) { // user R0-R5
 				DOLOG(debug, !peek_only, "read user R%d", a - 0177710);
-				return c -> getRegister(true, a - 0177710);
+				return c -> getRegister(a - 0177710, 3, false);
 			}
 			if (a == 0177706) { // kernel SP
 				DOLOG(debug, !peek_only, "read kernel sp");
@@ -472,12 +472,12 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 
 			if (a >= 0177700 && a <= 0177705) { // kernel R0-R5
 				DOLOG(debug, true, "write kernel R%d: %o", a - 01777700, value);
-				c -> setRegister(false, a - 0177700, value);
+				c -> setRegister(a - 0177700, false, false, value);
 				return value;
 			}
 			if (a >= 0177710 && a <= 0177715) { // user R0-R5
 				DOLOG(debug, true, "write user R%d: %o", a - 01777710, value);
-				c -> setRegister(true, a - 0177710, value);
+				c -> setRegister(a - 0177710, true, false, value);
 				return value;
 			}
 			if (a == 0177706) { // kernel SP

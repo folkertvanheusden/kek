@@ -23,7 +23,6 @@ add_executable(
   rk05.cpp
   rl02.cpp
   terminal.cpp
-  tests.cpp
   tm-11.cpp
   tty.cpp
   utils.cpp

@@ -18,7 +18,6 @@
 #include "log.h"
 #include "memory.h"
 #include "terminal.h"
-#include "tests.h"
 #include "tty.h"
 #include "utils.h"
 
@@ -43,7 +42,6 @@ void sw_handler(int s)
 void help()
 {
 	printf("-h       this help\n");
-	printf("-m mode  \"tc\": run testcases\n");
 	printf("-T t.bin load file as a binary tape file (like simh \"load\" command)\n");
 	printf("-R d.rk  load file as a RK05 disk device\n");
 	printf("-p 123   set CPU start pointer to decimal(!) value\n");
@@ -109,15 +107,6 @@ int main(int argc, char *argv[])
 
 			case 'n':
 				withUI = true;
-				break;
-
-			case 'm':
-				if (strcasecmp(optarg, "tc") == 0)
-					testCases = true;
-				else {
-					fprintf(stderr, "\"-m %s\" is not known\n", optarg);
-					return 1;
-				}
 				break;
 
 			case 'T':
@@ -187,9 +176,6 @@ int main(int argc, char *argv[])
 	tty *tty_ = new tty(cnsl);
 
 	b->add_tty(tty_);
-
-	if (testCases)
-		tests(c);
 
 	DOLOG(info, true, "Start running at %o", c->getRegister(7));
 

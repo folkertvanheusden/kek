@@ -38,9 +38,7 @@ private:
 
 	bool check_queued_interrupts();
 
-	uint16_t getRegister(const int nr, const bool MF_MT) const;
-	void     setRegister(const int nr, const bool MF_MT, const uint16_t value);
-	uint16_t addRegister(const int nr, const bool MF_MT, const uint16_t value);
+	uint16_t addRegister(const int nr, const bool prev_mode, const uint16_t value);
 
 	void     addToMMR1(const uint8_t mode, const uint8_t reg, const bool word_mode);
 	uint16_t getGAMAddress(const uint8_t mode, const int reg, const bool word_mode, const bool MF_MT);
@@ -121,17 +119,20 @@ public:
 	uint16_t getStackLimitRegister() { return stackLimitRegister; }
 	void setStackLimitRegister(const uint16_t v) { stackLimitRegister = v; }
 
-	uint16_t getRegister(const bool user, const int nr) const { return regs0_5[user][nr]; }
 	uint16_t getStackPointer(const int which) const { assert(which >= 0 && which < 4); return sp[which]; }
 	uint16_t getPC() const { return pc; }
 
+	void setRegister(const int nr, const bool reg_set, const bool prev_mode, const uint16_t value);
+	void setRegister(const int nr, const bool prev_mode, const uint16_t v) { setRegister(nr, (getPSW() >> 11) & 1, prev_mode, v); }
+	void setRegister(const int nr, const uint16_t v) { setRegister(nr, (getPSW() >> 11) & 1, false, v); }
+
 	void setRegisterLowByte(const int nr, const bool prev_mode, const uint16_t value);
-	void setRegister(const bool user, const int nr, const uint16_t value) { regs0_5[user][nr] = value; }
+
 	void setStackPointer(const int which, const uint16_t value) { assert(which >= 0 && which < 4); sp[which] = value; }
 	void setPC(const uint16_t value) { pc = value; }
 
-	uint16_t getRegister(const int nr) const { return getRegister(nr, false); }
-	void setRegister(const int nr, const uint16_t v) { setRegister(nr, false, v); }
+	uint16_t getRegister(const int nr, const int mode, const bool sp_prev_mode) const;
+	uint16_t getRegister(const int nr) const;
 
 	bool put_result(const uint16_t a, const uint8_t dst_mode, const uint8_t dst_reg, const bool word_mode, const uint16_t value);
 };
