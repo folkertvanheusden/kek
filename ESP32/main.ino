@@ -15,6 +15,7 @@
 #include "error.h"
 #include "esp32.h"
 #include "gen.h"
+#include "kw11-l.h"
 #include "loaders.h"
 #include "memory.h"
 #include "tty.h"
@@ -174,6 +175,9 @@ void setup() {
 
 	Serial.println(F("Connect CPU to BUS"));
 	b->add_cpu(c);
+
+	Serial.println(F("Start line-frequency interrupt"));
+	kw11_l *lf = new kw11_l(b);
 
 	c->setEmulateMFPT(true);
 
