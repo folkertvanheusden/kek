@@ -258,13 +258,15 @@ bool cpu::check_queued_interrupts()
 		auto interrupts = queued_interrupts.find(i);
 
 		if (interrupts->second.empty() == false) {
-			auto vector = interrupts->second.begin();
+			auto    vector = interrupts->second.begin();
+
+			uint8_t v      = *vector;
 
 			interrupts->second.erase(vector);
 
-			D(fprintf(stderr, "Invoking interrupt vector %o (IPL %d, current: %d)\n", *vector, i, current_level);)
+			D(fprintf(stderr, "Invoking interrupt vector %o (IPL %d, current: %d)\n", v, i, current_level);)
 
-			trap(*vector, i);
+			trap(v, i);
 
 			return true;
 		}
