@@ -199,13 +199,15 @@ int main(int argc, char *argv[])
 	else {
 		c->emulation_start();  // for statistics
 
-		*running = true;
-
 		for(;;) {
-			while(!event) {
+			*running = true;
+
+			while(event == EVENT_NONE) {
 				c->step_a();
 				c->step_b();
 			}
+
+			*running = false;
 
 			uint32_t stop_event = event.exchange(EVENT_NONE);
 
@@ -216,8 +218,6 @@ int main(int argc, char *argv[])
 		auto stats = c->get_mips_rel_speed();
 
 		printf("MIPS: %.2f, running speed: %.2f%%\n", stats.first, stats.second);
-
-		*running = false;
 	}
 
 	event = EVENT_TERMINATE;
