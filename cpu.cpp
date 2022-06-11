@@ -1321,16 +1321,16 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					 // retrieve word from '15/14'-stack
 					 uint16_t v = popStack();
 
-					 uint16_t a = 0xffff;
-
 					 bool set_flags = true;
 
 					 if (dst_mode == 0)
 						setRegister(dst_reg, true, v);
 					 else {
-						a = getGAMAddress(dst_mode, dst_reg, false, false);
+						uint16_t a = getGAMAddress(dst_mode, dst_reg, false, false);
 
 						set_flags = a != 0177776;
+
+						b -> write(a, false, v, true);  // put in '13/12' address space
 					 }
 
 					 if (set_flags) {
@@ -1338,9 +1338,6 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						 setPSW_z(v == 0);
 						 setPSW_v(false);
 					 }
-
-					 if (dst_mode != 0)
-						 b -> write(a, false, v, true);  // put in '13/12' address space
 
 					 break;
 				 }
