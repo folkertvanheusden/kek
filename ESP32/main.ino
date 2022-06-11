@@ -132,10 +132,10 @@ std::pair<std::vector<std::string>, std::vector<std::string> > select_disk_files
 		while(ch == -1 && ch != '1' && ch != '2' && ch != '3')
 			ch = c->wait_char(500);
 
+		c->put_string_lf(format("%c", ch));
+
 		if (ch == '3')
 			continue;
-
-		c->put_string_lf(format("%c", ch));
 
 		c->put_string("Opening file: ");
 		c->put_string_lf(selected_file.c_str());
