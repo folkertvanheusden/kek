@@ -153,7 +153,7 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 
 				D(fprintf(stderr, "RK05 drive %d position sec %d surf %d cyl %d, reclen %zo, WRITE to %o, mem: %o\n", device, sector, surface, cylinder, reclen, diskoffb, memoff);)
 
-				uint32_t p = reclen; // FIXME
+				uint32_t p = reclen;
 				for(size_t i=0; i<reclen; i++)
 					xfer_buffer[i] = b->readUnibusByte(memoff + i);
 

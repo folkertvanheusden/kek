@@ -36,10 +36,7 @@ void determine_terminal_size()
 
 void apply_mouse_setting(void)
 {
-	if (1) // FIXME (ignore_mouse)
-		mousemask(0, nullptr);
-	else
-		mousemask(BUTTON1_CLICKED | BUTTON1_DOUBLE_CLICKED | BUTTON3_CLICKED, nullptr);
+	mousemask(0, nullptr);
 }
 
 void init_ncurses(bool init_mouse)
@@ -104,14 +101,6 @@ void mydelwin(NEWWIN *win)
 void mydoupdate()
 {
 	update_panels();
-
-#if 0 // FIXME
-	else if (input_window)
-	{
-		wmove(input_window -> win, 0, ul_x);
-		setsyx(input_window -> y + 0, input_window -> x + ul_x);
-	}
-#endif
 
 	doupdate();
 }

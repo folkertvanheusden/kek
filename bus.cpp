@@ -530,7 +530,7 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 
 		if (a == 0177772) { // PIR
 			D(fprintf(stderr, "write set PIR: %o\n", value);)
-			PIR = value; // FIXME
+			PIR = value; // TODO
 			return PIR;
 		}
 
@@ -665,7 +665,7 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 		////
 
 		if (a == 0177746) { // cache control register
-			// FIXME
+			// TODO
 			return value;
 		}
 
@@ -676,7 +676,7 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 
 		///////////
 
-		if (a == 0177374) { // FIXME
+		if (a == 0177374) { // TODO
 			fprintf(stderr, "char: %c\n", value & 127);
 			return 128;
 		}

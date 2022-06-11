@@ -27,12 +27,12 @@ std::atomic_uint32_t event     { 0 };
 std::atomic_bool *running      { nullptr };
 bool              trace_output { false };
 
-std::atomic_bool  sw           { false };
+std::atomic_bool  sigw_event   { false };
 
 void sw_handler(int s)
 {
 	if (s == SIGWINCH)
-		sw = true;
+		sigw_event = true;
 	else {
 		fprintf(stderr, "Terminating...\n");
 

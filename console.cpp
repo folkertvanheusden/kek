@@ -19,6 +19,9 @@ console::console(std::atomic_uint32_t *const stop_event, bus *const b) :
 
 console::~console()
 {
+	// done as well in subclasses but also here to
+	// stop lgtm.com complaining about it
+	stop_thread();
 }
 
 void console::start_thread()
@@ -126,7 +129,7 @@ std::string console::read_line(const std::string & prompt)
 
 			str.clear();
 		}
-		else if (c >= 32 && c < 127) {
+		else if (c >= 32) {
 			str += c;
 
 			put_char(c);
@@ -159,6 +162,7 @@ void console::put_char(const char c)
 	put_char_ll(c);
 
 	if (c == 0) {
+		// ignore these
 	}
 	else if (c == 13)
 		tx = 0;

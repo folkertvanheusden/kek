@@ -1060,7 +1060,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						  if (set_flags) {
 							  setPSW_n(SIGN(v, word_mode));
 							  setPSW_z(IS_0(v, word_mode));
-							  setPSW_v(word_mode? (v & 0xff) == 0x80 : v == 0x8000);  // FIXME? v/c flags?
+							  setPSW_v(word_mode? (v & 0xff) == 0x80 : v == 0x8000);
 
 							  if (IS_0(vo, word_mode) && org_c)
 								  setPSW_c(true);
@@ -1246,7 +1246,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 						 setPSW_n(SIGN(v, word_mode));
 						 setPSW_z(IS_0(v, word_mode));
-						 setPSW_c(SIGN(vl, word_mode));  // FIXME vl?
+						 setPSW_c(SIGN(vl, word_mode));
 						 setPSW_v(getPSW_n() ^ getPSW_c());
 
 						 setRegister(dst_reg, false, v);

@@ -130,8 +130,8 @@ public:
 	void setStackPointer(const int which, const uint16_t value) { assert(which >= 0 && which < 4); sp[which] = value; }
 	void setPC(const uint16_t value) { pc = value; }
 
-	uint16_t getRegister(const int nr) const { return getRegister(nr, false); } // FIXME remove
-	void setRegister(const int nr, const uint16_t v) { setRegister(nr, false, v); } // FIXME remove
+	uint16_t getRegister(const int nr) const { return getRegister(nr, false); }
+	void setRegister(const int nr, const uint16_t v) { setRegister(nr, false, v); }
 
 	bool put_result(const uint16_t a, const uint8_t dst_mode, const uint8_t dst_reg, const bool word_mode, const uint16_t value);
 };

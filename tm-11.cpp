@@ -96,7 +96,7 @@ void tm_11::writeWord(const uint16_t addr, uint16_t v)
 			D(printf("invoke %d\n", func);)
 
 			if (func == 0) { // off-line
-				v = 128; // FIXME set error if error
+				v = 128; // TODO set error if error
 			}
 			else if (func == 1) { // read
 				D(printf("reading %d bytes from offset %d\n", reclen, offset);)
@@ -106,27 +106,27 @@ void tm_11::writeWord(const uint16_t addr, uint16_t v)
 					m -> writeByte(registers[(TM_11_MTCMA - TM_11_BASE) / 2] + i, xfer_buffer[i]);
 				offset += reclen;
 
-				v = 128; // FIXME set error if error
+				v = 128; // TODO set error if error
 			}
 			else if (func == 2) { // write
 				for(int i=0; i<reclen; i++)
 					xfer_buffer[i] = m -> readByte(registers[(TM_11_MTCMA - TM_11_BASE) / 2] + i);
 				fwrite(xfer_buffer, 1, reclen, fh);
 				offset += reclen;
-				v = 128; // FIXME
+				v = 128; // TODO
 			}
 			else if (func == 4) { // space forward
 				offset += reclen;
-				v = 128; // FIXME
+				v = 128; // TODO
 			}
 			else if (func == 5) { // space backward
 				if (offset >= reclen)
 					offset -= reclen;
-				v = 128; // FIXME
+				v = 128; // TODO
 			}
 			else if (func == 7) { // rewind
 				offset = 0;
-				v = 128; // FIXME set error if error
+				v = 128; // TODO set error if error
 			}
 		}
 	}

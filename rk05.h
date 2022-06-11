@@ -13,7 +13,6 @@
 #endif
 
 
-// FIXME namen van defines
 #define RK05_DS		0177400	// drive status
 #define RK05_ERROR	0177402 // error
 #define RK05_CS		0177404 // control status
