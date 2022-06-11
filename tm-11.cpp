@@ -5,6 +5,7 @@
 
 #include "tm-11.h"
 #include "gen.h"
+#include "log.h"
 #include "memory.h"
 #include "utils.h"
 
@@ -36,8 +37,6 @@ uint16_t tm_11::readWord(const uint16_t addr)
 	const int reg = (addr - TM_11_BASE) / 2;
 	uint16_t vtemp = registers[reg];
 
-	D(printf("TM-11 read addr %o: ", addr);)
-
 	if (addr == TM_11_MTS) {
 		setBit(vtemp, 15, false); // ILC
 		setBit(vtemp, 14, false); // EOC
@@ -63,7 +62,7 @@ uint16_t tm_11::readWord(const uint16_t addr)
 		vtemp = 0;
 	}
 
-	D(printf("%o\n", vtemp);)
+	DOLOG(debug, true, "TM-11 read addr %o: %o", addr, vtemp);
 
 	return vtemp;
 }
@@ -86,22 +85,22 @@ void tm_11::writeByte(const uint16_t addr, const uint8_t v)
 
 void tm_11::writeWord(const uint16_t addr, uint16_t v)
 {
-	D(printf("TM-11 write %o: %o\n", addr, v);)
+	DOLOG(debug, true, "TM-11 write %o: %o\n", addr, v);
 
 	if (addr == TM_11_MTC) {
 		if (v & 1) { // GO
 			const int func = (v >> 1) & 7; // FUNCTION
 			const int reclen = 512;
 
-			D(printf("invoke %d\n", func);)
+			DOLOG(debug, true, "invoke %d\n", func);
 
 			if (func == 0) { // off-line
 				v = 128; // TODO set error if error
 			}
 			else if (func == 1) { // read
-				D(printf("reading %d bytes from offset %d\n", reclen, offset);)
+				DOLOG(debug, true, "reading %d bytes from offset %d\n", reclen, offset);
 				if (fread(xfer_buffer, 1, reclen, fh) != reclen)
-					D(printf("failed: %s\n", strerror(errno));)
+					DOLOG(info, true, "failed: %s\n", strerror(errno));
 				for(int i=0; i<reclen; i++)
 					m -> writeByte(registers[(TM_11_MTCMA - TM_11_BASE) / 2] + i, xfer_buffer[i]);
 				offset += reclen;
@@ -132,9 +131,9 @@ void tm_11::writeWord(const uint16_t addr, uint16_t v)
 	}
 	else if (addr == TM_11_MTCMA) {
 		v &= ~1;
-		D(printf("Set DMA address to %o\n", v);)
+		DOLOG(debug, true, "Set DMA address to %o\n", v);
 	}
 
-	D(printf("set register %o to %o\n", addr, v);)
+	DOLOG(debug, true, "set register %o to %o\n", addr, v);
 	registers[(addr - TM_11_BASE) / 2] = v;
 }

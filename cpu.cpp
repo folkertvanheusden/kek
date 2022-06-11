@@ -7,6 +7,7 @@
 
 #include "cpu.h"
 #include "gen.h"
+#include "log.h"
 #include "utils.h"
 
 #define SIGN(x, wm) ((wm) ? (x) & 0x80 : (x) & 0x8000)
@@ -264,7 +265,7 @@ bool cpu::check_queued_interrupts()
 
 			interrupts->second.erase(vector);
 
-			D(fprintf(stderr, "Invoking interrupt vector %o (IPL %d, current: %d)\n", v, i, current_level);)
+			DOLOG(debug, true, "Invoking interrupt vector %o (IPL %d, current: %d)\n", v, i, current_level);
 
 			trap(v, i);
 
@@ -283,7 +284,7 @@ void cpu::queue_interrupt(const uint8_t level, const uint8_t vector)
 
 	it->second.insert(vector);
 
-	D(fprintf(stderr, "Queueing interrupt vector %o (IPL %d, current: %d), n: %zu\n", vector, level, getPSW_spl(), it->second.size());)
+	DOLOG(debug, true, "Queueing interrupt vector %o (IPL %d, current: %d), n: %zu\n", vector, level, getPSW_spl(), it->second.size());
 }
 
 void cpu::addToMMR1(const uint8_t mode, const uint8_t reg, const bool word_mode)
@@ -480,8 +481,6 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 
 				    addToMMR1(dst_mode, dst_reg, word_mode);
 
-				    // D(fprintf(stderr, "CMP%s %o,%o: %o\n", word_mode?"B":"", src_value, dst_value, temp);)
-
 				    setPSW_n(SIGN(temp, word_mode));
 				    setPSW_z(IS_0(temp, word_mode));
 				    setPSW_v(SIGN((src_value ^ dst_value) & (~dst_value ^ temp), word_mode));
@@ -492,7 +491,6 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 
 		case 0b011: { // BIT/BITB Bit Test Word/Byte
 				    uint16_t dst_value = getGAM(dst_mode, dst_reg, word_mode, false);
-				    //D(fprintf(stderr, "BIT%s: dst_value %o, src_val: %o\n", word_mode?"B":"", dst_value, src_value);)
 				    uint16_t result    = (dst_value & src_value) & (word_mode ? 0xff : 0xffff);
 
 				    setPSW_n(SIGN(result, word_mode));
@@ -615,8 +613,6 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 
 				int32_t  quot   = R0R1 / divider;
 				uint16_t rem    = R0R1 % divider;
-				D(fprintf(stderr, "value: %d, divider: %d, gives: %d / %d\n", R0R1, divider, quot, rem);)
-				D(fprintf(stderr, "value: %o, divider: %o, gives: %o / %o\n", R0R1, divider, quot, rem);)
 
 				// TODO: handle results out of range
 
@@ -642,8 +638,6 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 				uint32_t R     = getRegister(reg), oldR = R;
 				uint16_t shift = getGAM(dst_mode, dst_reg, false, false) & 077;
 				bool     sign  = SIGN(R, false);
-
-//				fprintf(stderr, "R: %06o, shift: %d, sign: %d, ", R, shift, sign);
 
 				// extend sign-bit
 				if (sign)
@@ -678,12 +672,6 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 				setPSW_v(SIGN(R, false) != SIGN(oldR, false));
 
 				setRegister(reg, R);
-
-//				uint16_t psw = getPSW();
-//	std::string psw_str = format("%d%d|%d|%d|%c%c%c%c%c", psw >> 14, (psw >> 12) & 3, (psw >> 11) & 1, (psw >> 5) & 7,
-//                        psw & 16?'t':'-', psw & 8?'n':'-', psw & 4?'z':'-', psw & 2 ? 'v':'-', psw & 1 ? 'c':'-');
-//				// printf("flags: %06o\r\n", getPSW());
-//				fprintf(stderr, "%s > %06o, R OUT: %06o\r\n", psw_str.c_str(), psw, R);
 
 				return true;
 			}
@@ -1481,8 +1469,6 @@ bool cpu::condition_code_operations(const uint16_t instr)
 //		// trap via vector 010  only(?) on an 11/60 and not(?) on an 11/70
 //		trap(010);
 
-		D(fprintf(stderr, "SPL%d, new pc: %06o\n", level, getPC());)
-
 		return true;
 	}
 
@@ -1646,7 +1632,6 @@ void cpu::trap(const uint16_t vector, const int new_ipl)
 	}
 
 	if ((b->getMMR1() & 0160000) == 0) {
-		D(fprintf(stderr, "trap: register vector/2xregister-undo\n");)
 		b->setMMR2(vector);
 		b->addToMMR1(-2, 6);
 		b->addToMMR1(-2, 6);
@@ -1663,8 +1648,6 @@ void cpu::trap(const uint16_t vector, const int new_ipl)
 
 	pushStack(before_psw);
 	pushStack(before_pc);
-
-	D(fprintf(stderr, "TRAP %o: PC is now %06o, PSW is now %06o\n", vector, getPC(), new_psw);)
 }
 
 cpu::operand_parameters cpu::addressing_to_string(const uint8_t mode_register, const uint16_t pc, const bool word_mode) const
@@ -1728,9 +1711,6 @@ cpu::operand_parameters cpu::addressing_to_string(const uint8_t mode_register, c
 
 std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t addr) const
 {
-	bool old_trace_output     = trace_output;
-	trace_output = false;
-
 	uint16_t    instruction   = b->peekWord(addr);
 
 	bool        word_mode     = !!(instruction & 0x8000);
@@ -2140,8 +2120,6 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 		work_values_str.push_back(format("%06o", v));
 	out.insert({ "work-values", work_values_str });
 
-	trace_output = old_trace_output;
-
 	return out;
 }
 
@@ -2189,11 +2167,11 @@ void cpu::step_b()
 		if (misc_operations(instr))
 			return;
 
-		fprintf(stderr, "UNHANDLED instruction %o\n", instr);
+		DOLOG(warning, true, "UNHANDLED instruction %o\n", instr);
 
 		trap(010);
 	}
 	catch(const int exception) {
-		D(fprintf(stderr, "bus-trap during execution of command\n");)
+		DOLOG(debug, true, "bus-trap during execution of command\n");
 	}
 }

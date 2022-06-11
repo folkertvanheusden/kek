@@ -15,6 +15,7 @@
 #include "gen.h"
 #include "kw11-l.h"
 #include "loaders.h"
+#include "log.h"
 #include "memory.h"
 #include "terminal.h"
 #include "tests.h"
@@ -25,7 +26,6 @@
 bool              withUI       { false };
 std::atomic_uint32_t event     { 0 };
 std::atomic_bool *running      { nullptr };
-bool              trace_output { false };
 
 std::atomic_bool  sigw_event   { false };
 
@@ -52,6 +52,7 @@ void help()
 	printf("-n       ncurses UI\n");
 	printf("-d       enable debugger\n");
 	printf("-t       enable tracing (disassemble to stderr, requires -d as well)\n");
+	printf("-l x     log to file x\n");
 }
 
 int main(int argc, char *argv[])
@@ -76,8 +77,10 @@ int main(int argc, char *argv[])
 
 	bootloader_t  bootloader = BL_NONE;
 
+	const char *logfile = nullptr;
+
 	int  opt          = -1;
-	while((opt = getopt(argc, argv, "hm:T:r:R:p:ndtL:b:")) != -1)
+	while((opt = getopt(argc, argv, "hm:T:r:R:p:ndtL:b:l:")) != -1)
 	{
 		switch(opt) {
 			case 'h':
@@ -100,7 +103,6 @@ int main(int argc, char *argv[])
 
 			case 't':
 				tracing      = true;
-				trace_output = true;
 				break;
 
 			case 'n':
@@ -136,22 +138,28 @@ int main(int argc, char *argv[])
 				loadbin(b, c->getRegister(7), optarg);
 				break;
 
+			case 'l':
+				logfile = optarg;
+				break;
+
 			default:
-				  fprintf(stderr, "-%c is not understood\n", opt);
-				  return 1;
+			        fprintf(stderr, "-%c is not understood\n", opt);
+				return 1;
 		}
 	}
 
 	console *cnsl = nullptr;
+
+	setlog(logfile, logfile ? debug : ll_error, withUI ? ll_error : debug);
 
 	std::atomic_bool interrupt_emulation { false };
 
 	if (withUI)
 		cnsl = new console_ncurses(&event, b);
 	else {
-		fprintf(stderr, "This PDP-11 emulator is called \"kek\" (reason for that is forgotten) and was written by Folkert van Heusden.\n");
+		DOLOG(info, true, "This PDP-11 emulator is called \"kek\" (reason for that is forgotten) and was written by Folkert van Heusden.\n");
 
-		fprintf(stderr, "Built on: " __DATE__ " " __TIME__ "\n");
+		DOLOG(info, true, "Built on: " __DATE__ " " __TIME__ "\n");
 
 		cnsl = new console_posix(&event, b);
 	}
@@ -174,7 +182,7 @@ int main(int argc, char *argv[])
 	if (testCases)
 		tests(c);
 
-	D(fprintf(stderr, "Start running at %o\n", c->getRegister(7));)
+	DOLOG(info, true, "Start running at %o\n", c->getRegister(7));
 
 	struct sigaction sa { };
 	sa.sa_handler = sw_handler;
