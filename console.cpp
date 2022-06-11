@@ -210,7 +210,7 @@ void console::operator()()
 	set_thread_name("kek::console");
 
 	while(*stop_event != EVENT_TERMINATE && !stop_thread_flag) {
-		int c = wait_for_char_ll(100);
+		int c = wait_for_char_ll(500);
 
 		if (c == -1)
 			continue;
