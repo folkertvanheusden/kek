@@ -30,7 +30,7 @@ void setlog(const char *lf, const log_level_t ll_file, const log_level_t ll_scre
 
 	free((void *)logfile);
 
-	logfile = strdup(lf);
+	logfile = lf ? strdup(lf) : nullptr;
 
 	log_level_file = ll_file;
 	log_level_screen = ll_screen;
@@ -51,7 +51,7 @@ void closelog()
 
 void dolog(const log_level_t ll, const char *fmt, ...)
 {
-	if (ll < log_level_file && ll < log_level_screen)
+	if ((ll < log_level_file && ll < log_level_screen) || !logfile)
 		return;
 
 	if (!lfh) {
