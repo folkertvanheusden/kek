@@ -14,6 +14,7 @@ std::string format(const char *const fmt, ...);
 std::vector<std::string> split(std::string in, std::string splitter);
 
 unsigned long get_ms();
+uint64_t get_us();
 void myusleep(uint64_t us);
 
 void set_thread_name(std::string name);

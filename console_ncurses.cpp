@@ -139,7 +139,7 @@ void console_ncurses::panel_update_thread()
 		int      run_mode      = current_PSW >> 14;
 
 		uint16_t current_PC    = c->getPC();
-		uint32_t full_addr     = b->calculate_physical_address(run_mode, current_PC, false, false);
+		uint32_t full_addr     = b->calculate_physical_address(run_mode, current_PC, false, false, true);
 
 		uint16_t current_instr = b->readWord(current_PC);
 

@@ -6,6 +6,7 @@
 
 #include "tty.h"
 #include "gen.h"
+#include "log.h"
 #include "memory.h"
 #include "utils.h"
 
@@ -67,7 +68,7 @@ uint16_t tty::readWord(const uint16_t addr)
 		vtemp = 128;
 	}
 
-	D(fprintf(stderr, "PDP11TTY read addr %o (%s): %d, 7bit: %d\n", addr, regnames[reg], vtemp, vtemp & 127);)
+	DOLOG(debug, true, "PDP11TTY read addr %o (%s): %d, 7bit: %d", addr, regnames[reg], vtemp, vtemp & 127);
 
 	registers[reg] = vtemp;
 
@@ -94,16 +95,16 @@ void tty::writeWord(const uint16_t addr, uint16_t v)
 {
 	const int reg = (addr - PDP11TTY_BASE) / 2;
 
-	D(fprintf(stderr, "PDP11TTY write %o (%s): %o\n", addr, regnames[reg], v);)
+	DOLOG(debug, true, "PDP11TTY write %o (%s): %o", addr, regnames[reg], v);
 
 	if (addr == PDP11TTY_TPB) {
 		char ch = v & 127;
 
-		D(fprintf(stderr, "PDP11TTY print '%c'\n", ch);)
+		DOLOG(debug, true, "PDP11TTY print '%c'", ch);
 
 		c->put_char(ch);
 	}
 
-	D(fprintf(stderr, "set register %o to %o\n", addr, v);)
+	DOLOG(debug, true, "set register %o to %o", addr, v);
 	registers[(addr - PDP11TTY_BASE) / 2] = v;
 }

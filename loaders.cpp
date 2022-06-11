@@ -7,6 +7,7 @@
 #include "error.h"
 #include "gen.h"
 #include "loaders.h"
+#include "log.h"
 #include "utils.h"
 
 
@@ -107,7 +108,7 @@ uint16_t loadTape(bus *const b, const char *const file)
 {
 	FILE *fh = fopen(file, "rb");
 	if (!fh) {
-		fprintf(stderr, "Cannot open %s\n", file);
+		DOLOG(ll_error, true, "Cannot open %s", file);
 		return -1;
 	}
 
@@ -128,16 +129,16 @@ uint16_t loadTape(bus *const b, const char *const file)
 
 		if (count == 6) { // eg no data
 			if (p != 1) {
-				D(fprintf(stderr, "Setting start address to %o\n", p);)
+				DOLOG(info, true, "Setting start address to %o", p);
 				start = p;
 			}
 		}
 
-		D(fprintf(stderr, "%ld] reading %d (dec) bytes to %o (oct)\n", ftell(fh), count - 6, p);)
+		DOLOG(debug, true, "%ld] reading %d (dec) bytes to %o (oct)", ftell(fh), count - 6, p);
 
 		for(int i=0; i<count - 6; i++) {
 			if (feof(fh)) {
-				fprintf(stderr, "short read\n");
+				DOLOG(warning, true, "short read");
 				break;
 			}
 			uint8_t c = fgetc(fh);
@@ -153,7 +154,7 @@ uint16_t loadTape(bus *const b, const char *const file)
 		csum += fcs;
 
 		if (csum != 255)
-			fprintf(stderr, "checksum error %d\n", csum);
+			DOLOG(warning, true, "checksum error %d", csum);
 	}
 
 	fclose(fh);

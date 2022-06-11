@@ -43,9 +43,24 @@ unsigned long get_ms()
 #else
 	struct timeval tv;
 
+	// TODO replace gettimeofday by clock_gettime
 	gettimeofday(&tv, NULL);
 
 	return tv.tv_sec * 1000 + tv.tv_usec / 1000;
+#endif
+}
+
+uint32_t long get_us()
+{
+#if defined(ESP32)
+	return micros();
+#else
+	struct timeval tv;
+
+	// TODO replace gettimeofday by clock_gettime
+	gettimeofday(&tv, NULL);
+
+	return tv.tv_sec * 1000000l + tv.tv_usec;
 #endif
 }
 
