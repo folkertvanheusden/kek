@@ -398,7 +398,7 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 			}
 		}
 
-		DOLOG(debug, !peek_only, "virtual address %06o maps to physical address %07o (run_mode: %d, par: %07o)", a, m_offset, run_mode, pages[run_mode][0][apf].par * 64);  // TODO: D/I
+		DOLOG(debug, !peek_only, "virtual address %06o maps to physical address %07o (run_mode: %d, apf: %d, par: %07o)", a, m_offset, run_mode, apf, pages[run_mode][0][apf].par * 64);  // TODO: D/I
 	}
 	else {
 		m_offset = a;
@@ -694,7 +694,7 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 
 	int run_mode = (c->getPSW() >> (use_prev ? 12 : 14)) & 3;
 
-	uint32_t m_offset = calculate_physical_address(run_mode, a, true, true, true);
+	uint32_t m_offset = calculate_physical_address(run_mode, a, true, true, false);
 
 	DOLOG(debug, true, "WRITE to %06o/%07o: %o", a, m_offset, value);
 
