@@ -100,3 +100,24 @@ void dolog(const log_level_t ll, const char *fmt, ...)
 	free(ts_str);
 }
 
+log_level_t parse_ll(const std::string & str)
+{
+	if (str == "debug")
+		return debug;
+
+	if (str == "info")
+		return info;
+
+	if (str == "warning")
+		return warning;
+
+	if (str == "error")
+		return ll_error;
+
+	if (str == "none")
+		return none;
+
+	error_exit(false, "Log level \"%s\" not understood", str.c_str());
+
+	return debug;
+}

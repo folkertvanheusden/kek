@@ -47,12 +47,12 @@ void help()
 	printf("-T t.bin load file as a binary tape file (like simh \"load\" command)\n");
 	printf("-R d.rk  load file as a RK05 disk device\n");
 	printf("-p 123   set CPU start pointer to decimal(!) value\n");
-	printf("-L f.bin load file into memory at address given by -p (and run it)\n");
 	printf("-b x     enable bootloader (build-in), parameter must be \"rk05\" or \"rl02\"\n");
 	printf("-n       ncurses UI\n");
 	printf("-d       enable debugger\n");
 	printf("-t       enable tracing (disassemble to stderr, requires -d as well)\n");
 	printf("-l x     log to file x\n");
+	printf("-L x,y   set log level for screen (x) and file (y)\n");
 }
 
 int main(int argc, char *argv[])
@@ -77,7 +77,9 @@ int main(int argc, char *argv[])
 
 	bootloader_t  bootloader = BL_NONE;
 
-	const char *logfile = nullptr;
+	const char  *logfile   = nullptr;
+	log_level_t  ll_screen = none;
+	log_level_t  ll_file   = none;
 
 	int  opt          = -1;
 	while((opt = getopt(argc, argv, "hm:T:r:R:p:ndtL:b:l:")) != -1)
@@ -134,8 +136,15 @@ int main(int argc, char *argv[])
 				c->setRegister(7, atoi(optarg));
 				break;
 
-			case 'L':
-				loadbin(b, c->getRegister(7), optarg);
+			case 'L': {
+					auto parts = split(optarg, ",");
+
+					if (parts.size() != 2)
+						error_exit(false, "Argument missing for -L");
+
+					ll_screen  = parse_ll(parts[0]);
+					ll_file    = parse_ll(parts[1]);
+				  }
 				break;
 
 			case 'l':
@@ -150,7 +159,7 @@ int main(int argc, char *argv[])
 
 	console *cnsl = nullptr;
 
-	setlog(logfile, logfile ? ((tracing || run_debugger) ? debug : info) : ll_error, ll_error);
+	setlog(logfile, ll_file, ll_screen);
 
 	std::atomic_bool interrupt_emulation { false };
 
