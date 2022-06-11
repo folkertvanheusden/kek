@@ -94,7 +94,7 @@ uint16_t rk05::readWord(const uint16_t addr)
 	if (addr == RK05_CS)
 		setBit(registers[reg], 0, false); // clear go
 
-	DOLOG(debug, true, "RK05 read %s/%o: %06o\n", reg[regnames], addr, vtemp);
+	DOLOG(debug, true, "RK05 read %s/%o: %06o", reg[regnames], addr, vtemp);
 
 	return vtemp;
 }
@@ -146,13 +146,13 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 			registers[(RK05_CS - RK05_BASE) / 2] &= ~(1 << 13); // reset search complete
 
 			if (func == 0) { // controller reset
-				DOLOG(debug, true, "RK05 invoke %d (controller reset)\n", func);
+				DOLOG(debug, true, "RK05 invoke %d (controller reset)", func);
 
 			}
 			else if (func == 1) { // write
 				*disk_write_acitivity = true;
 
-				DOLOG(debug, true, "RK05 drive %d position sec %d surf %d cyl %d, reclen %zo, WRITE to %o, mem: %o\n", device, sector, surface, cylinder, reclen, diskoffb, memoff);
+				DOLOG(debug, true, "RK05 drive %d position sec %d surf %d cyl %d, reclen %zo, WRITE to %o, mem: %o", device, sector, surface, cylinder, reclen, diskoffb, memoff);
 
 				uint32_t p = reclen;
 				for(size_t i=0; i<reclen; i++)
@@ -161,19 +161,19 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 #if defined(ESP32)
 				File32 *fh = fhs.at(device);
 				if (!fh->seek(diskoffb))
-					DOLOG(ll_error, true, "RK05 seek error %s\n", strerror(errno));
+					DOLOG(ll_error, true, "RK05 seek error %s", strerror(errno));
 				if (fh->write(xfer_buffer, reclen) != reclen)
-                                        DOLOG(ll_error, true, "RK05 fwrite error %s\n", strerror(errno));
+                                        DOLOG(ll_error, true, "RK05 fwrite error %s", strerror(errno));
 #else
 				FILE *fh = fhs.at(device);
 				if (fseek(fh, diskoffb, SEEK_SET) == -1)
-					DOLOG(ll_error, true, "RK05 seek error %s\n", strerror(errno));
+					DOLOG(ll_error, true, "RK05 seek error %s", strerror(errno));
 				if (fwrite(xfer_buffer, 1, reclen, fh) != reclen)
-					DOLOG(ll_error, true, "RK05 fwrite error %s\n", strerror(errno));
+					DOLOG(ll_error, true, "RK05 fwrite error %s", strerror(errno));
 #endif
 
 				if (v & 2048)
-					DOLOG(debug, true, "RK05 inhibit BA increase\n");
+					DOLOG(debug, true, "RK05 inhibit BA increase");
 				else
 					registers[(RK05_BA - RK05_BASE) / 2] += p;
 
@@ -192,14 +192,14 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 			else if (func == 2) { // read
 				*disk_read_acitivity = true;
 
-				DOLOG(debug, true, "RK05 drive %d position sec %d surf %d cyl %d, reclen %zo, READ from %o, mem: %o\n", device, sector, surface, cylinder, reclen, diskoffb, memoff);
+				DOLOG(debug, true, "RK05 drive %d position sec %d surf %d cyl %d, reclen %zo, READ from %o, mem: %o", device, sector, surface, cylinder, reclen, diskoffb, memoff);
 
 				bool proceed = true;
 
 #if defined(ESP32)
 				File32 *fh = fhs.at(device);
 				if (!fh->seek(diskoffb)) {
-					DOLOG(ll_error, true, "RK05 seek error %s\n", strerror(errno));
+					DOLOG(ll_error, true, "RK05 seek error %s", strerror(errno));
 					proceed = false;
 				}
 #else
@@ -211,7 +211,7 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 					fh = fhs.at(device);
 
 					if (fseek(fh, diskoffb, SEEK_SET) == -1) {
-						DOLOG(ll_error, true, "RK05 seek error %s\n", strerror(errno));
+						DOLOG(ll_error, true, "RK05 seek error %s", strerror(errno));
 						proceed = false;
 					}
 				}
@@ -226,10 +226,10 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 					yield();
 
 					if (fh->read(xfer_buffer, cur) != size_t(cur))
-						DOLOG(debug, true, "RK05 fread error: %s\n", strerror(errno));
+						DOLOG(debug, true, "RK05 fread error: %s", strerror(errno));
 #else
 					if (fread(xfer_buffer, 1, cur, fh) != size_t(cur))
-						DOLOG(debug, true, "RK05 fread error: %s\n", strerror(errno));
+						DOLOG(debug, true, "RK05 fread error: %s", strerror(errno));
 #endif
 
 					for(uint32_t i=0; i<cur; i++) {
@@ -242,7 +242,7 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 				}
 
 				if (v & 2048)
-					DOLOG(debug, true, "RK05 inhibit BA increase\n");
+					DOLOG(debug, true, "RK05 inhibit BA increase");
 				else
 					registers[(RK05_BA - RK05_BASE) / 2] += p;
 
@@ -259,15 +259,15 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 				*disk_read_acitivity = false;
 			}
 			else if (func == 4) {
-				DOLOG(debug, true, "RK05 invoke %d (seek) to %o\n", func, diskoffb);
+				DOLOG(debug, true, "RK05 invoke %d (seek) to %o", func, diskoffb);
 
 				registers[(RK05_CS - RK05_BASE) / 2] |= 1 << 13; // search complete
 			}
 			else if (func == 7) {
-				DOLOG(debug, true, "RK05 invoke %d (write lock)\n", func);
+				DOLOG(debug, true, "RK05 invoke %d (write lock)", func);
 			}
 			else {
-				DOLOG(debug, true, "RK05 command %d UNHANDLED\n", func);
+				DOLOG(debug, true, "RK05 command %d UNHANDLED", func);
 			}
 
 			registers[(RK05_WC - RK05_BASE) / 2] = 0;

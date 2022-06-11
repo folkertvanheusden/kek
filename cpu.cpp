@@ -265,7 +265,7 @@ bool cpu::check_queued_interrupts()
 
 			interrupts->second.erase(vector);
 
-			DOLOG(debug, true, "Invoking interrupt vector %o (IPL %d, current: %d)\n", v, i, current_level);
+			DOLOG(debug, true, "Invoking interrupt vector %o (IPL %d, current: %d)", v, i, current_level);
 
 			trap(v, i);
 
@@ -284,7 +284,7 @@ void cpu::queue_interrupt(const uint8_t level, const uint8_t vector)
 
 	it->second.insert(vector);
 
-	DOLOG(debug, true, "Queueing interrupt vector %o (IPL %d, current: %d), n: %zu\n", vector, level, getPSW_spl(), it->second.size());
+	DOLOG(debug, true, "Queueing interrupt vector %o (IPL %d, current: %d), n: %zu", vector, level, getPSW_spl(), it->second.size());
 }
 
 void cpu::addToMMR1(const uint8_t mode, const uint8_t reg, const bool word_mode)
@@ -1493,13 +1493,15 @@ bool cpu::condition_code_operations(const uint16_t instr)
 void cpu::pushStack(const uint16_t v)
 {
 	if (getRegister(6) == stackLimitRegister) {
-		printf("stackLimitRegister reached\n");  // TODO
-		exit(1);
+		DOLOG(debug, true, "stackLimitRegister reached");
+
+		trap(123, 7);  // TODO
 	}
+	else {
+		uint16_t a = addRegister(6, false, -2);
 
-	uint16_t a = addRegister(6, false, -2);
-
-	b -> writeWord(a, v);
+		b -> writeWord(a, v);
+	}
 }
 
 uint16_t cpu::popStack()
@@ -2167,11 +2169,11 @@ void cpu::step_b()
 		if (misc_operations(instr))
 			return;
 
-		DOLOG(warning, true, "UNHANDLED instruction %o\n", instr);
+		DOLOG(warning, true, "UNHANDLED instruction %o", instr);
 
 		trap(010);
 	}
 	catch(const int exception) {
-		DOLOG(debug, true, "bus-trap during execution of command\n");
+		DOLOG(debug, true, "bus-trap during execution of command");
 	}
 }

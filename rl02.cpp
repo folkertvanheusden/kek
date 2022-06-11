@@ -83,7 +83,7 @@ uint16_t rl02::readWord(const uint16_t addr)
 
 	// TODO
 
-	DOLOG(debug, true, "RL02 read %s/%o: %06o\n", regnames[reg], addr, value);
+	DOLOG(debug, true, "RL02 read %s/%o: %06o", regnames[reg], addr, value);
 
 	return value;
 }
@@ -120,7 +120,7 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 	digitalWrite(LED_BUILTIN, LOW);
 #endif
 
-	DOLOG(debug, true, "RL02 write %06o: %06o\n", addr, v);
+	DOLOG(debug, true, "RL02 write %06o: %06o", addr, v);
 
 	const int reg = (addr - RL02_BASE) / 2;
 
@@ -131,7 +131,7 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 
 		const bool    do_exec = !(v & 128);
 
-		DOLOG(debug, true, "RL02 set command %d, exec: %d\n", command, do_exec);
+		DOLOG(debug, true, "RL02 set command %d, exec: %d", command, do_exec);
 
 		uint32_t disk_offset = calcOffset(registers[(RL02_DAR - RL02_BASE) / 2] & ~1);
 		int      device      = 0;  // TODO
@@ -145,7 +145,7 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 					(1 << 7) |  // this is an RL02
 					0;
 
-				DOLOG(debug, true, "RL02 set MPR for status to %06o\n", registers[(RL02_MPR - RL02_BASE) / 2]);
+				DOLOG(debug, true, "RL02 set MPR for status to %06o", registers[(RL02_MPR - RL02_BASE) / 2]);
 			}
 #endif
 		}
@@ -158,7 +158,7 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 			File32 *fh = fhs.at(device);
 
 			if (!fh->seek(disk_offset)) {
-				DOLOG(ll_error, true, "RL02 seek to %d error %s\n", disk_offset, strerror(errno));
+				DOLOG(ll_error, true, "RL02 seek to %d error %s", disk_offset, strerror(errno));
 
 				proceed = false;
 			}
@@ -171,7 +171,7 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 				fh = fhs.at(device);
 
 				if (fseek(fh, disk_offset, SEEK_SET) == -1) {
-					DOLOG(ll_error, true, "RL02 seek error %s\n", strerror(errno));
+					DOLOG(ll_error, true, "RL02 seek error %s", strerror(errno));
 					proceed = false;
 				}
 			}
@@ -181,7 +181,7 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 
 			uint32_t count          = (65536 - registers[(RL02_MPR - RL02_BASE) / 2]) * 2;
 
-			DOLOG(debug, true, "RL02 read %d bytes (dec) from %d (dec) to %06o (oct)\n", count, disk_offset, memory_address);
+			DOLOG(debug, true, "RL02 read %d bytes (dec) from %d (dec) to %06o (oct)", count, disk_offset, memory_address);
 
 			uint32_t p    = memory_address;
 			while(proceed && count > 0) {
@@ -191,10 +191,10 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 				yield();
 
 				if (fh->read(xfer_buffer, cur) != size_t(cur))
-					DOLOG(info, true, "RL02 fread error: %s\n", strerror(errno));
+					DOLOG(info, true, "RL02 fread error: %s", strerror(errno));
 #else
 				if (fread(xfer_buffer, 1, cur, fh) != size_t(cur))
-					DOLOG(info, true, "RL02 fread error: %s\n", strerror(errno));
+					DOLOG(info, true, "RL02 fread error: %s", strerror(errno));
 #endif
 
 				for(uint32_t i=0; i<cur; i++, p++)
@@ -204,7 +204,7 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 			}
 
 			if (registers[(RL02_CSR - RL02_BASE) / 2] & 64) {  // interrupt enable?
-				DOLOG(debug, true, "RL02 triggering interrupt\n");
+				DOLOG(debug, true, "RL02 triggering interrupt");
 
 				b->getCpu()->queue_interrupt(5, 0254);
 			}

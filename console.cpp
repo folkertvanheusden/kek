@@ -169,7 +169,7 @@ void console::put_char(const char c)
 		tx = 0;
 	else if (c == 10) {
 		if (debug_buffer.empty() == false) {
-			DOLOG(::debug, true, "TTY: %s\n", debug_buffer.c_str());
+			DOLOG(::debug, true, "TTY: %s", debug_buffer.c_str());
 
 			debug_buffer.clear();
 		}
@@ -210,7 +210,7 @@ void console::put_string(const std::string & what)
 
 void console::operator()()
 {
-	DOLOG(::debug, true, "Console thread started\n");
+	DOLOG(::debug, true, "Console thread started");
 
 	set_thread_name("kek::console");
 
@@ -235,5 +235,5 @@ void console::operator()()
 		}
 	}
 
-	DOLOG(::debug, true, "Console thread terminating\n");
+	DOLOG(::debug, true, "Console thread terminating");
 }

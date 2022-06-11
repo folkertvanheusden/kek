@@ -150,16 +150,16 @@ int main(int argc, char *argv[])
 
 	console *cnsl = nullptr;
 
-	setlog(logfile, logfile ? debug : ll_error, withUI ? ll_error : debug);
+	setlog(logfile, logfile ? ((tracing || run_debugger) ? debug : info) : ll_error, ll_error);
 
 	std::atomic_bool interrupt_emulation { false };
 
 	if (withUI)
 		cnsl = new console_ncurses(&event, b);
 	else {
-		DOLOG(info, true, "This PDP-11 emulator is called \"kek\" (reason for that is forgotten) and was written by Folkert van Heusden.\n");
+		DOLOG(info, true, "This PDP-11 emulator is called \"kek\" (reason for that is forgotten) and was written by Folkert van Heusden.");
 
-		DOLOG(info, true, "Built on: " __DATE__ " " __TIME__ "\n");
+		DOLOG(info, true, "Built on: " __DATE__ " " __TIME__);
 
 		cnsl = new console_posix(&event, b);
 	}
@@ -182,7 +182,7 @@ int main(int argc, char *argv[])
 	if (testCases)
 		tests(c);
 
-	DOLOG(info, true, "Start running at %o\n", c->getRegister(7));
+	DOLOG(info, true, "Start running at %o", c->getRegister(7));
 
 	struct sigaction sa { };
 	sa.sa_handler = sw_handler;
