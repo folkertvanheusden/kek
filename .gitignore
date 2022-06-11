@@ -8,3 +8,4 @@ tests/*.bin
 *.log
 work/
 tests/
+build/
