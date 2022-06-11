@@ -158,11 +158,6 @@ uint16_t loadTape(bus *const b, const char *const file)
 
 	fclose(fh);
 
-	fh = fopen("test.dat", "wb");
-	for(int i=0; i<end; i++)
-		fputc(b -> readByte(i), fh);
-	fclose(fh);
-
 	return start;
 }
 
