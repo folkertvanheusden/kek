@@ -66,7 +66,7 @@ void console_esp32::panel_update_thread()
 
 	pixels.show();
 
-	constexpr uint8_t brightness = 32;
+	constexpr uint8_t brightness = 16;
 	const uint32_t magenta = pixels.Color(brightness, 0,          brightness);
 	const uint32_t red     = pixels.Color(brightness, 0,          0);
 	const uint32_t green   = pixels.Color(0,          brightness, 0);
