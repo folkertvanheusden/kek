@@ -16,6 +16,13 @@ static FILE       *lfh              = nullptr;
 static int         lf_uid           = -1;
 static int         lf_gid           = -1;
 
+#if defined(ESP32)
+int gettid()
+{
+	return 0;
+}
+#endif
+
 void setlog(const char *lf, const log_level_t ll_file, const log_level_t ll_screen)
 {
 	if (lfh)
@@ -52,11 +59,13 @@ void dolog(const log_level_t ll, const char *fmt, ...)
 		if (!lfh)
 			error_exit(true, "Cannot access log-file %s", logfile);
 
+#if !defined(ESP32)
 		if (lf_uid != -1 && fchown(fileno(lfh), lf_uid, lf_gid) == -1)
 			error_exit(true, "Cannot change logfile (%s) ownership", logfile);
 
 		if (fcntl(fileno(lfh), F_SETFD, FD_CLOEXEC) == -1)
 			error_exit(true, "fcntl(FD_CLOEXEC) failed");
+#endif
 	}
 
 	uint64_t now = get_us();
