@@ -66,7 +66,7 @@ uint64_t get_us()
 
 int parity(int v)
 {
-	return __builtin_parity(v); // FIXME
+	return __builtin_parity(v); // TODO
 }
 
 void myusleep(uint64_t us)

@@ -212,7 +212,7 @@ void console::put_string(const std::string & what)
 
 void console::operator()()
 {
-	DOLOG(::debug, true, "Console thread started");
+	DOLOG(::info, true, "Console thread started");
 
 	set_thread_name("kek::console");
 
@@ -239,5 +239,5 @@ void console::operator()()
 		}
 	}
 
-	DOLOG(::debug, true, "Console thread terminating");
+	DOLOG(::info, true, "Console thread terminating");
 }

@@ -59,6 +59,9 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 		if (word_mode)
 			DOLOG(debug, false, "READ I/O %06o in byte mode", a);
 
+		if (peek_only)
+			return 012345;
+
 		if (a == 0177750) { // MAINT
 			DOLOG(debug, !peek_only, "read MAINT");
 			return 1; // POWER OK
