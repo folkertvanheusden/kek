@@ -91,76 +91,46 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 		}
 
 		/// MMU ///
-		if (a >= 0172200 && a < 0172220) {
+		if (a >= 0172200 && a < 0172240) {
 			int      page = (a >> 1) & 7;
-			uint16_t t    = pages[001][0][page].pdr;
-			DOLOG(debug, !peek_only, "read supervisor I PDR for %d: %o", page, t);
+			bool     is_d = a & 16;
+			uint16_t t    = pages[001][is_d][page].pdr;
+			DOLOG(debug, !peek_only, "read supervisor %c PDR for %d: %o", is_d ? 'D' : 'I', page, t);
 			return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
 		}
-		else if (a >= 0172220 && a < 0172240) {
+		else if (a >= 0172240 && a < 0172300) {
 			int      page = (a >> 1) & 7;
-			uint16_t t    = pages[001][1][page].pdr;
-			DOLOG(debug, !peek_only, "read supervisor D PDR for %d: %o", page, t);
+			bool     is_d = a & 16;
+			uint16_t t    = pages[001][is_d][page].par;
+			DOLOG(debug, !peek_only, "read supervisor %c PAR for %d: %o (phys: %07o)", is_d ? 'D' : 'I', page, t, t * 64);
 			return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
 		}
-		else if (a >= 0172240 && a < 0172260) {
+		else if (a >= 0172300 && a < 0172340) {
 			int      page = (a >> 1) & 7;
-			uint16_t t    = pages[001][0][page].par;
-			DOLOG(debug, !peek_only, "read supervisor I PAR for %d: %o (phys: %07o)", page, t, t * 64);
+			bool     is_d = a & 16;
+			uint16_t t    = pages[000][is_d][page].pdr;
+			DOLOG(debug, !peek_only, "read kernel %c PDR for %d: %o", is_d ? 'D' : 'I', page, t);
 			return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
 		}
-		else if (a >= 0172260 && a < 0172300) {
+		else if (a >= 0172340 && a < 0172400) {
 			int      page = (a >> 1) & 7;
-			uint16_t t    = pages[001][1][page].par;
-			DOLOG(debug, !peek_only, "read supervisor D PAR for %d: %o (phys: %07o)", page, t, t * 64);
+			bool     is_d = a & 16;
+			uint16_t t    = pages[000][is_d][page].par;
+			DOLOG(debug, !peek_only, "read kernel %c PAR for %d: %o (phys: %07o)", is_d ? 'D' : 'I', page, t, t * 64);
 			return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
 		}
-		else if (a >= 0172300 && a < 0172320) {
+		else if (a >= 0177600 && a < 0177640) {
 			int      page = (a >> 1) & 7;
-			uint16_t t    = pages[000][0][page].pdr;
-			DOLOG(debug, !peek_only, "read kernel I PDR for %d: %o", page, t);
+			bool     is_d = a & 16;
+			uint16_t t    = pages[003][is_d][page].pdr;
+			DOLOG(debug, !peek_only, "read userspace %c PDR for %d: %o", is_d ? 'D' : 'I', page, t);
 			return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
 		}
-		else if (a >= 0172320 && a < 0172340) {
+		else if (a >= 0177640 && a < 0177700) {
 			int      page = (a >> 1) & 7;
-			uint16_t t    = pages[000][1][page].pdr;
-			DOLOG(debug, !peek_only, "read kernel D PDR for %d: %o", page, t);
-			return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
-		}
-		else if (a >= 0172340 && a < 0172360) {
-			int      page = (a >> 1) & 7;
-			uint16_t t    = pages[000][0][page].par;
-			DOLOG(debug, !peek_only, "read kernel I PAR for %d: %o (phys: %07o)", page, t, t * 64);
-			return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
-		}
-		else if (a >= 0172360 && a < 0172400) {
-			int      page = (a >> 1) & 7;
-			uint16_t t    = pages[000][1][page].par;
-			DOLOG(debug, !peek_only, "read kernel D PAR for %d: %o (phys: %07o)", page, t, t * 64);
-			return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
-		}
-		else if (a >= 0177600 && a < 0177620) {
-			int      page = (a >> 1) & 7;
-			uint16_t t    = pages[003][0][page].pdr;
-			DOLOG(debug, !peek_only, "read userspace I PDR for %d: %o", page, t);
-			return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
-		}
-		else if (a >= 0177620 && a < 0177640) {
-			int      page = (a >> 1) & 7;
-			uint16_t t    = pages[003][1][page].pdr;
-			DOLOG(debug, !peek_only, "read userspace D PDR for %d: %o", page, t);
-			return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
-		}
-		else if (a >= 0177640 && a < 0177660) {
-			int      page = (a >> 1) & 7;
-			uint16_t t    = pages[003][0][page].par;
-			DOLOG(debug, !peek_only, "read userspace I PAR for %d: %o (phys: %07o)", page, t, t * 64);
-			return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
-		}
-		else if (a >= 0177660 && a < 0177700) {
-			int      page = (a >> 1) & 7;
-			uint16_t t    = pages[003][1][page].par;
-			DOLOG(debug, !peek_only, "read userspace D PAR for %d: %o (phys: %07o)", page, t, t * 64);
+			bool     is_d = a & 16;
+			uint16_t t    = pages[003][is_d][page].par;
+			DOLOG(debug, !peek_only, "read userspace %c PAR for %d: %o (phys: %07o)", is_d ? 'D' : 'I', page, t, t * 64);
 			return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
 		}
 		///////////
@@ -398,11 +368,11 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 			}
 		}
 
-		DOLOG(debug, !peek_only, "virtual address %06o maps to physical address %07o (run_mode: %d, apf: %d, par: %07o)", a, m_offset, run_mode, apf, pages[run_mode][0][apf].par * 64);  // TODO: D/I
+		DOLOG(debug, !peek_only, "virtual address %06o maps to physical address %08o (run_mode: %d, apf: %d, par: %08o, poff)", a, m_offset, run_mode, apf, pages[run_mode][0][apf].par * 64, p_offset);  // TODO: D/I
 	}
 	else {
 		m_offset = a;
-		DOLOG(debug, !peek_only, "virtual address %06o maps to physical address %07o", a, m_offset);
+		DOLOG(debug, !peek_only, "virtual address %06o maps to physical address %08o", a, m_offset);
 	}
 
 	return m_offset;
@@ -575,7 +545,7 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 				pages[001][is_d][page].pdr = value;
 			}
 
-			DOLOG(debug, true, "write supervisor %c PDR for %d: %o", is_d ? 'D' : 'I', page, word_mode ? value & 0xff : value);
+			DOLOG(debug, true, "write supervisor %c PDR for %d: %o [%d]", is_d ? 'D' : 'I', page, value, word_mode);
 
 			return value;
 		}
@@ -609,7 +579,7 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 				pages[000][is_d][page].pdr = value;
 			}
 
-			DOLOG(debug, true, "write kernel %c PDR for %d: %o", is_d ? 'D' : 'I', page, word_mode ? value & 0xff : value);
+			DOLOG(debug, true, "write kernel %c PDR for %d: %o [%d]", is_d ? 'D' : 'I', page, value, word_mode);
 
 			return value;
 		}
@@ -643,7 +613,7 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 				pages[003][is_d][page].pdr = value;
 			}
 
-			DOLOG(debug, true, "write user %c PDR for %d: %o", is_d ? 'D' : 'I', page, word_mode ? value & 0xff : value);
+			DOLOG(debug, true, "write user %c PDR for %d: %o [%d]", is_d ? 'D' : 'I', page, value, word_mode);
 
 			return value;
 		}
