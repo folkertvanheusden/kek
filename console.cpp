@@ -88,6 +88,8 @@ int console::wait_char(const int timeout_ms)
 
 void console::flush_input()
 {
+	std::unique_lock<std::mutex> lck(input_lock);
+
 	input_buffer.clear();
 }
 
@@ -210,7 +212,7 @@ void console::put_string(const std::string & what)
 
 void console::operator()()
 {
-	DOLOG(::debug, true, "Console thread started");
+	DOLOG(::info, true, "Console thread started");
 
 	set_thread_name("kek::console");
 
@@ -229,11 +231,13 @@ void console::operator()()
 		else if (running_flag == false && c == 12)  // ^l
 			refresh_virtual_terminal();
 		else {
+			std::unique_lock<std::mutex> lck(input_lock);
+
 			input_buffer.push_back(c);
 
 			have_data.notify_all();
 		}
 	}
 
-	DOLOG(::debug, true, "Console thread terminating");
+	DOLOG(::info, true, "Console thread terminating");
 }
