@@ -329,7 +329,7 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 		const uint8_t apf = a >> 13; // active page field
 
 		// TODO: D/I
-		m_offset = pages[run_mode][0][apf].par * 64;  // memory offset
+		m_offset = pages[run_mode][0][apf].par * 64;  // memory offset  TODO: handle 16b int-s
 
 		uint16_t p_offset = a & 8191;  // page offset
 
@@ -417,7 +417,7 @@ void bus::addToMMR1(const int8_t delta, const uint8_t reg)
 {
 	MMR1 <<= 8;
 
-	MMR1 |= (delta & 5) << 3;
+	MMR1 |= (delta & 31) << 3;
 	MMR1 |= reg;
 }
 
