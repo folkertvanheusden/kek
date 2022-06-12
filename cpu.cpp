@@ -1011,7 +1011,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 						  setPSW_n(SIGN(v, word_mode));
 						  setPSW_z(IS_0(v, word_mode));
-						  setPSW_v((word_mode ? (vo & 0xff) == 0x80 : vo == 0x8000) && org_c);
+						  setPSW_v((word_mode ? (vo & 0xff) == 0x7f : vo == 0x7fff) && org_c);
 						  setPSW_c((word_mode ? (vo & 0xff) == 0xff : vo == 0xffff) && org_c);
 
 						  setRegister(dst_reg, false, v);
