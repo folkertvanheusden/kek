@@ -78,6 +78,8 @@ public:
 
 	uint16_t getMMR0() { return MMR0; }
 	uint16_t getMMR1() { return MMR1; }
+	uint16_t getMMR2() { return MMR2; }
+	uint16_t getMMR3() { return MMR3; }
 	void     clearMMR1();
 	void     addToMMR1(const int8_t delta, const uint8_t reg);
 	void     setMMR2(const uint16_t value) { MMR2 = value; }  // address

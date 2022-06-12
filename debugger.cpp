@@ -71,6 +71,43 @@ std::map<std::string, std::string> split(const std::vector<std::string> & kv_arr
 	return out;
 }
 
+void dump_par_pdr(console *const cnsl, bus *const b, const uint16_t pdrs, const uint16_t pars, const std::string & name, const int state)
+{
+	if (state == 0 || state == 2)
+		cnsl->put_string_lf(name);
+	else
+		cnsl->put_string_lf(format("%s DISABLED", name.c_str()));
+
+	cnsl->put_string_lf("   PAR             PDR");
+
+	for(int i=0; i<8; i++) {
+		uint16_t par_value = b->read(pars + i * 2, false, false, true);
+		uint16_t pdr_value = b->read(pdrs + i * 2, false, false, true);
+
+		uint16_t pdr_len   = (((pdr_value >> 8) & 127) + 1) * 64;
+
+		cnsl->put_string_lf(format("%d] %06o %08o %06o %04o D%d A%d", i, par_value, par_value * 64, pdr_value, pdr_len, !!(pdr_value & 8), pdr_value & 7));
+	}
+}
+
+void mmu_dump(console *const cnsl, bus *const b)
+{
+	uint16_t mmr0 = b->getMMR0();
+
+	cnsl->put_string_lf(mmr0 & 1 ? "MMU enabled" : "MMU NOT enabled");
+
+	uint16_t mmr3 = b->getMMR3();
+
+	dump_par_pdr(cnsl, b, 0172200, 0172240, "supervisor i-space", 0);
+	dump_par_pdr(cnsl, b, 0172220, 0172260, "supervisor d-space", 1 + (!!(mmr3 & 2)));
+
+	dump_par_pdr(cnsl, b, 0172300, 0172340, "kernel i-space", 0);
+	dump_par_pdr(cnsl, b, 0172320, 0172360, "kernel d-space", 1 + (!!(mmr3 & 4)));
+
+	dump_par_pdr(cnsl, b, 0177600, 0177640, "user i-space", 0);
+	dump_par_pdr(cnsl, b, 0177620, 0177660, "user d-space", 1 + (!!(mmr3 & 1)));
+}
+
 void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const stop_event, const bool tracing_in)
 {
 	int32_t trace_start_addr = -1;
@@ -146,6 +183,11 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 			continue;
 		}
+		else if (parts[0] == "mmudump") {
+			mmu_dump(cnsl, b);
+
+			continue;
+		}
 		else if (parts[0] == "strace") {
 			if (parts.size() != 2) {
 				trace_start_addr = -1;
@@ -206,6 +248,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 			cnsl->put_string_lf("sbp/cbp/lbp   - set/clear/list breakpoint(s)");
 			cnsl->put_string_lf("trace/t       - toggle tracing");
 			cnsl->put_string_lf("strace        - start tracing from address - invoke without address to disable");
+			cnsl->put_string_lf("mmudump       - dump MMU settings (PARs/PDRs)");
 
 			continue;
 		}
