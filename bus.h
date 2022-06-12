@@ -13,6 +13,8 @@ class cpu;
 class memory;
 class tty;
 
+typedef enum { d_space, i_space } d_i_space_t;
+
 typedef struct
 {
 	uint16_t par, pdr;
@@ -63,14 +65,14 @@ public:
 	void    set_lf_crs_b7();
 	uint8_t get_lf_crs();
 
-	uint16_t read(const uint16_t a, const bool word_mode, const bool use_prev, const bool peek_only=false);
+	uint16_t read(const uint16_t a, const bool word_mode, const bool use_prev, const bool peek_only=false, const d_i_space_t s = i_space);
 	uint16_t readByte(const uint16_t a) { return read(a, true, false); }
 	uint16_t readWord(const uint16_t a);
 	uint16_t peekWord(const uint16_t a);
 
 	uint16_t readUnibusByte(const uint16_t a);
 
-	uint16_t write(const uint16_t a, const bool word_mode, uint16_t value, const bool use_prev);
+	uint16_t write(const uint16_t a, const bool word_mode, uint16_t value, const bool use_prev, const d_i_space_t s = i_space);
 	uint8_t writeByte(const uint16_t a, const uint8_t value) { return write(a, true, value, false); }
 	uint16_t writeWord(const uint16_t a, const uint16_t value);
 

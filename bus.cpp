@@ -51,7 +51,7 @@ void bus::init()
 	MMR3 = 0;
 }
 
-uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, const bool peek_only)
+uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, const bool peek_only, const d_i_space_t space)
 {
 	uint16_t temp = 0;
 
@@ -279,7 +279,7 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 
 	int run_mode = (c->getPSW() >> (use_prev ? 12 : 14)) & 3;
 
-	uint32_t m_offset = calculate_physical_address(run_mode, a, !peek_only, false, peek_only, false);
+	uint32_t m_offset = calculate_physical_address(run_mode, a, !peek_only, false, peek_only, space == d_space);
 
 	if (word_mode)
 		temp = m -> readByte(m_offset);
@@ -393,7 +393,7 @@ void bus::addToMMR1(const int8_t delta, const uint8_t reg)
 	MMR1 |= reg;
 }
 
-uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bool use_prev)
+uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bool use_prev, const d_i_space_t space)
 {
 	if (a >= 0160000) {
 		if (word_mode) {
@@ -666,7 +666,7 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 
 	int run_mode = (c->getPSW() >> (use_prev ? 12 : 14)) & 3;
 
-	uint32_t m_offset = calculate_physical_address(run_mode, a, true, true, false, false);
+	uint32_t m_offset = calculate_physical_address(run_mode, a, true, true, false, space == d_space);
 
 	DOLOG(debug, true, "WRITE to %06o/%07o: %o", a, m_offset, value);
 
