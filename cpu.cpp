@@ -1053,6 +1053,8 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 						  if (IS_0(vo, word_mode) && org_c)
 							  setPSW_c(true);
+
+						  setRegister(dst_reg, false, v);
 					  }
 					  else {
 						  uint16_t       a     = getGAMAddress(dst_mode, dst_reg, word_mode, false);
