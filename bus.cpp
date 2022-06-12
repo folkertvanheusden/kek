@@ -59,9 +59,6 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 		if (word_mode)
 			DOLOG(debug, false, "READ I/O %06o in byte mode", a);
 
-		if (peek_only)
-			return 012345;
-
 		if (a == 0177750) { // MAINT
 			DOLOG(debug, !peek_only, "read MAINT");
 			return 1; // POWER OK
@@ -258,8 +255,12 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 		if (rl02_ && a >= RL02_BASE && a < RL02_END)
 			return word_mode ? rl02_ -> readByte(a) : rl02_ -> readWord(a);
 
-		if (tty_ && a >= PDP11TTY_BASE && a < PDP11TTY_END)
+		if (tty_ && a >= PDP11TTY_BASE && a < PDP11TTY_END) {
+			if (peek_only)
+				return 012345;
+
 			return word_mode ? tty_ -> readByte(a) : tty_ -> readWord(a);
+		}
 
 		// LO size register field must be all 1s, so subtract 1
 		const uint32_t system_size = n_pages * 8192 / 64 - 1;
@@ -375,7 +376,6 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 	}
 	else {
 		m_offset = a;
-		DOLOG(debug, !peek_only, "virtual address %06o maps to physical address %08o", a, m_offset);
 	}
 
 	return m_offset;
