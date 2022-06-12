@@ -1366,9 +1366,9 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 		case 0b000110111: // MFPS (get PSW to something) / SXT
 				 if (word_mode) {  // MFPS
 					 uint16_t temp      = psw & 0xff;
-					 bool     extend_b7 = temp & 128;
+					 bool     extend_b7 = psw & 128;
 
-					 if (extend_b7)
+					 if (extend_b7 && dst_mode == 0)
 						 temp |= 0xff00;
 
 					 set_flags = putGAM(dst_mode, dst_reg, word_mode, temp, false);
@@ -1376,7 +1376,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					 if (set_flags) {
 						 setPSW_z(temp == 0);
 						 setPSW_v(false);
-						 setPSW_n(!extend_b7);
+						 setPSW_n(extend_b7);
 					 }
 				 }
 				 else {  // SXT
