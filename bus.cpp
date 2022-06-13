@@ -707,9 +707,9 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 	return value;
 }
 
-uint16_t bus::readWord(const uint16_t a)
+uint16_t bus::readWord(const uint16_t a, const d_i_space_t s)
 {
-	return read(a, false, false, false);
+	return read(a, false, false, false, s);
 }
 
 uint16_t bus::peekWord(const uint16_t a)
