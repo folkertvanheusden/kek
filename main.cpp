@@ -80,12 +80,16 @@ int main(int argc, char *argv[])
 	log_level_t  ll_file   = none;
 
 	int  opt          = -1;
-	while((opt = getopt(argc, argv, "hm:T:r:R:p:ndtL:b:l:")) != -1)
+	while((opt = getopt(argc, argv, "hm:T:r:R:p:ndtL:b:l:3")) != -1)
 	{
 		switch(opt) {
 			case 'h':
 				help();
 				return 1;
+
+			case '3':
+				c->set_34(true);  // switch from 11/70 to 11/34
+				break;
 
 			case 'b':
 				if (strcasecmp(optarg, "rk05") == 0)
@@ -190,10 +194,22 @@ int main(int argc, char *argv[])
 	sigaction(SIGTERM, &sa, nullptr);
 	sigaction(SIGINT , &sa, nullptr);
 
+#if 0
 //	loadbin(b, 0, "test.dat");
 //	c->setRegister(7, 0);
 
 //load_p11_x11(b, "/home/folkert/Projects/PDP-11/work/p11-2.10i/Tests/mtpi.x11");
+
+
+	b->write(0172340, true, 0x34, false);
+	b->write(0172341, true, 0x12, false);
+	printf("%04x\n", b->read(0172340, false, false, true));
+	printf("%04x\n", b->read(0172340, true, false, true));
+	printf("%04x\n", b->read(0172341, true, false, true));
+	b->write(0172341, true, 0x88, false);
+	printf("%04x\n", b->read(0172340, false, false, true));
+	return 0;
+#endif
 
 	cnsl->start_thread();
 

@@ -550,6 +550,11 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 				pages[001][is_d][page].pdr = value;
 			}
 
+			if (c->get_34())  // 11/34 has no cache bit
+				pages[001][is_d][page].pdr &= 32767;
+
+			pages[001][is_d][page].pdr &= ~(128 + 64 + 32 + 16);  // set bit 4 & 5 to 0 as they are unused and A/W are set to 0 by writes
+
 			DOLOG(debug, true, "write supervisor %c PDR for %d: %o [%d]", is_d ? 'D' : 'I', page, value, word_mode);
 
 			return value;
@@ -565,6 +570,9 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 			else {
 				pages[001][is_d][page].par = value;
 			}
+
+			if (c->get_34())  // 11/34 has 12 bit PARs
+				pages[001][is_d][page].par &= 4095;
 
 			DOLOG(debug, true, "write supervisor %c PAR for %d: %o (%07o)", is_d ? 'D' : 'I', page, word_mode ? value & 0xff : value, pages[001][is_d][page].par * 64);
 
@@ -584,6 +592,11 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 				pages[000][is_d][page].pdr = value;
 			}
 
+			if (c->get_34())  // 11/34 has no cache bit
+				pages[000][is_d][page].pdr &= 32767;
+
+			pages[000][is_d][page].pdr &= ~(128 + 64 + 32 + 16);  // set bit 4 & 5 to 0 as they are unused and A/W are set to 0 by writes
+
 			DOLOG(debug, true, "write kernel %c PDR for %d: %o [%d]", is_d ? 'D' : 'I', page, value, word_mode);
 
 			return value;
@@ -599,6 +612,9 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 			else {
 				pages[000][is_d][page].par = value;
 			}
+
+			if (c->get_34())  // 11/34 has 12 bit PARs
+				pages[000][is_d][page].par &= 4095;
 
 			DOLOG(debug, true, "write kernel %c PAR for %d: %o (%07o)", is_d ? 'D' : 'I', page, word_mode ? value & 0xff : value, pages[000][is_d][page].par * 64);
 
@@ -618,6 +634,11 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 				pages[003][is_d][page].pdr = value;
 			}
 
+			if (c->get_34())  // 11/34 has no cache bit
+				pages[003][is_d][page].pdr &= 32767;
+
+			pages[003][is_d][page].pdr &= ~(128 + 64 + 32 + 16);  // set bit 4 & 5 to 0 as they are unused and A/W are set to 0 by writes
+
 			DOLOG(debug, true, "write user %c PDR for %d: %o [%d]", is_d ? 'D' : 'I', page, value, word_mode);
 
 			return value;
@@ -633,6 +654,9 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 			else {
 				pages[003][is_d][page].par = value;
 			}
+
+			if (c->get_34())  // 11/34 has 12 bit PARs
+				pages[003][is_d][page].par &= 4095;
 
 			DOLOG(debug, true, "write user %c PAR for %d: %o (%07o)", is_d ? 'D' : 'I', page, word_mode ? value & 0xff : value, pages[003][is_d][page].par * 64);
 
