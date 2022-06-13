@@ -104,11 +104,11 @@ void setBootLoader(bus *const b, const bootloader_t which)
 	c -> setRegister(7, offset);
 }
 
-uint16_t loadTape(bus *const b, const char *const file)
+uint16_t loadTape(bus *const b, const std::string & file)
 {
-	FILE *fh = fopen(file, "rb");
+	FILE *fh = fopen(file.c_str(), "rb");
 	if (!fh) {
-		DOLOG(ll_error, true, "Cannot open %s", file);
+		DOLOG(ll_error, true, "Cannot open %s", file.c_str());
 		return -1;
 	}
 

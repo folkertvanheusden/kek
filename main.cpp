@@ -57,15 +57,6 @@ int main(int argc, char *argv[])
 {
 	//setlocale(LC_ALL, "");
 
-	bus *b = new bus();
-
-	cpu *c = new cpu(b, &event);
-	b->add_cpu(c);
-
-	kw11_l *lf = new kw11_l(b);
-
-	c -> setEmulateMFPT(true);
-
 	std::vector<std::string> rk05_files;
 	std::vector<std::string> rl02_files;
 
@@ -79,13 +70,24 @@ int main(int argc, char *argv[])
 	log_level_t  ll_screen = none;
 	log_level_t  ll_file   = none;
 
+	bool         mode_34   = false;
+
+	uint16_t     start_addr= 01000;
+	bool         sa_set    = false;
+
+	std::string  tape;
+
 	int  opt          = -1;
-	while((opt = getopt(argc, argv, "hm:T:r:R:p:ndtL:b:l:")) != -1)
+	while((opt = getopt(argc, argv, "hm:T:r:R:p:ndtL:b:l:3")) != -1)
 	{
 		switch(opt) {
 			case 'h':
 				help();
 				return 1;
+
+			case '3':
+				mode_34 = true;  // switch from 11/70 to 11/34
+				break;
 
 			case 'b':
 				if (strcasecmp(optarg, "rk05") == 0)
@@ -110,7 +112,7 @@ int main(int argc, char *argv[])
 				break;
 
 			case 'T':
-				c->setRegister(7, loadTape(b, optarg));
+				tape = optarg;
 				break;
 
 			case 'R':
@@ -122,7 +124,8 @@ int main(int argc, char *argv[])
 				break;
 
 			case 'p':
-				c->setRegister(7, atoi(optarg));
+				start_addr = atoi(optarg);
+				sa_set     = true;
 				break;
 
 			case 'L': {
@@ -150,7 +153,24 @@ int main(int argc, char *argv[])
 
 	setlog(logfile, ll_file, ll_screen);
 
+	bus *b = new bus();
+
+	cpu *c = new cpu(b, &event);
+	b->add_cpu(c);
+
+	c->set_34(mode_34);
+
+	kw11_l *lf = new kw11_l(b);
+
+	c->setEmulateMFPT(true);
+
 	std::atomic_bool interrupt_emulation { false };
+
+	if (tape.empty() == false)
+		c->setRegister(7, loadTape(b, tape));
+
+	if (sa_set)
+		c->setRegister(7, start_addr);
 
 	if (withUI)
 		cnsl = new console_ncurses(&event, b);
@@ -190,10 +210,22 @@ int main(int argc, char *argv[])
 	sigaction(SIGTERM, &sa, nullptr);
 	sigaction(SIGINT , &sa, nullptr);
 
+#if 0
 //	loadbin(b, 0, "test.dat");
 //	c->setRegister(7, 0);
 
 //load_p11_x11(b, "/home/folkert/Projects/PDP-11/work/p11-2.10i/Tests/mtpi.x11");
+
+
+	b->write(0172340, true, 0x34, false);
+	b->write(0172341, true, 0x12, false);
+	printf("%04x\n", b->read(0172340, false, false, true));
+	printf("%04x\n", b->read(0172340, true, false, true));
+	printf("%04x\n", b->read(0172341, true, false, true));
+	b->write(0172341, true, 0x88, false);
+	printf("%04x\n", b->read(0172340, false, false, true));
+	return 0;
+#endif
 
 	cnsl->start_thread();
 

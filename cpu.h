@@ -25,6 +25,7 @@ private:
 	bool     emulateMFPT { false };
 	uint64_t instruction_count { 0 };
 	uint64_t running_since     { 0 };
+	bool     mode11_70   { true };
 
 	// level, vector
 	std::map<uint8_t, std::set<uint8_t> > queued_interrupts;
@@ -65,6 +66,9 @@ private:
 public:
 	explicit cpu(bus *const b, std::atomic_uint32_t *const event);
 	~cpu();
+
+	void set_34(const bool v) { mode11_70 = !v; }
+	bool get_34()             { return !mode11_70; }
 
 	bool check_breakpoint();
 	void set_breakpoint(const uint16_t addr);
