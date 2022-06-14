@@ -551,7 +551,7 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 			}
 
 			if (c->get_34())  // 11/34 has no cache bit
-				pages[001][is_d][page].pdr &= 077516;
+				pages[001][is_d][page].pdr &= 077416;
 			else
 				pages[001][is_d][page].pdr &= ~(128 + 64 + 32 + 16);  // set bit 4 & 5 to 0 as they are unused and A/W are set to 0 by writes
 
@@ -593,7 +593,7 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 			}
 
 			if (c->get_34())  // 11/34 has no cache bit
-				pages[000][is_d][page].pdr &= 077516;
+				pages[000][is_d][page].pdr &= 077416;
 			else
 				pages[000][is_d][page].pdr &= ~(128 + 64 + 32 + 16);  // set bit 4 & 5 to 0 as they are unused and A/W are set to 0 by writes
 
@@ -635,7 +635,7 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 			}
 
 			if (c->get_34())  // 11/34 has no cache bit
-				pages[003][is_d][page].pdr &= 077516;
+				pages[003][is_d][page].pdr &= 077416;
 			else
 				pages[003][is_d][page].pdr &= ~(128 + 64 + 32 + 16);  // set bit 4 & 5 to 0 as they are unused and A/W are set to 0 by writes
 
