@@ -407,12 +407,12 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 				DOLOG(debug, true, "writeb PSW %s", a & 1 ? "MSB" : "LSB");
 				uint16_t vtemp = c -> getPSW();
 
-				value &= ~16;  // cannot set T bit via this
-
 				if (a & 1)
 					vtemp = (vtemp & 0x00ff) | (value << 8);
 				else
 					vtemp = (vtemp & 0xff00) | value;
+
+				vtemp &= ~16;  // cannot set T bit via this
 
 				c -> setPSW(vtemp, false);
 
