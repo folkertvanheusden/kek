@@ -552,8 +552,8 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 
 			if (c->get_34())  // 11/34 has no cache bit
 				pages[001][is_d][page].pdr &= 077516;
-
-			pages[001][is_d][page].pdr &= ~(128 + 64 + 32 + 16);  // set bit 4 & 5 to 0 as they are unused and A/W are set to 0 by writes
+			else
+				pages[001][is_d][page].pdr &= ~(128 + 64 + 32 + 16);  // set bit 4 & 5 to 0 as they are unused and A/W are set to 0 by writes
 
 			DOLOG(debug, true, "write supervisor %c PDR for %d: %o [%d]", is_d ? 'D' : 'I', page, value, word_mode);
 
@@ -594,8 +594,8 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 
 			if (c->get_34())  // 11/34 has no cache bit
 				pages[000][is_d][page].pdr &= 077516;
-
-			pages[000][is_d][page].pdr &= ~(128 + 64 + 32 + 16);  // set bit 4 & 5 to 0 as they are unused and A/W are set to 0 by writes
+			else
+				pages[000][is_d][page].pdr &= ~(128 + 64 + 32 + 16);  // set bit 4 & 5 to 0 as they are unused and A/W are set to 0 by writes
 
 			DOLOG(debug, true, "write kernel %c PDR for %d: %o [%d]", is_d ? 'D' : 'I', page, value, word_mode);
 
@@ -636,8 +636,8 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 
 			if (c->get_34())  // 11/34 has no cache bit
 				pages[003][is_d][page].pdr &= 077516;
-
-			pages[003][is_d][page].pdr &= ~(128 + 64 + 32 + 16);  // set bit 4 & 5 to 0 as they are unused and A/W are set to 0 by writes
+			else
+				pages[003][is_d][page].pdr &= ~(128 + 64 + 32 + 16);  // set bit 4 & 5 to 0 as they are unused and A/W are set to 0 by writes
 
 			DOLOG(debug, true, "write user %c PDR for %d: %o [%d]", is_d ? 'D' : 'I', page, value, word_mode);
 
