@@ -399,6 +399,18 @@ void bus::addToMMR1(const int8_t delta, const uint8_t reg)
 
 uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bool use_prev)
 {
+	int run_mode = (c->getPSW() >> (use_prev ? 12 : 14)) & 3;
+
+	if (run_mode == 1 && c->get_34())
+		run_mode = 3;
+
+	if (MMR0 & 1) {
+		const uint8_t apf = a >> 13; // active page field
+
+                // TODO: D/I
+                pages[run_mode][0][apf].pdr |= 64;
+	}
+
 	if (a >= 0160000) {
 		if (word_mode) {
 			assert(value < 256);
@@ -693,11 +705,6 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 
 		return value;
 	}
-
-	int run_mode = (c->getPSW() >> (use_prev ? 12 : 14)) & 3;
-
-	if (run_mode == 1 && c->get_34())
-		run_mode = 3;
 
 	uint32_t m_offset = calculate_physical_address(run_mode, a, true, true, false);
 
