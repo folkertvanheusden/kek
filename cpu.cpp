@@ -1650,10 +1650,8 @@ void cpu::trap(const uint16_t vector, const int new_ipl)
 	uint16_t before_psw = getPSW();
 	uint16_t before_pc  = getPC();
 
-	if (b->getMMR0() & 1) {
-		// make sure the trap vector is retrieved from kernel space
-		psw &= 037777;  // mask off 14/15
-	}
+	// make sure the trap vector is retrieved from kernel space
+	psw &= 037777;  // mask off 14/15
 
 	if ((b->getMMR1() & 0160000) == 0) {
 		b->setMMR2(vector);

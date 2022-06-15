@@ -363,7 +363,7 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 				throw 1;
 			}
 
-			if ((p_offset > pdr_len && direction == true) || (p_offset < pdr_len && direction == false)) {
+			if ((p_offset > pdr_len && direction == false) || (p_offset < pdr_len && direction == true)) {
 				DOLOG(debug, !peek_only, "bus::calculate_physical_address::p_offset %o >= %o", p_offset, pdr_len);
 				c->schedule_trap(0250);  // invalid access
 
@@ -404,7 +404,7 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 	if (run_mode == 1 && c->get_34())
 		run_mode = 3;
 
-	if (MMR0 & 1) {
+	if ((MMR0 & 1) == 1 && (a & 1) == 0) {
 		const uint8_t apf = a >> 13; // active page field
 
                 // TODO: D/I
