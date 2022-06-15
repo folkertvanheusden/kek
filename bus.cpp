@@ -283,8 +283,8 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 
 	int run_mode = (c->getPSW() >> (use_prev ? 12 : 14)) & 3;
 
-	if (run_mode == 1 && c->get_34())
-		run_mode = 3;
+//	if (run_mode == 1 && c->get_34())
+//		run_mode = 3;
 
 	uint32_t m_offset = calculate_physical_address(run_mode, a, !peek_only, false, peek_only);
 
@@ -354,11 +354,15 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 
 			if (m_offset >= n_pages * 8192) {
 				DOLOG(debug, !peek_only, "bus::calculate_physical_address %o >= %o", m_offset, n_pages * 8192);
-				c->schedule_trap(04);  // invalid address
 
 				MMR0 |= 1 << 15;  // non-resident
 
+				MMR0 &= ~14;  // add current page
+				MMR0 |= apf << 1;
+
 				pages[run_mode][0][apf].pdr |= 1 << 7;  // TODO: D/I
+									//
+				c->schedule_trap(04);  // invalid address
 
 				throw 1;
 			}
@@ -368,6 +372,9 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 				c->schedule_trap(0250);  // invalid access
 
 				MMR0 |= 1 << 14;  // length
+
+				MMR0 &= ~14;  // add current page
+				MMR0 |= apf << 1;
 
 				pages[run_mode][0][apf].pdr |= 1 << 7;  // TODO: D/I
 
@@ -401,8 +408,8 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 {
 	int run_mode = (c->getPSW() >> (use_prev ? 12 : 14)) & 3;
 
-	if (run_mode == 1 && c->get_34())
-		run_mode = 3;
+//	if (run_mode == 1 && c->get_34())
+//		run_mode = 3;
 
 	if ((MMR0 & 1) == 1 && (a & 1) == 0) {
 		const uint8_t apf = a >> 13; // active page field
