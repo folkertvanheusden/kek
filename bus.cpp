@@ -363,7 +363,7 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 				throw 1;
 			}
 
-			if ((p_offset >= pdr_len && direction == false) || (p_offset < pdr_len && direction == true)) {
+			if ((p_offset > pdr_len && direction == true) || (p_offset < pdr_len && direction == false)) {
 				DOLOG(debug, !peek_only, "bus::calculate_physical_address::p_offset %o >= %o", p_offset, pdr_len);
 				c->schedule_trap(0250);  // invalid access
 
