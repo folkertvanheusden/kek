@@ -283,6 +283,9 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 
 	int run_mode = (c->getPSW() >> (use_prev ? 12 : 14)) & 3;
 
+	if (run_mode == 1 && c->get_34())
+		run_mode = 3;
+
 	uint32_t m_offset = calculate_physical_address(run_mode, a, !peek_only, false, peek_only);
 
 	if (word_mode)
@@ -692,6 +695,9 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 	}
 
 	int run_mode = (c->getPSW() >> (use_prev ? 12 : 14)) & 3;
+
+	if (run_mode == 1 && c->get_34())
+		run_mode = 3;
 
 	uint32_t m_offset = calculate_physical_address(run_mode, a, true, true, false);
 
