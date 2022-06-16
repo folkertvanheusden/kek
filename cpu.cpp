@@ -2167,6 +2167,7 @@ void cpu::step_b()
 	instruction_count++;
 
 	uint16_t temp_pc = getPC();
+
 	b->setMMR2(temp_pc);
 
 	if (temp_pc & 1)

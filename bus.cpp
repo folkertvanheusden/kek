@@ -315,7 +315,7 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 		m_offset += p_offset;
 
 		if (trap_on_failure) {
-			if (MMR0 & (1 << 9)) {
+			if ((MMR0 & (1 << 9)) || c->get_34()) {
 				int access_control = pages[run_mode][0][apf].pdr & 7;
 
 				if (is_write && access_control != 6) {  // write
@@ -384,7 +384,7 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 			}
 		}
 
-		DOLOG(debug, !peek_only, "virtual address %06o maps to physical address %08o (run_mode: %d, apf: %d, par: %08o, poff)", a, m_offset, run_mode, apf, pages[run_mode][0][apf].par * 64, p_offset);  // TODO: D/I
+		DOLOG(debug, !peek_only, "virtual address %06o maps to physical address %08o (run_mode: %d, apf: %d, par: %08o, poff: %o, AC: %d)", a, m_offset, run_mode, apf, pages[run_mode][0][apf].par * 64, p_offset, pages[run_mode][0][apf].pdr & 7);  // TODO: D/I
 	}
 	else {
 		m_offset = a;
