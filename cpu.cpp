@@ -66,11 +66,13 @@ uint64_t cpu::get_instructions_executed_count()
 	return instruction_count;
 }
 
-std::pair<double, double> cpu::get_mips_rel_speed()
+std::tuple<double, double, uint64_t> cpu::get_mips_rel_speed()
 {
+	uint64_t instr_count = get_instructions_executed_count();
+
         uint32_t t_diff = get_ms() - running_since;
 
-        double mips = get_instructions_executed_count() / (1000.0 * t_diff);
+        double mips = instr_count / (1000.0 * t_diff);
 
         // see https://retrocomputing.stackexchange.com/questions/6960/what-was-the-clock-speed-and-ips-for-the-original-pdp-11
         constexpr double pdp11_clock_cycle = 150;  // ns, for the 11/70
@@ -78,7 +80,7 @@ std::pair<double, double> cpu::get_mips_rel_speed()
         constexpr double pdp11_avg_cycles_per_instruction = (1 + 5) / 2.0;
         constexpr double pdp11_estimated_mips = pdp11_mhz / pdp11_avg_cycles_per_instruction;
 
-	return { mips, mips * 100 / pdp11_estimated_mips };
+	return { mips, mips * 100 / pdp11_estimated_mips, instr_count };
 }
 
 void cpu::reset()

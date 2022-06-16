@@ -290,7 +290,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 		if (!single_step) {
 			auto speed = c->get_mips_rel_speed();
-			cnsl->debug("MIPS: %.2f, relative speed: %.2f%%", speed.first, speed.second);
+			cnsl->debug("MIPS: %.2f, relative speed: %.2f%%, instructions executed: %lu", std::get<0>(speed), std::get<1>(speed), std::get<2>(speed));
 		}
 
 		if (*stop_event == EVENT_INTERRUPT) {
