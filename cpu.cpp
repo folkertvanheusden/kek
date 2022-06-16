@@ -2195,6 +2195,6 @@ void cpu::step_b()
 		trap(010);
 	}
 	catch(const int exception) {
-		DOLOG(debug, true, "bus-trap during execution of command");
+		DOLOG(debug, true, "bus-trap during execution of command (%d)", exception);
 	}
 }

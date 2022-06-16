@@ -345,7 +345,7 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 						MMR0 &= ~(3 << 5);
 						MMR0 |= run_mode << 5;
 
-						throw 1;
+						throw 2;
 					}
 				}
 			}
@@ -366,7 +366,7 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 									//
 				c->schedule_trap(04);  // invalid address
 
-				throw 1;
+				throw 3;
 			}
 
 			if ((p_offset > pdr_len && direction == false) || (p_offset < pdr_len && direction == true)) {
@@ -380,7 +380,7 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 
 				pages[run_mode][0][apf].pdr |= 1 << 7;  // TODO: D/I
 
-				throw 1;
+				throw 4;
 			}
 		}
 
@@ -410,14 +410,11 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 {
 	int  run_mode = (c->getPSW() >> (use_prev ? 12 : 14)) & 3;
 
-//	if (run_mode == 1 && is_11_34)
-//		run_mode = 3;
-
-	if ((MMR0 & 1) == 1 && (a & 1) == 0) {
+	if ((MMR0 & 1) == 1 && (a & 1) == 0 && a != 0177572) {
 		const uint8_t apf = a >> 13; // active page field
 
                 // TODO: D/I
-                pages[run_mode][0][apf].pdr |= 64;
+                pages[run_mode][0][apf].pdr |= 64;  // set 'W' (written to) bit
 	}
 
 	if (a >= 0160000) {
