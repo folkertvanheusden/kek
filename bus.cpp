@@ -525,10 +525,12 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 		if (a == 0177572) { // MMR0
 			DOLOG(debug, true, "write set MMR0: %o", value);
 
-			MMR0 = value & ~(3 << 10);  // bit 10 & 11 always read as 0
+			value &= ~(3 << 10);  // bit 10 & 11 always read as 0
 
 			if (value & 1)
-				MMR0 = value & ~(7 << 13);  // reset error bits
+				value &= ~(7 << 13);  // reset error bits
+
+			MMR0 = value;
 
 			return MMR0;
 		}
