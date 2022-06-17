@@ -2170,7 +2170,8 @@ void cpu::step_b()
 
 	uint16_t temp_pc = getPC();
 
-	b->setMMR2(temp_pc);
+	if ((b->getMMR1() & 0160000) == 0)
+		b->setMMR2(temp_pc);
 
 	if (temp_pc & 1)
 		busError();
