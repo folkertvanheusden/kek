@@ -265,7 +265,7 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 		}
 
 		// LO size register field must be all 1s, so subtract 1
-		const uint32_t system_size = n_pages * 8192 / 64 - 1;
+		constexpr uint32_t system_size = n_pages * 8192 / 64 - 1;
 
 		if (a == 0177762)  // system size HI
 			return system_size >> 16;
@@ -316,10 +316,12 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 
 		if (trap_on_failure) {
 			if ((MMR0 & (1 << 9)) || c->get_34()) {
-				int access_control = pages[run_mode][0][apf].pdr & 7;
+				const int access_control = pages[run_mode][0][apf].pdr & 7;
 
 				if (is_write && access_control != 6) {  // write
-					c->schedule_trap(04);  // invalid address
+					DOLOG(info, true, "TRAP(0250) (throw 1) for access_control %d on address %06o", access_control, a);
+
+					c->schedule_trap(0250);  // invalid address
 
 					pages[run_mode][0][apf].pdr |= 1 << 7;  // TODO: D/I
 
@@ -334,7 +336,9 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 				}
 				else if (!is_write) { // read
 					if (access_control == 0 || access_control == 1 || access_control == 3 || access_control == 4 || access_control == 7) {
-						c->schedule_trap(04);  // invalid address
+						DOLOG(info, true, "TRAP(4) (throw 2) for access_control %d on address %06o", access_control, a);
+
+						c->schedule_trap(0250);  // invalid address
 
 						pages[run_mode][0][apf].pdr |= 1 << 7;  // TODO: D/I
 
@@ -356,6 +360,7 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 
 			if (m_offset >= n_pages * 8192) {
 				DOLOG(debug, !peek_only, "bus::calculate_physical_address %o >= %o", m_offset, n_pages * 8192);
+				DOLOG(info, true, "TRAP(04) (throw 3) on address %06o", a);
 
 				MMR0 |= 1 << 15;  // non-resident
 
@@ -364,13 +369,14 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 
 				pages[run_mode][0][apf].pdr |= 1 << 7;  // TODO: D/I
 									//
-				c->schedule_trap(04);  // invalid address
+				c->schedule_trap(04);
 
 				throw 3;
 			}
 
 			if ((p_offset > pdr_len && direction == false) || (p_offset < pdr_len && direction == true)) {
 				DOLOG(debug, !peek_only, "bus::calculate_physical_address::p_offset %o >= %o", p_offset, pdr_len);
+				DOLOG(info, true, "TRAP(0250) (throw 4) on address %06o", a);
 				c->schedule_trap(0250);  // invalid access
 
 				MMR0 |= 1 << 14;  // length
