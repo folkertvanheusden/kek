@@ -252,7 +252,7 @@ int main(int argc, char *argv[])
 
 		auto stats = c->get_mips_rel_speed();
 
-		printf("MIPS: %.2f, relative speed: %.2f%%, instructions executed: %lu", std::get<0>(stats), std::get<1>(stats), std::get<2>(stats));
+		cnsl->put_string_lf(format("MIPS: %.2f, relative speed: %.2f%%, instructions executed: %lu", std::get<0>(stats), std::get<1>(stats), std::get<2>(stats)));
 	}
 
 	event = EVENT_TERMINATE;
