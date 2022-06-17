@@ -308,6 +308,11 @@ void bus::setMMR0(int value)
 	if (value & 1)
 		value &= ~(7 << 13);  // reset error bits
 
+	if (MMR0 & 0160000) {
+		if ((value & 1) == 0)
+			value &= 254;  // bits 7...1 are protected 
+	}
+
 // TODO if bit 15/14/13 are set (either of them), then do not modify bit 1...7
 
 	MMR0 = value;
