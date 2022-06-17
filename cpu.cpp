@@ -302,7 +302,7 @@ void cpu::queue_interrupt(const uint8_t level, const uint8_t vector)
 
 void cpu::addToMMR1(const uint8_t mode, const uint8_t reg, const bool word_mode)
 {
-	if (mode == 0 || mode == 1 || (b->getMMR1() & 0160000 /* bits frozen? */))
+	if (mode == 0 || mode == 1 || (b->getMMR0() & 0160000 /* bits frozen? */))
 		return;
 
 	bool neg = mode == 4 || mode == 5;
@@ -1289,7 +1289,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					 // always words: word_mode-bit is to select between MFPI and MFPD
 					 assert(!word_mode);  // TODO
 
-					 if ((b->getMMR1() & 0160000) == 0)
+					 if ((b->getMMR0() & 0160000) == 0)
 						 b->addToMMR1(-2, 6);
 
 					 bool     set_flags = true;
@@ -1323,7 +1323,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					 // always words: word_mode-bit is to select between MTPI and MTPD
 					 assert(!word_mode);  // TODO
 
-					 if ((b->getMMR1() & 0160000) == 0)
+					 if ((b->getMMR0() & 0160000) == 0)
 						 b->addToMMR1(2, 6);
 
 					 // retrieve word from '15/14'-stack
@@ -1655,7 +1655,7 @@ void cpu::trap(const uint16_t vector, const int new_ipl)
 	// make sure the trap vector is retrieved from kernel space
 	psw &= 037777;  // mask off 14/15
 
-	if ((b->getMMR1() & 0160000) == 0) {
+	if ((b->getMMR0() & 0160000) == 0) {
 		b->setMMR2(vector);
 		b->addToMMR1(-2, 6);
 		b->addToMMR1(-2, 6);
@@ -2149,7 +2149,7 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 
 void cpu::step_a()
 {
-	if ((b->getMMR1() & 0160000) == 0)
+	if ((b->getMMR0() & 0160000) == 0)
 		b->clearMMR1();
 
 	if (scheduled_trap) {
@@ -2170,7 +2170,7 @@ void cpu::step_b()
 
 	uint16_t temp_pc = getPC();
 
-	if ((b->getMMR1() & 0160000) == 0)
+	if ((b->getMMR0() & 0160000) == 0)
 		b->setMMR2(temp_pc);
 
 	if (temp_pc & 1)

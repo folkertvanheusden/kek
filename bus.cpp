@@ -300,6 +300,24 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 	return temp;
 }
 
+
+void bus::setMMR0(int value)
+{
+	value &= ~(3 << 10);  // bit 10 & 11 always read as 0
+
+	if (value & 1)
+		value &= ~(7 << 13);  // reset error bits
+
+// TODO if bit 15/14/13 are set (either of them), then do not modify bit 1...7
+
+	MMR0 = value;
+}
+
+void bus::setMMR2(const uint16_t value) 
+{
+	MMR2 = value;
+}
+
 uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, const bool trap_on_failure, const bool is_write, const bool peek_only)
 {
 	uint32_t m_offset = 0;
@@ -525,12 +543,7 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 		if (a == 0177572) { // MMR0
 			DOLOG(debug, true, "write set MMR0: %o", value);
 
-			value &= ~(3 << 10);  // bit 10 & 11 always read as 0
-
-			if (value & 1)
-				value &= ~(7 << 13);  // reset error bits
-
-			MMR0 = value;
+			setMMR0(value);
 
 			return;
 		}

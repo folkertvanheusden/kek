@@ -2,6 +2,7 @@
 // Released under Apache License v2.0
 #pragma once
 
+#include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
 
@@ -82,7 +83,8 @@ public:
 	uint16_t getMMR3() { return MMR3; }
 	void     clearMMR1();
 	void     addToMMR1(const int8_t delta, const uint8_t reg);
-	void     setMMR2(const uint16_t value) { MMR2 = value; }  // address
+	void     setMMR0(int value);
+	void     setMMR2(const uint16_t value);
 
 	uint16_t get_switch_register() const { return switch_register; }
 
