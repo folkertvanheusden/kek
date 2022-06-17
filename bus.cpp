@@ -339,7 +339,9 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 		const uint8_t apf = a >> 13; // active page field
 
 		// TODO: D/I
-		m_offset = pages[run_mode][0][apf].par * 64;  // memory offset  TODO: handle 16b int-s
+		uint32_t mul = c->get_34() ? pages[run_mode][0][apf].par & 4095 : pages[run_mode][0][apf].par;
+
+		m_offset = mul * 64;  // memory offset  TODO: handle 16b int-s
 
 		uint16_t p_offset = a & 8191;  // page offset
 
@@ -624,9 +626,6 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 				pages[001][is_d][page].par = value;
 			}
 
-			if (is_11_34)  // 11/34 has 12 bit PARs
-				pages[001][is_d][page].par &= 4095;
-
 			DOLOG(debug, true, "write supervisor %c PAR for %d: %o (%07o)", is_d ? 'D' : 'I', page, word_mode ? value & 0xff : value, pages[001][is_d][page].par * 64);
 
 			return;
@@ -666,9 +665,6 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 				pages[000][is_d][page].par = value;
 			}
 
-			if (is_11_34)  // 11/34 has 12 bit PARs
-				pages[000][is_d][page].par &= 4095;
-
 			DOLOG(debug, true, "write kernel %c PAR for %d: %o (%07o)", is_d ? 'D' : 'I', page, word_mode ? value & 0xff : value, pages[000][is_d][page].par * 64);
 
 			return;
@@ -707,9 +703,6 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 			else {
 				pages[003][is_d][page].par = value;
 			}
-
-			if (is_11_34)  // 11/34 has 12 bit PARs
-				pages[003][is_d][page].par &= 4095;
 
 			DOLOG(debug, true, "write user %c PAR for %d: %o (%07o)", is_d ? 'D' : 'I', page, word_mode ? value & 0xff : value, pages[003][is_d][page].par * 64);
 
