@@ -280,7 +280,7 @@ bool cpu::check_queued_interrupts()
 
 			DOLOG(debug, true, "Invoking interrupt vector %o (IPL %d, current: %d)", v, i, current_level);
 
-			trap(v, i);
+			trap(v, i, true);
 
 			return true;
 		}
@@ -1647,7 +1647,7 @@ void cpu::schedule_trap(const uint16_t vector)
 	scheduled_trap = vector;
 }
 
-void cpu::trap(const uint16_t vector, const int new_ipl)
+void cpu::trap(const uint16_t vector, const int new_ipl, const bool is_interrupt)
 {
 	uint16_t before_psw = getPSW();
 	uint16_t before_pc  = getPC();
@@ -1660,6 +1660,9 @@ void cpu::trap(const uint16_t vector, const int new_ipl)
 		b->addToMMR1(-2, 6);
 		b->addToMMR1(-2, 6);
 	}
+
+	if (!is_interrupt)
+		b->setMMR0Bit(12);  // it's a trap
 
 	setPC(b->readWord(vector + 0));
 

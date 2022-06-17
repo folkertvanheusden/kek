@@ -318,6 +318,14 @@ void bus::setMMR0(int value)
 	MMR0 = value;
 }
 
+void bus::setMMR0Bit(const int bit)
+{
+	assert(bit != 10 && bit != 11);
+	assert(bit < 16 && bit >= 0);
+
+	MMR0 |= 1 << bit;
+}
+
 void bus::setMMR2(const uint16_t value) 
 {
 	MMR2 = value;
@@ -350,8 +358,6 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 
 					MMR0 |= 1 << 13;  // read-only
 
-					MMR0 |= 1 << 12;  // trap
-
 					MMR0 &= ~(3 << 5);
 					MMR0 |= run_mode << 5;  // TODO: kernel-mode or user-mode when a trap occurs in user-mode?
 
@@ -366,8 +372,6 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 						pages[run_mode][0][apf].pdr |= 1 << 7;  // TODO: D/I
 
 						MMR0 |= 1 << 13;  // read-only
-
-						MMR0 |= 1 << 12;  // trap
 
 						MMR0 &= ~(3 << 5);
 						MMR0 |= run_mode << 5;
