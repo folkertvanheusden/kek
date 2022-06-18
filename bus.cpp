@@ -361,66 +361,69 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 				const int access_control = pages[run_mode][0][apf].pdr & 7;
 
 				if (is_write && access_control != 6) {  // write
-					DOLOG(info, true, "TRAP(0250) (throw 1) for access_control %d on address %06o", access_control, a);
+					DOLOG(debug, true, "TRAP(0250) (throw 1) for access_control %d on address %06o", access_control, a);
 
 					c->schedule_trap(0250);  // invalid address
 
 					pages[run_mode][0][apf].pdr |= 1 << 7;  // TODO: D/I
 
-					MMR0 &= 017777;
-					MMR0 |= 1 << 13;  // read-only
+					if ((MMR0 & 0160000) == 0) {
+						MMR0 &= 017777;
+						MMR0 |= 1 << 13;  // read-only
 
-					MMR0 &= ~(3 << 5);
-					MMR0 |= run_mode << 5;  // TODO: kernel-mode or user-mode when a trap occurs in user-mode?
+						MMR0 &= ~(3 << 5);
+						MMR0 |= run_mode << 5;  // TODO: kernel-mode or user-mode when a trap occurs in user-mode?
 
-					MMR0 &= ~14;  // add current page
-					MMR0 |= apf << 1;
+						MMR0 &= ~14;  // add current page
+						MMR0 |= apf << 1;
+					}
 
-					DOLOG(info, true, "MMR0: %06o", MMR0);
+					DOLOG(debug, true, "MMR0: %06o", MMR0);
 
 					throw 1;
 				}
 				else if (!is_write) { // read
 					if (access_control == 0 || access_control == 1 || access_control == 3 || access_control == 4 || access_control == 7) {
-						DOLOG(info, true, "TRAP(4) (throw 2) for access_control %d on address %06o", access_control, a);
+						DOLOG(debug, true, "TRAP(4) (throw 2) for access_control %d on address %06o", access_control, a);
 
 						c->schedule_trap(0250);  // invalid address
 
 						pages[run_mode][0][apf].pdr |= 1 << 7;  // TODO: D/I
 
-						MMR0 &= 017777;
-						if (access_control == 0 || access_control == 4)
-							MMR0 |= 1 << 15;  // not resident
-						else
-							MMR0 |= 1 << 13;  // read-only
+						if ((MMR0 & 0160000) == 0) {
+							MMR0 &= 017777;
 
-						MMR0 &= ~(3 << 5);
-						MMR0 |= run_mode << 5;
+							if (access_control == 0 || access_control == 4)
+								MMR0 |= 1 << 15;  // not resident
+							else
+								MMR0 |= 1 << 13;  // read-only
 
-						MMR0 &= ~14;  // add current page
-						MMR0 |= apf << 1;
+							MMR0 &= ~(3 << 5);
+							MMR0 |= run_mode << 5;
+
+							MMR0 &= ~14;  // add current page
+							MMR0 |= apf << 1;
+						}
 
 						throw 2;
 					}
 				}
 			}
 
-			uint16_t pdr_len = (((pages[run_mode][0][apf].pdr >> 8) & 127) + 1) * 64;  // TODO: D/I
-
-			bool direction = pages[run_mode][0][apf].pdr & 8;  // TODO: D/I
-
 			if (m_offset >= n_pages * 8192) {
 				DOLOG(debug, !peek_only, "bus::calculate_physical_address %o >= %o", m_offset, n_pages * 8192);
-				DOLOG(info, true, "TRAP(04) (throw 3) on address %06o", a);
+				DOLOG(debug, true, "TRAP(04) (throw 3) on address %06o", a);
 
-				MMR0 &= 017777;
-				MMR0 |= 1 << 15;  // non-resident
+				if ((MMR0 & 0160000) == 0) {
+					MMR0 &= 017777;
+					MMR0 |= 1 << 15;  // non-resident
 
-				MMR0 &= ~14;  // add current page
-				MMR0 |= apf << 1;
+					MMR0 &= ~14;  // add current page
+					MMR0 |= apf << 1;
 
-				MMR0 &= ~(3 << 5);
-				MMR0 |= run_mode << 5;
+					MMR0 &= ~(3 << 5);
+					MMR0 |= run_mode << 5;
+				}
 
 				pages[run_mode][0][apf].pdr |= 1 << 7;  // TODO: D/I
 
@@ -429,19 +432,27 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 				throw 3;
 			}
 
+			uint16_t pdr_len = ((pages[run_mode][0][apf].pdr >> 8) & 127) * 64;  // TODO: D/I
+
+			bool direction = pages[run_mode][0][apf].pdr & 8;  // TODO: D/I
+
+			DOLOG(debug, true, "p_offset %06o pdr_len %06o direction %d, run_mode %d, apf %d, pdr: %06o", p_offset, pdr_len, direction, run_mode, apf, pages[run_mode][0][apf].pdr);
+
 			if ((p_offset > pdr_len && direction == false) || (p_offset < pdr_len && direction == true)) {
 				DOLOG(debug, !peek_only, "bus::calculate_physical_address::p_offset %o >= %o", p_offset, pdr_len);
-				DOLOG(info, true, "TRAP(0250) (throw 4) on address %06o", a);
+				DOLOG(debug, true, "TRAP(0250) (throw 4) on address %06o", a);
 				c->schedule_trap(0250);  // invalid access
 
-				MMR0 &= 017777;
-				MMR0 |= 1 << 14;  // length
+				if ((MMR0 & 0160000) == 0) {
+					MMR0 &= 017777;
+					MMR0 |= 1 << 14;  // length
 
-				MMR0 &= ~14;  // add current page
-				MMR0 |= apf << 1;
+					MMR0 &= ~14;  // add current page
+					MMR0 |= apf << 1;
 
-				MMR0 &= ~(3 << 5);
-				MMR0 |= run_mode << 5;
+					MMR0 &= ~(3 << 5);
+					MMR0 |= run_mode << 5;
+				}
 
 				pages[run_mode][0][apf].pdr |= 1 << 7;  // TODO: D/I
 
@@ -767,9 +778,9 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 		}
 
 		if (a & 1)
-			DOLOG(info, true, "bus::writeWord: odd address UNHANDLED");
+			DOLOG(debug, true, "bus::writeWord: odd address UNHANDLED");
 
-		DOLOG(info, true, "UNHANDLED write %o(%c): %o", a, word_mode ? 'B' : ' ', value);
+		DOLOG(debug, true, "UNHANDLED write %o(%c): %o", a, word_mode ? 'B' : ' ', value);
 
 //		c -> busError();
 

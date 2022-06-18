@@ -1650,6 +1650,7 @@ void cpu::schedule_trap(const uint16_t vector)
 // 'is_interrupt' is not correct naming; it is true for mmu faults and interrupts
 void cpu::trap(const uint16_t vector, const int new_ipl, const bool is_interrupt)
 {
+	DOLOG(debug, true, "*** CPU::TRAP ***");
 	uint16_t before_psw = getPSW();
 	uint16_t before_pc  = getPC();
 
@@ -1678,6 +1679,7 @@ void cpu::trap(const uint16_t vector, const int new_ipl, const bool is_interrupt
 
 	pushStack(before_psw);
 	pushStack(before_pc);
+	DOLOG(debug, true, "*** CPU::TRAP fin ***");
 }
 
 cpu::operand_parameters cpu::addressing_to_string(const uint8_t mode_register, const uint16_t pc, const bool word_mode) const
