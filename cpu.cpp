@@ -1515,7 +1515,7 @@ bool cpu::condition_code_operations(const uint16_t instr)
 void cpu::pushStack(const uint16_t v)
 {
 	if (getRegister(6) == stackLimitRegister) {
-		DOLOG(debug, true, "stackLimitRegister reached");
+		DOLOG(debug, true, "stackLimitRegister reached %06o while pushing %06o", stackLimitRegister, v);
 
 		trap(123, 7);  // TODO
 	}
@@ -1684,6 +1684,8 @@ void cpu::trap(const uint16_t vector, const int new_ipl, const bool is_interrupt
 		new_psw = (new_psw & ~0xe0) | (new_ipl << 5);
 	new_psw |= (before_psw >> 2) & 030000; // apply new 'previous mode'
 	setPSW(new_psw, false);
+
+//	DOLOG(info, true, "R6: %06o, before PSW: %06o, new PSW: %06o", getRegister(6), before_psw, new_psw);
 
 	pushStack(before_psw);
 	pushStack(before_pc);
@@ -2193,9 +2195,6 @@ void cpu::step_b()
 
 	if ((b->getMMR0() & 0160000) == 0)
 		b->setMMR2(temp_pc);
-
-	if (temp_pc & 1)
-		busError();
 
 	try {
 		uint16_t instr = b->readWord(temp_pc);
