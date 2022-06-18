@@ -338,12 +338,28 @@ void bus::setMMR2(const uint16_t value)
 
 uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, const bool trap_on_failure, const bool is_write, const bool peek_only, const bool word_mode)
 {
-	uint32_t m_offset = 0;
+	uint32_t m_offset = a;
 
 	const uint8_t apf = a >> 13; // active page field
 
-	if (MMR0 & 1) {
+	if ((a & 1) && word_mode == 0 && peek_only == false) {
+		DOLOG(debug, !peek_only, "bus::calculate_physical_address::m_offset %o run mode %d", a, run_mode);
+		DOLOG(debug, true, "TRAP(004) (throw 5) on address %06o", a);
+		c->schedule_trap(004);  // invalid access
 
+		pages[run_mode][0][apf].pdr |= 1 << 7;  // TODO: D/I
+
+		uint16_t bMMR0 = MMR0;
+
+		MMR0 &= ~(3 << 5);
+		MMR0 |= run_mode << 5;  // TODO: kernel-mode or user-mode when a trap occurs in user-mode?
+
+		DOLOG(info, true, "before: %06o after %06o", bMMR0, MMR0);
+
+		throw 5;
+	}
+
+	if (MMR0 & 1) {
 		// TODO: D/I
 		m_offset = pages[run_mode][0][apf].par * 64;  // memory offset  TODO: handle 16b int-s
 
@@ -434,7 +450,7 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 
 			bool direction = pages[run_mode][0][apf].pdr & 8;  // TODO: D/I
 
-			DOLOG(debug, true, "p_offset %06o pdr_len %06o direction %d, run_mode %d, apf %d, pdr: %06o", p_offset, pdr_len, direction, run_mode, apf, pages[run_mode][0][apf].pdr);
+			// DOLOG(debug, true, "p_offset %06o pdr_len %06o direction %d, run_mode %d, apf %d, pdr: %06o", p_offset, pdr_len, direction, run_mode, apf, pages[run_mode][0][apf].pdr);
 
 			if ((p_offset > pdr_len && direction == false) || (p_offset < pdr_len && direction == true)) {
 				DOLOG(debug, !peek_only, "bus::calculate_physical_address::p_offset %o >= %o", p_offset, pdr_len);
@@ -459,19 +475,6 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 		}
 
 		DOLOG(debug, !peek_only, "virtual address %06o maps to physical address %08o (run_mode: %d, apf: %d, par: %08o, poff: %o, AC: %d)", a, m_offset, run_mode, apf, pages[run_mode][0][apf].par * 64, p_offset, pages[run_mode][0][apf].pdr & 7);  // TODO: D/I
-	}
-	else {
-		m_offset = a;
-	}
-
-	if ((m_offset & 1) && word_mode == 0 && peek_only == false) {
-		DOLOG(debug, !peek_only, "bus::calculate_physical_address::m_offset %o", m_offset);
-		DOLOG(debug, true, "TRAP(004) (throw 5) on address %06o", a);
-		c->schedule_trap(004);  // invalid access
-
-		pages[run_mode][0][apf].pdr |= 1 << 7;  // TODO: D/I
-
-		throw 5;
 	}
 
 	return m_offset;
