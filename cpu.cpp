@@ -1647,6 +1647,7 @@ void cpu::schedule_trap(const uint16_t vector)
 	scheduled_trap = vector;
 }
 
+// 'is_interrupt' is not correct naming; it is true for mmu faults and interrupts
 void cpu::trap(const uint16_t vector, const int new_ipl, const bool is_interrupt)
 {
 	uint16_t before_psw = getPSW();
@@ -1661,7 +1662,9 @@ void cpu::trap(const uint16_t vector, const int new_ipl, const bool is_interrupt
 		b->addToMMR1(-2, 6);
 	}
 
-	if (!is_interrupt)
+	if (is_interrupt)
+		b->clearMMR0Bit(12);
+	else
 		b->setMMR0Bit(12);  // it's a trap
 
 	setPC(b->readWord(vector + 0));
@@ -2156,7 +2159,7 @@ void cpu::step_a()
 		b->clearMMR1();
 
 	if (scheduled_trap) {
-		trap(scheduled_trap, 7);
+		trap(scheduled_trap, 7, true);
 
 		scheduled_trap = 0;
 

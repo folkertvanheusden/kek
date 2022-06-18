@@ -326,6 +326,14 @@ void bus::setMMR0Bit(const int bit)
 	MMR0 |= 1 << bit;
 }
 
+void bus::clearMMR0Bit(const int bit)
+{
+	assert(bit != 10 && bit != 11);
+	assert(bit < 16 && bit >= 0);
+
+	MMR0 &= ~(1 << bit);
+}
+
 void bus::setMMR2(const uint16_t value) 
 {
 	MMR2 = value;
@@ -359,6 +367,7 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 
 					pages[run_mode][0][apf].pdr |= 1 << 7;  // TODO: D/I
 
+					MMR0 &= 017777;
 					MMR0 |= 1 << 13;  // read-only
 
 					MMR0 &= ~(3 << 5);
@@ -366,6 +375,8 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 
 					MMR0 &= ~14;  // add current page
 					MMR0 |= apf << 1;
+
+					DOLOG(info, true, "MMR0: %06o", MMR0);
 
 					throw 1;
 				}
@@ -377,7 +388,11 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 
 						pages[run_mode][0][apf].pdr |= 1 << 7;  // TODO: D/I
 
-						MMR0 |= 1 << 13;  // read-only
+						MMR0 &= 017777;
+						if (access_control == 0 || access_control == 4)
+							MMR0 |= 1 << 15;  // not resident
+						else
+							MMR0 |= 1 << 13;  // read-only
 
 						MMR0 &= ~(3 << 5);
 						MMR0 |= run_mode << 5;
@@ -398,6 +413,7 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 				DOLOG(debug, !peek_only, "bus::calculate_physical_address %o >= %o", m_offset, n_pages * 8192);
 				DOLOG(info, true, "TRAP(04) (throw 3) on address %06o", a);
 
+				MMR0 &= 017777;
 				MMR0 |= 1 << 15;  // non-resident
 
 				MMR0 &= ~14;  // add current page
@@ -415,6 +431,7 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 				DOLOG(info, true, "TRAP(0250) (throw 4) on address %06o", a);
 				c->schedule_trap(0250);  // invalid access
 
+				MMR0 &= 017777;
 				MMR0 |= 1 << 14;  // length
 
 				MMR0 &= ~14;  // add current page
