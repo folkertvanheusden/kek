@@ -224,6 +224,8 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 				if (val != -1)
 					cnsl->put_string_lf(format("value at %06o, octal: %o, hex: %x, dec: %d\n", addr, val, val, val));
 			}
+
+			continue;
 		}
 		else if (cmd == "reset" || cmd == "r") {
 #if defined(ESP32)
