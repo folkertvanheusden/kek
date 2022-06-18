@@ -98,6 +98,11 @@ void mmu_dump(console *const cnsl, bus *const b)
 
 	uint16_t mmr3 = b->getMMR3();
 
+	cnsl->put_string_lf(format("MMR0: %06o", mmr0));
+	cnsl->put_string_lf(format("MMR1: %06o", b->getMMR1()));
+	cnsl->put_string_lf(format("MMR2: %06o", b->getMMR2()));
+	cnsl->put_string_lf(format("MMR3: %06o", mmr3));
+
 	dump_par_pdr(cnsl, b, 0172200, 0172240, "supervisor i-space", 0);
 	dump_par_pdr(cnsl, b, 0172220, 0172260, "supervisor d-space", 1 + (!!(mmr3 & 2)));
 
@@ -285,7 +290,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 		if (!single_step) {
 			auto speed = c->get_mips_rel_speed();
-			cnsl->debug("MIPS: %.2f, relative speed: %.2f%%", speed.first, speed.second);
+			cnsl->debug("MIPS: %.2f, relative speed: %.2f%%, instructions executed: %lu", std::get<0>(speed), std::get<1>(speed), std::get<2>(speed));
 		}
 
 		if (*stop_event == EVENT_INTERRUPT) {

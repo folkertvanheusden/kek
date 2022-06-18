@@ -56,6 +56,8 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 	uint16_t temp = 0;
 
 	if (a >= 0160000) {
+		bool is_11_34 = c->get_34();
+
 		if (word_mode)
 			DOLOG(debug, false, "READ I/O %06o in byte mode", a);
 
@@ -93,42 +95,42 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 		/// MMU ///
 		if (a >= 0172200 && a < 0172240) {
 			int      page = (a >> 1) & 7;
-			bool     is_d = a & 16;
+			bool     is_d = is_11_34 ? false : (a & 16);
 			uint16_t t    = pages[001][is_d][page].pdr;
 			DOLOG(debug, !peek_only, "read supervisor %c PDR for %d: %o", is_d ? 'D' : 'I', page, t);
 			return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
 		}
 		else if (a >= 0172240 && a < 0172300) {
 			int      page = (a >> 1) & 7;
-			bool     is_d = a & 16;
+			bool     is_d = is_11_34 ? false : (a & 16);
 			uint16_t t    = pages[001][is_d][page].par;
 			DOLOG(debug, !peek_only, "read supervisor %c PAR for %d: %o (phys: %07o)", is_d ? 'D' : 'I', page, t, t * 64);
 			return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
 		}
 		else if (a >= 0172300 && a < 0172340) {
 			int      page = (a >> 1) & 7;
-			bool     is_d = a & 16;
+			bool     is_d = is_11_34 ? false : (a & 16);
 			uint16_t t    = pages[000][is_d][page].pdr;
 			DOLOG(debug, !peek_only, "read kernel %c PDR for %d: %o", is_d ? 'D' : 'I', page, t);
 			return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
 		}
 		else if (a >= 0172340 && a < 0172400) {
 			int      page = (a >> 1) & 7;
-			bool     is_d = a & 16;
+			bool     is_d = is_11_34 ? false : (a & 16);
 			uint16_t t    = pages[000][is_d][page].par;
 			DOLOG(debug, !peek_only, "read kernel %c PAR for %d: %o (phys: %07o)", is_d ? 'D' : 'I', page, t, t * 64);
 			return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
 		}
 		else if (a >= 0177600 && a < 0177640) {
 			int      page = (a >> 1) & 7;
-			bool     is_d = a & 16;
+			bool     is_d = is_11_34 ? false : (a & 16);
 			uint16_t t    = pages[003][is_d][page].pdr;
 			DOLOG(debug, !peek_only, "read userspace %c PDR for %d: %o", is_d ? 'D' : 'I', page, t);
 			return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
 		}
 		else if (a >= 0177640 && a < 0177700) {
 			int      page = (a >> 1) & 7;
-			bool     is_d = a & 16;
+			bool     is_d = is_11_34 ? false : (a & 16);
 			uint16_t t    = pages[003][is_d][page].par;
 			DOLOG(debug, !peek_only, "read userspace %c PAR for %d: %o (phys: %07o)", is_d ? 'D' : 'I', page, t, t * 64);
 			return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
@@ -263,7 +265,7 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 		}
 
 		// LO size register field must be all 1s, so subtract 1
-		const uint32_t system_size = n_pages * 8192 / 64 - 1;
+		constexpr uint32_t system_size = n_pages * 8192 / 64 - 1;
 
 		if (a == 0177762)  // system size HI
 			return system_size >> 16;
@@ -295,6 +297,36 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 	return temp;
 }
 
+void bus::setMMR0(int value)
+{
+	value &= ~(3 << 10);  // bit 10 & 11 always read as 0
+
+	if (value & 1)
+		value &= ~(7 << 13);  // reset error bits
+
+	if (MMR0 & 0160000) {
+		if ((value & 1) == 0)
+			value &= 254;  // bits 7...1 are protected 
+	}
+
+// TODO if bit 15/14/13 are set (either of them), then do not modify bit 1...7
+
+	MMR0 = value;
+}
+
+void bus::setMMR0Bit(const int bit)
+{
+	assert(bit != 10 && bit != 11);
+	assert(bit < 16 && bit >= 0);
+
+	MMR0 |= 1 << bit;
+}
+
+void bus::setMMR2(const uint16_t value) 
+{
+	MMR2 = value;
+}
+
 uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, const bool trap_on_failure, const bool is_write, const bool peek_only, const bool is_data)
 {
 	uint32_t m_offset = 0;
@@ -312,37 +344,43 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 		m_offset += p_offset;
 
 		if (trap_on_failure) {
-			if (MMR0 & (1 << 9)) {
-				int access_control = pages[run_mode][d][apf].pdr & 7;
+			if ((MMR0 & (1 << 9)) || c->get_34()) {
+				const int access_control = pages[run_mode][0][apf].pdr & 7;
 
 				if (is_write && access_control != 6) {  // write
-					c->schedule_trap(04);  // invalid address
+					DOLOG(info, true, "TRAP(0250) (throw 1) for access_control %d on address %06o", access_control, a);
+
+					c->schedule_trap(0250);  // invalid address
 
 					pages[run_mode][d][apf].pdr |= 1 << 7;
 
 					MMR0 |= 1 << 13;  // read-only
 
-					MMR0 |= 1 << 12;  // trap
-
 					MMR0 &= ~(3 << 5);
 					MMR0 |= run_mode << 5;  // TODO: kernel-mode or user-mode when a trap occurs in user-mode?
+
+					MMR0 &= ~14;  // add current page
+					MMR0 |= apf << 1;
 
 					throw 1;
 				}
 				else if (!is_write) { // read
 					if (access_control == 0 || access_control == 1 || access_control == 3 || access_control == 4 || access_control == 7) {
-						c->schedule_trap(04);  // invalid address
+						DOLOG(info, true, "TRAP(4) (throw 2) for access_control %d on address %06o", access_control, a);
+
+						c->schedule_trap(0250);  // invalid address
 
 						pages[run_mode][d][apf].pdr |= 1 << 7;
 
 						MMR0 |= 1 << 13;  // read-only
 
-						MMR0 |= 1 << 12;  // trap
-
 						MMR0 &= ~(3 << 5);
 						MMR0 |= run_mode << 5;
 
-						throw 1;
+						MMR0 &= ~14;  // add current page
+						MMR0 |= apf << 1;
+
+						throw 2;
 					}
 				}
 			}
@@ -353,28 +391,37 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 
 			if (m_offset >= n_pages * 8192) {
 				DOLOG(debug, !peek_only, "bus::calculate_physical_address %o >= %o", m_offset, n_pages * 8192);
-				c->schedule_trap(04);  // invalid address
+				DOLOG(info, true, "TRAP(04) (throw 3) on address %06o", a);
 
 				MMR0 |= 1 << 15;  // non-resident
 
-				pages[run_mode][d][apf].pdr |= 1 << 7;
+				MMR0 &= ~14;  // add current page
+				MMR0 |= apf << 1;
 
-				throw 1;
+				pages[run_mode][0][apf].pdr |= 1 << 7;  // TODO: D/I
+									//
+				c->schedule_trap(04);
+
+				throw 3;
 			}
 
-			if ((p_offset >= pdr_len && direction == false) || (p_offset < pdr_len && direction == true)) {
+			if ((p_offset > pdr_len && direction == false) || (p_offset < pdr_len && direction == true)) {
 				DOLOG(debug, !peek_only, "bus::calculate_physical_address::p_offset %o >= %o", p_offset, pdr_len);
+				DOLOG(info, true, "TRAP(0250) (throw 4) on address %06o", a);
 				c->schedule_trap(0250);  // invalid access
 
 				MMR0 |= 1 << 14;  // length
 
-				pages[run_mode][d][apf].pdr |= 1 << 7;
+				MMR0 &= ~14;  // add current page
+				MMR0 |= apf << 1;
 
-				throw 1;
+				pages[run_mode][0][apf].pdr |= 1 << 7;  // TODO: D/I
+
+				throw 4;
 			}
 		}
 
-		DOLOG(debug, !peek_only, "virtual address %06o maps to physical address %08o (run_mode: %d, apf: %d, par: %08o, poff)", a, m_offset, run_mode, apf, pages[run_mode][d][apf].par * 64, p_offset);
+		DOLOG(debug, !peek_only, "virtual address %06o maps to physical address %08o (run_mode: %d, apf: %d, par: %08o, poff: %o, AC: %d)", a, m_offset, run_mode, apf, pages[run_mode][0][apf].par * 64, p_offset, pages[run_mode][0][apf].pdr & 7);  // TODO: D/I
 	}
 	else {
 		m_offset = a;
@@ -396,9 +443,20 @@ void bus::addToMMR1(const int8_t delta, const uint8_t reg)
 	MMR1 |= reg;
 }
 
-uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bool use_prev, const d_i_space_t space)
+void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bool use_prev, const d_i_space_t space)
 {
+	int run_mode = (c->getPSW() >> (use_prev ? 12 : 14)) & 3;
+
+	if ((MMR0 & 1) == 1 && (a & 1) == 0 && a != 0177572) {
+		const uint8_t apf = a >> 13; // active page field
+
+                // TODO: D/I
+                pages[run_mode][0][apf].pdr |= 64;  // set 'W' (written to) bit
+	}
+
 	if (a >= 0160000) {
+		bool is_11_34 = c->get_34();
+
 		if (word_mode) {
 			assert(value < 256);
 			DOLOG(debug, true, "WRITE I/O %06o in byte mode", a);
@@ -409,16 +467,16 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 				DOLOG(debug, true, "writeb PSW %s", a & 1 ? "MSB" : "LSB");
 				uint16_t vtemp = c -> getPSW();
 
-				value &= ~16;  // cannot set T bit via this
-
 				if (a & 1)
 					vtemp = (vtemp & 0x00ff) | (value << 8);
 				else
 					vtemp = (vtemp & 0xff00) | value;
 
+				vtemp &= ~16;  // cannot set T bit via this
+
 				c -> setPSW(vtemp, false);
 
-				return value;
+				return;
 			}
 
 			if (a == 0177774 || a == 0177775) { // stack limit register
@@ -431,117 +489,114 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 					v = (v & 0xff00) | value;
 
 				c -> setStackLimitRegister(v);
-				return v;
+				return;
 			}
 		}
 		else {
 			if (a == 0177776) { // PSW
 				DOLOG(debug, true, "write PSW %o", value);
 				c -> setPSW(value & ~16, false);
-				return value;
+				return;
 			}
 
 			if (a == 0177774) { // stack limit register
 				DOLOG(debug, true, "write Set stack limit register: %o", value);
 				c -> setStackLimitRegister(value);
-				return value;
+				return;
 			}
 
 			if (a >= 0177700 && a <= 0177705) { // kernel R0-R5
 				DOLOG(debug, true, "write kernel R%d: %o", a - 01777700, value);
 				c -> setRegister(a - 0177700, false, false, value);
-				return value;
+				return;
 			}
 			if (a >= 0177710 && a <= 0177715) { // user R0-R5
 				DOLOG(debug, true, "write user R%d: %o", a - 01777710, value);
 				c -> setRegister(a - 0177710, true, false, value);
-				return value;
+				return;
 			}
 			if (a == 0177706) { // kernel SP
 				DOLOG(debug, true, "write kernel SP: %o", value);
 				c -> setStackPointer(0, value);
-				return value;
+				return;
 			}
 			if (a == 0177707) { // PC
 				DOLOG(debug, true, "write PC: %o", value);
 				c -> setPC(value);
-				return value;
+				return;
 			}
 			if (a == 0177716) { // supervisor SP
 				DOLOG(debug, true, "write supervisor sp: %o", value);
 				c -> setStackPointer(1, value);
-				return value;
+				return;
 			}
 			if (a == 0177717) { // user SP
 				DOLOG(debug, true, "write user sp: %o", value);
 				c -> setStackPointer(3, value);
-				return value;
+				return;
 			}
 
 			if (a == 0177770) {  // microprogram break register
-				return value;
+				return;
 			}
 		}
 
 		if (a == 0177766) { // cpu error register
 			DOLOG(debug, true, "write CPUERR: %o", value);
 			CPUERR = 0;
-			return CPUERR;
+			return;
 		}
 
 		if (a == 0172516) { // MMR3
 			DOLOG(debug, true, "write set MMR3: %o", value);
 			MMR3 = value & 067;
-			return MMR3;
+			return;
 		}
 
 		if (a == 0177572) { // MMR0
 			DOLOG(debug, true, "write set MMR0: %o", value);
 
-			MMR0 = value & ~(3 << 10);  // bit 10 & 11 always read as 0
+			setMMR0(value);
 
-			if (value & 1)
-				MMR0 = value & ~(7 << 13);  // reset error bits
-
-			return MMR0;
+			return;
 		}
 
 		if (a == 0177772) { // PIR
 			DOLOG(debug, true, "write set PIR: %o", value);
 			PIR = value; // TODO
-			return PIR;
+			return;
 		}
 
 		if (a == 0177546) { // line frequency clock and status register
 			DOLOG(debug, true, "write set LFC/SR: %o", value);
 			lf_csr = value;
-			return lf_csr;
+			return;
 		}
 
 		if (tm11 && a >= TM_11_BASE && a < TM_11_END) {
 			word_mode ? tm11 -> writeByte(a, value) : tm11 -> writeWord(a, value);
-			return value;
+			return;
 		}
 
 		if (rk05_ && a >= RK05_BASE && a < RK05_END) {
 			word_mode ? rk05_ -> writeByte(a, value) : rk05_ -> writeWord(a, value);
-			return value;
+			return;
 		}
 
 		if (rl02_ && a >= RL02_BASE && a < RL02_END) {
 			word_mode ? rl02_ -> writeByte(a, value) : rl02_ -> writeWord(a, value);
-			return value;
+			return;
 		}
 
 		if (tty_ && a >= PDP11TTY_BASE && a < PDP11TTY_END) {
 			word_mode ? tty_ -> writeByte(a, value) : tty_ -> writeWord(a, value);
-			return value;
+			return;
 		}
 
 		/// MMU ///
 		// supervisor
 		if (a >= 0172200 && a < 0172240) {
-			bool is_d = a & 16;
+			bool is_d = is_11_34 ? false : (a & 16);
 			int  page = (a >> 1) & 7;
 
 			if (word_mode) {
@@ -552,17 +607,17 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 				pages[001][is_d][page].pdr = value;
 			}
 
-			if (c->get_34())  // 11/34 has no cache bit
-				pages[001][is_d][page].pdr &= 077516;
-
-			pages[001][is_d][page].pdr &= ~(128 + 64 + 32 + 16);  // set bit 4 & 5 to 0 as they are unused and A/W are set to 0 by writes
+			if (is_11_34)  // 11/34 has no cache bit
+				pages[001][is_d][page].pdr &= 077416;
+			else
+				pages[001][is_d][page].pdr &= ~(128 + 64 + 32 + 16);  // set bit 4 & 5 to 0 as they are unused and A/W are set to 0 by writes
 
 			DOLOG(debug, true, "write supervisor %c PDR for %d: %o [%d]", is_d ? 'D' : 'I', page, value, word_mode);
 
-			return value;
+			return;
 		}
 		if (a >= 0172240 && a < 0172300) {
-			bool is_d = a & 16;
+			bool is_d = is_11_34 ? false : (a & 16);
 			int  page = (a >> 1) & 7;
 
 			if (word_mode) {
@@ -573,17 +628,17 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 				pages[001][is_d][page].par = value;
 			}
 
-			if (c->get_34())  // 11/34 has 12 bit PARs
+			if (is_11_34)  // 11/34 has 12 bit PARs
 				pages[001][is_d][page].par &= 4095;
 
 			DOLOG(debug, true, "write supervisor %c PAR for %d: %o (%07o)", is_d ? 'D' : 'I', page, word_mode ? value & 0xff : value, pages[001][is_d][page].par * 64);
 
-			return value;
+			return;
 		}
 
 		// kernel
 		if (a >= 0172300 && a < 0172340) {
-			bool is_d = a & 16;
+			bool is_d = is_11_34 ? false : (a & 16);
 			int  page = (a >> 1) & 7;
 
 			if (word_mode) {
@@ -594,17 +649,17 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 				pages[000][is_d][page].pdr = value;
 			}
 
-			if (c->get_34())  // 11/34 has no cache bit
-				pages[000][is_d][page].pdr &= 077516;
-
-			pages[000][is_d][page].pdr &= ~(128 + 64 + 32 + 16);  // set bit 4 & 5 to 0 as they are unused and A/W are set to 0 by writes
+			if (is_11_34)  // 11/34 has no cache bit
+				pages[000][is_d][page].pdr &= 077416;
+			else
+				pages[000][is_d][page].pdr &= ~(128 + 64 + 32 + 16);  // set bit 4 & 5 to 0 as they are unused and A/W are set to 0 by writes
 
 			DOLOG(debug, true, "write kernel %c PDR for %d: %o [%d]", is_d ? 'D' : 'I', page, value, word_mode);
 
-			return value;
+			return;
 		}
 		if (a >= 0172340 && a < 0172400) {
-			bool is_d = a & 16;
+			bool is_d = is_11_34 ? false : (a & 16);
 			int  page = (a >> 1) & 7;
 
 			if (word_mode) {
@@ -615,17 +670,17 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 				pages[000][is_d][page].par = value;
 			}
 
-			if (c->get_34())  // 11/34 has 12 bit PARs
+			if (is_11_34)  // 11/34 has 12 bit PARs
 				pages[000][is_d][page].par &= 4095;
 
 			DOLOG(debug, true, "write kernel %c PAR for %d: %o (%07o)", is_d ? 'D' : 'I', page, word_mode ? value & 0xff : value, pages[000][is_d][page].par * 64);
 
-			return value;
+			return;
 		}
 
 		// user
 		if (a >= 0177600 && a < 0177640) {
-			bool is_d = a & 16;
+			bool is_d = is_11_34 ? false : (a & 16);
 			int  page = (a >> 1) & 7;
 
 			if (word_mode) {
@@ -636,17 +691,17 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 				pages[003][is_d][page].pdr = value;
 			}
 
-			if (c->get_34())  // 11/34 has no cache bit
-				pages[003][is_d][page].pdr &= 077516;
-
-			pages[003][is_d][page].pdr &= ~(128 + 64 + 32 + 16);  // set bit 4 & 5 to 0 as they are unused and A/W are set to 0 by writes
+			if (is_11_34)  // 11/34 has no cache bit
+				pages[003][is_d][page].pdr &= 077416;
+			else
+				pages[003][is_d][page].pdr &= ~(128 + 64 + 32 + 16);  // set bit 4 & 5 to 0 as they are unused and A/W are set to 0 by writes
 
 			DOLOG(debug, true, "write user %c PDR for %d: %o [%d]", is_d ? 'D' : 'I', page, value, word_mode);
 
-			return value;
+			return;
 		}
 		if (a >= 0177640 && a < 0177700) {
-			bool is_d = a & 16;
+			bool is_d = is_11_34 ? false : (a & 16);
 			int  page = (a >> 1) & 7;
 
 			if (word_mode) {
@@ -657,30 +712,30 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 				pages[003][is_d][page].par = value;
 			}
 
-			if (c->get_34())  // 11/34 has 12 bit PARs
+			if (is_11_34)  // 11/34 has 12 bit PARs
 				pages[003][is_d][page].par &= 4095;
 
 			DOLOG(debug, true, "write user %c PAR for %d: %o (%07o)", is_d ? 'D' : 'I', page, word_mode ? value & 0xff : value, pages[003][is_d][page].par * 64);
 
-			return value;
+			return;
 		}
 		////
 
 		if (a == 0177746) { // cache control register
 			// TODO
-			return value;
+			return;
 		}
 
 		if (a == 0177570) {  // switch register
 			switch_register = value;
-			return value;
+			return;
 		}
 
 		///////////
 
 		if (a == 0177374) { // TODO
 			DOLOG(debug, true, "char: %c", value & 127);
-			return 128;
+			return;
 		}
 
 		if (a & 1)
@@ -690,10 +745,8 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 
 //		c -> busError();
 
-		return value;
+		return;
 	}
-
-	int run_mode = (c->getPSW() >> (use_prev ? 12 : 14)) & 3;
 
 	uint32_t m_offset = calculate_physical_address(run_mode, a, true, true, false, space == d_space);
 
@@ -703,8 +756,6 @@ uint16_t bus::write(const uint16_t a, const bool word_mode, uint16_t value, cons
 		m->writeByte(m_offset, value);
 	else
 		m->writeWord(m_offset, value);
-
-	return value;
 }
 
 uint16_t bus::readWord(const uint16_t a, const d_i_space_t s)
@@ -717,9 +768,9 @@ uint16_t bus::peekWord(const uint16_t a)
 	return read(a, false, false, true);
 }
 
-uint16_t bus::writeWord(const uint16_t a, const uint16_t value)
+void bus::writeWord(const uint16_t a, const uint16_t value)
 {
-	return write(a, false, value, false);
+	write(a, false, value, false);
 }
 
 uint16_t bus::readUnibusByte(const uint16_t a)

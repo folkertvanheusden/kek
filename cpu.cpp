@@ -66,11 +66,13 @@ uint64_t cpu::get_instructions_executed_count()
 	return instruction_count;
 }
 
-std::pair<double, double> cpu::get_mips_rel_speed()
+std::tuple<double, double, uint64_t> cpu::get_mips_rel_speed()
 {
+	uint64_t instr_count = get_instructions_executed_count();
+
         uint32_t t_diff = get_ms() - running_since;
 
-        double mips = get_instructions_executed_count() / (1000.0 * t_diff);
+        double mips = instr_count / (1000.0 * t_diff);
 
         // see https://retrocomputing.stackexchange.com/questions/6960/what-was-the-clock-speed-and-ips-for-the-original-pdp-11
         constexpr double pdp11_clock_cycle = 150;  // ns, for the 11/70
@@ -78,7 +80,7 @@ std::pair<double, double> cpu::get_mips_rel_speed()
         constexpr double pdp11_avg_cycles_per_instruction = (1 + 5) / 2.0;
         constexpr double pdp11_estimated_mips = pdp11_mhz / pdp11_avg_cycles_per_instruction;
 
-	return { mips, mips * 100 / pdp11_estimated_mips };
+	return { mips, mips * 100 / pdp11_estimated_mips, instr_count };
 }
 
 void cpu::reset()
@@ -278,7 +280,7 @@ bool cpu::check_queued_interrupts()
 
 			DOLOG(debug, true, "Invoking interrupt vector %o (IPL %d, current: %d)", v, i, current_level);
 
-			trap(v, i);
+			trap(v, i, true);
 
 			return true;
 		}
@@ -300,7 +302,7 @@ void cpu::queue_interrupt(const uint8_t level, const uint8_t vector)
 
 void cpu::addToMMR1(const uint8_t mode, const uint8_t reg, const bool word_mode)
 {
-	if (mode == 0 || mode == 1 || (b->getMMR1() & 0160000 /* bits frozen? */))
+	if (mode == 0 || mode == 1 || (b->getMMR0() & 0160000 /* bits frozen? */))
 		return;
 
 	bool neg = mode == 4 || mode == 5;
@@ -1287,7 +1289,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					 // always words: word_mode-bit is to select between MFPI and MFPD
 					 assert(!word_mode);  // TODO
 
-					 if ((b->getMMR1() & 0160000) == 0)
+					 if ((b->getMMR0() & 0160000) == 0)
 						 b->addToMMR1(-2, 6);
 
 					 bool     set_flags = true;
@@ -1321,7 +1323,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					 // always words: word_mode-bit is to select between MTPI and MTPD
 					 assert(!word_mode);  // TODO
 
-					 if ((b->getMMR1() & 0160000) == 0)
+					 if ((b->getMMR0() & 0160000) == 0)
 						 b->addToMMR1(2, 6);
 
 					 // retrieve word from '15/14'-stack
@@ -1645,23 +1647,24 @@ void cpu::schedule_trap(const uint16_t vector)
 	scheduled_trap = vector;
 }
 
-void cpu::trap(const uint16_t vector, const int new_ipl)
+void cpu::trap(const uint16_t vector, const int new_ipl, const bool is_interrupt)
 {
 	uint16_t before_psw = getPSW();
 	uint16_t before_pc  = getPC();
 
-	if (b->getMMR0() & 1) {
-		// make sure the trap vector is retrieved from kernel space
-		psw &= 037777;  // mask off 14/15
-	}
+	// make sure the trap vector is retrieved from kernel space
+	psw &= 037777;  // mask off 14/15
 
-	if ((b->getMMR1() & 0160000) == 0) {
+	if ((b->getMMR0() & 0160000) == 0) {
 		b->setMMR2(vector);
 		b->addToMMR1(-2, 6);
 		b->addToMMR1(-2, 6);
 	}
 
 	setPC(b->readWord(vector + 0, d_space));
+
+	if (!is_interrupt)
+		b->setMMR0Bit(12);  // it's a trap
 
 	// switch to kernel mode & update 'previous mode'
 	uint16_t new_psw = b->readWord(vector + 2, d_space) & 0147777;  // mask off old 'previous mode'
@@ -2149,7 +2152,7 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 
 void cpu::step_a()
 {
-	if ((b->getMMR1() & 0160000) == 0)
+	if ((b->getMMR0() & 0160000) == 0)
 		b->clearMMR1();
 
 	if (scheduled_trap) {
@@ -2169,7 +2172,9 @@ void cpu::step_b()
 	instruction_count++;
 
 	uint16_t temp_pc = getPC();
-	b->setMMR2(temp_pc);
+
+	if ((b->getMMR0() & 0160000) == 0)
+		b->setMMR2(temp_pc);
 
 	if (temp_pc & 1)
 		busError();
@@ -2196,6 +2201,6 @@ void cpu::step_b()
 		trap(010);
 	}
 	catch(const int exception) {
-		DOLOG(debug, true, "bus-trap during execution of command");
+		DOLOG(debug, true, "bus-trap during execution of command (%d)", exception);
 	}
 }

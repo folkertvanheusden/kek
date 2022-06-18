@@ -82,7 +82,7 @@ public:
 
 	void emulation_start();
 	uint64_t get_instructions_executed_count();
-	std::pair<double, double> get_mips_rel_speed();
+	std::tuple<double, double, uint64_t> get_mips_rel_speed();
 
 	void reset();
 
@@ -96,7 +96,7 @@ public:
 	void queue_interrupt(const uint8_t level, const uint8_t vector);
 
 	void busError();
-	void trap(const uint16_t vector, const int new_ipl = -1);
+	void trap(const uint16_t vector, const int new_ipl = -1, const bool is_interrupt = false);
 	void schedule_trap(const uint16_t vector);
 
 	void setEmulateMFPT(const bool v) { emulateMFPT = v; }

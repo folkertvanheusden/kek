@@ -2,6 +2,7 @@
 // Released under Apache License v2.0
 #pragma once
 
+#include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
 
@@ -72,9 +73,9 @@ public:
 
 	uint16_t readUnibusByte(const uint16_t a);
 
-	uint16_t write(const uint16_t a, const bool word_mode, uint16_t value, const bool use_prev, const d_i_space_t s = i_space);
-	uint8_t  writeByte(const uint16_t a, const uint8_t value) { return write(a, true, value, false); }
-	uint16_t writeWord(const uint16_t a, const uint16_t value);
+	void write(const uint16_t a, const bool word_mode, uint16_t value, const bool use_prev, const d_i_space_t s = i_space);
+	void writeByte(const uint16_t a, const uint8_t value) { return write(a, true, value, false); }
+	void writeWord(const uint16_t a, const uint16_t value);
 
 	void writeUnibusByte(const uint16_t a, const uint8_t value);
 
@@ -84,7 +85,9 @@ public:
 	uint16_t getMMR3() { return MMR3; }
 	void     clearMMR1();
 	void     addToMMR1(const int8_t delta, const uint8_t reg);
-	void     setMMR2(const uint16_t value) { MMR2 = value; }  // address
+	void     setMMR0(int value);
+	void     setMMR0Bit(const int bit);
+	void     setMMR2(const uint16_t value);
 
 	uint16_t get_switch_register() const { return switch_register; }
 
