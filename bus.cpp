@@ -419,8 +419,11 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 				MMR0 &= ~14;  // add current page
 				MMR0 |= apf << 1;
 
+				MMR0 &= ~(3 << 5);
+				MMR0 |= run_mode << 5;
+
 				pages[run_mode][0][apf].pdr |= 1 << 7;  // TODO: D/I
-									//
+
 				c->schedule_trap(04);
 
 				throw 3;
@@ -436,6 +439,9 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 
 				MMR0 &= ~14;  // add current page
 				MMR0 |= apf << 1;
+
+				MMR0 &= ~(3 << 5);
+				MMR0 |= run_mode << 5;
 
 				pages[run_mode][0][apf].pdr |= 1 << 7;  // TODO: D/I
 
