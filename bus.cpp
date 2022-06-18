@@ -283,7 +283,7 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 		return -1;
 	}
 
-	int run_mode = (c->getPSW() >> (use_prev ? 12 : 14)) & 3;
+	int      run_mode = (c->getPSW() >> (use_prev ? 12 : 14)) & 3;
 
 	uint32_t m_offset = calculate_physical_address(run_mode, a, !peek_only, false, peek_only, word_mode);
 
@@ -344,17 +344,15 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 
 	if ((a & 1) && word_mode == 0 && peek_only == false) {
 		DOLOG(debug, !peek_only, "bus::calculate_physical_address::m_offset %o run mode %d", a, run_mode);
-		DOLOG(debug, true, "TRAP(004) (throw 5) on address %06o", a);
+		DOLOG(debug, true, "TRAP(004) (throw 5) on address %06o, page %d", a, apf);
 		c->schedule_trap(004);  // invalid access
 
 		pages[run_mode][0][apf].pdr |= 1 << 7;  // TODO: D/I
 
-		uint16_t bMMR0 = MMR0;
+		MMR0 &= ~14;  // add current page
+		MMR0 |= apf << 1;
 
-		MMR0 &= ~(3 << 5);
-		MMR0 |= run_mode << 5;  // TODO: kernel-mode or user-mode when a trap occurs in user-mode?
-
-		DOLOG(info, true, "before: %06o after %06o", bMMR0, MMR0);
+//		DOLOG(info, true, "MMR0 %06o, MMR1 %06o, MMR2 %06o, MMR3 %06o", MMR0, MMR1, MMR2, MMR3);
 
 		throw 5;
 	}
