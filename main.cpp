@@ -60,7 +60,6 @@ int main(int argc, char *argv[])
 	std::vector<std::string> rk05_files;
 	std::vector<std::string> rl02_files;
 
-	bool testCases    = false;
 	bool run_debugger = false;
 	bool tracing      = false;
 

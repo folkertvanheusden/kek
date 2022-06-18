@@ -345,6 +345,9 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 
 		m_offset += p_offset;
 
+		if ((MMR3 & 16) == 0)  // off is 18bit
+			m_offset &= 0x3ffff;
+
 		if (trap_on_failure) {
 			if ((MMR0 & (1 << 9)) || c->get_34()) {
 				const int access_control = pages[run_mode][0][apf].pdr & 7;
