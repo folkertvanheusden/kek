@@ -246,17 +246,15 @@ int cpu::getPSW_spl() const
 	return (psw >> 5) & 7;
 }
 
-void cpu::setPSW(const uint16_t v, const bool limited)
+void cpu::setPSW(uint16_t v, const bool limited)
 {
 	if (limited) {
-		psw |= v & 0174000;  // current & previous mode can only be increased, 11 can only be set
+		v &= 0174037;
 
-		psw &= 0174000;  // retain upper 5 bit
-		psw |= v & ~0174000;
+		v |= psw & 0174340;
 	}
-	else {
-		psw = v;
-	}
+
+	psw = v;
 }
 
 bool cpu::check_queued_interrupts()
@@ -1548,10 +1546,15 @@ bool cpu::misc_operations(const uint16_t instr)
 		case 0b0000000000000001: // WAIT
 			return true;
 
-		case 0b0000000000000010: // RTI
+		case 0b0000000000000010: {  // RTI
 			setPC(popStack());
-			setPSW(popStack(), !!((getPSW() >> 12) & 3));
+
+			uint16_t replacement_psw = popStack();
+
+			setPSW(replacement_psw, true);
+
 			return true;
+		}
 
 		case 0b0000000000000011: // BPT
 			trap(014);
@@ -1561,10 +1564,15 @@ bool cpu::misc_operations(const uint16_t instr)
 			trap(020);
 			return true;
 
-		case 0b0000000000000110: // RTT
+		case 0b0000000000000110: {  // RTT
 			setPC(popStack());
-			setPSW(popStack(), !!((getPSW() >> 12) & 3));
+
+			uint16_t replacement_psw = popStack();
+
+			setPSW(replacement_psw, true);
+
 			return true;
+		}
 
 		case 0b0000000000000111: // MFPT
 			if (emulateMFPT)
