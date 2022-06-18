@@ -1657,7 +1657,7 @@ void cpu::trap(const uint16_t vector, const int new_ipl, const bool is_interrupt
 	// make sure the trap vector is retrieved from kernel space
 	psw &= 037777;  // mask off 14/15
 
-	if ((b->getMMR0() & 0160000) == 0) {
+	if ((b->getMMR0() & 0160000) == 0 && vector != 4) {
 		b->setMMR2(vector);
 		b->addToMMR1(-2, 6);
 		b->addToMMR1(-2, 6);
@@ -2161,7 +2161,12 @@ void cpu::step_a()
 		b->clearMMR1();
 
 	if (scheduled_trap) {
-		trap(scheduled_trap, 7, true);
+		try {
+			trap(scheduled_trap, 7, true);
+		}
+		catch(const int exception) {
+			DOLOG(debug, true, "2nd-bus-trap during execution of command (%d)", exception);
+		}
 
 		scheduled_trap = 0;
 

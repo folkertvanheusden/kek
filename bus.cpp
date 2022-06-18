@@ -285,10 +285,7 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 
 	int run_mode = (c->getPSW() >> (use_prev ? 12 : 14)) & 3;
 
-//	if (run_mode == 1 && is_11_34)
-//		run_mode = 3;
-
-	uint32_t m_offset = calculate_physical_address(run_mode, a, !peek_only, false, peek_only);
+	uint32_t m_offset = calculate_physical_address(run_mode, a, !peek_only, false, peek_only, word_mode);
 
 	if (word_mode)
 		temp = m -> readByte(m_offset);
@@ -339,12 +336,13 @@ void bus::setMMR2(const uint16_t value)
 	MMR2 = value;
 }
 
-uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, const bool trap_on_failure, const bool is_write, const bool peek_only)
+uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, const bool trap_on_failure, const bool is_write, const bool peek_only, const bool word_mode)
 {
 	uint32_t m_offset = 0;
 
+	const uint8_t apf = a >> 13; // active page field
+
 	if (MMR0 & 1) {
-		const uint8_t apf = a >> 13; // active page field
 
 		// TODO: D/I
 		m_offset = pages[run_mode][0][apf].par * 64;  // memory offset  TODO: handle 16b int-s
@@ -464,6 +462,16 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 	}
 	else {
 		m_offset = a;
+	}
+
+	if ((m_offset & 1) && word_mode == 0 && peek_only == false) {
+		DOLOG(debug, !peek_only, "bus::calculate_physical_address::m_offset %o", m_offset);
+		DOLOG(debug, true, "TRAP(004) (throw 5) on address %06o", a);
+		c->schedule_trap(004);  // invalid access
+
+		pages[run_mode][0][apf].pdr |= 1 << 7;  // TODO: D/I
+
+		throw 5;
 	}
 
 	return m_offset;
@@ -787,7 +795,7 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 		return;
 	}
 
-	uint32_t m_offset = calculate_physical_address(run_mode, a, true, true, false);
+	uint32_t m_offset = calculate_physical_address(run_mode, a, true, true, false, word_mode);
 
 	DOLOG(debug, true, "WRITE to %06o/%07o: %o", a, m_offset, value);
 
