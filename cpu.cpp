@@ -1656,39 +1656,69 @@ void cpu::schedule_trap(const uint16_t vector)
 }
 
 // 'is_interrupt' is not correct naming; it is true for mmu faults and interrupts
-void cpu::trap(const uint16_t vector, const int new_ipl, const bool is_interrupt)
+void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 {
 	DOLOG(debug, true, "*** CPU::TRAP ***");
-	uint16_t before_psw = getPSW();
-	uint16_t before_pc  = getPC();
 
-	// make sure the trap vector is retrieved from kernel space
-	psw &= 037777;  // mask off 14/15
+	int      processing_trap_depth = 0;
+	uint16_t before_psw            = 0;
+	uint16_t before_pc             = 0;
 
-	if ((b->getMMR0() & 0160000) == 0 && vector != 4) {
-		b->setMMR2(vector);
-		b->addToMMR1(-2, 6);
-		b->addToMMR1(-2, 6);
+	for(;;) {
+		try {
+			processing_trap_depth++;
+
+			if (processing_trap_depth >= 2) {
+				vector = 4;
+
+				if (processing_trap_depth >= 3) {
+					// TODO: halt?
+				}
+			}
+			else {
+				before_psw = getPSW();
+				before_pc  = getPC();
+			}
+
+			// make sure the trap vector is retrieved from kernel space
+			psw &= 037777;  // mask off 14/15
+
+			if ((b->getMMR0() & 0160000) == 0 && vector != 4) {
+				b->setMMR2(vector);
+				b->addToMMR1(-2, 6);
+				b->addToMMR1(-2, 6);
+			}
+
+			if (is_interrupt)
+				b->clearMMR0Bit(12);
+			else
+				b->setMMR0Bit(12);  // it's a trap
+
+			setPC(b->readWord(vector + 0));
+
+			// switch to kernel mode & update 'previous mode'
+			uint16_t new_psw = b->readWord(vector + 2) & 0147777;  // mask off old 'previous mode'
+			if (new_ipl != -1)
+				new_psw = (new_psw & ~0xe0) | (new_ipl << 5);
+			new_psw |= (before_psw >> 2) & 030000; // apply new 'previous mode'
+			setPSW(new_psw, false);
+
+		//	DOLOG(info, true, "R6: %06o, before PSW: %06o, new PSW: %06o", getRegister(6), before_psw, new_psw);
+
+			pushStack(before_psw);
+			pushStack(before_pc);
+
+			// if we reach this point then the trap was processed without causing
+			// another trap
+			break;
+		}
+		catch(const int exception) {
+			DOLOG(debug, true, "trap during execution of trap (%d)", exception);
+
+			setPSW(before_psw, false);
+		}
 	}
 
-	if (is_interrupt)
-		b->clearMMR0Bit(12);
-	else
-		b->setMMR0Bit(12);  // it's a trap
-
-	setPC(b->readWord(vector + 0));
-
-	// switch to kernel mode & update 'previous mode'
-	uint16_t new_psw = b->readWord(vector + 2) & 0147777;  // mask off old 'previous mode'
-	if (new_ipl != -1)
-		new_psw = (new_psw & ~0xe0) | (new_ipl << 5);
-	new_psw |= (before_psw >> 2) & 030000; // apply new 'previous mode'
-	setPSW(new_psw, false);
-
-//	DOLOG(info, true, "R6: %06o, before PSW: %06o, new PSW: %06o", getRegister(6), before_psw, new_psw);
-
-	pushStack(before_psw);
-	pushStack(before_pc);
 	DOLOG(debug, true, "*** CPU::TRAP FIN, MMR0: %06o, MMR2: %06o ***", b->getMMR0(), b->getMMR2());
 }
 
@@ -2171,12 +2201,7 @@ void cpu::step_a()
 		b->clearMMR1();
 
 	if (scheduled_trap) {
-		try {
-			trap(scheduled_trap, 7, true);
-		}
-		catch(const int exception) {
-			DOLOG(debug, true, "2nd-bus-trap during execution of command (%d)", exception);
-		}
+		trap(scheduled_trap, 7, true);
 
 		scheduled_trap = 0;
 
