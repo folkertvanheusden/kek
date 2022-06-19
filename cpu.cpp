@@ -1285,7 +1285,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 		case 0b00110101: { // MFPD/MFPI
 					 // always words: word_mode-bit is to select between MFPI and MFPD
-					 assert(!word_mode);  // TODO
+					 // NOTE: this code does not work for D/I split setups! TODO
 
 					 if ((b->getMMR0() & 0160000) == 0)
 						 b->addToMMR1(-2, 6);
@@ -1319,7 +1319,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 		case 0b00110110: { // MTPI/MTPD
 					 // always words: word_mode-bit is to select between MTPI and MTPD
-					 assert(!word_mode);  // TODO
+					 // NOTE: this code does not work for D/I split setups! TODO
 
 					 if ((b->getMMR0() & 0160000) == 0)
 						 b->addToMMR1(2, 6);
@@ -1689,7 +1689,7 @@ void cpu::trap(const uint16_t vector, const int new_ipl, const bool is_interrupt
 
 	pushStack(before_psw);
 	pushStack(before_pc);
-	DOLOG(debug, true, "*** CPU::TRAP fin ***");
+	DOLOG(debug, true, "*** CPU::TRAP FIN, MMR0: %06o, MMR2: %06o ***", b->getMMR0(), b->getMMR2());
 }
 
 cpu::operand_parameters cpu::addressing_to_string(const uint8_t mode_register, const uint16_t pc, const bool word_mode) const

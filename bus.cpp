@@ -343,16 +343,14 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 	const uint8_t apf = a >> 13; // active page field
 
 	if ((a & 1) && word_mode == 0 && peek_only == false) {
-		DOLOG(debug, !peek_only, "bus::calculate_physical_address::m_offset %o run mode %d", a, run_mode);
-		DOLOG(debug, true, "TRAP(004) (throw 5) on address %06o, page %d", a, apf);
-		c->schedule_trap(004);  // invalid access
+		DOLOG(debug, true, "TRAP(004) (throw 5) on address %06o, page %d, run mode %d, MMR0 %06o, MMR2 %06o", a, apf, run_mode, MMR0, MMR2);
 
 		pages[run_mode][0][apf].pdr |= 1 << 7;  // TODO: D/I
 
 		MMR0 &= ~14;  // add current page
 		MMR0 |= apf << 1;
 
-//		DOLOG(info, true, "MMR0 %06o, MMR1 %06o, MMR2 %06o, MMR3 %06o", MMR0, MMR1, MMR2, MMR3);
+		c->schedule_trap(004);  // invalid access
 
 		throw 5;
 	}
