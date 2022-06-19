@@ -67,9 +67,9 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 		}
 
 		if (a == 0177570) { // console switch & display register
-			DOLOG(debug, !peek_only, "read console switch");
+			DOLOG(debug, !peek_only, "read console switch (%06o)", console_switches);
 
-			return debug_mode ? 128 : 0;
+			return console_switches;
 		}
 
 		if (a == 0172540) { // KW11P programmable clock

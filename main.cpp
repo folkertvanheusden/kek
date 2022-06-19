@@ -48,6 +48,7 @@ void help()
 	printf("-b x     enable bootloader (build-in), parameter must be \"rk05\" or \"rl02\"\n");
 	printf("-n       ncurses UI\n");
 	printf("-d       enable debugger\n");
+	printf("-s x     set console switches state - octal number\n");
 	printf("-t       enable tracing (disassemble to stderr, requires -d as well)\n");
 	printf("-l x     log to file x\n");
 	printf("-L x,y   set log level for screen (x) and file (y)\n");
@@ -76,13 +77,19 @@ int main(int argc, char *argv[])
 
 	std::string  tape;
 
+	uint16_t     console_switches = 0;
+
 	int  opt          = -1;
-	while((opt = getopt(argc, argv, "hm:T:r:R:p:ndtL:b:l:3")) != -1)
+	while((opt = getopt(argc, argv, "hm:T:r:R:p:ndtL:b:l:3s:")) != -1)
 	{
 		switch(opt) {
 			case 'h':
 				help();
 				return 1;
+
+			case 's':
+				console_switches = strtol(optarg, NULL, 8);
+				break;
 
 			case '3':
 				mode_34 = true;  // switch from 11/70 to 11/34
@@ -153,6 +160,8 @@ int main(int argc, char *argv[])
 	setlog(logfile, ll_file, ll_screen);
 
 	bus *b = new bus();
+
+	b->set_console_switches(console_switches);
 
 	cpu *c = new cpu(b, &event);
 	b->add_cpu(c);

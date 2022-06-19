@@ -178,7 +178,7 @@ void load_p11_x11(bus *const b, const std::string & file)
 			break;
 
 		if (n) {
-			uint8_t byte = strtol(buffer, NULL, 16);
+			uint8_t byte = strtol(buffer, nullptr, 16);
 
 			b->writeByte(addr, byte);
 
@@ -189,8 +189,8 @@ void load_p11_x11(bus *const b, const std::string & file)
 		else {
 			std::vector<std::string> parts = split(buffer, " ");
 
-			addr = strtol(parts[0].c_str(), NULL, 16);
-			n    = strtol(parts[1].c_str(), NULL, 16);
+			addr = strtol(parts[0].c_str(), nullptr, 16);
+			n    = strtol(parts[1].c_str(), nullptr, 16);
 		}
 	}
 

@@ -120,7 +120,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 	cpu *const c = b->getCpu();
 
-	b->set_debug_mode(true);
+	b->set_debug_mode();
 
 	bool single_step = false;
 

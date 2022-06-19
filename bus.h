@@ -39,7 +39,7 @@ private:
 
 	uint16_t lf_csr { 0 };
 
-	bool     debug_mode { false };
+	uint16_t console_switches { 0 };
 
 public:
 	bus();
@@ -47,7 +47,8 @@ public:
 
 	void clearmem();
 
-	void set_debug_mode(const bool state) { debug_mode = state; }
+	void set_console_switches(const uint16_t new_state) { console_switches = new_state; }
+	void set_debug_mode() { console_switches |= 128; }
 
 	void add_cpu(cpu *const c) { this -> c = c; }
 	void add_tm11(tm_11 *tm11) { this -> tm11 = tm11; } 
