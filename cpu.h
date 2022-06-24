@@ -95,7 +95,6 @@ public:
 	void init_interrupt_queue();
 	void queue_interrupt(const uint8_t level, const uint8_t vector);
 
-	void busError();
 	void trap(uint16_t vector, const int new_ipl = -1, const bool is_interrupt = false);
 	void schedule_trap(const uint16_t vector);
 

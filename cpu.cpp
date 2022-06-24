@@ -1645,11 +1645,6 @@ bool cpu::misc_operations(const uint16_t instr)
 	return false;
 }
 
-void cpu::busError()
-{
-	trap(4);
-}
-
 void cpu::schedule_trap(const uint16_t vector)
 {
 	scheduled_trap = vector;
@@ -1658,7 +1653,7 @@ void cpu::schedule_trap(const uint16_t vector)
 // 'is_interrupt' is not correct naming; it is true for mmu faults and interrupts
 void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 {
-	DOLOG(debug, true, "*** CPU::TRAP ***");
+	DOLOG(debug, true, "*** CPU::TRAP, MMR0: %06o, MMR2: %06o ***", b->getMMR0(), b->getMMR2());
 
 	int      processing_trap_depth = 0;
 	uint16_t before_psw            = 0;
@@ -1668,8 +1663,15 @@ void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 		try {
 			processing_trap_depth++;
 
+			bool kernel_mode = psw >> 14;
+
 			if (processing_trap_depth >= 2) {
-				vector = 4;
+				DOLOG(debug, true, "Trap depth %d", processing_trap_depth);
+
+				if (kernel_mode)
+					vector = 4;
+
+				setRegister(6, 04);
 
 				if (processing_trap_depth >= 3) {
 					// TODO: halt?
@@ -1678,21 +1680,21 @@ void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 			else {
 				before_psw = getPSW();
 				before_pc  = getPC();
+
+				if ((b->getMMR0() & 0160000) == 0 && vector != 4) {
+					b->setMMR2(vector);
+					b->addToMMR1(-2, 6);
+					b->addToMMR1(-2, 6);
+				}
+
+				if (is_interrupt)
+					b->clearMMR0Bit(12);
+				else
+					b->setMMR0Bit(12);  // it's a trap
 			}
 
 			// make sure the trap vector is retrieved from kernel space
 			psw &= 037777;  // mask off 14/15
-
-			if ((b->getMMR0() & 0160000) == 0 && vector != 4) {
-				b->setMMR2(vector);
-				b->addToMMR1(-2, 6);
-				b->addToMMR1(-2, 6);
-			}
-
-			if (is_interrupt)
-				b->clearMMR0Bit(12);
-			else
-				b->setMMR0Bit(12);  // it's a trap
 
 			setPC(b->readWord(vector + 0));
 
@@ -1704,6 +1706,9 @@ void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 			setPSW(new_psw, false);
 
 		//	DOLOG(info, true, "R6: %06o, before PSW: %06o, new PSW: %06o", getRegister(6), before_psw, new_psw);
+		//
+			if (processing_trap_depth >= 2 && kernel_mode)
+				setRegister(6, 04);
 
 			pushStack(before_psw);
 			pushStack(before_pc);
@@ -2191,6 +2196,9 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 	for(auto v : work_values)
 		work_values_str.push_back(format("%06o", v));
 	out.insert({ "work-values", work_values_str });
+
+	out.insert({ "MMR0", { format("%06o", b->getMMR0()) } });
+	out.insert({ "MMR2", { format("%06o", b->getMMR2()) } });
 
 	return out;
 }
