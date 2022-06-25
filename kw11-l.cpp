@@ -1,10 +1,12 @@
 #include <unistd.h>
 
+#include "console.h"
 #include "cpu.h"
 #include "kw11-l.h"
+#include "utils.h"
 
 
-kw11_l::kw11_l(bus *const b) : b(b)
+kw11_l::kw11_l(bus *const b, console *const cnsl) : b(b), cnsl(cnsl)
 {
 	th = new std::thread(std::ref(*this));
 }
@@ -21,11 +23,16 @@ kw11_l::~kw11_l()
 void kw11_l::operator()()
 {
 	while(!stop_flag) {
-		b->set_lf_crs_b7();
+		if (*cnsl->get_running_flag()) {
+			b->set_lf_crs_b7();
 
-		if (b->get_lf_crs() & 64)
-			b->getCpu()->queue_interrupt(6, 0100);
+			if (b->get_lf_crs() & 64)
+				b->getCpu()->queue_interrupt(6, 0100);
 
-		usleep(1000000 / 50);
+			myusleep(1000000 / 50);
+		}
+		else {
+			myusleep(1000000 / 10);
+		}
 	}
 }

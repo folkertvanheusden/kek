@@ -2232,6 +2232,10 @@ void cpu::step_b()
 	try {
 		uint16_t instr = b->readWord(temp_pc);
 
+//		FILE *fh = fopen("/home/folkert/kek.dat", "a+");
+//		fprintf(fh, "%06o %06o\n", temp_pc, instr);
+//		fclose(fh);
+
 		addRegister(7, false, 2);
 
 		if (double_operand_instructions(instr))

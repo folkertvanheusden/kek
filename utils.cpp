@@ -83,6 +83,7 @@ void myusleep(uint64_t us)
 		struct timespec rem { 0, 0 };
 
 		int rc = nanosleep(&req, &rem);
+
 		if (rc == 0 || (rc == -1 && errno != EINTR))
 			break;
 

@@ -168,8 +168,6 @@ int main(int argc, char *argv[])
 
 	c->set_34(mode_34);
 
-	kw11_l *lf = new kw11_l(b);
-
 	c->setEmulateMFPT(true);
 
 	std::atomic_bool interrupt_emulation { false };
@@ -234,6 +232,8 @@ int main(int argc, char *argv[])
 	printf("%04x\n", b->read(0172340, false, false, true));
 	return 0;
 #endif
+
+	kw11_l *lf = new kw11_l(b, cnsl);
 
 	cnsl->start_thread();
 
