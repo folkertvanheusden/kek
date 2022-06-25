@@ -160,10 +160,10 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 			cnsl->put_string_lf("Breakpoints:");
 
-			for(auto pc : bps) {
-				cnsl->put_string_lf(format("   %06o", pc));
+			for(auto a : bps) {
+				cnsl->put_string(format("   %06o> ", a));
 
-				pc += disassemble(c, cnsl, pc, true);
+				disassemble(c, cnsl, a, true);
 			}
 
 			continue;
