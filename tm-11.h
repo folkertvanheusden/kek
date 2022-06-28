@@ -6,12 +6,12 @@
 #include <stdio.h>
 #include <string>
 
-#define TM_11_MTS	0172520	// status register
-#define TM_11_MTC	0172522	// command register
-#define TM_11_MTBRC	0172524	// byte record counter
-#define TM_11_MTCMA	0172526	// current memory address register
-#define TM_11_MTD	0172530	// data buffer register
-#define TM_11_MTRD	0172532	// TU10 read lines
+#define TM_11_MTS	0772520	// status register
+#define TM_11_MTC	0772522	// command register
+#define TM_11_MTBRC	0772524	// byte record counter
+#define TM_11_MTCMA	0772526	// current memory address register
+#define TM_11_MTD	0772530	// data buffer register
+#define TM_11_MTRD	0772532	// TU10 read lines
 #define TM_11_BASE	TM_11_MTS
 #define TM_11_END	(TM_11_MTRD + 2)
 

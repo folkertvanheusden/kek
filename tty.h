@@ -9,10 +9,10 @@
 #include "console.h"
 
 
-#define PDP11TTY_TKS		0177560	// reader status
-#define PDP11TTY_TKB		0177562	// reader buffer
-#define PDP11TTY_TPS		0177564	// puncher status
-#define PDP11TTY_TPB		0177566	// puncher buffer
+#define PDP11TTY_TKS		0777560	// reader status
+#define PDP11TTY_TKB		0777562	// reader buffer
+#define PDP11TTY_TPS		0777564	// puncher status
+#define PDP11TTY_TPB		0777566	// puncher buffer
 #define PDP11TTY_BASE	PDP11TTY_TKS
 #define PDP11TTY_END	(PDP11TTY_TPB + 2)
 
@@ -30,9 +30,9 @@ public:
 	tty(console *const c);
 	virtual ~tty();
 
-	uint8_t readByte(const uint16_t addr);
-	uint16_t readWord(const uint16_t addr);
+	uint8_t  readByte(const uint32_t addr);
+	uint16_t readWord(const uint32_t addr);
 
-	void writeByte(const uint16_t addr, const uint8_t v);
-	void writeWord(const uint16_t addr, uint16_t v);
+	void writeByte(const uint32_t addr, const uint8_t v);
+	void writeWord(const uint32_t addr, uint16_t      v);
 };

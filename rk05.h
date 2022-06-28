@@ -13,13 +13,13 @@
 #endif
 
 
-#define RK05_DS		0177400	// drive status
-#define RK05_ERROR	0177402 // error
-#define RK05_CS		0177404 // control status
-#define RK05_WC		0177406 // word count
-#define RK05_BA		0177410 // bus address
-#define RK05_DA		0177412 // disk address
-#define RK05_DATABUF	0177414 // data buffer
+#define RK05_DS		0777400	// drive status
+#define RK05_ERROR	0777402 // error
+#define RK05_CS		0777404 // control status
+#define RK05_WC		0777406 // word count
+#define RK05_BA		0777410 // bus address
+#define RK05_DA		0777412 // disk address
+#define RK05_DATABUF	0777414 // data buffer
 #define RK05_BASE	RK05_DS
 #define RK05_END	(RK05_DATABUF + 2)
 
@@ -30,7 +30,7 @@ class rk05
 private:
 	bus *const b;
 	uint16_t registers[7];
-	uint8_t xfer_buffer[512];
+	uint8_t  xfer_buffer[512];
 #if defined(ESP32)
 	std::vector<File32 *> fhs;
 #else
@@ -43,9 +43,9 @@ public:
 	rk05(const std::vector<std::string> & files, bus *const b, std::atomic_bool *const disk_read_acitivity, std::atomic_bool *const disk_write_acitivity);
 	virtual ~rk05();
 
-	uint8_t readByte(const uint16_t addr);
-	uint16_t readWord(const uint16_t addr);
+	uint8_t  readByte(const uint32_t addr);
+	uint16_t readWord(const uint32_t addr);
 
-	void writeByte(const uint16_t addr, const uint8_t v);
-	void writeWord(const uint16_t addr, uint16_t v);
+	void writeByte(const uint32_t addr, const uint8_t v);
+	void writeWord(const uint32_t addr, uint16_t      v);
 };

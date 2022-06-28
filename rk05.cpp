@@ -60,7 +60,7 @@ rk05::~rk05()
 	}
 }
 
-uint8_t rk05::readByte(const uint16_t addr)
+uint8_t rk05::readByte(const uint32_t addr)
 {
 	uint16_t v = readWord(addr & ~1);
 
@@ -70,7 +70,7 @@ uint8_t rk05::readByte(const uint16_t addr)
 	return v;
 }
 
-uint16_t rk05::readWord(const uint16_t addr)
+uint16_t rk05::readWord(const uint32_t addr)
 {
 	const int reg = (addr - RK05_BASE) / 2;
 
@@ -99,7 +99,7 @@ uint16_t rk05::readWord(const uint16_t addr)
 	return vtemp;
 }
 
-void rk05::writeByte(const uint16_t addr, const uint8_t v)
+void rk05::writeByte(const uint32_t addr, const uint8_t v)
 {
 	uint16_t vtemp = registers[(addr - RK05_BASE) / 2];
 
@@ -115,7 +115,7 @@ void rk05::writeByte(const uint16_t addr, const uint8_t v)
 	writeWord(addr, vtemp);
 }
 
-void rk05::writeWord(const uint16_t addr, uint16_t v)
+void rk05::writeWord(const uint32_t addr, uint16_t v)
 {
 #if defined(ESP32)
 	digitalWrite(LED_BUILTIN, LOW);
