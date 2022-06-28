@@ -41,6 +41,11 @@ private:
 
 	uint16_t console_switches { 0 };
 
+	uint16_t read_pdr (const uint32_t a, const int run_mode, const bool word_mode, const bool peek_only);
+	uint16_t read_par (const uint32_t a, const int run_mode, const bool word_mode, const bool peek_only);
+	void     write_pdr(const uint32_t a, const int run_mode, const uint16_t value, const bool word_mode);
+	void     write_par(const uint32_t a, const int run_mode, const uint16_t value, const bool word_mode);
+
 public:
 	bus();
 	~bus();
