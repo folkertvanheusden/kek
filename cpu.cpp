@@ -162,7 +162,7 @@ bool cpu::put_result(const uint16_t a, const uint8_t dst_mode, const uint8_t dst
 
 	b->write(a, word_mode, value, false);
 	
-	return a != 0177776;
+	return a != ADDR_PSW;
 }
 
 uint16_t cpu::addRegister(const int nr, const bool prev_mode, const uint16_t value)
@@ -404,7 +404,7 @@ bool cpu::putGAM(const uint8_t mode, const int reg, const bool word_mode, const 
 			break;
 	}
 
-	return addr == -1 || addr != 0177776;
+	return addr == -1 || addr != ADDR_PSW;
 }
 
 uint16_t cpu::getGAMAddress(const uint8_t mode, const int reg, const bool word_mode, const bool prev_mode)
@@ -554,7 +554,7 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 				    int16_t  dst_value  = b->readWord(dst_addr);
 				    int16_t  result     = 0;
 
-				    bool     set_flags  = dst_addr != 0177776;
+				    bool     set_flags  = dst_addr != ADDR_PSW;
 
 				    if (instr & 0x8000) {
 					    result = (dst_value - ssrc_value) & 0xffff;
@@ -759,7 +759,7 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 				else {
 					b->write(a, false, vl, false);
 
-					set_flags = a != 0177776;
+					set_flags = a != ADDR_PSW;
 				}
 
 				if (set_flags) {
@@ -816,7 +816,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 							 v = ((v & 0xff) << 8) | (v >> 8);
 
-							 set_flags = a != 0177776;
+							 set_flags = a != ADDR_PSW;
 
 							 b->writeWord(a, v);
 						 }
@@ -845,7 +845,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					  else {
 						  uint16_t a = getGAMAddress(dst_mode, dst_reg, word_mode, false);
 
-						  set_flags = a != 0177776;
+						  set_flags = a != ADDR_PSW;
 
 						  b -> write(a, word_mode, 0, false);
 					  }
@@ -885,7 +885,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						  else
 							  v ^= 0xffff;
 
-						  bool set_flags = a != 0177776;
+						  bool set_flags = a != ADDR_PSW;
 
 						  if (set_flags) {
 							  setPSW_n(SIGN(v, word_mode));
@@ -918,7 +918,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						  uint16_t v   = b -> read(a, word_mode, false);
 						  int32_t  vl  = (v + 1) & (word_mode ? 0xff : 0xffff);
 
-						  bool set_flags = a != 0177776;
+						  bool set_flags = a != ADDR_PSW;
 
 						  if (set_flags) {
 							  setPSW_n(SIGN(vl, word_mode));
@@ -951,7 +951,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						  uint16_t v   = b -> read(a, word_mode, false);
 						  int32_t  vl  = (v - 1) & (word_mode ? 0xff : 0xffff);
 
-						  bool set_flags = a != 0177776;
+						  bool set_flags = a != ADDR_PSW;
 
 						  if (set_flags) {
 							  setPSW_n(SIGN(vl, word_mode));
@@ -986,7 +986,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 						  b->write(a, word_mode, v, false);
 
-						  bool set_flags = a != 0177776;
+						  bool set_flags = a != ADDR_PSW;
 
 						  if (set_flags) {
 							  setPSW_n(SIGN(v, word_mode));
@@ -1024,7 +1024,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 						  b->write(a, word_mode, v, false);
 
-						  bool set_flags = a != 0177776;
+						  bool set_flags = a != ADDR_PSW;
 
 						  if (set_flags) {
 							  setPSW_n(SIGN(v, word_mode));
@@ -1066,7 +1066,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 						  b->write(a, word_mode, v, false);
 
-						  bool set_flags = a != 0177776;
+						  bool set_flags = a != ADDR_PSW;
 
 						  if (set_flags) {
 							  setPSW_n(SIGN(v, word_mode));
@@ -1128,7 +1128,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 						  b->write(a, word_mode, temp, false);
 
-						  bool set_flags = a != 0177776;
+						  bool set_flags = a != ADDR_PSW;
 
 						  if (set_flags) {
 							  setPSW_c(new_carry);
@@ -1179,7 +1179,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 						  b->write(a, word_mode, temp, false);
 
-						  bool set_flags = a != 0177776;
+						  bool set_flags = a != ADDR_PSW;
 
 						  if (set_flags) {
 							  setPSW_c(new_carry);
@@ -1238,7 +1238,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 						  b->write(a, word_mode, v, false);
 
-						  bool set_flags = a != 0177776;
+						  bool set_flags = a != ADDR_PSW;
 
 						  if (set_flags) {
 							  setPSW_n(SIGN(v, word_mode));
@@ -1269,7 +1269,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						 uint16_t vl  = b -> read(a, word_mode, false);
 						 uint16_t v   = (vl << 1) & (word_mode ? 0xff : 0xffff);
 
-						 bool set_flags = a != 0177776;
+						 bool set_flags = a != ADDR_PSW;
 
 						 if (set_flags) {
 							 setPSW_n(SIGN(v, word_mode));
@@ -1299,7 +1299,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						 // calculate address in current address space
 						 uint16_t a = getGAMAddress(dst_mode, dst_reg, false, false);
 
-						 set_flags = a != 0177776;
+						 set_flags = a != ADDR_PSW;
 
 						 // read from previous space
 						 v = b -> read(a, false, true);
@@ -1334,7 +1334,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					 else {
 						uint16_t a = getGAMAddress(dst_mode, dst_reg, false, false);
 
-						set_flags = a != 0177776;
+						set_flags = a != ADDR_PSW;
 
 						b -> write(a, false, v, true);  // put in '13/12' address space
 					 }
