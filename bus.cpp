@@ -20,7 +20,6 @@ constexpr int n_pages = 12;
 constexpr int n_pages = 16;
 #endif
 
-
 bus::bus()
 {
 	m = new memory(n_pages * 8192);
@@ -83,158 +82,156 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 		if (word_mode)
 			DOLOG(debug, false, "READ I/O %06o in byte mode", a);
 
-		if (a == 0177750) { // MAINT
+		if (a == ADDR_MAINT) { // MAINT
 			DOLOG(debug, !peek_only, "read MAINT");
 			return 1; // POWER OK
 		}
 
-		if (a == 0177570) { // console switch & display register
+		if (a == ADDR_CONSW) { // console switch & display register
 			DOLOG(debug, !peek_only, "read console switch (%06o)", console_switches);
 
 			return console_switches;
 		}
 
-		if (a == 0172540) { // KW11P programmable clock
+		if (a == ADDR_KW11P) { // KW11P programmable clock
 			DOLOG(debug, !peek_only, "read programmable clock");
 			return 128;
 		}
 
-		if (a == 0177772) { // PIR
+		if (a == ADDR_PIR) { // PIR
 			DOLOG(debug, !peek_only, "read PIT");
 			return PIR;
 		}
 
-		if (a == 0177546) { // line frequency clock and status register
+		if (a == ADDR_LFC) { // line frequency clock and status register
 			DOLOG(debug, !peek_only, "read line freq clock");
 			return lf_csr;
 		}
 
-		if (a == 0177514) { // printer, CSR register, LP11
+		if (a == ADDR_LP11CSR) { // printer, CSR register, LP11
 			DOLOG(debug, !peek_only, "read LP11 CSR");
 			return 0x80;
 		}
 
 		/// MMU ///
-		if (a >= 0172200 && a < 0172240)
+		if (a >= ADDR_PDR_SV_START && a < ADDR_PDR_SV_END)
 			return read_pdr(a, 1, word_mode, peek_only);
-		else if (a >= 0172240 && a < 0172300)
+		else if (a >= ADDR_PAR_SV_START && a < ADDR_PAR_SV_END)
 			return read_par(a, 1, word_mode, peek_only);
-		else if (a >= 0172300 && a < 0172340)
+		else if (a >= ADDR_PDR_K_START && a < ADDR_PDR_K_END)
 			return read_pdr(a, 0, word_mode, peek_only);
-		else if (a >= 0172340 && a < 0172400)
+		else if (a >= ADDR_PAR_K_START && a < ADDR_PAR_K_END)
 			return read_par(a, 0, word_mode, peek_only);
-		else if (a >= 0177600 && a < 0177640)
+		else if (a >= ADDR_PDR_U_START && a < ADDR_PDR_U_END)
 			return read_pdr(a, 3, word_mode, peek_only);
-		else if (a >= 0177640 && a < 0177700)
+		else if (a >= ADDR_PAR_U_START && a < ADDR_PAR_U_END)
 			return read_par(a, 3, word_mode, peek_only);
 		///////////
 
 		if (word_mode) {
-			if (a == 0177776) { // PSW
+			if (a == ADDR_PSW) { // PSW
 				DOLOG(debug, !peek_only, "readb PSW LSB");
 				return c -> getPSW() & 255;
 			}
 
-			if (a == 0177777) {
+			if (a == ADDR_PSW + 1) {
 				DOLOG(debug, !peek_only, "readb PSW MSB");
 				return c -> getPSW() >> 8;
 			}
-
-			if (a == 0177774) { // stack limit register
+			if (a == ADDR_STACKLIM) { // stack limit register
 				DOLOG(debug, !peek_only, "readb stack limit register");
 				return c -> getStackLimitRegister() & 0xff;
 			}
-			if (a == 0177775) { // stack limit register
+			if (a == ADDR_STACKLIM + 1) { // stack limit register
 				DOLOG(debug, !peek_only, "readb stack limit register");
 				return c -> getStackLimitRegister() >> 8;
 			}
 
-			if (a >= 0177700 && a <= 0177705) { // kernel R0-R5
-				DOLOG(debug, !peek_only, "readb kernel R%d", a - 0177700);
-				return c -> getRegister(a - 0177700, 0, false) & 0xff;
+			if (a >= ADDR_KERNEL_R && a <= ADDR_KERNEL_R + 5) { // kernel R0-R5
+				DOLOG(debug, !peek_only, "readb kernel R%d", a - ADDR_KERNEL_R);
+				return c -> getRegister(a - ADDR_KERNEL_R, 0, false) & 0xff;
 			}
-			if (a >= 0177710 && a <= 0177715) { // user R0-R5
-				DOLOG(debug, !peek_only, "readb user R%d", a - 0177710);
-				return c -> getRegister(a - 0177710, 3, false) & 0xff;
+			if (a >= ADDR_USER_R && a <= ADDR_USER_R + 5) { // user R0-R5
+				DOLOG(debug, !peek_only, "readb user R%d", a - ADDR_USER_R);
+				return c -> getRegister(a - ADDR_USER_R, 3, false) & 0xff;
 			}
-			if (a == 0177706) { // kernel SP
+			if (a == ADDR_KERNEL_SP) { // kernel SP
 				DOLOG(debug, !peek_only, "readb kernel sp");
 				return c -> getStackPointer(0) & 0xff;
 			}
-			if (a == 0177707) { // PC
+			if (a == ADDR_PC) { // PC
 				DOLOG(debug, !peek_only, "readb pc");
 				return c -> getPC() & 0xff;
 			}
-			if (a == 0177716) { // supervisor SP
+			if (a == ADDR_SV_SP) { // supervisor SP
 				DOLOG(debug, !peek_only, "readb supervisor sp");
 				return c -> getStackPointer(1) & 0xff;
 			}
-			if (a == 0177717) { // user SP
+			if (a == ADDR_USER_SP) { // user SP
 				DOLOG(debug, !peek_only, "readb user sp");
 				return c -> getStackPointer(3) & 0xff;
 			}
-
-			if (a == 0177766) { // cpu error register
+			if (a == ADDR_CPU_ERR) { // cpu error register
 				DOLOG(debug, !peek_only, "readb cpuerr");
 				return CPUERR & 0xff;
 			}
 		}
 		else {
-			if (a == 0177572) {
+			if (a == ADDR_MMR0) {
 				DOLOG(debug, !peek_only, "read MMR0");
 				return MMR0;
 			}
 
-			if (a == 0177574) { // MMR1
+			if (a == ADDR_MMR1) { // MMR1
 				DOLOG(debug, !peek_only, "read MMR1");
 				return MMR1;
 			}
 
-			if (a == 0177576) { // MMR2
+			if (a == ADDR_MMR2) { // MMR2
 				DOLOG(debug, !peek_only, "read MMR2");
 				return MMR2;
 			}
 
-			if (a == 0172516) { // MMR3
+			if (a == ADDR_MMR3) { // MMR3
 				DOLOG(debug, !peek_only, "read MMR3");
 				return MMR3;
 			}
 
-			if (a == 0177776) { // PSW
+			if (a == ADDR_PSW) { // PSW
 				DOLOG(debug, !peek_only, "read PSW");
 				return c -> getPSW();
 			}
 
-			if (a == 0177774) { // stack limit register
+			if (a == ADDR_STACKLIM) { // stack limit register
 				return c -> getStackLimitRegister();
 			}
 
-			if (a >= 0177700 && a <= 0177705) { // kernel R0-R5
-				DOLOG(debug, !peek_only, "read kernel R%d", a - 0177700);
-				return c -> getRegister(a - 0177700, 0, false);
+			if (a >= ADDR_KERNEL_R && a <= ADDR_KERNEL_R + 5) { // kernel R0-R5
+				DOLOG(debug, !peek_only, "read kernel R%d", a - ADDR_KERNEL_R);
+				return c -> getRegister(a - ADDR_KERNEL_R, 0, false);
 			}
-			if (a >= 0177710 && a <= 0177715) { // user R0-R5
-				DOLOG(debug, !peek_only, "read user R%d", a - 0177710);
-				return c -> getRegister(a - 0177710, 3, false);
+			if (a >= ADDR_USER_R && a <= ADDR_USER_R + 5) { // user R0-R5
+				DOLOG(debug, !peek_only, "read user R%d", a - ADDR_USER_R);
+				return c -> getRegister(a - ADDR_USER_R, 3, false);
 			}
-			if (a == 0177706) { // kernel SP
+			if (a == ADDR_KERNEL_SP) { // kernel SP
 				DOLOG(debug, !peek_only, "read kernel sp");
 				return c -> getStackPointer(0);
 			}
-			if (a == 0177707) { // PC
+			if (a == ADDR_PC) { // PC
 				DOLOG(debug, !peek_only, "read pc");
 				return c -> getPC();
 			}
-			if (a == 0177716) { // supervisor SP
+			if (a == ADDR_SV_SP) { // supervisor SP
 				DOLOG(debug, !peek_only, "read supervisor sp");
 				return c -> getStackPointer(1);
 			}
-			if (a == 0177717) { // user SP
+			if (a == ADDR_USER_SP) { // user SP
 				DOLOG(debug, !peek_only, "read user sp");
 				return c -> getStackPointer(3);
 			}
 
-			if (a == 0177766) { // cpu error register
+			if (a == ADDR_CPU_ERR) { // cpu error register
 				DOLOG(debug, !peek_only, "read CPUERR");
 				return CPUERR;
 			}
@@ -259,10 +256,10 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 		// LO size register field must be all 1s, so subtract 1
 		constexpr uint32_t system_size = n_pages * 8192 / 64 - 1;
 
-		if (a == 0177762)  // system size HI
+		if (a == ADDR_SYSSIZE + 2)  // system size HI
 			return system_size >> 16;
 
-		if (a == 0177760)  // system size LO
+		if (a == ADDR_SYSSIZE)  // system size LO
 			return system_size & 65535;
 
 		if (a & 1)
@@ -531,7 +528,7 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 {
 	int  run_mode = (c->getPSW() >> (use_prev ? 12 : 14)) & 3;
 
-	if ((MMR0 & 1) == 1 && (a & 1) == 0 && a != 0177572) {
+	if ((MMR0 & 1) == 1 && (a & 1) == 0 && a != ADDR_MMR0) {
 		const uint8_t apf = a >> 13; // active page field
 
                 // TODO: D/I
@@ -545,7 +542,7 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 		}
 
 		if (word_mode) {
-			if (a == 0177776 || a == 0177777) { // PSW
+			if (a == ADDR_PSW || a == ADDR_PSW + 1) { // PSW
 				DOLOG(debug, true, "writeb PSW %s", a & 1 ? "MSB" : "LSB");
 				uint16_t vtemp = c -> getPSW();
 
@@ -561,7 +558,7 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 				return;
 			}
 
-			if (a == 0177774 || a == 0177775) { // stack limit register
+			if (a == ADDR_STACKLIM || a == ADDR_STACKLIM + 1) { // stack limit register
 				DOLOG(debug, true, "writeb Set stack limit register: %o", value);
 				uint16_t v = c -> getStackLimitRegister();
 
@@ -575,67 +572,67 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 			}
 		}
 		else {
-			if (a == 0177776) { // PSW
+			if (a == ADDR_PSW) { // PSW
 				DOLOG(debug, true, "write PSW %o", value);
 				c -> setPSW(value & ~16, false);
 				return;
 			}
 
-			if (a == 0177774) { // stack limit register
+			if (a == ADDR_STACKLIM) { // stack limit register
 				DOLOG(debug, true, "write Set stack limit register: %o", value);
 				c -> setStackLimitRegister(value);
 				return;
 			}
 
-			if (a >= 0177700 && a <= 0177705) { // kernel R0-R5
-				DOLOG(debug, true, "write kernel R%d: %o", a - 01777700, value);
-				c -> setRegister(a - 0177700, false, false, value);
+			if (a >= ADDR_KERNEL_R && a <= ADDR_KERNEL_R + 5) { // kernel R0-R5
+				DOLOG(debug, true, "write kernel R%d: %o", a - ADDR_KERNEL_R, value);
+				c -> setRegister(a - ADDR_KERNEL_R, false, false, value);
 				return;
 			}
-			if (a >= 0177710 && a <= 0177715) { // user R0-R5
-				DOLOG(debug, true, "write user R%d: %o", a - 01777710, value);
-				c -> setRegister(a - 0177710, true, false, value);
+			if (a >= ADDR_USER_R && a <= ADDR_USER_R + 5) { // user R0-R5
+				DOLOG(debug, true, "write user R%d: %o", a - ADDR_USER_R, value);
+				c -> setRegister(a - ADDR_USER_R, true, false, value);
 				return;
 			}
-			if (a == 0177706) { // kernel SP
+			if (a == ADDR_KERNEL_SP) { // kernel SP
 				DOLOG(debug, true, "write kernel SP: %o", value);
 				c -> setStackPointer(0, value);
 				return;
 			}
-			if (a == 0177707) { // PC
+			if (a == ADDR_PC) { // PC
 				DOLOG(debug, true, "write PC: %o", value);
 				c -> setPC(value);
 				return;
 			}
-			if (a == 0177716) { // supervisor SP
+			if (a == ADDR_SV_SP) { // supervisor SP
 				DOLOG(debug, true, "write supervisor sp: %o", value);
 				c -> setStackPointer(1, value);
 				return;
 			}
-			if (a == 0177717) { // user SP
+			if (a == ADDR_USER_SP) { // user SP
 				DOLOG(debug, true, "write user sp: %o", value);
 				c -> setStackPointer(3, value);
 				return;
 			}
 
-			if (a == 0177770) {  // microprogram break register
+			if (a == ADDR_MICROPROG_BREAK_REG) {  // microprogram break register
 				return;
 			}
 		}
 
-		if (a == 0177766) { // cpu error register
+		if (a == ADDR_CPU_ERR) { // cpu error register
 			DOLOG(debug, true, "write CPUERR: %o", value);
 			CPUERR = 0;
 			return;
 		}
 
-		if (a == 0172516) { // MMR3
+		if (a == ADDR_MMR3) { // MMR3
 			DOLOG(debug, true, "write set MMR3: %o", value);
 			MMR3 = value & 067;
 			return;
 		}
 
-		if (a == 0177572) { // MMR0
+		if (a == ADDR_MMR0) { // MMR0
 			DOLOG(debug, true, "write set MMR0: %o", value);
 
 			setMMR0(value);
@@ -643,13 +640,13 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 			return;
 		}
 
-		if (a == 0177772) { // PIR
+		if (a == ADDR_PIR) { // PIR
 			DOLOG(debug, true, "write set PIR: %o", value);
 			PIR = value; // TODO
 			return;
 		}
 
-		if (a == 0177546) { // line frequency clock and status register
+		if (a == ADDR_LFC) { // line frequency clock and status register
 			DOLOG(debug, true, "write set LFC/SR: %o", value);
 			lf_csr = value;
 			return;
@@ -677,55 +674,47 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 
 		/// MMU ///
 		// supervisor
-		if (a >= 0172200 && a < 0172240) {
+		if (a >= ADDR_PDR_SV_START && a < ADDR_PDR_SV_END) {
 			write_pdr(a, 1, value, word_mode);
 			return;
 		}
-		if (a >= 0172240 && a < 0172300) {
+		if (a >= ADDR_PAR_SV_START && a < ADDR_PAR_SV_END) {
 			write_par(a, 1, value, word_mode);
 			return;
 		}
 
 		// kernel
-		if (a >= 0172300 && a < 0172340) {
+		if (a >= ADDR_PDR_K_START && a < ADDR_PDR_K_END) {
 			write_pdr(a, 0, value, word_mode);
 			return;
 		}
-		if (a >= 0172340 && a < 0172400) {
+		if (a >= ADDR_PAR_K_START && a < ADDR_PAR_K_END) {
 			write_par(a, 0, value, word_mode);
 			return;
 		}
 
 		// user
-		if (a >= 0177600 && a < 0177640) {
+		if (a >= ADDR_PDR_U_START && a < ADDR_PDR_U_END) {
 			write_pdr(a, 3, value, word_mode);
 			return;
 		}
-		if (a >= 0177640 && a < 0177700) {
+		if (a >= ADDR_PAR_U_START && a < ADDR_PAR_U_END) {
 			write_par(a, 3, value, word_mode);
 			return;
 		}
 		////
 
-		if (a == 0177746) { // cache control register
+		if (a == ADDR_CCR) { // cache control register
 			// TODO
 			return;
 		}
 
-		if (a == 0177570) {  // switch register
+		if (a == ADDR_CONSW) {  // switch register
 			switch_register = value;
 			return;
 		}
 
 		///////////
-
-		if (a == 0177374) { // TODO
-			DOLOG(debug, true, "char: %c", value & 127);
-			return;
-		}
-
-		if (a & 1)
-			DOLOG(debug, true, "bus::writeWord: odd address UNHANDLED");
 
 		DOLOG(debug, true, "UNHANDLED write %o(%c): %o", a, word_mode ? 'B' : ' ', value);
 

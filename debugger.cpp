@@ -106,14 +106,14 @@ void mmu_dump(console *const cnsl, bus *const b)
 	cnsl->put_string_lf(format("MMR2: %06o", b->getMMR2()));
 	cnsl->put_string_lf(format("MMR3: %06o", mmr3));
 
-	dump_par_pdr(cnsl, b, 0172200, 0172240, "supervisor i-space", 0);
-	dump_par_pdr(cnsl, b, 0172220, 0172260, "supervisor d-space", 1 + (!!(mmr3 & 2)));
+	dump_par_pdr(cnsl, b, ADDR_PDR_SV_START,       ADDR_PAR_SV_START,       "supervisor i-space", 0);
+	dump_par_pdr(cnsl, b, ADDR_PDR_SV_START + 020, ADDR_PAR_SV_START + 020, "supervisor d-space", 1 + (!!(mmr3 & 2)));
 
-	dump_par_pdr(cnsl, b, 0172300, 0172340, "kernel i-space", 0);
-	dump_par_pdr(cnsl, b, 0172320, 0172360, "kernel d-space", 1 + (!!(mmr3 & 4)));
+	dump_par_pdr(cnsl, b, ADDR_PDR_K_START,       ADDR_PAR_K_START,       "kernel i-space", 0);
+	dump_par_pdr(cnsl, b, ADDR_PDR_K_START + 020, ADDR_PAR_K_START + 020, "kernel d-space", 1 + (!!(mmr3 & 4)));
 
-	dump_par_pdr(cnsl, b, 0177600, 0177640, "user i-space", 0);
-	dump_par_pdr(cnsl, b, 0177620, 0177660, "user d-space", 1 + (!!(mmr3 & 1)));
+	dump_par_pdr(cnsl, b, ADDR_PDR_U_START,       ADDR_PAR_U_START,       "user i-space", 0);
+	dump_par_pdr(cnsl, b, ADDR_PDR_U_START + 020, ADDR_PAR_U_START + 020, "user d-space", 1 + (!!(mmr3 & 1)));
 }
 
 void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const stop_event, const bool tracing_in)
