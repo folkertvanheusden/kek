@@ -12,10 +12,10 @@
 #include "esp32.h"
 #endif
 
-#define RL02_CSR 0174400  // control status register
-#define RL02_BAR 0174402  // bus address register
-#define RL02_DAR 0174404  // disk address register
-#define RL02_MPR 0174406  // multi purpose register
+#define RL02_CSR 0774400  // control status register
+#define RL02_BAR 0774402  // bus address register
+#define RL02_DAR 0774404  // disk address register
+#define RL02_MPR 0774406  // multi purpose register
 #define RL02_BASE  RL02_CSR
 #define RL02_END  (RL02_MPR + 2)
 
@@ -43,9 +43,9 @@ public:
 	rl02(const std::vector<std::string> & files, bus *const b, std::atomic_bool *const disk_read_acitivity, std::atomic_bool *const disk_write_acitivity);
 	virtual ~rl02();
 
-	uint8_t  readByte(const uint16_t addr);
-	uint16_t readWord(const uint16_t addr);
+	uint8_t  readByte(const uint32_t addr);
+	uint16_t readWord(const uint32_t addr);
 
-	void writeByte(const uint16_t addr, const uint8_t  v);
-	void writeWord(const uint16_t addr, const uint16_t v);
+	void writeByte(const uint32_t addr, const uint8_t  v);
+	void writeWord(const uint32_t addr, const uint16_t v);
 };

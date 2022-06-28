@@ -60,7 +60,7 @@ rl02::~rl02()
 	}
 }
 
-uint8_t rl02::readByte(const uint16_t addr)
+uint8_t rl02::readByte(const uint32_t addr)
 {
 	uint16_t v = readWord(addr & ~1);
 
@@ -70,7 +70,7 @@ uint8_t rl02::readByte(const uint16_t addr)
 	return v;
 }
 
-uint16_t rl02::readWord(const uint16_t addr)
+uint16_t rl02::readWord(const uint32_t addr)
 {
 	const int reg = (addr - RL02_BASE) / 2;
 
@@ -88,7 +88,7 @@ uint16_t rl02::readWord(const uint16_t addr)
 	return value;
 }
 
-void rl02::writeByte(const uint16_t addr, const uint8_t v)
+void rl02::writeByte(const uint32_t addr, const uint8_t v)
 {
 	uint16_t vtemp = registers[(addr - RL02_BASE) / 2];
 
@@ -114,7 +114,7 @@ uint32_t rl02::calcOffset(const uint16_t da)
 	return offset;
 }
 
-void rl02::writeWord(const uint16_t addr, uint16_t v)
+void rl02::writeWord(const uint32_t addr, uint16_t v)
 {
 #if defined(ESP32)
 	digitalWrite(LED_BUILTIN, LOW);

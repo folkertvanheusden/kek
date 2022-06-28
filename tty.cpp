@@ -26,7 +26,7 @@ tty::~tty()
 {
 }
 
-uint8_t tty::readByte(const uint16_t addr)
+uint8_t tty::readByte(const uint32_t addr)
 {
 	uint16_t v = readWord(addr & ~1);
 
@@ -36,7 +36,7 @@ uint8_t tty::readByte(const uint16_t addr)
 	return v;
 }
 
-uint16_t tty::readWord(const uint16_t addr)
+uint16_t tty::readWord(const uint32_t addr)
 {
 	const int reg = (addr - PDP11TTY_BASE) / 2;
 	uint16_t vtemp = registers[reg];
@@ -75,7 +75,7 @@ uint16_t tty::readWord(const uint16_t addr)
 	return vtemp;
 }
 
-void tty::writeByte(const uint16_t addr, const uint8_t v)
+void tty::writeByte(const uint32_t addr, const uint8_t v)
 {
 	uint16_t vtemp = registers[(addr - PDP11TTY_BASE) / 2];
 	
@@ -91,7 +91,7 @@ void tty::writeByte(const uint16_t addr, const uint8_t v)
 	writeWord(addr, vtemp);
 }
 
-void tty::writeWord(const uint16_t addr, uint16_t v)
+void tty::writeWord(const uint32_t addr, uint16_t v)
 {
 	const int reg = (addr - PDP11TTY_BASE) / 2;
 

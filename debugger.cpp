@@ -74,7 +74,7 @@ std::map<std::string, std::string> split(const std::vector<std::string> & kv_arr
 	return out;
 }
 
-void dump_par_pdr(console *const cnsl, bus *const b, const uint16_t pdrs, const uint16_t pars, const std::string & name, const int state)
+void dump_par_pdr(console *const cnsl, bus *const b, const uint32_t pdrs, const uint32_t pars, const std::string & name, const int state)
 {
 	if (state == 0 || state == 2)
 		cnsl->put_string_lf(name);

@@ -221,16 +221,6 @@ int main(int argc, char *argv[])
 //	c->setRegister(7, 0);
 
 //load_p11_x11(b, "/home/folkert/Projects/PDP-11/work/p11-2.10i/Tests/mtpi.x11");
-
-
-	b->write(0172340, true, 0x34, false);
-	b->write(0172341, true, 0x12, false);
-	printf("%04x\n", b->read(0172340, false, false, true));
-	printf("%04x\n", b->read(0172340, true, false, true));
-	printf("%04x\n", b->read(0172341, true, false, true));
-	b->write(0172341, true, 0x88, false);
-	printf("%04x\n", b->read(0172340, false, false, true));
-	return 0;
 #endif
 
 	kw11_l *lf = new kw11_l(b, cnsl);
