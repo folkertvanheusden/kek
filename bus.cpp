@@ -51,13 +51,35 @@ void bus::init()
 	MMR3 = 0;
 }
 
+uint16_t bus::read_pdr(const uint32_t a, const int run_mode, const bool word_mode, const bool peek_only)
+{
+	bool is_11_34 = c->get_34();
+	int      page = (a >> 1) & 7;
+	bool     is_d = is_11_34 ? false : (a & 16);
+	uint16_t t    = pages[run_mode][is_d][page].pdr;
+
+	DOLOG(debug, !peek_only, "read run-mode %d: %c PDR for %d: %o", run_mode, is_d ? 'D' : 'I', page, t);
+
+	return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
+}
+
+uint16_t bus::read_par(const uint32_t a, const int run_mode, const bool word_mode, const bool peek_only)
+{
+	bool is_11_34 = c->get_34();
+	int      page = (a >> 1) & 7;
+	bool     is_d = is_11_34 ? false : (a & 16);
+	uint16_t t    = pages[run_mode][is_d][page].par;
+
+	DOLOG(debug, !peek_only, "read run-mode %d: %c PAR for %d: %o (phys: %07o)", run_mode, is_d ? 'D' : 'I', page, t, t * 64);
+
+	return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
+}
+
 uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, const bool peek_only)
 {
 	uint16_t temp = 0;
 
 	if (a >= 0160000) {
-		bool is_11_34 = c->get_34();
-
 		if (word_mode)
 			DOLOG(debug, false, "READ I/O %06o in byte mode", a);
 
@@ -93,48 +115,18 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 		}
 
 		/// MMU ///
-		if (a >= 0172200 && a < 0172240) {
-			int      page = (a >> 1) & 7;
-			bool     is_d = is_11_34 ? false : (a & 16);
-			uint16_t t    = pages[001][is_d][page].pdr;
-			DOLOG(debug, !peek_only, "read supervisor %c PDR for %d: %o", is_d ? 'D' : 'I', page, t);
-			return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
-		}
-		else if (a >= 0172240 && a < 0172300) {
-			int      page = (a >> 1) & 7;
-			bool     is_d = is_11_34 ? false : (a & 16);
-			uint16_t t    = pages[001][is_d][page].par;
-			DOLOG(debug, !peek_only, "read supervisor %c PAR for %d: %o (phys: %07o)", is_d ? 'D' : 'I', page, t, t * 64);
-			return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
-		}
-		else if (a >= 0172300 && a < 0172340) {
-			int      page = (a >> 1) & 7;
-			bool     is_d = is_11_34 ? false : (a & 16);
-			uint16_t t    = pages[000][is_d][page].pdr;
-			DOLOG(debug, !peek_only, "read kernel %c PDR for %d: %o", is_d ? 'D' : 'I', page, t);
-			return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
-		}
-		else if (a >= 0172340 && a < 0172400) {
-			int      page = (a >> 1) & 7;
-			bool     is_d = is_11_34 ? false : (a & 16);
-			uint16_t t    = pages[000][is_d][page].par;
-			DOLOG(debug, !peek_only, "read kernel %c PAR for %d: %o (phys: %07o)", is_d ? 'D' : 'I', page, t, t * 64);
-			return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
-		}
-		else if (a >= 0177600 && a < 0177640) {
-			int      page = (a >> 1) & 7;
-			bool     is_d = is_11_34 ? false : (a & 16);
-			uint16_t t    = pages[003][is_d][page].pdr;
-			DOLOG(debug, !peek_only, "read userspace %c PDR for %d: %o", is_d ? 'D' : 'I', page, t);
-			return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
-		}
-		else if (a >= 0177640 && a < 0177700) {
-			int      page = (a >> 1) & 7;
-			bool     is_d = is_11_34 ? false : (a & 16);
-			uint16_t t    = pages[003][is_d][page].par;
-			DOLOG(debug, !peek_only, "read userspace %c PAR for %d: %o (phys: %07o)", is_d ? 'D' : 'I', page, t, t * 64);
-			return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
-		}
+		if (a >= 0172200 && a < 0172240)
+			return read_pdr(a, 1, word_mode, peek_only);
+		else if (a >= 0172240 && a < 0172300)
+			return read_par(a, 1, word_mode, peek_only);
+		else if (a >= 0172300 && a < 0172340)
+			return read_pdr(a, 0, word_mode, peek_only);
+		else if (a >= 0172340 && a < 0172400)
+			return read_par(a, 0, word_mode, peek_only);
+		else if (a >= 0177600 && a < 0177640)
+			return read_pdr(a, 3, word_mode, peek_only);
+		else if (a >= 0177640 && a < 0177700)
+			return read_par(a, 3, word_mode, peek_only);
 		///////////
 
 		if (word_mode) {
@@ -493,6 +485,48 @@ void bus::addToMMR1(const int8_t delta, const uint8_t reg)
 	MMR1 |= reg;
 }
 
+void bus::write_pdr(const uint32_t a, const int run_mode, const uint16_t value, const bool word_mode)
+{
+	bool is_11_34 = c->get_34();
+	bool is_d = is_11_34 ? false : (a & 16);
+	int  page = (a >> 1) & 7;
+
+	if (word_mode) {
+		a & 1 ? (pages[run_mode][is_d][page].pdr &= 0xff,   pages[run_mode][is_d][page].pdr |= value << 8) :
+			(pages[run_mode][is_d][page].pdr &= 0xff00, pages[run_mode][is_d][page].pdr |= value);
+	}
+	else {
+		pages[run_mode][is_d][page].pdr = value;
+	}
+
+	if (is_11_34)  // 11/34 has no cache bit
+		pages[run_mode][is_d][page].pdr &= 077416;
+	else
+		pages[run_mode][is_d][page].pdr &= ~(128 + 64 + 32 + 16);  // set bit 4 & 5 to 0 as they are unused and A/W are set to 0 by writes
+
+	DOLOG(debug, true, "write run-mode %d: %c PDR for %d: %o [%d]", run_mode, is_d ? 'D' : 'I', page, value, word_mode);
+}
+
+void bus::write_par(const uint32_t a, const int run_mode, const uint16_t value, const bool word_mode)
+{
+	bool is_11_34 = c->get_34();
+	bool is_d = is_11_34 ? false : (a & 16);
+	int  page = (a >> 1) & 7;
+
+	if (word_mode) {
+		a & 1 ? (pages[run_mode][is_d][page].par &= 0xff,   pages[run_mode][is_d][page].par |= value << 8) :
+			(pages[run_mode][is_d][page].par &= 0xff00, pages[run_mode][is_d][page].par |= value);
+	}
+	else {
+		pages[run_mode][is_d][page].par = value;
+	}
+
+	if (is_11_34)  // 11/34 has 12 bit PARs
+		pages[run_mode][is_d][page].par &= 4095;
+
+	DOLOG(debug, true, "write run-mode %d: %c PAR for %d: %o (%07o)", run_mode, is_d ? 'D' : 'I', page, word_mode ? value & 0xff : value, pages[run_mode][is_d][page].par * 64);
+}
+
 void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bool use_prev)
 {
 	int  run_mode = (c->getPSW() >> (use_prev ? 12 : 14)) & 3;
@@ -505,8 +539,6 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 	}
 
 	if (a >= 0160000) {
-		bool is_11_34 = c->get_34();
-
 		if (word_mode) {
 			assert(value < 256);
 			DOLOG(debug, true, "WRITE I/O %06o in byte mode", a);
@@ -646,127 +678,31 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 		/// MMU ///
 		// supervisor
 		if (a >= 0172200 && a < 0172240) {
-			bool is_d = is_11_34 ? false : (a & 16);
-			int  page = (a >> 1) & 7;
-
-			if (word_mode) {
-				a & 1 ? (pages[001][is_d][page].pdr &= 0xff,   pages[001][is_d][page].pdr |= value << 8) :
-					(pages[001][is_d][page].pdr &= 0xff00, pages[001][is_d][page].pdr |= value);
-			}
-			else {
-				pages[001][is_d][page].pdr = value;
-			}
-
-			if (is_11_34)  // 11/34 has no cache bit
-				pages[001][is_d][page].pdr &= 077416;
-			else
-				pages[001][is_d][page].pdr &= ~(128 + 64 + 32 + 16);  // set bit 4 & 5 to 0 as they are unused and A/W are set to 0 by writes
-
-			DOLOG(debug, true, "write supervisor %c PDR for %d: %o [%d]", is_d ? 'D' : 'I', page, value, word_mode);
-
+			write_pdr(a, 1, value, word_mode);
 			return;
 		}
 		if (a >= 0172240 && a < 0172300) {
-			bool is_d = is_11_34 ? false : (a & 16);
-			int  page = (a >> 1) & 7;
-
-			if (word_mode) {
-				a & 1 ? (pages[001][is_d][page].par &= 0xff,   pages[001][is_d][page].par |= value << 8) :
-					(pages[001][is_d][page].par &= 0xff00, pages[001][is_d][page].par |= value);
-			}
-			else {
-				pages[001][is_d][page].par = value;
-			}
-
-			if (is_11_34)  // 11/34 has 12 bit PARs
-				pages[001][is_d][page].par &= 4095;
-
-			DOLOG(debug, true, "write supervisor %c PAR for %d: %o (%07o)", is_d ? 'D' : 'I', page, word_mode ? value & 0xff : value, pages[001][is_d][page].par * 64);
-
+			write_par(a, 1, value, word_mode);
 			return;
 		}
 
 		// kernel
 		if (a >= 0172300 && a < 0172340) {
-			bool is_d = is_11_34 ? false : (a & 16);
-			int  page = (a >> 1) & 7;
-
-			if (word_mode) {
-				a & 1 ? (pages[000][is_d][page].pdr &= 0xff,   pages[000][is_d][page].pdr |= value << 8) :
-					(pages[000][is_d][page].pdr &= 0xff00, pages[000][is_d][page].pdr |= value);
-			}
-			else {
-				pages[000][is_d][page].pdr = value;
-			}
-
-			if (is_11_34)  // 11/34 has no cache bit
-				pages[000][is_d][page].pdr &= 077416;
-			else
-				pages[000][is_d][page].pdr &= ~(128 + 64 + 32 + 16);  // set bit 4 & 5 to 0 as they are unused and A/W are set to 0 by writes
-
-			DOLOG(debug, true, "write kernel %c PDR for %d: %o [%d]", is_d ? 'D' : 'I', page, value, word_mode);
-
+			write_pdr(a, 0, value, word_mode);
 			return;
 		}
 		if (a >= 0172340 && a < 0172400) {
-			bool is_d = is_11_34 ? false : (a & 16);
-			int  page = (a >> 1) & 7;
-
-			if (word_mode) {
-				a & 1 ? (pages[000][is_d][page].par &= 0xff,   pages[000][is_d][page].par |= value << 8) :
-					(pages[000][is_d][page].par &= 0xff00, pages[000][is_d][page].par |= value);
-			}
-			else {
-				pages[000][is_d][page].par = value;
-			}
-
-			if (is_11_34)  // 11/34 has 12 bit PARs
-				pages[000][is_d][page].par &= 4095;
-
-			DOLOG(debug, true, "write kernel %c PAR for %d: %o (%07o)", is_d ? 'D' : 'I', page, word_mode ? value & 0xff : value, pages[000][is_d][page].par * 64);
-
+			write_par(a, 0, value, word_mode);
 			return;
 		}
 
 		// user
 		if (a >= 0177600 && a < 0177640) {
-			bool is_d = is_11_34 ? false : (a & 16);
-			int  page = (a >> 1) & 7;
-
-			if (word_mode) {
-				a & 1 ? (pages[003][is_d][page].pdr &= 0xff,   pages[003][is_d][page].pdr |= value << 8) :
-					(pages[003][is_d][page].pdr &= 0xff00, pages[003][is_d][page].pdr |= value);
-			}
-			else {
-				pages[003][is_d][page].pdr = value;
-			}
-
-			if (is_11_34)  // 11/34 has no cache bit
-				pages[003][is_d][page].pdr &= 077416;
-			else
-				pages[003][is_d][page].pdr &= ~(128 + 64 + 32 + 16);  // set bit 4 & 5 to 0 as they are unused and A/W are set to 0 by writes
-
-			DOLOG(debug, true, "write user %c PDR for %d: %o [%d]", is_d ? 'D' : 'I', page, value, word_mode);
-
+			write_pdr(a, 3, value, word_mode);
 			return;
 		}
 		if (a >= 0177640 && a < 0177700) {
-			bool is_d = is_11_34 ? false : (a & 16);
-			int  page = (a >> 1) & 7;
-
-			if (word_mode) {
-				a & 1 ? (pages[003][is_d][page].par &= 0xff,   pages[003][is_d][page].par |= value << 8) :
-					(pages[003][is_d][page].par &= 0xff00, pages[003][is_d][page].par |= value);
-			}
-			else {
-				pages[003][is_d][page].par = value;
-			}
-
-			if (is_11_34)  // 11/34 has 12 bit PARs
-				pages[003][is_d][page].par &= 4095;
-
-			DOLOG(debug, true, "write user %c PAR for %d: %o (%07o)", is_d ? 'D' : 'I', page, word_mode ? value & 0xff : value, pages[003][is_d][page].par * 64);
-
+			write_par(a, 3, value, word_mode);
 			return;
 		}
 		////
