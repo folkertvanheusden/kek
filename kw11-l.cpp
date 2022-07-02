@@ -43,18 +43,10 @@ void kw11_l::operator()()
 			if (b->get_lf_crs() & 64)
 				b->getCpu()->queue_interrupt(6, 0100);
 
-#if defined(ESP32)
-			vTaskDelay(100 / portTICK_RATE_MS);
-#else
 			myusleep(1000000 / 50);  // 20ms
-#endif
 		}
 		else {
-#if defined(ESP32)
-			vTaskDelay(100 / portTICK_RATE_MS);
-#else
 			myusleep(1000000 / 10);  // 100ms
-#endif
 		}
 	}
 }

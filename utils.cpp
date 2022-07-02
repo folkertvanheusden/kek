@@ -72,10 +72,20 @@ int parity(int v)
 void myusleep(uint64_t us)
 {
 #if defined(ESP32)
-	if (us >= 1000)
-		vTaskDelay(us / 1000 / portTICK_RATE_MS);
-	else
-		delayMicroseconds(us);
+	for(;;) {
+		uint64_t n_ms = us / 1000;
+
+		if (n_ms >= portTICK_RATE_MS) {
+			vTaskDelay(n_ms / portTICK_RATE_MS);
+
+			us -= n_ms * 1000;
+		}
+		else {
+			delayMicroseconds(us);
+
+			break;
+		}
+	}
 #else
 	struct timespec req;
 
