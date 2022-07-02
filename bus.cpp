@@ -716,7 +716,7 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 
 		///////////
 
-		DOLOG(debug, true, "UNHANDLED write %o(%c): %o", a, word_mode ? 'B' : ' ', value);
+		DOLOG(debug, true, "UNHANDLED write %o(%c): %o", a, word_mode ? 'B' : 'W', value);
 
 //		c -> busError();
 

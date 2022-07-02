@@ -188,11 +188,19 @@ int main(int argc, char *argv[])
 		cnsl = new console_posix(&event, b);
 	}
 
-	if (rk05_files.empty() == false)
-		b->add_rk05(new rk05(rk05_files, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
+	if (rk05_files.empty() == false) {
+		if (bootloader != BL_RK05)
+			DOLOG(warning, true, "Note: loading RK05 with no RK05 bootloader selected");
 
-	if (rl02_files.empty() == false)
+		b->add_rk05(new rk05(rk05_files, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
+	}
+
+	if (rl02_files.empty() == false) {
+		if (bootloader != BL_RL02)
+			DOLOG(warning, true, "Note: loading RL02 with no RL02 bootloader selected");
+
 		b->add_rl02(new rl02(rl02_files, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
+	}
 
 	if (bootloader != BL_NONE)
 		setBootLoader(b, bootloader);
