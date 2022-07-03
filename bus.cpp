@@ -440,6 +440,8 @@ uint32_t bus::virt_to_phys(const uint16_t av, const run_mode_sel_t rms)
 			m_offset &= 0x3ffff;
 	}
 
+	DOLOG(debug, true, "Mapping %06o to %08o", av, m_offset);
+
 	return m_offset;
 }
 
