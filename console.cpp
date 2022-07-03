@@ -173,6 +173,10 @@ void console::put_char(const char c)
 		if (debug_buffer.empty() == false) {
 			DOLOG(::debug, true, "TTY: %s", debug_buffer.c_str());
 
+			FILE *fh = fopen("/home/folkert/kek2.dat", "a+");
+			fprintf(fh, "TTY: %s\n", debug_buffer.c_str());
+			fclose(fh);
+
 			debug_buffer.clear();
 		}
 

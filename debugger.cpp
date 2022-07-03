@@ -287,6 +287,13 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 				break;
 			}
 
+#if 0
+			if (c->getPC() == 002230 && c->getRegister(0) == 007600 && c->getRegister(4) == 007600) {
+				cnsl->put_string_lf("Gebroken punt");
+				break;
+			}
+#endif
+
 			c->step_b();
 
 			if (single_step)

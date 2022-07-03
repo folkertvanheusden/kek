@@ -233,7 +233,7 @@ int main(int argc, char *argv[])
 //load_p11_x11(b, "/home/folkert/Projects/PDP-11/work/p11-2.10i/Tests/mtpi.x11");
 #endif
 
-	kw11_l *lf = new kw11_l(b, cnsl);
+	kw11_l *lf = nullptr;  // new kw11_l(b, cnsl);
 
 	cnsl->start_thread();
 

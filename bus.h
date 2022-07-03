@@ -107,6 +107,8 @@ public:
 
 	tty     *getTty() { return this->tty_; }
 
+	page_t *get_page_t(int mode, int nr) { return &pages[mode][0][nr]; }
+
 	void     init();  // invoked by 'RESET' command
 
 	void     set_lf_crs_b7();

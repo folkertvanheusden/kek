@@ -325,6 +325,7 @@ uint16_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t wm
 			temp_out = b->read_phys(b->virt_to_phys(temp_addr, rms), wm, rms);
 
 			addRegister(reg, rms, wm == WM_WORD || reg == 7 || reg == 6 ? 2 : 1);
+
 			return temp_out;
 
 		case 3:
@@ -467,33 +468,33 @@ std::pair<uint32_t, std::optional<uint16_t> > cpu::getGAMAddress(const uint8_t m
 
 			return { ADDR_USER_R + reg, { } };
 		case 1:
-			temp = getRegister(reg, set, rms);
+			temp = getRegister(reg, set, RM_CUR);
 			break;
 		case 2:
 			temp = getRegister(reg, set, RM_CUR);
 			addRegister(reg, RM_CUR, wm == WM_WORD || reg == 6 || reg == 7 ? 2 : 1);
 			break;
 		case 3:
-			temp = b->read_phys(getRegister(reg, set, rms), WM_WORD);
-			addRegister(reg, rms, 2);
+			temp = b->read_phys(getRegister(reg, set, RM_CUR), WM_WORD);
+			addRegister(reg, RM_CUR, 2);
 			break;
 		case 4:
-			addRegister(reg, rms, wm == WM_WORD || reg == 6 || reg == 7 ? -2 : -1);
-			temp = getRegister(reg, set, rms);
+			addRegister(reg, RM_CUR, wm == WM_WORD || reg == 6 || reg == 7 ? -2 : -1);
+			temp = getRegister(reg, set, RM_CUR);
 			break;
 		case 5:
-			addRegister(reg, rms, -2);
-			temp = b->read_phys(getRegister(reg, set, rms), WM_WORD);
+			addRegister(reg, RM_CUR, -2);
+			temp = b->read_phys(getRegister(reg, set, RM_CUR), WM_WORD);
 			break;
 		case 6:
 			next_word = b->read_phys(getPC(), WM_WORD);
-			addRegister(7, rms, 2);
-			temp = getRegister(reg, set, rms) + next_word;
+			addRegister(7, RM_CUR, 2);
+			temp = getRegister(reg, set, RM_CUR) + next_word;
 			break;
 		case 7:
 			next_word = b->read_phys(getPC(), WM_WORD);
-			addRegister(7, rms, 2);
-			temp = b->read_phys(getRegister(reg, set, rms) + next_word, WM_WORD);
+			addRegister(7, RM_CUR, 2);
+			temp = b->read_phys(getRegister(reg, set, RM_CUR) + next_word, WM_WORD);
 			break;
 	}
 
@@ -1379,6 +1380,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 						 set_flags = a.first != ADDR_PSW;
 
+						 // find phys addr in prev space
 						 uint32_t phys_addr = b->virt_to_phys(a.second.value(), RM_PREV);
 
 						 // read from previous space
@@ -2327,7 +2329,20 @@ void cpu::step_b()
 	try {
 		uint32_t phys_pc_addr = b->virt_to_phys(temp_pc, RM_CUR);
 
+
 		uint16_t instr = b->read_phys(phys_pc_addr, WM_WORD);
+
+		FILE *fh = fopen("/home/folkert/kek2.dat", "a+");
+/*		fprintf(fh, "R0: %06o, R1: %06o, R2: %06o, R3: %06o, R4: %06o, R5: %06o, R6K: %06o, R6U: %06o, PC: %06o, instr: %06o\n",
+				getRegister(0), getRegister(1), getRegister(2), getRegister(3), getRegister(4), getRegister(5),
+				sp[0], sp[3],
+				temp_pc,
+				instr); */
+		fprintf(fh, "R0: %06o, R1: %06o, R2: %06o, R3: %06o, R4: %06o, R5: %06o, PC: %06o, instr: %06o\n",
+				getRegister(0), getRegister(1), getRegister(2), getRegister(3), getRegister(4), getRegister(5),
+				temp_pc,
+				instr);
+		fclose(fh);
 
 		addRegister(7, RM_CUR, 2);
 
