@@ -49,6 +49,17 @@ void closelog()
 	lfh = nullptr;
 }
 
+void flushlog()
+{
+	if (lfh)
+		fflush(lfh);
+}
+
+void initlog()
+{
+	atexit(closelog);
+}
+
 void dolog(const log_level_t ll, const char *fmt, ...)
 {
 	if ((ll < log_level_file && ll < log_level_screen) || !logfile)

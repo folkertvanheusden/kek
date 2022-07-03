@@ -56,6 +56,8 @@ void help()
 
 int main(int argc, char *argv[])
 {
+	initlog();
+
 	//setlocale(LC_ALL, "");
 
 	std::vector<std::string> rk05_files;
