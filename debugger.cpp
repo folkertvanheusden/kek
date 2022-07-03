@@ -84,8 +84,8 @@ void dump_par_pdr(console *const cnsl, bus *const b, const uint32_t pdrs, const 
 	cnsl->put_string_lf("   PAR             PDR");
 
 	for(int i=0; i<8; i++) {
-		uint16_t par_value = b->read(pars + i * 2, false, false, true);
-		uint16_t pdr_value = b->read(pdrs + i * 2, false, false, true);
+		uint16_t par_value = b->read_phys(pars + i * 2, WM_WORD, true);
+		uint16_t pdr_value = b->read_phys(pdrs + i * 2, WM_WORD, true);
 
 		uint16_t pdr_len   = (((pdr_value >> 8) & 127) + 1) * 64;
 
@@ -214,18 +214,20 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 			if (parts.size() != 3)
 				cnsl->put_string_lf("parameter missing");
 			else {
-				int addr = std::stoi(parts[2], nullptr, 8);
+				uint16_t virtual_addr  = std::stoi(parts[2], nullptr, 8);
 				int val  = -1;
 
+				uint32_t physical_addr = b->virt_to_phys(virtual_addr, RM_CUR);
+
 				if (parts[1] == "B" || parts[1] == "b")
-					val = b->read(addr, true, false, true);
+					val = b->read_phys(physical_addr, WM_BYTE, true);
 				else if (parts[1] == "W" || parts[1] == "w")
-					val = b->read(addr, false, false, true);
+					val = b->read_phys(physical_addr, WM_WORD, true);
 				else
 					cnsl->put_string_lf("expected b or w");
 
 				if (val != -1)
-					cnsl->put_string_lf(format("value at %06o, octal: %o, hex: %x, dec: %d\n", addr, val, val, val));
+					cnsl->put_string_lf(format("value at %06o, octal: %o, hex: %x, dec: %d\n", virtual_addr, val, val, val));
 			}
 
 			continue;

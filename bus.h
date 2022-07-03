@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include "gen.h"
 #include "tm-11.h"
 #include "rk05.h"
 #include "rl02.h"
@@ -82,10 +83,10 @@ private:
 
 	uint16_t console_switches { 0 };
 
-	uint16_t read_pdr (const uint32_t a, const int run_mode, const bool word_mode, const bool peek_only);
-	uint16_t read_par (const uint32_t a, const int run_mode, const bool word_mode, const bool peek_only);
-	void     write_pdr(const uint32_t a, const int run_mode, const uint16_t value, const bool word_mode);
-	void     write_par(const uint32_t a, const int run_mode, const uint16_t value, const bool word_mode);
+	uint16_t read_pdr (const uint32_t a, const int run_mode, const word_mode_t wm, const bool peek_only);
+	uint16_t read_par (const uint32_t a, const int run_mode, const word_mode_t wm, const bool peek_only);
+	void     write_pdr(const uint32_t a, const int run_mode, const uint16_t value, const word_mode_t wm);
+	void     write_par(const uint32_t a, const int run_mode, const uint16_t value, const word_mode_t wm);
 
 public:
 	bus();
@@ -102,27 +103,23 @@ public:
 	void add_rl02(rl02 *rl02_) { this -> rl02_ = rl02_; }
 	void add_tty(tty *tty_)    { this -> tty_ = tty_; }
 
-	cpu *getCpu() { return this->c; }
+	cpu     *getCpu() { return this->c; }
 
-	tty *getTty() { return this->tty_; }
+	tty     *getTty() { return this->tty_; }
 
-	void init();  // invoked by 'RESET' command
+	void     init();  // invoked by 'RESET' command
 
-	void    set_lf_crs_b7();
-	uint8_t get_lf_crs();
+	void     set_lf_crs_b7();
+	uint8_t  get_lf_crs();
 
-	uint16_t read(const uint16_t a, const bool word_mode, const bool use_prev, const bool peek_only=false);
-	uint16_t readByte(const uint16_t a) { return read(a, true, false); }
-	uint16_t readWord(const uint16_t a);
-	uint16_t peekWord(const uint16_t a);
+	uint16_t peekWord  (const uint16_t a);
+	uint16_t read_phys (const uint32_t a, const word_mode_t wm, const bool peek_only=false);
+	void     write_phys(const uint32_t a, const word_mode_t wm, const uint16_t value);
+	void     register_write(const uint16_t virt_addr, const int run_mode);
 
-	uint16_t readUnibusByte(const uint16_t a);
-
-	void write(const uint16_t a, const bool word_mode, uint16_t value, const bool use_prev);
-	void writeByte(const uint16_t a, const uint8_t value) { return write(a, true, value, false); }
-	void writeWord(const uint16_t a, const uint16_t value);
-
-	void writeUnibusByte(const uint16_t a, const uint8_t value);
+	uint16_t read_cur_word(const uint16_t a);
+	void     write_cur_word(const uint16_t a, const uint16_t v);
+	void     write_cur_byte(const uint16_t a, const uint8_t  v);
 
 	uint16_t getMMR0() { return MMR0; }
 	uint16_t getMMR1() { return MMR1; }
@@ -137,5 +134,7 @@ public:
 
 	uint16_t get_switch_register() const { return switch_register; }
 
-	uint32_t calculate_physical_address(const int run_mode, const uint16_t a, const bool trap_on_failure, const bool is_write, const bool peek_only, const bool word_mode);
+	void     check_bus(const uint16_t av, const word_mode_t wm, const bool is_write, const run_mode_sel_t rms);
+
+	uint32_t virt_to_phys(const uint16_t av, const run_mode_sel_t rms);
 };

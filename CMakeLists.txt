@@ -50,3 +50,5 @@ pkg_check_modules(PANEL REQUIRED panel)
 target_link_libraries(kek ${PANEL_LIBRARIES})
 target_include_directories(kek PUBLIC ${PANEL_INCLUDE_DIRS})
 target_compile_options(kek PUBLIC ${PANEL_CFLAGS_OTHER})
+
+#set_property(TARGET kek PROPERTY INTERPROCEDURAL_OPTIMIZATION True)

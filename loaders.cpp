@@ -16,7 +16,7 @@ void loadbin(bus *const b, uint16_t base, const char *const file)
 	FILE *fh = fopen(file, "rb");
 
 	while(!feof(fh))
-		b -> writeByte(base++, fgetc(fh));
+		b->write_cur_byte(base++, fgetc(fh));
 
 	fclose(fh);
 }
@@ -99,7 +99,7 @@ void setBootLoader(bus *const b, const bootloader_t which)
 	}
 
 	for(int i=0; i<size; i++)
-		b -> writeWord(offset + i * 2, bl[i]);
+		b -> write_cur_word(offset + i * 2, bl[i]);
 
 	c -> setRegister(7, offset);
 }
@@ -144,7 +144,7 @@ uint16_t loadTape(bus *const b, const std::string & file)
 			uint8_t c = fgetc(fh);
 
 			csum += c;
-			b -> writeByte(p++, c);
+			b -> write_cur_byte(p++, c);
 
 			if (p > end)
 				end = p;
@@ -180,7 +180,7 @@ void load_p11_x11(bus *const b, const std::string & file)
 		if (n) {
 			uint8_t byte = strtol(buffer, nullptr, 16);
 
-			b->writeByte(addr, byte);
+			b->write_cur_byte(addr, byte);
 
 			n--;
 

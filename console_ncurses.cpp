@@ -139,9 +139,9 @@ void console_ncurses::panel_update_thread()
 		int      run_mode      = current_PSW >> 14;
 
 		uint16_t current_PC    = c->getPC();
-		uint32_t full_addr     = b->calculate_physical_address(run_mode, current_PC, false, false, true, true);
+		uint32_t full_addr     = b->virt_to_phys(current_PC, RM_CUR);
 
-		uint16_t current_instr = b->readWord(current_PC);
+		uint16_t current_instr = b->read_phys(full_addr, WM_WORD, true);
 
 		auto data = c->disassemble(current_PC);
 
@@ -153,12 +153,12 @@ void console_ncurses::panel_update_thread()
 		wattron(w_panel->win, COLOR_PAIR(1 + run_mode));
 
 		for(uint8_t b=0; b<22; b++)
-			mvwprintw(w_panel->win, 0, 1 + 22 - b,      "%c", full_addr     & (1 << b) ? '1' : '0');
+			mvwprintw(w_panel->win, 0, 1 + 22 - b,      "%c", full_addr & (1 << b) ? '1' : '0');
 
 		wattron(w_panel->win, COLOR_PAIR(1));
 
 		for(uint8_t b=0; b<16; b++)
-			mvwprintw(w_panel->win, 1, 1 + 16 - b,      "%c", current_PSW   & (1 << b) ? '1' : '0');
+			mvwprintw(w_panel->win, 1, 1 + 16 - b,      "%c", current_PSW & (1 << b) ? '1' : '0');
 
 		for(uint8_t b=0; b<16; b++)
 			mvwprintw(w_panel->win, 1, 1 + 16 - b + 17, "%c", current_instr & (1 << b) ? '1' : '0');

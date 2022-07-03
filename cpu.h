@@ -5,11 +5,13 @@
 #include <assert.h>
 #include <map>
 #include <mutex>
+#include <optional>
 #include <set>
 #include <stdint.h>
 #include <vector>
 
 #include "bus.h"
+
 
 class cpu
 {
@@ -39,13 +41,13 @@ private:
 
 	bool check_queued_interrupts();
 
-	uint16_t addRegister(const int nr, const bool prev_mode, const uint16_t value);
+	uint16_t addRegister(const int nr, const run_mode_sel_t rms, const uint16_t value);
 
-	void     addToMMR1(const uint8_t mode, const uint8_t reg, const bool word_mode);
-	uint16_t getGAMAddress(const uint8_t mode, const int reg, const bool word_mode, const bool MF_MT);
-	uint16_t getGAM(const uint8_t mode, const uint8_t reg, const bool word_mode, const bool MF_MT);
+	void     addToMMR1(const uint8_t mode, const uint8_t reg, const word_mode_t wm);
+	std::pair<uint32_t, std::optional<uint16_t> > getGAMAddress(const uint8_t mode, const int reg, const word_mode_t wm, const run_mode_sel_t rms);
+	uint16_t getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t wm, const run_mode_sel_t rms);
 	// returns false when flag registers should not be updated
-	bool     putGAM(const uint8_t mode, const int reg, const bool word_mode, const uint16_t value, const bool MF_FT);
+	bool     putGAM(const uint8_t mode, const int reg, const word_mode_t wm, const uint16_t value, const run_mode_sel_t rms);
 
 	bool double_operand_instructions(const uint16_t instr);
 	bool additional_double_operand_instructions(const uint16_t instr);
@@ -61,7 +63,7 @@ private:
 		uint16_t    work_value;
 	};
 
-	operand_parameters addressing_to_string(const uint8_t mode_register, const uint16_t pc, const bool word_mode) const;
+	operand_parameters addressing_to_string(const uint8_t mode_register, const uint16_t pc, const word_mode_t wm) const;
 
 public:
 	explicit cpu(bus *const b, std::atomic_uint32_t *const event);
@@ -125,17 +127,15 @@ public:
 	uint16_t getStackPointer(const int which) const { assert(which >= 0 && which < 4); return sp[which]; }
 	uint16_t getPC() const { return pc; }
 
-	void setRegister(const int nr, const bool reg_set, const bool prev_mode, const uint16_t value);
-	void setRegister(const int nr, const bool prev_mode, const uint16_t v) { setRegister(nr, (getPSW() >> 11) & 1, prev_mode, v); }
-	void setRegister(const int nr, const uint16_t v) { setRegister(nr, (getPSW() >> 11) & 1, false, v); }
+	void setRegister(const int nr, const bool reg_set, const run_mode_sel_t rms, const uint16_t value);
+	void setRegister(const int nr, const run_mode_sel_t rms, const uint16_t v) { setRegister(nr, (getPSW() >> 11) & 1, rms, v); }
+	void setRegister(const int nr, const uint16_t v) { setRegister(nr, (getPSW() >> 11) & 1, RM_CUR, v); }
 
-	void setRegisterLowByte(const int nr, const bool prev_mode, const uint16_t value);
+	void setRegisterLowByte(const int nr, const word_mode_t wm, const uint16_t value);
 
 	void setStackPointer(const int which, const uint16_t value) { assert(which >= 0 && which < 4); sp[which] = value; }
 	void setPC(const uint16_t value) { pc = value; }
 
-	uint16_t getRegister(const int nr, const int mode, const bool sp_prev_mode) const;
+	uint16_t getRegister(const int nr, const int mode, const run_mode_sel_t sp_rms) const;
 	uint16_t getRegister(const int nr) const;
-
-	bool put_result(const uint16_t a, const uint8_t dst_mode, const uint8_t dst_reg, const bool word_mode, const uint16_t value);
 };

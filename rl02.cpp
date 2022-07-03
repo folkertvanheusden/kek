@@ -198,7 +198,7 @@ void rl02::writeWord(const uint32_t addr, uint16_t v)
 #endif
 
 				for(uint32_t i=0; i<cur; i++, p++)
-					b->writeByte(p, xfer_buffer[i]);
+					b->write_phys(p, WM_BYTE, xfer_buffer[i]);
 
 				count -= cur;
 			}

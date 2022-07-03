@@ -156,7 +156,7 @@ void rk05::writeWord(const uint32_t addr, uint16_t v)
 
 				uint32_t p = reclen;
 				for(size_t i=0; i<reclen; i++)
-					xfer_buffer[i] = b->readUnibusByte(memoff + i);
+					xfer_buffer[i] = b->read_phys(memoff + i, WM_BYTE);
 
 #if defined(ESP32)
 				File32 *fh = fhs.at(device);
@@ -232,11 +232,8 @@ void rk05::writeWord(const uint32_t addr, uint16_t v)
 						DOLOG(debug, true, "RK05 fread error: %s", strerror(errno));
 #endif
 
-					for(uint32_t i=0; i<cur; i++) {
-						if (p < 0160000)
-							b -> writeUnibusByte(p, xfer_buffer[i]);
-						p++;
-					}
+					for(uint32_t i=0; i<cur; i++)
+						b->write_phys(p++, WM_BYTE, xfer_buffer[i]);
 
 					temp -= cur;
 				}

@@ -3,3 +3,7 @@
 #pragma once
 
 typedef enum { EVENT_NONE = 0, EVENT_HALT, EVENT_INTERRUPT, EVENT_TERMINATE } stop_event_t;
+
+typedef enum { WM_BYTE, WM_WORD } word_mode_t;
+
+typedef enum { RM_CUR, RM_PREV } run_mode_sel_t;
