@@ -1822,7 +1822,8 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 		// single_operand_instructions
 		switch(so_opcode) {
 			case 0b00000011:
-				text = "SWAB " + dst_text.operand;
+				if (!word_mode)
+					text = "SWAB " + dst_text.operand;
 				break;
 
 			case 0b000101000:
