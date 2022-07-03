@@ -865,6 +865,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 	switch(opcode) {
 		case 0b00000011: { // SWAB
+				   DOLOG(debug, true, "0b00000011: %d %d, wm: %d", dst_mode, dst_reg, wm);
 					 if (wm == WM_BYTE) // handled elsewhere
 						 return false;
 					 else {
@@ -888,6 +889,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 							 b->check_bus(a.second.value(), WM_WORD, true, RM_CUR);
 							 b->write_phys(a.first, WM_WORD, v);
+							 DOLOG(debug, true, "SWAB write %06o to %06o/%08o", v, a.second.value(), a.first);
 						 }
 
 						 if (set_flags) {
