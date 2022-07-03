@@ -411,8 +411,9 @@ bool cpu::putGAM(const uint8_t mode, const int reg, const word_mode_t wm, const 
 			break;
 		case 4:
 			addRegister(reg, rms, wm == WM_WORD || reg == 7 || reg == 6 ? -2 : -1);
+			addr = getRegister(reg, set, rms);
 			b->check_bus(addr, wm, true, RM_CUR);
-			b->write_phys(getRegister(reg, set, rms), wm, value);
+			b->write_phys(addr, wm, value);
 			break;
 		case 5:
 			addRegister(reg, rms, -2);
@@ -494,8 +495,6 @@ std::pair<uint32_t, std::optional<uint16_t> > cpu::getGAMAddress(const uint8_t m
 
 bool cpu::double_operand_instructions(const uint16_t instr)
 {
-	const word_mode_t wm = instr & 0x8000 ? WM_BYTE : WM_WORD;
-
 	const uint8_t operation = (instr >> 12) & 7;
 
 	if (operation == 0b000)
@@ -503,6 +502,8 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 
 	if (operation == 0b111)
 		return additional_double_operand_instructions(instr);
+
+	const word_mode_t wm = instr & 0x8000 ? WM_BYTE : WM_WORD;
 
 	const uint8_t src        = (instr >> 6) & 63;
 	const uint8_t src_mode   = (src >> 3) & 7;
