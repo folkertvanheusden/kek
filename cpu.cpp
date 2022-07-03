@@ -340,8 +340,10 @@ uint16_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t wm
 			return temp_out;
 		case 4:
 			addRegister(reg, rms, wm == WM_WORD || reg == 7 || reg == 6 ? -2 : -1);
+
 			temp_addr = getRegister(reg, set, rms);
 			b->check_bus(temp_addr, wm, false, rms);
+
 			return b->read_phys(b->virt_to_phys(temp_addr, rms), wm, rms);
 		case 5:
 			addRegister(reg, rms, -2);
@@ -468,8 +470,8 @@ std::pair<uint32_t, std::optional<uint16_t> > cpu::getGAMAddress(const uint8_t m
 			temp = getRegister(reg, set, rms);
 			break;
 		case 2:
-			temp = getRegister(reg, set, rms);
-			addRegister(reg, rms, wm == WM_WORD || reg == 6 || reg == 7 ? 2 : 1);
+			temp = getRegister(reg, set, RM_CUR);
+			addRegister(reg, RM_CUR, wm == WM_WORD || reg == 6 || reg == 7 ? 2 : 1);
 			break;
 		case 3:
 			temp = b->read_phys(getRegister(reg, set, rms), WM_WORD);
@@ -1414,7 +1416,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 						set_flags = a.first != ADDR_PSW;
 
-						b->check_bus(a.second.value(), WM_WORD, true, RM_CUR);
+						b->check_bus(a.second.value(), WM_WORD, true, RM_PREV);
 						b->write_phys(a.first, WM_WORD, v);
 					 }
 
