@@ -312,8 +312,10 @@ uint16_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t wm
 			return getRegister(reg, set, rms) & (wm == WM_BYTE ? 0xff : 0xffff);
 		case 1:
 			temp_addr = getRegister(reg, set, rms);
+
 			b->check_bus(temp_addr, wm, false, rms);
-			return b->read_phys(temp_addr, wm, rms);
+
+			return b->read_phys(b->virt_to_phys(temp_addr, rms), wm, rms);
 		case 2:
 			temp_addr = getRegister(reg, set, rms);
 
