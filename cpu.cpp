@@ -475,7 +475,9 @@ std::pair<uint32_t, std::optional<uint16_t> > cpu::getGAMAddress(const uint8_t m
 			addRegister(reg, RM_CUR, wm == WM_WORD || reg == 6 || reg == 7 ? 2 : 1);
 			break;
 		case 3:
-			temp = b->read_phys(getRegister(reg, set, RM_CUR), WM_WORD);
+			temp = getRegister(reg, set, RM_CUR);
+			b->check_bus(temp, wm, false, rms);
+			temp = b->read_phys(b->virt_to_phys(temp, rms), WM_WORD);
 			addRegister(reg, RM_CUR, 2);
 			break;
 		case 4:
@@ -484,17 +486,20 @@ std::pair<uint32_t, std::optional<uint16_t> > cpu::getGAMAddress(const uint8_t m
 			break;
 		case 5:
 			addRegister(reg, RM_CUR, -2);
-			temp = b->read_phys(getRegister(reg, set, RM_CUR), WM_WORD);
+			temp = getRegister(reg, set, RM_CUR);
+			b->check_bus(temp, wm, false, rms);
+			temp = b->read_phys(b->virt_to_phys(temp, rms), WM_WORD);
 			break;
 		case 6:
-			next_word = b->read_phys(getPC(), WM_WORD);
+			next_word = b->read_phys(b->virt_to_phys(getPC(), RM_CUR), WM_WORD);
 			addRegister(7, RM_CUR, 2);
 			temp = getRegister(reg, set, RM_CUR) + next_word;
 			break;
 		case 7:
-			next_word = b->read_phys(getPC(), WM_WORD);
+			next_word = b->read_phys(b->virt_to_phys(getPC(), RM_CUR), WM_WORD);
 			addRegister(7, RM_CUR, 2);
-			temp = b->read_phys(getRegister(reg, set, RM_CUR) + next_word, WM_WORD);
+			temp = getRegister(reg, set, RM_CUR) + next_word;
+			temp = b->read_phys(b->virt_to_phys(temp, RM_CUR), WM_WORD);
 			break;
 	}
 
