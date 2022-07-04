@@ -44,9 +44,11 @@ void setloguid(const int uid, const int gid)
 
 void closelog()
 {
-	fclose(lfh);
+	if (lfh) {
+		fclose(lfh);
 
-	lfh = nullptr;
+		lfh = nullptr;
+	}
 }
 
 void flushlog()
