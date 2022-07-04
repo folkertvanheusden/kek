@@ -1660,7 +1660,7 @@ bool cpu::misc_operations(const uint16_t instr)
 
 			uint16_t replacement_psw = popStack();
 
-			setPSW(replacement_psw, true);
+			setPSW(replacement_psw, psw >> 14);
 
 			return true;
 		}
