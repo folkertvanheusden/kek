@@ -196,8 +196,9 @@ uint16_t bus::read_phys(const uint32_t a, const word_mode_t wm, const bool peek_
 			}
 
 			if (a == ADDR_PSW) { // PSW
-				DOLOG(debug, !peek_only, "read PSW");
-				return c -> getPSW();
+				uint16_t temp = c->getPSW();
+				DOLOG(debug, !peek_only, "read PSW: %06x", temp);
+				return temp;
 			}
 
 			if (a == ADDR_STACKLIM) { // stack limit register

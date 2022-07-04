@@ -392,7 +392,8 @@ uint16_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t wm
 bool cpu::putGAM(const uint8_t mode, const int reg, const word_mode_t wm, const uint16_t value, const run_mode_sel_t rms)
 {
 	uint16_t next_word = 0;
-	int      addr      = -1;
+	uint16_t addr      = 0;
+	uint32_t phys_addr = ~1;
 
 	int      set       = getBitPSW(11);
 
@@ -403,45 +404,52 @@ bool cpu::putGAM(const uint8_t mode, const int reg, const word_mode_t wm, const 
 		case 1:
 			addr = getRegister(reg, set, rms);
 			b->check_bus(addr, wm, true, rms);
-			b->write_phys(b->virt_to_phys(addr, rms), wm, value);
+			phys_addr = b->virt_to_phys(addr, rms);
+			b->write_phys(phys_addr, wm, value);
 			break;
 		case 2:
 			addr = getRegister(reg, set, rms);
 			b->check_bus(addr, wm, true, rms);
-			b->write_phys(b->virt_to_phys(addr, rms), wm, value);
+			phys_addr = b->virt_to_phys(addr, rms);
+			b->write_phys(phys_addr, wm, value);
 			addRegister(reg, rms, wm == WM_WORD || reg == 7 || reg == 6 ? 2 : 1);
 			break;
 		case 3:
 			addr = b->read_phys(getRegister(reg, set, rms), WM_WORD);
 			b->check_bus(addr, wm, true, rms);
-			b->write_phys(b->virt_to_phys(addr, rms), wm, value);
+			phys_addr = b->virt_to_phys(addr, rms);
+			b->write_phys(phys_addr, wm, value);
 			addRegister(reg, rms, 2);
 			break;
 		case 4:
 			addRegister(reg, rms, wm == WM_WORD || reg == 7 || reg == 6 ? -2 : -1);
 			addr = getRegister(reg, set, rms);
 			b->check_bus(addr, wm, true, rms);
-			b->write_phys(b->virt_to_phys(addr, rms), wm, value);
+			phys_addr = b->virt_to_phys(addr, rms);
+			b->write_phys(phys_addr, wm, value);
 			break;
 		case 5:
 			addRegister(reg, rms, -2);
 			addr = b->read_phys(getRegister(reg, set, rms), WM_WORD);
 			b->check_bus(addr, wm, true, rms);
-			b->write_phys(b->virt_to_phys(addr, rms), wm, value);
+			phys_addr = b->virt_to_phys(addr, rms);
+			b->write_phys(phys_addr, wm, value);
 			break;
 		case 6:
 			next_word = b->read_phys(getPC(), WM_WORD);
 			addRegister(7, rms, 2);
 			addr = (getRegister(reg, set, rms) + next_word) & 0xffff;
 			b->check_bus(addr, wm, true, rms);
-			b->write_phys(b->virt_to_phys(addr, rms), wm, value);
+			phys_addr = b->virt_to_phys(addr, rms);
+			b->write_phys(phys_addr, wm, value);
 			break;
 		case 7:
 			next_word = b->read_phys(getPC(), WM_WORD);
 			addRegister(7, rms, 2);
 			addr = b->read_phys(getRegister(reg, set, rms) + next_word, WM_WORD);
 			b->check_bus(addr, wm, true, rms);
-			b->write_phys(b->virt_to_phys(addr, rms), wm, value);
+			phys_addr = b->virt_to_phys(addr, rms);
+			b->write_phys(phys_addr, wm, value);
 			break;
 
 		default:
@@ -449,7 +457,7 @@ bool cpu::putGAM(const uint8_t mode, const int reg, const word_mode_t wm, const 
 			break;
 	}
 
-	return addr == -1 || addr != ADDR_PSW;
+	return phys_addr == uint32_t(~1) || phys_addr != ADDR_PSW;
 }
 
 std::pair<uint32_t, std::optional<uint16_t> > cpu::getGAMAddress(const uint8_t mode, const int reg, const word_mode_t wm, const run_mode_sel_t rms)
@@ -2337,6 +2345,7 @@ void cpu::step_b()
 
 		uint16_t instr = b->read_phys(phys_pc_addr, WM_WORD);
 
+#if 0
 		FILE *fh = fopen("/home/folkert/kek2.dat", "a+");
 /*		fprintf(fh, "R0: %06o, R1: %06o, R2: %06o, R3: %06o, R4: %06o, R5: %06o, R6K: %06o, R6U: %06o, PC: %06o, instr: %06o\n",
 				getRegister(0), getRegister(1), getRegister(2), getRegister(3), getRegister(4), getRegister(5),
@@ -2348,6 +2357,7 @@ void cpu::step_b()
 				temp_pc,
 				instr);
 		fclose(fh);
+#endif
 
 		addRegister(7, RM_CUR, 2);
 
