@@ -444,11 +444,14 @@ bool cpu::putGAM(const uint8_t mode, const int reg, const word_mode_t wm, const 
 			b->write_phys(phys_addr, wm, value);
 			break;
 		case 7:
-			next_word = b->read_phys(getPC(), WM_WORD);
-			addRegister(7, rms, 2);
-			addr = b->read_phys(getRegister(reg, set, rms) + next_word, WM_WORD);
+			next_word = b->read_phys(b->virt_to_phys(getPC(), RM_CUR), WM_WORD);
+			addRegister(7, RM_CUR, 2);
+
+			addr = b->read_phys(b->virt_to_phys(getRegister(reg, set, RM_CUR) + next_word, RM_CUR), WM_WORD);
+
 			b->check_bus(addr, wm, true, rms);
 			phys_addr = b->virt_to_phys(addr, rms);
+
 			b->write_phys(phys_addr, wm, value);
 			break;
 
@@ -457,7 +460,7 @@ bool cpu::putGAM(const uint8_t mode, const int reg, const word_mode_t wm, const 
 			break;
 	}
 
-	return phys_addr == uint32_t(~1) || phys_addr != ADDR_PSW;
+	return phys_addr != ADDR_PSW;
 }
 
 std::pair<uint32_t, std::optional<uint16_t> > cpu::getGAMAddress(const uint8_t mode, const int reg, const word_mode_t wm, const run_mode_sel_t rms)
@@ -1467,7 +1470,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					 if (extend_b7 && dst_mode == 0)
 						 temp |= 0xff00;
 
-					 set_flags = putGAM(dst_mode, dst_reg, wm, temp, RM_CUR);
+					 set_flags = putGAM(dst_mode, dst_reg, WM_BYTE, temp, RM_CUR);
 
 					 if (set_flags) {
 						 setPSW_z(temp == 0);
