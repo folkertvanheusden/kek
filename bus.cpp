@@ -197,7 +197,7 @@ uint16_t bus::read_phys(const uint32_t a, const word_mode_t wm, const bool peek_
 
 			if (a == ADDR_PSW) { // PSW
 				uint16_t temp = c->getPSW();
-				DOLOG(debug, !peek_only, "read PSW: %06x", temp);
+				DOLOG(debug, !peek_only, "read PSW: %06o", temp);
 				return temp;
 			}
 
@@ -554,7 +554,7 @@ void bus::write_phys(const uint32_t a, const word_mode_t wm, const uint16_t valu
 		else {
 			if (a == ADDR_PSW) { // PSW
 				DOLOG(debug, true, "write PSW %o", value);
-				c -> setPSW(value & ~16, false);
+				c->setPSW(value & ~16, false);
 				return;
 			}
 
