@@ -2,6 +2,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "error.h"
@@ -71,7 +72,7 @@ void dolog(const log_level_t ll, const char *fmt, ...)
 	uint64_t now = get_us();
 	time_t t_now = now / 1000000;
 
-	struct tm tm { 0 };
+	tm tm { 0 };
 	if (!localtime_r(&t_now, &tm))
 		error_exit(true, "localtime_r failed");
 

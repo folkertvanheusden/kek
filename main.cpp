@@ -44,6 +44,7 @@ void help()
 	printf("-h       this help\n");
 	printf("-T t.bin load file as a binary tape file (like simh \"load\" command)\n");
 	printf("-R d.rk  load file as a RK05 disk device\n");
+	printf("-r d.rk  load file as a RL02 disk device\n");
 	printf("-p 123   set CPU start pointer to decimal(!) value\n");
 	printf("-b x     enable bootloader (build-in), parameter must be \"rk05\" or \"rl02\"\n");
 	printf("-n       ncurses UI\n");
