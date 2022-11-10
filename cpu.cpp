@@ -1336,7 +1336,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 						set_flags = a != ADDR_PSW;
 
-						b -> write(a, false, v, true);  // put in '13/12' address space
+						b->write(a, false, v, true);  // put in '13/12' address space
 					 }
 
 					 if (set_flags) {

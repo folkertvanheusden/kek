@@ -120,6 +120,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 {
 	int32_t trace_start_addr = -1;
 	bool    tracing          = tracing_in;
+	int     n_single_step    = 1;
 
 	cpu *const c = b->getCpu();
 
@@ -137,8 +138,14 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 		if (cmd == "go")
 			single_step = false;
-		else if (cmd == "single" || cmd == "s")
+		else if (parts[0] == "single" || parts[0] == "s") {
 			single_step = true;
+
+			if (parts.size() == 2)
+				n_single_step = atoi(parts[1].c_str());
+			else
+				n_single_step = 1;
+		}
 		else if ((parts[0] == "sbp" || parts[0] == "cbp") && parts.size() == 2){
 			uint16_t pc = std::stoi(parts[1].c_str(), nullptr, 8);
 
@@ -211,21 +218,50 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 			continue;
 		}
 		else if (parts[0] == "examine" || parts[0] == "e") {
-			if (parts.size() != 3)
+			if (parts.size() < 3)
 				cnsl->put_string_lf("parameter missing");
 			else {
-				int addr = std::stoi(parts[2], nullptr, 8);
-				int val  = -1;
+				int  addr       = std::stoi(parts[2], nullptr, 8);
+				int  val        = -1;
 
-				if (parts[1] == "B" || parts[1] == "b")
-					val = b->read(addr, true, false, true);
-				else if (parts[1] == "W" || parts[1] == "w")
-					val = b->read(addr, false, false, true);
-				else
+				int  n          = parts.size() == 4 ? atoi(parts[3].c_str()) : 1;
+				bool word       = parts[1] == "w";
+
+				if (parts[1] != "w" && parts[1] != "b") {
 					cnsl->put_string_lf("expected b or w");
 
-				if (val != -1)
-					cnsl->put_string_lf(format("value at %06o, octal: %o, hex: %x, dec: %d\n", addr, val, val, val));
+					continue;
+				}
+
+				std::string out;
+
+				for(int i=0; i<n; i++) {
+					if (!word)
+						val = b->read(addr + i, true, false, true);
+					else if (word)
+						val = b->read(addr + i, false, false, true);
+
+					if (val == -1) {
+						cnsl->put_string_lf(format("Can't read from %06o\n", addr + i));
+						break;
+					}
+
+					if (n == 1)
+						cnsl->put_string_lf(format("value at %06o, octal: %o, hex: %x, dec: %d\n", addr + i, val, val, val));
+
+					if (n > 1) {
+						if (i > 0)
+							out += " ";
+
+						if (word)
+							out += format("%06o", val);
+						else
+							out += format("%03o", val);
+					}
+				}
+
+				if (n > 1)
+					cnsl->put_string_lf(out);
 			}
 
 			continue;
@@ -252,7 +288,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 #if !defined(ESP32)
 			cnsl->put_string_lf("quit/q        - stop emulator");
 #endif
-			cnsl->put_string_lf("examine/e     - show memory address (<b|w> <octal address>)");
+			cnsl->put_string_lf("examine/e     - show memory address (<b|w> <octal address> [<n>])");
 			cnsl->put_string_lf("reset/r       - reset cpu/bus/etc");
 			cnsl->put_string_lf("single/s      - run 1 instruction (implicit 'disassemble' command)");
 			cnsl->put_string_lf("sbp/cbp/lbp   - set/clear/list breakpoint(s)");
@@ -287,7 +323,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 			c->step_b();
 
-			if (single_step)
+			if (single_step && --n_single_step == 0)
 				break;
 		}
 
