@@ -80,13 +80,19 @@ int main(int argc, char *argv[])
 
 	uint16_t     console_switches = 0;
 
+	std::string  test;
+
 	int  opt          = -1;
-	while((opt = getopt(argc, argv, "hm:T:r:R:p:ndtL:b:l:3s:")) != -1)
+	while((opt = getopt(argc, argv, "hm:T:r:R:p:ndtL:b:l:3s:Q:")) != -1)
 	{
 		switch(opt) {
 			case 'h':
 				help();
 				return 1;
+
+			case 'Q':
+				test = optarg;
+				break;
 
 			case 's':
 				console_switches = strtol(optarg, NULL, 8);
@@ -224,6 +230,9 @@ int main(int argc, char *argv[])
 
 	sigaction(SIGTERM, &sa, nullptr);
 	sigaction(SIGINT , &sa, nullptr);
+
+	if (test.empty() == false)
+		load_p11_x11(b, test);
 
 #if 0
 //	loadbin(b, 0, "test.dat");
