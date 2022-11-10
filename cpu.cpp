@@ -162,7 +162,7 @@ bool cpu::put_result(const uint16_t a, const uint8_t dst_mode, const uint8_t dst
 
 	b->write(a, word_mode, value, false);
 	
-	return a != 0177776;
+	return a != ADDR_PSW;
 }
 
 uint16_t cpu::addRegister(const int nr, const bool prev_mode, const uint16_t value)
@@ -246,17 +246,15 @@ int cpu::getPSW_spl() const
 	return (psw >> 5) & 7;
 }
 
-void cpu::setPSW(const uint16_t v, const bool limited)
+void cpu::setPSW(uint16_t v, const bool limited)
 {
 	if (limited) {
-		psw |= v & 0174000;  // current & previous mode can only be increased, 11 can only be set
+		v &= 0174037;
 
-		psw &= 0174000;  // retain upper 5 bit
-		psw |= v & ~0174000;
+		v |= psw & 0174340;
 	}
-	else {
-		psw = v;
-	}
+
+	psw = v;
 }
 
 bool cpu::check_queued_interrupts()
@@ -406,7 +404,7 @@ bool cpu::putGAM(const uint8_t mode, const int reg, const bool word_mode, const 
 			break;
 	}
 
-	return addr == -1 || addr != 0177776;
+	return addr == -1 || addr != ADDR_PSW;
 }
 
 uint16_t cpu::getGAMAddress(const uint8_t mode, const int reg, const bool word_mode, const bool prev_mode)
@@ -556,7 +554,7 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 				    int16_t  dst_value  = b->readWord(dst_addr);
 				    int16_t  result     = 0;
 
-				    bool     set_flags  = dst_addr != 0177776;
+				    bool     set_flags  = dst_addr != ADDR_PSW;
 
 				    if (instr & 0x8000) {
 					    result = (dst_value - ssrc_value) & 0xffff;
@@ -761,7 +759,7 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 				else {
 					b->write(a, false, vl, false);
 
-					set_flags = a != 0177776;
+					set_flags = a != ADDR_PSW;
 				}
 
 				if (set_flags) {
@@ -818,7 +816,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 							 v = ((v & 0xff) << 8) | (v >> 8);
 
-							 set_flags = a != 0177776;
+							 set_flags = a != ADDR_PSW;
 
 							 b->writeWord(a, v);
 						 }
@@ -847,7 +845,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					  else {
 						  uint16_t a = getGAMAddress(dst_mode, dst_reg, word_mode, false);
 
-						  set_flags = a != 0177776;
+						  set_flags = a != ADDR_PSW;
 
 						  b -> write(a, word_mode, 0, false);
 					  }
@@ -887,7 +885,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						  else
 							  v ^= 0xffff;
 
-						  bool set_flags = a != 0177776;
+						  bool set_flags = a != ADDR_PSW;
 
 						  if (set_flags) {
 							  setPSW_n(SIGN(v, word_mode));
@@ -920,7 +918,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						  uint16_t v   = b -> read(a, word_mode, false);
 						  int32_t  vl  = (v + 1) & (word_mode ? 0xff : 0xffff);
 
-						  bool set_flags = a != 0177776;
+						  bool set_flags = a != ADDR_PSW;
 
 						  if (set_flags) {
 							  setPSW_n(SIGN(vl, word_mode));
@@ -953,7 +951,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						  uint16_t v   = b -> read(a, word_mode, false);
 						  int32_t  vl  = (v - 1) & (word_mode ? 0xff : 0xffff);
 
-						  bool set_flags = a != 0177776;
+						  bool set_flags = a != ADDR_PSW;
 
 						  if (set_flags) {
 							  setPSW_n(SIGN(vl, word_mode));
@@ -988,7 +986,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 						  b->write(a, word_mode, v, false);
 
-						  bool set_flags = a != 0177776;
+						  bool set_flags = a != ADDR_PSW;
 
 						  if (set_flags) {
 							  setPSW_n(SIGN(v, word_mode));
@@ -1026,7 +1024,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 						  b->write(a, word_mode, v, false);
 
-						  bool set_flags = a != 0177776;
+						  bool set_flags = a != ADDR_PSW;
 
 						  if (set_flags) {
 							  setPSW_n(SIGN(v, word_mode));
@@ -1068,7 +1066,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 						  b->write(a, word_mode, v, false);
 
-						  bool set_flags = a != 0177776;
+						  bool set_flags = a != ADDR_PSW;
 
 						  if (set_flags) {
 							  setPSW_n(SIGN(v, word_mode));
@@ -1130,7 +1128,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 						  b->write(a, word_mode, temp, false);
 
-						  bool set_flags = a != 0177776;
+						  bool set_flags = a != ADDR_PSW;
 
 						  if (set_flags) {
 							  setPSW_c(new_carry);
@@ -1181,7 +1179,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 						  b->write(a, word_mode, temp, false);
 
-						  bool set_flags = a != 0177776;
+						  bool set_flags = a != ADDR_PSW;
 
 						  if (set_flags) {
 							  setPSW_c(new_carry);
@@ -1240,7 +1238,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 						  b->write(a, word_mode, v, false);
 
-						  bool set_flags = a != 0177776;
+						  bool set_flags = a != ADDR_PSW;
 
 						  if (set_flags) {
 							  setPSW_n(SIGN(v, word_mode));
@@ -1271,7 +1269,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						 uint16_t vl  = b -> read(a, word_mode, false);
 						 uint16_t v   = (vl << 1) & (word_mode ? 0xff : 0xffff);
 
-						 bool set_flags = a != 0177776;
+						 bool set_flags = a != ADDR_PSW;
 
 						 if (set_flags) {
 							 setPSW_n(SIGN(v, word_mode));
@@ -1287,7 +1285,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 		case 0b00110101: { // MFPD/MFPI
 					 // always words: word_mode-bit is to select between MFPI and MFPD
-					 assert(!word_mode);  // TODO
+					 // NOTE: this code does not work for D/I split setups! TODO
 
 					 if ((b->getMMR0() & 0160000) == 0)
 						 b->addToMMR1(-2, 6);
@@ -1301,7 +1299,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						 // calculate address in current address space
 						 uint16_t a = getGAMAddress(dst_mode, dst_reg, false, false);
 
-						 set_flags = a != 0177776;
+						 set_flags = a != ADDR_PSW;
 
 						 // read from previous space
 						 v = b -> read(a, false, true);
@@ -1321,7 +1319,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 		case 0b00110110: { // MTPI/MTPD
 					 // always words: word_mode-bit is to select between MTPI and MTPD
-					 assert(!word_mode);  // TODO
+					 // NOTE: this code does not work for D/I split setups! TODO
 
 					 if ((b->getMMR0() & 0160000) == 0)
 						 b->addToMMR1(2, 6);
@@ -1336,7 +1334,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					 else {
 						uint16_t a = getGAMAddress(dst_mode, dst_reg, false, false);
 
-						set_flags = a != 0177776;
+						set_flags = a != ADDR_PSW;
 
 						b -> write(a, false, v, true);  // put in '13/12' address space
 					 }
@@ -1517,7 +1515,7 @@ bool cpu::condition_code_operations(const uint16_t instr)
 void cpu::pushStack(const uint16_t v)
 {
 	if (getRegister(6) == stackLimitRegister) {
-		DOLOG(debug, true, "stackLimitRegister reached");
+		DOLOG(debug, true, "stackLimitRegister reached %06o while pushing %06o", stackLimitRegister, v);
 
 		trap(123, 7);  // TODO
 	}
@@ -1548,10 +1546,15 @@ bool cpu::misc_operations(const uint16_t instr)
 		case 0b0000000000000001: // WAIT
 			return true;
 
-		case 0b0000000000000010: // RTI
+		case 0b0000000000000010: {  // RTI
 			setPC(popStack());
-			setPSW(popStack(), !!((getPSW() >> 12) & 3));
+
+			uint16_t replacement_psw = popStack();
+
+			setPSW(replacement_psw, true);
+
 			return true;
+		}
 
 		case 0b0000000000000011: // BPT
 			trap(014);
@@ -1561,10 +1564,15 @@ bool cpu::misc_operations(const uint16_t instr)
 			trap(020);
 			return true;
 
-		case 0b0000000000000110: // RTT
+		case 0b0000000000000110: {  // RTT
 			setPC(popStack());
-			setPSW(popStack(), !!((getPSW() >> 12) & 3));
+
+			uint16_t replacement_psw = popStack();
+
+			setPSW(replacement_psw, true);
+
 			return true;
+		}
 
 		case 0b0000000000000111: // MFPT
 			if (emulateMFPT)
@@ -1637,28 +1645,83 @@ bool cpu::misc_operations(const uint16_t instr)
 	return false;
 }
 
-void cpu::busError()
-{
-	trap(4);
-}
-
 void cpu::schedule_trap(const uint16_t vector)
 {
 	scheduled_trap = vector;
 }
 
-void cpu::trap(const uint16_t vector, const int new_ipl, const bool is_interrupt)
+// 'is_interrupt' is not correct naming; it is true for mmu faults and interrupts
+void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 {
-	uint16_t before_psw = getPSW();
-	uint16_t before_pc  = getPC();
+	DOLOG(debug, true, "*** CPU::TRAP, MMR0: %06o, MMR2: %06o ***", b->getMMR0(), b->getMMR2());
 
-	// make sure the trap vector is retrieved from kernel space
-	psw &= 037777;  // mask off 14/15
+	int      processing_trap_depth = 0;
+	uint16_t before_psw            = 0;
+	uint16_t before_pc             = 0;
 
-	if ((b->getMMR0() & 0160000) == 0) {
-		b->setMMR2(vector);
-		b->addToMMR1(-2, 6);
-		b->addToMMR1(-2, 6);
+	for(;;) {
+		try {
+			processing_trap_depth++;
+
+			bool kernel_mode = psw >> 14;
+
+			if (processing_trap_depth >= 2) {
+				DOLOG(debug, true, "Trap depth %d", processing_trap_depth);
+
+				if (kernel_mode)
+					vector = 4;
+
+				setRegister(6, 04);
+
+				if (processing_trap_depth >= 3) {
+					// TODO: halt?
+				}
+			}
+			else {
+				before_psw = getPSW();
+				before_pc  = getPC();
+
+				if ((b->getMMR0() & 0160000) == 0 && vector != 4) {
+					b->setMMR2(vector);
+					b->addToMMR1(-2, 6);
+					b->addToMMR1(-2, 6);
+				}
+
+				if (is_interrupt)
+					b->clearMMR0Bit(12);
+				else
+					b->setMMR0Bit(12);  // it's a trap
+			}
+
+			// make sure the trap vector is retrieved from kernel space
+			psw &= 037777;  // mask off 14/15
+
+			setPC(b->readWord(vector + 0));
+
+			// switch to kernel mode & update 'previous mode'
+			uint16_t new_psw = b->readWord(vector + 2) & 0147777;  // mask off old 'previous mode'
+			if (new_ipl != -1)
+				new_psw = (new_psw & ~0xe0) | (new_ipl << 5);
+			new_psw |= (before_psw >> 2) & 030000; // apply new 'previous mode'
+			setPSW(new_psw, false);
+
+		//	DOLOG(info, true, "R6: %06o, before PSW: %06o, new PSW: %06o", getRegister(6), before_psw, new_psw);
+		//
+			if (processing_trap_depth >= 2 && kernel_mode)
+				setRegister(6, 04);
+
+			pushStack(before_psw);
+			pushStack(before_pc);
+
+			// if we reach this point then the trap was processed without causing
+			// another trap
+			break;
+		}
+		catch(const int exception) {
+			DOLOG(debug, true, "trap during execution of trap (%d)", exception);
+
+			setPSW(before_psw, false);
+		}
 	}
 
 	setPC(b->readWord(vector + 0, d_space));
@@ -1772,7 +1835,8 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 		// single_operand_instructions
 		switch(so_opcode) {
 			case 0b00000011:
-				text = "SWAB " + dst_text.operand;
+				if (!word_mode)
+					text = "SWAB " + dst_text.operand;
 				break;
 
 			case 0b000101000:
@@ -2147,6 +2211,9 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 		work_values_str.push_back(format("%06o", v));
 	out.insert({ "work-values", work_values_str });
 
+	out.insert({ "MMR0", { format("%06o", b->getMMR0()) } });
+	out.insert({ "MMR2", { format("%06o", b->getMMR2()) } });
+
 	return out;
 }
 
@@ -2156,7 +2223,7 @@ void cpu::step_a()
 		b->clearMMR1();
 
 	if (scheduled_trap) {
-		trap(scheduled_trap, 7);
+		trap(scheduled_trap, 7, true);
 
 		scheduled_trap = 0;
 
@@ -2176,11 +2243,12 @@ void cpu::step_b()
 	if ((b->getMMR0() & 0160000) == 0)
 		b->setMMR2(temp_pc);
 
-	if (temp_pc & 1)
-		busError();
-
 	try {
 		uint16_t instr = b->readWord(temp_pc);
+
+//		FILE *fh = fopen("/home/folkert/kek.dat", "a+");
+//		fprintf(fh, "%06o %06o\n", temp_pc, instr);
+//		fclose(fh);
 
 		addRegister(7, false, 2);
 

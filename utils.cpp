@@ -4,10 +4,12 @@
 #include <Arduino.h>
 #endif
 #include <errno.h>
+#include <pthread.h>
 #include <stdarg.h>
 #include <stdint.h>
 #include <string>
 #include <string.h>
+#include <time.h>
 #include <vector>
 #include <sys/time.h>
 
@@ -41,7 +43,7 @@ unsigned long get_ms()
 #if defined(ESP32)
 	return millis();
 #else
-	struct timeval tv;
+	timeval tv;
 
 	// TODO replace gettimeofday by clock_gettime
 	gettimeofday(&tv, NULL);
@@ -55,7 +57,7 @@ uint64_t get_us()
 #if defined(ESP32)
 	return micros();
 #else
-	struct timeval tv;
+	timeval tv;
 
 	// TODO replace gettimeofday by clock_gettime
 	gettimeofday(&tv, NULL);
@@ -72,21 +74,35 @@ int parity(int v)
 void myusleep(uint64_t us)
 {
 #if defined(ESP32)
-	delayMicroseconds(us);
+	for(;;) {
+		uint64_t n_ms = us / 1000;
+
+		if (n_ms >= portTICK_RATE_MS) {
+			vTaskDelay(n_ms / portTICK_RATE_MS);
+
+			us -= n_ms * 1000;
+		}
+		else {
+			delayMicroseconds(us);
+
+			break;
+		}
+	}
 #else
-	struct timespec req;
+	timespec req;
 
 	req.tv_sec = us / 1000000l;
 	req.tv_nsec = (us % 1000000l) * 1000l;
 
 	for(;;) {
-		struct timespec rem { 0, 0 };
+		timespec rem { 0, 0 };
 
 		int rc = nanosleep(&req, &rem);
+
 		if (rc == 0 || (rc == -1 && errno != EINTR))
 			break;
 
-		memcpy(&req, &rem, sizeof(struct timespec));
+		memcpy(&req, &rem, sizeof(timespec));
 	}
 #endif
 }

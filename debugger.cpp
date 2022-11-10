@@ -28,6 +28,9 @@ int disassemble(cpu *const c, console *const cnsl, const int pc, const bool inst
 
 	std::string instruction = data["instruction-text"].at(0);
 
+	std::string MMR0 = data["MMR0"].at(0);
+	std::string MMR2 = data["MMR2"].at(0);
+
 	std::string result;
 
 	if (instruction_only)
@@ -38,13 +41,13 @@ int disassemble(cpu *const c, console *const cnsl, const int pc, const bool inst
 				work_values.c_str()
 				);
 	else
-		result = format("R0: %s, R1: %s, R2: %s, R3: %s, R4: %s, R5: %s, SP: %s, PC: %06o, PSW: %s, instr: %s: %s - %s",
+		result = format("R0: %s, R1: %s, R2: %s, R3: %s, R4: %s, R5: %s, SP: %s, PC: %06o, PSW: %s, instr: %s: %s - MMR0/2: %s/%s",
 				registers[0].c_str(), registers[1].c_str(), registers[2].c_str(), registers[3].c_str(), registers[4].c_str(), registers[5].c_str(),
 				registers[6].c_str(), pc, 
 				psw.c_str(),
 				instruction_values.c_str(),
 				instruction.c_str(),
-				work_values.c_str()
+				MMR0.c_str(), MMR2.c_str()
 				);
 
 	if (cnsl)
@@ -103,14 +106,14 @@ void mmu_dump(console *const cnsl, bus *const b)
 	cnsl->put_string_lf(format("MMR2: %06o", b->getMMR2()));
 	cnsl->put_string_lf(format("MMR3: %06o", mmr3));
 
-	dump_par_pdr(cnsl, b, 0172200, 0172240, "supervisor i-space", 0);
-	dump_par_pdr(cnsl, b, 0172220, 0172260, "supervisor d-space", 1 + (!!(mmr3 & 2)));
+	dump_par_pdr(cnsl, b, ADDR_PDR_SV_START,       ADDR_PAR_SV_START,       "supervisor i-space", 0);
+	dump_par_pdr(cnsl, b, ADDR_PDR_SV_START + 020, ADDR_PAR_SV_START + 020, "supervisor d-space", 1 + (!!(mmr3 & 2)));
 
-	dump_par_pdr(cnsl, b, 0172300, 0172340, "kernel i-space", 0);
-	dump_par_pdr(cnsl, b, 0172320, 0172360, "kernel d-space", 1 + (!!(mmr3 & 4)));
+	dump_par_pdr(cnsl, b, ADDR_PDR_K_START,       ADDR_PAR_K_START,       "kernel i-space", 0);
+	dump_par_pdr(cnsl, b, ADDR_PDR_K_START + 020, ADDR_PAR_K_START + 020, "kernel d-space", 1 + (!!(mmr3 & 4)));
 
-	dump_par_pdr(cnsl, b, 0177600, 0177640, "user i-space", 0);
-	dump_par_pdr(cnsl, b, 0177620, 0177660, "user d-space", 1 + (!!(mmr3 & 1)));
+	dump_par_pdr(cnsl, b, ADDR_PDR_U_START,       ADDR_PAR_U_START,       "user i-space", 0);
+	dump_par_pdr(cnsl, b, ADDR_PDR_U_START + 020, ADDR_PAR_U_START + 020, "user d-space", 1 + (!!(mmr3 & 1)));
 }
 
 void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const stop_event, const bool tracing_in)
@@ -120,7 +123,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 	cpu *const c = b->getCpu();
 
-	b->set_debug_mode(true);
+	b->set_debug_mode();
 
 	bool single_step = false;
 
@@ -157,10 +160,10 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 			cnsl->put_string_lf("Breakpoints:");
 
-			for(auto pc : bps) {
-				cnsl->put_string_lf(format("   %06o", pc));
+			for(auto a : bps) {
+				cnsl->put_string(format("   %06o> ", a));
 
-				pc += disassemble(c, cnsl, pc, true);
+				disassemble(c, cnsl, a, true);
 			}
 
 			continue;
@@ -224,6 +227,8 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 				if (val != -1)
 					cnsl->put_string_lf(format("value at %06o, octal: %o, hex: %x, dec: %d\n", addr, val, val, val));
 			}
+
+			continue;
 		}
 		else if (cmd == "reset" || cmd == "r") {
 #if defined(ESP32)

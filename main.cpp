@@ -44,10 +44,12 @@ void help()
 	printf("-h       this help\n");
 	printf("-T t.bin load file as a binary tape file (like simh \"load\" command)\n");
 	printf("-R d.rk  load file as a RK05 disk device\n");
+	printf("-r d.rk  load file as a RL02 disk device\n");
 	printf("-p 123   set CPU start pointer to decimal(!) value\n");
 	printf("-b x     enable bootloader (build-in), parameter must be \"rk05\" or \"rl02\"\n");
 	printf("-n       ncurses UI\n");
 	printf("-d       enable debugger\n");
+	printf("-s x     set console switches state - octal number\n");
 	printf("-t       enable tracing (disassemble to stderr, requires -d as well)\n");
 	printf("-l x     log to file x\n");
 	printf("-L x,y   set log level for screen (x) and file (y)\n");
@@ -60,7 +62,6 @@ int main(int argc, char *argv[])
 	std::vector<std::string> rk05_files;
 	std::vector<std::string> rl02_files;
 
-	bool testCases    = false;
 	bool run_debugger = false;
 	bool tracing      = false;
 
@@ -77,13 +78,25 @@ int main(int argc, char *argv[])
 
 	std::string  tape;
 
+	uint16_t     console_switches = 0;
+
+	std::string  test;
+
 	int  opt          = -1;
-	while((opt = getopt(argc, argv, "hm:T:r:R:p:ndtL:b:l:3")) != -1)
+	while((opt = getopt(argc, argv, "hm:T:r:R:p:ndtL:b:l:3s:Q:")) != -1)
 	{
 		switch(opt) {
 			case 'h':
 				help();
 				return 1;
+
+			case 'Q':
+				test = optarg;
+				break;
+
+			case 's':
+				console_switches = strtol(optarg, NULL, 8);
+				break;
 
 			case '3':
 				mode_34 = true;  // switch from 11/70 to 11/34
@@ -155,12 +168,12 @@ int main(int argc, char *argv[])
 
 	bus *b = new bus();
 
+	b->set_console_switches(console_switches);
+
 	cpu *c = new cpu(b, &event);
 	b->add_cpu(c);
 
 	c->set_34(mode_34);
-
-	kw11_l *lf = new kw11_l(b);
 
 	c->setEmulateMFPT(true);
 
@@ -182,11 +195,19 @@ int main(int argc, char *argv[])
 		cnsl = new console_posix(&event, b);
 	}
 
-	if (rk05_files.empty() == false)
-		b->add_rk05(new rk05(rk05_files, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
+	if (rk05_files.empty() == false) {
+		if (bootloader != BL_RK05)
+			DOLOG(warning, true, "Note: loading RK05 with no RK05 bootloader selected");
 
-	if (rl02_files.empty() == false)
+		b->add_rk05(new rk05(rk05_files, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
+	}
+
+	if (rl02_files.empty() == false) {
+		if (bootloader != BL_RL02)
+			DOLOG(warning, true, "Note: loading RL02 with no RL02 bootloader selected");
+
 		b->add_rl02(new rl02(rl02_files, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
+	}
 
 	if (bootloader != BL_NONE)
 		setBootLoader(b, bootloader);
@@ -210,6 +231,9 @@ int main(int argc, char *argv[])
 	sigaction(SIGTERM, &sa, nullptr);
 	sigaction(SIGINT , &sa, nullptr);
 
+	if (test.empty() == false)
+		load_p11_x11(b, test);
+
 #if 0
 //	loadbin(b, 0, "test.dat");
 //	c->setRegister(7, 0);
@@ -226,6 +250,8 @@ int main(int argc, char *argv[])
 	printf("%04x\n", b->read(0172340, false, false, true));
 	return 0;
 #endif
+
+	kw11_l *lf = new kw11_l(b, cnsl);
 
 	cnsl->start_thread();
 

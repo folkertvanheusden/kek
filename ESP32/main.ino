@@ -181,13 +181,13 @@ void setup() {
 	Serial.println(F("Connect CPU to BUS"));
 	b->add_cpu(c);
 
-	Serial.println(F("Start line-frequency interrupt"));
-	kw11_l *lf = new kw11_l(b);
-
 	c->setEmulateMFPT(true);
 
 	Serial.println(F("Init console"));
 	cnsl = new console_esp32(&stop_event, b);
+
+	Serial.println(F("Start line-frequency interrupt"));
+	kw11_l *lf = new kw11_l(b, cnsl);
 
 	running = cnsl->get_running_flag();
 

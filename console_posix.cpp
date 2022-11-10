@@ -32,7 +32,7 @@ int console_posix::wait_for_char_ll(const short timeout)
 {
 	struct pollfd fds[] = { { STDIN_FILENO, POLLIN, timeout } };
 
-	if (poll(fds, 1, 0) == 1 && fds[0].revents)
+	if (poll(fds, 1, timeout) == 1 && fds[0].revents)
 		return getchar();
 
 	return -1;

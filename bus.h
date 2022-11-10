@@ -10,6 +10,47 @@
 #include "rk05.h"
 #include "rl02.h"
 
+#define ADDR_MMR0 0177572
+#define ADDR_MMR1 0177574
+#define ADDR_MMR2 0177576
+#define ADDR_MMR3 0172516
+
+#define ADDR_PIR  0177772
+#define ADDR_LFC  0177546  // line frequency
+#define ADDR_MAINT 0177750
+#define ADDR_CONSW 0177570
+#define ADDR_KW11P 0172540
+#define ADDR_LP11CSR 0177514  // printer
+
+#define ADDR_PDR_SV_START 0172200
+#define ADDR_PDR_SV_END   0172240
+#define ADDR_PAR_SV_START 0172240
+#define ADDR_PAR_SV_END   0172300
+
+#define ADDR_PDR_K_START 0172300
+#define ADDR_PDR_K_END   0172340
+#define ADDR_PAR_K_START 0172340
+#define ADDR_PAR_K_END   0172400
+
+#define ADDR_PDR_U_START 0177600
+#define ADDR_PDR_U_END   0177640
+#define ADDR_PAR_U_START 0177640
+#define ADDR_PAR_U_END   0177700
+
+#define ADDR_PSW      0177776
+#define ADDR_STACKLIM 0177774
+#define ADDR_KERNEL_R 0177700
+#define ADDR_USER_R   0177710
+#define ADDR_KERNEL_SP 0177706
+#define ADDR_PC       0177707
+#define ADDR_SV_SP    0177716
+#define ADDR_USER_SP  0177717
+
+#define ADDR_CPU_ERR 0177766
+#define ADDR_SYSSIZE 0177760
+#define ADDR_MICROPROG_BREAK_REG 0177770
+#define ADDR_CCR 0177746
+
 class cpu;
 class memory;
 class tty;
@@ -41,7 +82,12 @@ private:
 
 	uint16_t lf_csr { 0 };
 
-	bool     debug_mode { false };
+	uint16_t console_switches { 0 };
+
+	uint16_t read_pdr (const uint32_t a, const int run_mode, const bool word_mode, const bool peek_only);
+	uint16_t read_par (const uint32_t a, const int run_mode, const bool word_mode, const bool peek_only);
+	void     write_pdr(const uint32_t a, const int run_mode, const uint16_t value, const bool word_mode);
+	void     write_par(const uint32_t a, const int run_mode, const uint16_t value, const bool word_mode);
 
 public:
 	bus();
@@ -49,7 +95,8 @@ public:
 
 	void clearmem();
 
-	void set_debug_mode(const bool state) { debug_mode = state; }
+	void set_console_switches(const uint16_t new_state) { console_switches = new_state; }
+	void set_debug_mode() { console_switches |= 128; }
 
 	void add_cpu(cpu *const c) { this -> c = c; }
 	void add_tm11(tm_11 *tm11) { this -> tm11 = tm11; } 
@@ -87,6 +134,7 @@ public:
 	void     addToMMR1(const int8_t delta, const uint8_t reg);
 	void     setMMR0(int value);
 	void     setMMR0Bit(const int bit);
+	void     clearMMR0Bit(const int bit);
 	void     setMMR2(const uint16_t value);
 
 	uint16_t get_switch_register() const { return switch_register; }

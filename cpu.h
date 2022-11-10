@@ -95,8 +95,7 @@ public:
 	void init_interrupt_queue();
 	void queue_interrupt(const uint8_t level, const uint8_t vector);
 
-	void busError();
-	void trap(const uint16_t vector, const int new_ipl = -1, const bool is_interrupt = false);
+	void trap(uint16_t vector, const int new_ipl = -1, const bool is_interrupt = false);
 	void schedule_trap(const uint16_t vector);
 
 	void setEmulateMFPT(const bool v) { emulateMFPT = v; }
@@ -118,7 +117,7 @@ public:
 	void setBitPSW(const int bit, const bool v);
 
 	uint16_t getPSW() const { return psw; }
-	void setPSW(const uint16_t v, const bool limited);
+	void setPSW(uint16_t v, const bool limited);
 
 	uint16_t getStackLimitRegister() { return stackLimitRegister; }
 	void setStackLimitRegister(const uint16_t v) { stackLimitRegister = v; }
