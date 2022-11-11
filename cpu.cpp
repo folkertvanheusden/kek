@@ -359,6 +359,8 @@ bool cpu::putGAM(const uint8_t mode, const int reg, const bool word_mode, const 
 
 	int      set       = getBitPSW(11);
 
+	uint16_t dummy = 0;
+
 	switch(mode) {
 		case 0:
 			setRegister(reg, prev_mode, value);
@@ -378,8 +380,8 @@ bool cpu::putGAM(const uint8_t mode, const int reg, const bool word_mode, const 
 			addRegister(reg, prev_mode, 2);
 			break;
 		case 4:
-			addRegister(reg, prev_mode, !word_mode || reg == 7 || reg == 6 ? -2 : -1);
-			b -> write(getRegister(reg, set, prev_mode), word_mode, value, false);
+			dummy = addRegister(reg, prev_mode, !word_mode || reg == 7 || reg == 6 ? -2 : -1);
+			b -> write(dummy, word_mode, value, false);
 			break;
 		case 5:
 			addRegister(reg, prev_mode, -2);
@@ -1827,8 +1829,6 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 		auto dst_text { addressing_to_string(dst_register, (addr + 2) & 65535, word_mode) };
 
 		auto next_word = dst_text.instruction_part;
-		if (next_word != -1)
-			instruction_words.push_back(next_word);
 
 		work_values.push_back(dst_text.work_value);
 
@@ -1910,14 +1910,15 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 
 		if (text.empty() && name.empty() == false)
 			text = name + word_mode_str + space + dst_text.operand;
+
+		if (text.empty() == false && next_word != -1)
+			instruction_words.push_back(next_word);
 	}
 	else if (do_opcode == 0b111) {
 		std::string src_text = format("R%d", (instruction >> 6) & 7);
 		auto        dst_text { addressing_to_string(dst_register, (addr + 2) & 65535, word_mode) };
 
 		auto next_word = dst_text.instruction_part;
-		if (next_word != -1)
-			instruction_words.push_back(next_word);
 
 		work_values.push_back(dst_text.work_value);
 
@@ -1949,6 +1950,9 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 
 		if (text.empty() && name.empty() == false)
 			text = name + space + src_text + comma + dst_text.operand;
+
+		if (text.empty() == false && next_word != -1)
+			instruction_words.push_back(next_word);
 	}
 	else {
 		switch(do_opcode) {
