@@ -90,7 +90,6 @@ void cpu::reset()
 	pc = 0;
 	psw = 7 << 5;
 	fpsr = 0;
-	runMode = false;
 	init_interrupt_queue();
 }
 
@@ -441,6 +440,50 @@ uint16_t cpu::getGAMAddress(const uint8_t mode, const int reg, const bool word_m
 			addRegister(7, prev_mode, 2);
 			return getRegister(reg, set, prev_mode) + next_word;
 		case 7:
+			next_word = b -> readWord(getPC());
+			addRegister(7, prev_mode, 2);
+			return b -> readWord(getRegister(reg, set, prev_mode) + next_word);
+	}
+
+	return -1;
+}
+
+uint16_t cpu::getGAMAddressDI(const uint8_t mode, const int reg, const bool word_mode, const bool prev_mode)
+{
+	uint16_t next_word = 0;
+	uint16_t temp      = 0;
+
+	int      set       = getBitPSW(11);
+
+	switch(mode) {
+		case 0:
+			// registers are also mapped in memory
+			return 0177700 + reg;
+		case 1:
+			return getRegister(reg, set, prev_mode);
+		case 2:
+			temp = getRegister(reg, set, prev_mode);
+			addRegister(reg, prev_mode, !word_mode || reg == 6 || reg == 7 ? 2 : 1);
+			return temp;
+		case 3:
+			printf("hier001\n");
+			temp = b -> readWord(getRegister(reg, set, prev_mode));
+			addRegister(reg, prev_mode, 2);
+			return temp;
+		case 4:
+			addRegister(reg, prev_mode, !word_mode || reg == 6 || reg == 7 ? -2 : -1);
+			return getRegister(reg, set, prev_mode);
+		case 5:
+			addRegister(reg, prev_mode, -2);
+			printf("hier002\n");
+			return b -> readWord(getRegister(reg, set, prev_mode));
+		case 6:
+			printf("hier003\n");
+			next_word = b -> readWord(getPC());
+			addRegister(7, prev_mode, 2);
+			return getRegister(reg, set, prev_mode) + next_word;
+		case 7:
+			printf("hier004\n");
 			next_word = b -> readWord(getPC());
 			addRegister(7, prev_mode, 2);
 			return b -> readWord(getRegister(reg, set, prev_mode) + next_word);
@@ -1334,11 +1377,21 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					 if (dst_mode == 0)
 						setRegister(dst_reg, true, v);
 					 else {
-						uint16_t a = getGAMAddress(dst_mode, dst_reg, false, false);
+						uint16_t a = getGAMAddressDI(dst_mode, dst_reg, false, false);
 
 						set_flags = a != ADDR_PSW;
 
-						b->write(a, false, v, true);  // put in '13/12' address space
+						if (a >= 0160000)
+							b->write(a, false, v, true);  // put in '13/12' address space
+						else {
+							auto phys = b->calculate_physical_address((getPSW() >> 12) & 3, a);
+
+							DOLOG(debug, true, "MTPI/D %06o -> %o / %o", a, phys.physical_instruction, phys.physical_data);
+
+							b->check_address(true, true, phys, false, word_mode, (getPSW() >> 12) & 3);
+
+							b->writePhysical(word_mode ? phys.physical_data : phys.physical_instruction, v);
+						}
 					 }
 
 					 if (set_flags) {

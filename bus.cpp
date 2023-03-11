@@ -864,6 +864,12 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 		m->writeWord(m_offset, value);
 }
 
+void bus::writePhysical(const uint32_t a, const uint16_t value)
+{
+	DOLOG(debug, true, "physicalWRITE %06o to %o", value, a);
+	m->writeWord(a, value);
+}
+
 uint16_t bus::readWord(const uint16_t a, const d_i_space_t s)
 {
 	return read(a, false, false, false, s);
