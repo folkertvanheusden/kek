@@ -57,8 +57,14 @@ class tty;
 
 typedef enum { d_space, i_space } d_i_space_t;
 
-typedef struct
-{
+typedef struct {
+	uint16_t virtual_address;
+	uint8_t  apf;  // active page field
+	uint32_t physical_instruction;
+	uint32_t physical_data;
+} memory_addresses_t;
+
+typedef struct {
 	uint16_t par, pdr;
 } page_t;
 
@@ -140,4 +146,7 @@ public:
 	uint16_t get_switch_register() const { return switch_register; }
 
 	uint32_t calculate_physical_address(const int run_mode, const uint16_t a, const bool trap_on_failure, const bool is_write, const bool peek_only, const bool is_data);
+
+	memory_addresses_t calculate_physical_address(const int run_mode, const uint16_t a);
+	void check_address(const bool trap_on_failure, const bool is_write, const memory_addresses_t & addr, const bool word_mode, const bool is_data, const int run_mode);
 };
