@@ -308,6 +308,9 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 		*cnsl->get_running_flag() = true;
 
 		while(*stop_event == EVENT_NONE) {
+			if (!single_step)
+				DOLOG(debug, false, "---");
+
 			c->step_a();
 
 			if (trace_start_addr != -1 && c->getPC() == trace_start_addr)
