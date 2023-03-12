@@ -1778,21 +1778,6 @@ void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 			setPSW(before_psw, false);
 		}
 	}
-
-	setPC(b->readWord(vector + 0, d_space));
-
-	if (!is_interrupt)
-		b->setMMR0Bit(12);  // it's a trap
-
-	// switch to kernel mode & update 'previous mode'
-	uint16_t new_psw = b->readWord(vector + 2, d_space) & 0147777;  // mask off old 'previous mode'
-	if (new_ipl != -1)
-		new_psw = (new_psw & ~0xe0) | (new_ipl << 5);
-	new_psw |= (before_psw >> 2) & 030000; // apply new 'previous mode'
-	setPSW(new_psw, false);
-
-	pushStack(before_psw);
-	pushStack(before_pc);
 }
 
 cpu::operand_parameters cpu::addressing_to_string(const uint8_t mode_register, const uint16_t pc, const bool word_mode) const
