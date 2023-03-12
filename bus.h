@@ -130,6 +130,7 @@ public:
 	void writeByte(const uint16_t a, const uint8_t value) { return write(a, true, value, false); }
 	void writeWord(const uint16_t a, const uint16_t value);
 
+	uint16_t readPhysical(const uint32_t a);
 	void writePhysical(const uint32_t a, const uint16_t value);
 
 	void writeUnibusByte(const uint16_t a, const uint8_t value);

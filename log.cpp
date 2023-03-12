@@ -13,7 +13,7 @@
 static const char *logfile          = strdup("/tmp/myip.log");
 log_level_t        log_level_file   = warning;
 log_level_t        log_level_screen = warning;
-static FILE       *lfh              = nullptr;
+FILE       *lfh              = nullptr;
 static int         lf_uid           = -1;
 static int         lf_gid           = -1;
 

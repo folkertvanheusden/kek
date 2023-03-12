@@ -26,6 +26,8 @@ private:
 	uint64_t running_since     { 0 };
 	bool     mode11_70   { true };
 
+	uint64_t mtpi_count { 0 };
+
 	// level, vector
 	std::map<uint8_t, std::set<uint8_t> > queued_interrupts;
 	std::mutex qi_lock;

@@ -10,6 +10,8 @@
 #include "log.h"
 #include "utils.h"
 
+uint16_t oldpc = 0;
+
 #define SIGN(x, wm) ((wm) ? (x) & 0x80 : (x) & 0x8000)
 
 #define IS_0(x, wm) ((wm) ? ((x) & 0xff) == 0 : (x) == 0)
@@ -88,7 +90,7 @@ void cpu::reset()
 	memset(regs0_5, 0x00, sizeof regs0_5);
 	memset(sp, 0x00, sizeof sp);
 	pc = 0;
-	psw = 7 << 5;
+	psw = 0;  // 7 << 5;
 	fpsr = 0;
 	init_interrupt_queue();
 }
@@ -605,7 +607,8 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 					    result = (dst_value - ssrc_value) & 0xffff;
 
 					    if (set_flags) {
-						    setPSW_v(sign(ssrc_value) != sign(dst_value) && sign(ssrc_value) == sign(result));
+						    //setPSW_v(sign(ssrc_value) != sign(dst_value) && sign(ssrc_value) == sign(result));
+						    setPSW_v(((ssrc_value ^ dst_value) & 0x8000) && !((dst_value ^ result) & 0x8000));
 						    setPSW_c(uint16_t(dst_value) < uint16_t(ssrc_value));
 					    }
 				    }
@@ -1346,14 +1349,27 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 						 set_flags = a != ADDR_PSW;
 
-						 // read from previous space
-						 v = b -> read(a, false, true);
+						 if (a >= 0160000) {
+							 // read from previous space
+							 v = b -> read(a, false, true);
+						 }
+						 else {
+							auto phys = b->calculate_physical_address((getPSW() >> 12) & 3, a);
+
+							//b->check_address(true, true, phys, false, word_mode, (getPSW() >> 12) & 3);
+
+							extern FILE *lfh;
+							fflush(lfh);
+
+							v = b->readPhysical(word_mode ? phys.physical_data : phys.physical_instruction);
+						 }
 					 }
 
 					 if (set_flags) {
-						 setPSW_n(SIGN(v, false));
+						 setPSW_c(true);
 						 setPSW_z(v == 0);
-						 setPSW_v(false);
+						 setPSW_n(SIGN(v, false));
+						 // deze niet? setPSW_v(false);
 					 }
 
 					 // put on current stack
@@ -1388,16 +1404,27 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 							DOLOG(debug, true, "MTPI/D %06o -> %o / %o", a, phys.physical_instruction, phys.physical_data);
 
-							b->check_address(true, true, phys, false, word_mode, (getPSW() >> 12) & 3);
+//							FILE *fh = fopen("og2-kek.dat", "a+");
+//							fprintf(fh, "%lu %06o MTPI %06o: %06o\n", mtpi_count, oldpc, a, v);
+//							fclose(fh);
+							DOLOG(debug, true, "%lu %06o MTPI %06o: %06o", mtpi_count, oldpc, a, v);
+
+							mtpi_count++;
+
+							//b->check_address(true, true, phys, false, word_mode, (getPSW() >> 12) & 3);
+
+							extern FILE *lfh;
+							fflush(lfh);
 
 							b->writePhysical(word_mode ? phys.physical_data : phys.physical_instruction, v);
 						}
 					 }
 
 					 if (set_flags) {
-						 setPSW_n(SIGN(v, false));
+						 setPSW_c(true);
 						 setPSW_z(v == 0);
-						 setPSW_v(false);
+						 setPSW_n(SIGN(v, false));
+						 // deze niet? setPSW_v(false);
 					 }
 
 					 break;
@@ -2281,6 +2308,7 @@ void cpu::step_b()
 	instruction_count++;
 
 	uint16_t temp_pc = getPC();
+	oldpc = temp_pc;
 
 	if ((b->getMMR0() & 0160000) == 0)
 		b->setMMR2(temp_pc);

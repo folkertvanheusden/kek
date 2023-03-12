@@ -17,7 +17,7 @@
 // see also https://github.com/espressif/esp-idf/issues/1934
 constexpr int n_pages = 12;
 #else
-constexpr int n_pages = 16;
+constexpr int n_pages = 32;
 #endif
 
 constexpr uint16_t di_ena_mask[4] = { 4, 2, 0, 1 };
@@ -867,7 +867,29 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 void bus::writePhysical(const uint32_t a, const uint16_t value)
 {
 	DOLOG(debug, true, "physicalWRITE %06o to %o", value, a);
-	m->writeWord(a, value);
+
+	if (a >= n_pages * 8192) {
+		DOLOG(debug, true, "physicalWRITE to %o: trap 004", a);
+		c->schedule_trap(004);
+	}
+	else {
+		m->writeWord(a, value);
+	}
+}
+
+uint16_t bus::readPhysical(const uint32_t a)
+{
+	if (a >= n_pages * 8192) {
+		DOLOG(debug, true, "physicalREAD from %o: trap 004", a);
+		c->schedule_trap(004);
+
+		return 0;
+	}
+	else {
+		uint16_t value = m->readWord(a);
+		DOLOG(debug, true, "physicalREAD %06o from %o", value, a);
+		return value;
+	}
 }
 
 uint16_t bus::readWord(const uint16_t a, const d_i_space_t s)
