@@ -617,6 +617,8 @@ void bus::write_pdr(const uint32_t a, const int run_mode, const uint16_t value, 
 	int  page = (a >> 1) & 7;
 
 	if (word_mode) {
+		assert(a != 0 || value < 256);
+
 		a & 1 ? (pages[run_mode][is_d][page].pdr &= 0xff,   pages[run_mode][is_d][page].pdr |= value << 8) :
 			(pages[run_mode][is_d][page].pdr &= 0xff00, pages[run_mode][is_d][page].pdr |= value);
 	}
