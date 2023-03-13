@@ -452,50 +452,6 @@ uint16_t cpu::getGAMAddress(const uint8_t mode, const int reg, const bool word_m
 	return -1;
 }
 
-uint16_t cpu::getGAMAddressDI(const uint8_t mode, const int reg, const bool word_mode, const bool prev_mode)
-{
-	uint16_t next_word = 0;
-	uint16_t temp      = 0;
-
-	int      set       = getBitPSW(11);
-
-	switch(mode) {
-		case 0:
-			// registers are also mapped in memory
-			return 0177700 + reg;
-		case 1:
-			return getRegister(reg, set, prev_mode);
-		case 2:
-			temp = getRegister(reg, set, prev_mode);
-			addRegister(reg, prev_mode, !word_mode || reg == 6 || reg == 7 ? 2 : 1);
-			return temp;
-		case 3:
-			printf("hier001\n");
-			temp = b -> readWord(getRegister(reg, set, prev_mode));
-			addRegister(reg, prev_mode, 2);
-			return temp;
-		case 4:
-			addRegister(reg, prev_mode, !word_mode || reg == 6 || reg == 7 ? -2 : -1);
-			return getRegister(reg, set, prev_mode);
-		case 5:
-			addRegister(reg, prev_mode, -2);
-			printf("hier002\n");
-			return b -> readWord(getRegister(reg, set, prev_mode));
-		case 6:
-			printf("hier003\n");
-			next_word = b -> readWord(getPC());
-			addRegister(7, prev_mode, 2);
-			return getRegister(reg, set, prev_mode) + next_word;
-		case 7:
-			printf("hier004\n");
-			next_word = b -> readWord(getPC());
-			addRegister(7, prev_mode, 2);
-			return b -> readWord(getRegister(reg, set, prev_mode) + next_word);
-	}
-
-	return -1;
-}
-
 bool cpu::double_operand_instructions(const uint16_t instr)
 {
 	const bool    word_mode = !!(instr & 0x8000);
@@ -1335,7 +1291,6 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 		case 0b00110101: { // MFPD/MFPI
 					 // always words: word_mode-bit is to select between MFPI and MFPD
-					 // NOTE: this code does not work for D/I split setups! TODO
 
 					 if ((b->getMMR0() & 0160000) == 0)
 						 b->addToMMR1(-2, 6);
@@ -1382,7 +1337,6 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 		case 0b00110110: { // MTPI/MTPD
 					 // always words: word_mode-bit is to select between MTPI and MTPD
-					 // NOTE: this code does not work for D/I split setups! TODO
 
 					 if ((b->getMMR0() & 0160000) == 0)
 						 b->addToMMR1(2, 6);
@@ -1395,7 +1349,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					 if (dst_mode == 0)
 						setRegister(dst_reg, true, v);
 					 else {
-						uint16_t a = getGAMAddressDI(dst_mode, dst_reg, false, false);
+						uint16_t a = getGAMAddress(dst_mode, dst_reg, false, false);
 
 						set_flags = a != ADDR_PSW;
 

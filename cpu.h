@@ -44,7 +44,6 @@ private:
 
 	void     addToMMR1(const uint8_t mode, const uint8_t reg, const bool word_mode);
 	uint16_t getGAMAddress(const uint8_t mode, const int reg, const bool word_mode, const bool MF_MT);
-	uint16_t getGAMAddressDI(const uint8_t mode, const int reg, const bool word_mode, const bool MF_MT);
 	uint16_t getGAM(const uint8_t mode, const uint8_t reg, const bool word_mode, const bool MF_MT);
 	// returns false when flag registers should not be updated
 	bool     putGAM(const uint8_t mode, const int reg, const bool word_mode, const uint16_t value, const bool MF_FT);
