@@ -35,6 +35,8 @@ void setlog(const char *lf, const log_level_t ll_file, const log_level_t ll_scre
 
 	log_level_file = ll_file;
 	log_level_screen = ll_screen;
+
+	atexit(closelog);
 }
 
 void setloguid(const int uid, const int gid)
@@ -45,9 +47,11 @@ void setloguid(const int uid, const int gid)
 
 void closelog()
 {
-	fclose(lfh);
+	if (lfh) {
+		fclose(lfh);
 
-	lfh = nullptr;
+		lfh = nullptr;
+	}
 }
 
 void dolog(const log_level_t ll, const char *fmt, ...)
