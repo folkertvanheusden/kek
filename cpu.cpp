@@ -1377,10 +1377,9 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					 }
 
 					 if (set_flags) {
-						 setPSW_c(true);
 						 setPSW_z(v == 0);
 						 setPSW_n(SIGN(v, false));
-						 // deze niet? setPSW_v(false);
+						 setPSW_v(false);
 					 }
 
 					 break;
