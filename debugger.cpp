@@ -49,6 +49,7 @@ int disassemble(cpu *const c, console *const cnsl, const int pc, const bool inst
 				instruction.c_str(),
 				MMR0.c_str(), MMR2.c_str()
 				);
+#if !defined(ESP32)
 	{
 		std::string temp = format("R0: %s, R1: %s, R2: %s, R3: %s, R4: %s, R5: %s, SP: %s, PC: %06o, PSW: %s, instr: %s",
 				registers[0].c_str(), registers[1].c_str(), registers[2].c_str(), registers[3].c_str(), registers[4].c_str(), registers[5].c_str(), registers[6].c_str(), pc, 
@@ -60,6 +61,7 @@ int disassemble(cpu *const c, console *const cnsl, const int pc, const bool inst
 		fprintf(fh, "%s\n", temp.c_str());
 		fclose(fh);
 	}
+#endif
 
 	if (cnsl)
 		cnsl->debug(result);
