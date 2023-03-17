@@ -149,8 +149,11 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 		if (parts.empty())
 			continue;
 
-		if (cmd == "go")
+		if (cmd == "go") {
 			single_step = false;
+
+			*stop_event = EVENT_NONE;
+		}
 		else if (parts[0] == "single" || parts[0] == "s") {
 			single_step = true;
 
@@ -200,6 +203,19 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 				pc += disassemble(c, cnsl, pc, !show_registers);
 
 				show_registers = false;
+			}
+
+			continue;
+		}
+		else if (parts[0] == "setpc") {
+			if (parts.size() == 2) {
+				uint16_t new_pc = std::stoi(parts.at(1), nullptr, 8);
+				c->setPC(new_pc);
+
+				cnsl->put_string_lf(format("Set PC to %06o", new_pc));
+			}
+			else {
+				cnsl->put_string_lf("setpc requires an (octal address as) parameter");
 			}
 
 			continue;
@@ -308,6 +324,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 			cnsl->put_string_lf("trace/t       - toggle tracing");
 			cnsl->put_string_lf("strace        - start tracing from address - invoke without address to disable");
 			cnsl->put_string_lf("mmudump       - dump MMU settings (PARs/PDRs)");
+			cnsl->put_string_lf("setpc         - set PC to value");
 
 			continue;
 		}
