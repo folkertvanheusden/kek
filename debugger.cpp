@@ -220,6 +220,23 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 			continue;
 		}
+		else if (parts[0] == "setmem") {
+			auto a_it = kv.find("a");
+			auto v_it = kv.find("v");
+
+			if (a_it == kv.end() || v_it == kv.end())
+				cnsl->put_string_lf("setmem: parameter missing?");
+			else {
+				uint16_t a = std::stoi(a_it->second, nullptr, 8);
+				uint8_t  v = std::stoi(v_it->second, nullptr, 8);
+
+				c->getBus()->writeByte(a, v);
+
+				cnsl->put_string_lf(format("Set %06o to %03o", a, v));
+			}
+
+			continue;
+		}
 		else if (parts[0] == "trace" || parts[0] == "t") {
 			tracing = !tracing;
 
@@ -325,6 +342,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 			cnsl->put_string_lf("strace        - start tracing from address - invoke without address to disable");
 			cnsl->put_string_lf("mmudump       - dump MMU settings (PARs/PDRs)");
 			cnsl->put_string_lf("setpc         - set PC to value");
+			cnsl->put_string_lf("setmem        - set memory (a=) to value (v=), both in octal, one byte");
 
 			continue;
 		}
