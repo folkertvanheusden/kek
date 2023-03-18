@@ -268,10 +268,17 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 			return system_size;
 		}
 
-		if (a & 1)
-			DOLOG(debug, !peek_only, "bus::readWord: odd address UNHANDLED %o", a);
+		if (!peek_only) {
+			if (a & 1)
+				DOLOG(debug, true, "bus::readWord: odd address UNHANDLED %o", a);
 
-		DOLOG(debug, !peek_only, "UNHANDLED read %o(%c)", a, word_mode ? 'B' : ' ');
+			DOLOG(debug, true, "UNHANDLED read %o(%c)", a, word_mode ? 'B' : ' ');
+
+			// DEBUG CODE TODO
+			extern FILE *lfh;
+			fflush(lfh);
+			assert(false);
+		}
 
 		return -1;
 	}

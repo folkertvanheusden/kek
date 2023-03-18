@@ -351,9 +351,9 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const bool word_mode
 			break;
 		case 3:
 			g.addr  = b->read(getRegister(reg, g.set, prev_mode), false, prev_mode, g.space);
+			addRegister(reg, prev_mode, 2);
 			if (read_value)
 				g.value = b->read(g.addr.value(), word_mode, prev_mode, false, d_space);
-			addRegister(reg, prev_mode, 2);
 			break;
 		case 4:
 			addRegister(reg, prev_mode, !word_mode || reg == 7 || reg == 6 ? -2 : -1);
@@ -770,16 +770,20 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 		case 0b000101000: { // CLR/CLRB
 					  {
-						  auto     g_dst = getGAM(dst_mode, dst_reg, word_mode, false);
+						  auto     g_dst = getGAMAddress(dst_mode, dst_reg, word_mode);
 
 						  uint16_t r     = 0;
 
 						  // CLRB only clears the least significant byte
-						  if (word_mode)
-							r = g_dst.value.value() & 0xff00;
+						  if (word_mode) {
+							if (dst_mode)
+								r = b->read(g_dst.addr.value(), false, false) & 0xff00;
+							else
+								r = getRegister(dst_reg, false, false) & 0xff00;
 
-						  // both in byte and word mode the full register must be updated
-						  g_dst.word_mode = false;
+							// both in byte and word mode the full register must be updated
+							g_dst.word_mode = false;
+						  }
 
 						  bool set_flags = putGAM(g_dst, r);
 
