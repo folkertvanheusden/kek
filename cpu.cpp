@@ -331,6 +331,8 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const bool word_mode
 
 	uint16_t next_word = 0;
 
+	d_i_space_t space = reg == 7 ? i_space : (b->get_use_data_space(psw >> 14) ? d_space : i_space);
+
 	switch(mode) {
 		case 0: // 000 
 			g.reg   = reg;
@@ -339,45 +341,45 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const bool word_mode
 		case 1:
 			g.addr  = getRegister(reg, g.set, prev_mode);
 			if (read_value)
-				g.value = b->read(g.addr.value(), word_mode, prev_mode);
+				g.value = b->read(g.addr.value(), word_mode, prev_mode, false, space);
 			break;
 		case 2:
 			g.addr  = getRegister(reg, g.set, prev_mode);
 			if (read_value)
-				g.value = b->read(g.addr.value(), word_mode, prev_mode);
+				g.value = b->read(g.addr.value(), word_mode, prev_mode, false, space);
 			addRegister(reg, prev_mode, !word_mode || reg == 7 || reg == 6 ? 2 : 1);
 			break;
 		case 3:
-			g.addr  = b->read(getRegister(reg, g.set, prev_mode), false, prev_mode);
+			g.addr  = b->read(getRegister(reg, g.set, prev_mode), false, prev_mode, space);
 			if (read_value)
-				g.value = b->read(g.addr.value(), word_mode, prev_mode);
+				g.value = b->read(g.addr.value(), word_mode, prev_mode, false, d_space);
 			addRegister(reg, prev_mode, 2);
 			break;
 		case 4:
 			addRegister(reg, prev_mode, !word_mode || reg == 7 || reg == 6 ? -2 : -1);
 			g.addr  = getRegister(reg, g.set, prev_mode);
 			if (read_value)
-				g.value = b->read(g.addr.value(), word_mode, prev_mode);
+				g.value = b->read(g.addr.value(), word_mode, prev_mode, false, d_space);
 			break;
 		case 5:
 			addRegister(reg, prev_mode, -2);
-			g.addr  = b->read(getRegister(reg, g.set, prev_mode), false, prev_mode);
+			g.addr  = b->read(getRegister(reg, g.set, prev_mode), false, prev_mode, space);
 			if (read_value)
-				g.value = b->read(g.addr.value(), word_mode, prev_mode);
+				g.value = b->read(g.addr.value(), word_mode, prev_mode, d_space);
 			break;
 		case 6:
 			next_word = b -> read(getPC(), false, prev_mode);
 			addRegister(7, prev_mode, + 2);
 			g.addr  = getRegister(reg, g.set, prev_mode) + next_word;
 			if (read_value)
-				g.value = b->read(g.addr.value(), word_mode, prev_mode);
+				g.value = b->read(g.addr.value(), word_mode, prev_mode, d_space);
 			break;
 		case 7:
 			next_word = b -> read(getPC(), false, prev_mode);
 			addRegister(7, prev_mode, + 2);
 			g.addr  = b->read(getRegister(reg, g.set, prev_mode) + next_word, false, prev_mode);
 			if (read_value)
-				g.value = b->read(g.addr.value(), word_mode, prev_mode);
+				g.value = b->read(g.addr.value(), word_mode, prev_mode, d_space);
 			break;
 	}
 

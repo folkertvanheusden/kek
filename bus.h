@@ -150,6 +150,7 @@ public:
 
 	uint32_t calculate_physical_address(const int run_mode, const uint16_t a, const bool trap_on_failure, const bool is_write, const bool peek_only, const bool is_data);
 
+	bool get_use_data_space(const int run_mode);
 	memory_addresses_t calculate_physical_address(const int run_mode, const uint16_t a);
 	void check_address(const bool trap_on_failure, const bool is_write, const memory_addresses_t & addr, const bool word_mode, const bool is_data, const int run_mode);
 };
