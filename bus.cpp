@@ -101,7 +101,7 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 		}
 
 		if (a == ADDR_PIR) { // PIR
-			DOLOG(debug, !peek_only, "read PIT");
+			DOLOG(debug, !peek_only, "read PIR");
 			return PIR;
 		}
 
