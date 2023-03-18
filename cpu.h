@@ -5,11 +5,26 @@
 #include <assert.h>
 #include <map>
 #include <mutex>
+#include <optional>
 #include <set>
 #include <stdint.h>
 #include <vector>
 
 #include "bus.h"
+
+typedef struct {
+	bool word_mode;
+	bool prev_mode;
+	bool set;
+	d_i_space_t space;
+
+	union {
+		std::optional<uint16_t> addr;
+		int reg;
+	};
+
+	std::optional<uint16_t> value;
+} gam_rc_t;
 
 class cpu
 {
@@ -21,11 +36,12 @@ private:
 	uint16_t fpsr  { 0 };
 	uint16_t stackLimitRegister { 0 };
 	uint8_t  scheduled_trap     { 0 };
-	bool     runMode     { false };
 	bool     emulateMFPT { false };
 	uint64_t instruction_count { 0 };
 	uint64_t running_since     { 0 };
 	bool     mode11_70   { true };
+
+	uint64_t mtpi_count { 0 };
 
 	// level, vector
 	std::map<uint8_t, std::set<uint8_t> > queued_interrupts;
@@ -42,10 +58,11 @@ private:
 	uint16_t addRegister(const int nr, const bool prev_mode, const uint16_t value);
 
 	void     addToMMR1(const uint8_t mode, const uint8_t reg, const bool word_mode);
-	uint16_t getGAMAddress(const uint8_t mode, const int reg, const bool word_mode, const bool MF_MT);
-	uint16_t getGAM(const uint8_t mode, const uint8_t reg, const bool word_mode, const bool MF_MT);
-	// returns false when flag registers should not be updated
-	bool     putGAM(const uint8_t mode, const int reg, const bool word_mode, const uint16_t value, const bool MF_FT);
+
+
+	gam_rc_t getGAM(const uint8_t mode, const uint8_t reg, const bool word_mode, const bool prev_mode, const bool read_value = true);
+	gam_rc_t getGAMAddress(const uint8_t mode, const int reg, const bool word_mode);
+	bool     putGAM(const gam_rc_t & g, const uint16_t value); // returns false when flag registers should not be updated
 
 	bool double_operand_instructions(const uint16_t instr);
 	bool additional_double_operand_instructions(const uint16_t instr);
@@ -100,8 +117,6 @@ public:
 
 	void setEmulateMFPT(const bool v) { emulateMFPT = v; }
 
-	bool getRunMode() { return runMode; }
-
 	bool getPSW_c() const;
 	bool getPSW_v() const;
 	bool getPSW_z() const;
@@ -115,6 +130,7 @@ public:
 	void setPSW_n(const bool v);
 	void setPSW_spl(const int v);
 	void setBitPSW(const int bit, const bool v);
+	void setPSW_flags_nzv(const uint16_t value, const bool word_mode);
 
 	uint16_t getPSW() const { return psw; }
 	void setPSW(const uint16_t v, const bool limited);
@@ -137,5 +153,5 @@ public:
 	uint16_t getRegister(const int nr, const int mode, const bool sp_prev_mode) const;
 	uint16_t getRegister(const int nr) const;
 
-	bool put_result(const uint16_t a, const uint8_t dst_mode, const uint8_t dst_reg, const bool word_mode, const uint16_t value);
+	bool put_result(const gam_rc_t & g, const uint16_t value);
 };

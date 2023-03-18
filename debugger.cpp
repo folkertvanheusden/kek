@@ -49,6 +49,19 @@ int disassemble(cpu *const c, console *const cnsl, const int pc, const bool inst
 				instruction.c_str(),
 				MMR0.c_str(), MMR2.c_str()
 				);
+#if defined(COMPARE_OUTPUT)
+	{
+		std::string temp = format("R0: %s, R1: %s, R2: %s, R3: %s, R4: %s, R5: %s, SP: %s, PC: %06o, PSW: %s, instr: %s",
+				registers[0].c_str(), registers[1].c_str(), registers[2].c_str(), registers[3].c_str(), registers[4].c_str(), registers[5].c_str(), registers[6].c_str(), pc, 
+				psw.c_str(),
+				data["instruction-values"][0].c_str()
+				);
+
+		FILE *fh = fopen("compare.dat", "a+");
+		fprintf(fh, "%s\n", temp.c_str());
+		fclose(fh);
+	}
+#endif
 
 	if (cnsl)
 		cnsl->debug(result);
@@ -136,8 +149,11 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 		if (parts.empty())
 			continue;
 
-		if (cmd == "go")
+		if (cmd == "go") {
 			single_step = false;
+
+			*stop_event = EVENT_NONE;
+		}
 		else if (parts[0] == "single" || parts[0] == "s") {
 			single_step = true;
 
@@ -145,6 +161,8 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 				n_single_step = atoi(parts[1].c_str());
 			else
 				n_single_step = 1;
+
+			*stop_event = EVENT_NONE;
 		}
 		else if ((parts[0] == "sbp" || parts[0] == "cbp") && parts.size() == 2){
 			uint16_t pc = std::stoi(parts[1].c_str(), nullptr, 8);
@@ -187,6 +205,36 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 				pc += disassemble(c, cnsl, pc, !show_registers);
 
 				show_registers = false;
+			}
+
+			continue;
+		}
+		else if (parts[0] == "setpc") {
+			if (parts.size() == 2) {
+				uint16_t new_pc = std::stoi(parts.at(1), nullptr, 8);
+				c->setPC(new_pc);
+
+				cnsl->put_string_lf(format("Set PC to %06o", new_pc));
+			}
+			else {
+				cnsl->put_string_lf("setpc requires an (octal address as) parameter");
+			}
+
+			continue;
+		}
+		else if (parts[0] == "setmem") {
+			auto a_it = kv.find("a");
+			auto v_it = kv.find("v");
+
+			if (a_it == kv.end() || v_it == kv.end())
+				cnsl->put_string_lf("setmem: parameter missing?");
+			else {
+				uint16_t a = std::stoi(a_it->second, nullptr, 8);
+				uint8_t  v = std::stoi(v_it->second, nullptr, 8);
+
+				c->getBus()->writeByte(a, v);
+
+				cnsl->put_string_lf(format("Set %06o to %03o", a, v));
 			}
 
 			continue;
@@ -295,6 +343,8 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 			cnsl->put_string_lf("trace/t       - toggle tracing");
 			cnsl->put_string_lf("strace        - start tracing from address - invoke without address to disable");
 			cnsl->put_string_lf("mmudump       - dump MMU settings (PARs/PDRs)");
+			cnsl->put_string_lf("setpc         - set PC to value");
+			cnsl->put_string_lf("setmem        - set memory (a=) to value (v=), both in octal, one byte");
 
 			continue;
 		}
@@ -308,6 +358,9 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 		*cnsl->get_running_flag() = true;
 
 		while(*stop_event == EVENT_NONE) {
+			if (!single_step)
+				DOLOG(debug, false, "---");
+
 			c->step_a();
 
 			if (trace_start_addr != -1 && c->getPC() == trace_start_addr)

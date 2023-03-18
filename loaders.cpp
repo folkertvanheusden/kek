@@ -26,11 +26,13 @@ void setBootLoader(bus *const b, const bootloader_t which)
 	cpu *const c      = b -> getCpu();
 
 	uint16_t         offset = 0;
+	uint16_t         start  = 0;
 	const uint16_t  *bl     = nullptr;
 	int              size   = 0;
 
 	if (which == BL_RK05) {
-		offset = 01000;
+		/*
+		start = offset = 01000;
 
 		static uint16_t rk05_code[] = {
 			0012700,
@@ -43,13 +45,44 @@ void setBootLoader(bus *const b, const bootloader_t which)
 			0100376,
 			0005007
 		};
+		*/
+
+		// from https://github.com/amakukha/PyPDP11.git
+		offset = 02000;
+		start  = 02002;
+
+		static uint16_t rk05_code[] = {
+			0042113,                        // "KD"
+			0012706, 02000,                // MOV #boot_start, SP
+			0012700, 0000000,              // MOV #unit, R0        ; unit number
+			0010003,                        // MOV R0, R3
+			0000303,                        // SWAB R3
+			0006303,                        // ASL R3
+			0006303,                        // ASL R3
+			0006303,                        // ASL R3
+			0006303,                        // ASL R3
+			0006303,                        // ASL R3
+			0012701, 0177412,              // MOV #RKDA, R1        ; csr
+			0010311,                        // MOV R3, (R1)         ; load da
+			0005041,                        // CLR -(R1)            ; clear ba
+			0012741, 0177000,              // MOV #-256.*2, -(R1)  ; load wc
+			0012741, 0000005,              // MOV #READ+GO, -(R1)  ; read & go
+			0005002,                        // CLR R2
+			0005003,                        // CLR R3
+			0012704, 02020,                // MOV #START+20, R4
+			0005005,                        // CLR R5
+			0105711,                        // TSTB (R1)
+			0100376,                        // BPL .-2
+			0105011,                        // CLRB (R1)
+			0005007                         // CLR PC
+		};
 
 		bl = rk05_code;
 
-		size = 9;
+		size = sizeof(rk05_code)/sizeof(rk05_code[0]);
 	}
 	else if (which == BL_RL02) {
-		offset = 01000;
+		start = offset = 01000;
 
 		/* from https://www.pdp-11.nl/peripherals/disk/rl-info.html
 		static uint16_t rl02_code[] = {
@@ -93,7 +126,7 @@ void setBootLoader(bus *const b, const bootloader_t which)
 			0005007,
 		};
 
-		size = 10;
+		size = sizeof(rl02_code)/sizeof(rl02_code[0]);
 
 		bl = rl02_code;
 	}
@@ -101,7 +134,7 @@ void setBootLoader(bus *const b, const bootloader_t which)
 	for(int i=0; i<size; i++)
 		b -> writeWord(offset + i * 2, bl[i]);
 
-	c -> setRegister(7, offset);
+	c -> setRegister(7, start);
 }
 
 uint16_t loadTape(bus *const b, const std::string & file)

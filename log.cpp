@@ -13,7 +13,7 @@
 static const char *logfile          = strdup("/tmp/myip.log");
 log_level_t        log_level_file   = warning;
 log_level_t        log_level_screen = warning;
-static FILE       *lfh              = nullptr;
+FILE       *lfh              = nullptr;
 static int         lf_uid           = -1;
 static int         lf_gid           = -1;
 
@@ -35,6 +35,8 @@ void setlog(const char *lf, const log_level_t ll_file, const log_level_t ll_scre
 
 	log_level_file = ll_file;
 	log_level_screen = ll_screen;
+
+	atexit(closelog);
 }
 
 void setloguid(const int uid, const int gid)
@@ -45,9 +47,11 @@ void setloguid(const int uid, const int gid)
 
 void closelog()
 {
-	fclose(lfh);
+	if (lfh) {
+		fclose(lfh);
 
-	lfh = nullptr;
+		lfh = nullptr;
+	}
 }
 
 void dolog(const log_level_t ll, const char *fmt, ...)
@@ -56,11 +60,11 @@ void dolog(const log_level_t ll, const char *fmt, ...)
 		return;
 
 	if (!lfh) {
+#if !defined(ESP32)
 		lfh = fopen(logfile, "a+");
 		if (!lfh)
 			error_exit(true, "Cannot access log-file %s", logfile);
 
-#if !defined(ESP32)
 		if (lf_uid != -1 && fchown(fileno(lfh), lf_uid, lf_gid) == -1)
 			error_exit(true, "Cannot change logfile (%s) ownership", logfile);
 
@@ -91,8 +95,10 @@ void dolog(const log_level_t ll, const char *fmt, ...)
 	(void)vasprintf(&str, fmt, ap);
 	va_end(ap);
 
+#if !defined(ESP32)
 	if (ll >= log_level_file)
 		fprintf(lfh, "%s%s\n", ts_str, str);
+#endif
 
 	if (ll >= log_level_screen)
 		printf("%s%s\r\n", ts_str, str);
