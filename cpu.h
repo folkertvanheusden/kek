@@ -16,6 +16,7 @@ typedef struct {
 	bool word_mode;
 	bool prev_mode;
 	bool set;
+	d_i_space_t space;
 
 	union {
 		std::optional<uint16_t> addr;

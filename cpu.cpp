@@ -324,14 +324,14 @@ void cpu::addToMMR1(const uint8_t mode, const uint8_t reg, const bool word_mode)
 // GAM = general addressing modes
 gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const bool word_mode, const bool prev_mode, const bool read_value)
 {
-	gam_rc_t g { false, false, false, { }, 0 };
+	gam_rc_t g { false, false, false, i_space, { }, 0 };
 	g.word_mode = word_mode;  // word/byte
 	g.prev_mode = prev_mode;  // run mode
 	g.set       = getBitPSW(11);
 
 	uint16_t next_word = 0;
 
-	d_i_space_t space = reg == 7 ? i_space : (b->get_use_data_space(psw >> 14) ? d_space : i_space);
+	g.space = reg == 7 ? i_space : (b->get_use_data_space(psw >> 14) ? d_space : i_space);
 
 	switch(mode) {
 		case 0: // 000 
@@ -341,16 +341,16 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const bool word_mode
 		case 1:
 			g.addr  = getRegister(reg, g.set, prev_mode);
 			if (read_value)
-				g.value = b->read(g.addr.value(), word_mode, prev_mode, false, space);
+				g.value = b->read(g.addr.value(), word_mode, prev_mode, false, g.space);
 			break;
 		case 2:
 			g.addr  = getRegister(reg, g.set, prev_mode);
 			if (read_value)
-				g.value = b->read(g.addr.value(), word_mode, prev_mode, false, space);
+				g.value = b->read(g.addr.value(), word_mode, prev_mode, false, g.space);
 			addRegister(reg, prev_mode, !word_mode || reg == 7 || reg == 6 ? 2 : 1);
 			break;
 		case 3:
-			g.addr  = b->read(getRegister(reg, g.set, prev_mode), false, prev_mode, space);
+			g.addr  = b->read(getRegister(reg, g.set, prev_mode), false, prev_mode, g.space);
 			if (read_value)
 				g.value = b->read(g.addr.value(), word_mode, prev_mode, false, d_space);
 			addRegister(reg, prev_mode, 2);
@@ -363,7 +363,7 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const bool word_mode
 			break;
 		case 5:
 			addRegister(reg, prev_mode, -2);
-			g.addr  = b->read(getRegister(reg, g.set, prev_mode), false, prev_mode, space);
+			g.addr  = b->read(getRegister(reg, g.set, prev_mode), false, prev_mode, g.space);
 			if (read_value)
 				g.value = b->read(g.addr.value(), word_mode, prev_mode, d_space);
 			break;
@@ -389,7 +389,7 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const bool word_mode
 bool cpu::putGAM(const gam_rc_t & g, const uint16_t value)
 {
 	if (g.addr.has_value()) {
-		b->write(g.addr.value(), g.word_mode, value, g.prev_mode);
+		b->write(g.addr.value(), g.word_mode, value, g.prev_mode, g.space);
 
 		return g.addr.value() != ADDR_PSW;
 	}
@@ -420,7 +420,7 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 	const uint8_t src_mode   = (src >> 3) & 7;
 	const uint8_t src_reg    = src & 7;
 
-	gam_rc_t g_src { false, false, false, { }, 0 };
+	gam_rc_t g_src { false, false, false, i_space, { }, 0 };
 
 	if (operation != 0b110)
 		g_src = getGAM(src_mode, src_reg, word_mode, false);
