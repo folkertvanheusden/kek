@@ -424,7 +424,6 @@ uint16_t cpu::getGAMAddress(const uint8_t mode, const int reg, const bool word_m
 
 	switch(mode) {
 		case 0:
-			printf("REG: %d\r\n", reg);
                         // registers are also mapped in memory
                         if (reg < 6)
                                 return (run_mode == 3 ? ADDR_USER_R : ADDR_KERNEL_R) + reg;
