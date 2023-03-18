@@ -273,11 +273,6 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 				DOLOG(debug, true, "bus::readWord: odd address UNHANDLED %o", a);
 
 			DOLOG(debug, true, "UNHANDLED read %o(%c)", a, word_mode ? 'B' : ' ');
-
-			// DEBUG CODE TODO
-			extern FILE *lfh;
-			fflush(lfh);
-			assert(false);
 		}
 
 		return -1;

@@ -776,12 +776,10 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 						  // CLRB only clears the least significant byte
 						  if (word_mode) {
-							if (dst_mode)
-								r = b->read(g_dst.addr.value(), false, false) & 0xff00;
-							else
+							if (dst_mode == 0)
 								r = getRegister(dst_reg, false, false) & 0xff00;
 
-							// both in byte and word mode the full register must be updated
+							// both in byte and word mode the full word must be updated
 							g_dst.word_mode = false;
 						  }
 
@@ -1498,7 +1496,7 @@ bool cpu::misc_operations(const uint16_t instr)
 			return true;
 
 		case 0b0000000000000100: // IOT
-			trap(020);
+			//trap(020);  disabled for debugging
 			return true;
 
 		case 0b0000000000000110: // RTT
