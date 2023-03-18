@@ -418,11 +418,21 @@ uint16_t cpu::getGAMAddress(const uint8_t mode, const int reg, const bool word_m
 	uint16_t temp      = 0;
 
 	int      set       = getBitPSW(11);
+	int      run_mode  = psw >> 14;
+
+	constexpr uint16_t sp_pointers[] = { ADDR_KERNEL_SP, ADDR_SV_SP, 0xffff, ADDR_USER_SP };
 
 	switch(mode) {
 		case 0:
-			// registers are also mapped in memory
-			return 0177700 + reg;
+			printf("REG: %d\r\n", reg);
+                        // registers are also mapped in memory
+                        if (reg < 6)
+                                return (run_mode == 3 ? ADDR_USER_R : ADDR_KERNEL_R) + reg;
+
+                        if (reg == 7)
+                                return ADDR_PC;
+
+                        return sp_pointers[run_mode];
 		case 1:
 			return getRegister(reg, set, prev_mode);
 		case 2:
