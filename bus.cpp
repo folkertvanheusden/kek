@@ -259,13 +259,13 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 		constexpr uint32_t system_size = n_pages * 8192 / 64 - 1;
 
 		if (a == ADDR_SYSSIZE + 2) {  // system size HI
-                        printf("accessing system size HI\r\n");
-			return ((system_size >> 6) - 1) >> 16;
+                        // printf("accessing system size HI\r\n");
+			return system_size >> 16;
 		}
 
 		if (a == ADDR_SYSSIZE) {  // system size LO
-                        printf("accessing system size LO\r\n");
-			return (system_size >> 6) - 1;
+                        // printf("accessing system size LO\r\n");
+			return system_size;
 		}
 
 		if (a & 1)
