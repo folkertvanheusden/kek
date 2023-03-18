@@ -49,7 +49,7 @@ int disassemble(cpu *const c, console *const cnsl, const int pc, const bool inst
 				instruction.c_str(),
 				MMR0.c_str(), MMR2.c_str()
 				);
-#if !defined(ESP32)
+#if defined(COMPARE_OUTPUT)
 	{
 		std::string temp = format("R0: %s, R1: %s, R2: %s, R3: %s, R4: %s, R5: %s, SP: %s, PC: %06o, PSW: %s, instr: %s",
 				registers[0].c_str(), registers[1].c_str(), registers[2].c_str(), registers[3].c_str(), registers[4].c_str(), registers[5].c_str(), registers[6].c_str(), pc, 
@@ -161,6 +161,8 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 				n_single_step = atoi(parts[1].c_str());
 			else
 				n_single_step = 1;
+
+			*stop_event = EVENT_NONE;
 		}
 		else if ((parts[0] == "sbp" || parts[0] == "cbp") && parts.size() == 2){
 			uint16_t pc = std::stoi(parts[1].c_str(), nullptr, 8);
