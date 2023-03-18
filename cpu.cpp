@@ -260,6 +260,13 @@ void cpu::setPSW(const uint16_t v, const bool limited)
 	}
 }
 
+void cpu::setPSW_flags_nzv(const uint16_t value, const bool word_mode)
+{
+	setPSW_n(SIGN(value, word_mode));
+	setPSW_z(IS_0(value, word_mode));
+	setPSW_v(false);
+}
+
 bool cpu::check_queued_interrupts()
 {
 	std::unique_lock<std::mutex> lck(qi_lock);
@@ -496,11 +503,8 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 
 				    addToMMR1(dst_mode, dst_reg, word_mode);
 
-				    if (set_flags) {
-					    setPSW_n(SIGN(src_value, word_mode));
-					    setPSW_z(IS_0(src_value, word_mode));
-					    setPSW_v(false);
-				    }
+				    if (set_flags)
+					    setPSW_flags_nzv(src_value, word_mode);
 
 				    return true;
 			    }
@@ -526,9 +530,7 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 				    uint16_t dst_value = getGAM(dst_mode, dst_reg, word_mode, false);
 				    uint16_t result    = (dst_value & src_value) & (word_mode ? 0xff : 0xffff);
 
-				    setPSW_n(SIGN(result, word_mode));
-				    setPSW_z(IS_0(result, word_mode));
-				    setPSW_v(false);
+				    setPSW_flags_nzv(result, word_mode);
 
 				    return true;
 			    }
@@ -538,11 +540,8 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 
 				    uint16_t result = b->read(a, word_mode, false) & ~src_value;
 
-				    if (put_result(a, dst_mode, dst_reg, word_mode, result)) {
-					    setPSW_n(SIGN(result, word_mode));
-					    setPSW_z(IS_0(result, word_mode));
-					    setPSW_v(false);
-				    }
+				    if (put_result(a, dst_mode, dst_reg, word_mode, result))
+					    setPSW_flags_nzv(result, word_mode);
 
 				    return true;
 			    }
@@ -552,11 +551,8 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 
 				    uint16_t result = b->read(a, word_mode, false) | src_value;
 
-				    if (put_result(a, dst_mode, dst_reg, word_mode, result)) {
-					    setPSW_n(SIGN(result, word_mode));
-					    setPSW_z(IS_0(result, word_mode));
-					    setPSW_v(false);
-				    }
+				    if (put_result(a, dst_mode, dst_reg, word_mode, result))
+					    setPSW_flags_nzv(result, word_mode);
 
 				    return true;
 			    }
@@ -777,11 +773,8 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 					set_flags = a != ADDR_PSW;
 				}
 
-				if (set_flags) {
-					setPSW_n(vl & 0x8000);
-					setPSW_z(vl == 0);
-					setPSW_v(false);
-				}
+				if (set_flags)
+				    setPSW_flags_nzv(vl, false);
 
 				return true;
 			}
@@ -837,9 +830,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						 }
 
 						 if (set_flags) {
-							 setPSW_n(v & 0x80);
-							 setPSW_z((v & 0xff) == 0);
-							 setPSW_v(false);
+						         setPSW_flags_nzv(v, true);
 							 setPSW_c(false);
 						 }
 					 }
@@ -884,9 +875,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						  else
 							  v ^= 0xffff;
 
-						  setPSW_n(SIGN(v, word_mode));
-						  setPSW_z(IS_0(v, word_mode));
-						  setPSW_v(false);
+					          setPSW_flags_nzv(v, word_mode);
 						  setPSW_c(true);
 
 						  setRegister(dst_reg, false, v);
@@ -903,9 +892,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						  bool set_flags = a != ADDR_PSW;
 
 						  if (set_flags) {
-							  setPSW_n(SIGN(v, word_mode));
-							  setPSW_z(IS_0(v, word_mode));
-							  setPSW_v(false);
+							  setPSW_flags_nzv(v, word_mode);
 							  setPSW_c(true);
 						  }
 
@@ -1100,9 +1087,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 		case 0b000101111: { // TST/TSTB
 					  uint16_t v = getGAM(dst_mode, dst_reg, word_mode, false);
 
-					  setPSW_n(SIGN(v, word_mode));
-					  setPSW_z(IS_0(v, word_mode));
-					  setPSW_v(false);
+					  setPSW_flags_nzv(v, word_mode);
 					  setPSW_c(false);
 
 					  break;
@@ -1331,11 +1316,8 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						 }
 					 }
 
-					 if (set_flags) {
-						 setPSW_z(v == 0);
-						 setPSW_n(SIGN(v, false));
-						 setPSW_v(false);
-					 }
+					 if (set_flags)
+						 setPSW_flags_nzv(v, false);
 
 					 // put on current stack
 					 pushStack(v);
@@ -1384,11 +1366,8 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						}
 					 }
 
-					 if (set_flags) {
-						 setPSW_z(v == 0);
-						 setPSW_n(SIGN(v, false));
-						 setPSW_v(false);
-					 }
+					 if (set_flags)
+						 setPSW_flags_nzv(v, false);
 
 					 break;
 				 }

@@ -114,6 +114,7 @@ public:
 	void setPSW_n(const bool v);
 	void setPSW_spl(const int v);
 	void setBitPSW(const int bit, const bool v);
+	void setPSW_flags_nzv(const uint16_t value, const bool word_mode);
 
 	uint16_t getPSW() const { return psw; }
 	void setPSW(const uint16_t v, const bool limited);
