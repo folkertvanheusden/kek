@@ -258,11 +258,15 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 		// LO size register field must be all 1s, so subtract 1
 		constexpr uint32_t system_size = n_pages * 8192 / 64 - 1;
 
-		if (a == ADDR_SYSSIZE + 2)  // system size HI
-			return system_size >> 16;
+		if (a == ADDR_SYSSIZE + 2) {  // system size HI
+                        printf("accessing system size HI\r\n");
+			return ((system_size >> 6) - 1) >> 16;
+		}
 
-		if (a == ADDR_SYSSIZE)  // system size LO
-			return system_size & 65535;
+		if (a == ADDR_SYSSIZE) {  // system size LO
+                        printf("accessing system size LO\r\n");
+			return (system_size >> 6) - 1;
+		}
 
 		if (a & 1)
 			DOLOG(debug, !peek_only, "bus::readWord: odd address UNHANDLED %o", a);
