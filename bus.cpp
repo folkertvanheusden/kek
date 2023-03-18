@@ -17,7 +17,7 @@
 // see also https://github.com/espressif/esp-idf/issues/1934
 constexpr int n_pages = 12;
 #else
-constexpr int n_pages = 32;
+constexpr int n_pages = 128;  // 1MB
 #endif
 
 constexpr uint16_t di_ena_mask[4] = { 4, 2, 0, 1 };

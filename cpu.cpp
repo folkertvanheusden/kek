@@ -778,6 +778,9 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						  if (word_mode)
 							r = g_dst.value.value() & 0xff00;
 
+						  // both in byte and word mode the full register must be updated
+						  g_dst.word_mode = false;
+
 						  bool set_flags = putGAM(g_dst, r);
 
 						  if (set_flags) {
@@ -812,9 +815,9 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 		case 0b000101010: { // INC/INCB
 				    	  auto     a = getGAM(dst_mode, dst_reg, word_mode, false);
-					  uint16_t v = a.value.value();
 
 					  if (dst_mode == 0) {
+						  uint16_t v = a.value.value();
 						  uint16_t add = word_mode ? v & 0xff00 : 0;
 
 						  v = (v + 1) & (word_mode ? 0xff : 0xffff);
@@ -834,7 +837,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						  if (set_flags) {
 							  setPSW_n(SIGN(vl, word_mode));
 							  setPSW_z(IS_0(vl, word_mode));
-							  setPSW_v(word_mode ? vl == 0x80 : v == 0x8000);
+							  setPSW_v(word_mode ? vl == 0x80 : vl == 0x8000);
 						  }
 
 						  b->write(a.addr.value(), word_mode, vl, false);
@@ -983,7 +986,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						  if (set_flags) {
 							  setPSW_n(SIGN(v, word_mode));
 							  setPSW_z(IS_0(v, word_mode));
-							  setPSW_v(word_mode? (vo & 0xff) == 0x80 : v == 0x8000);
+							  setPSW_v(word_mode? (vo & 0xff) == 0x80 : vo == 0x8000);
 
 							  if (IS_0(vo, word_mode) && org_c)
 								  setPSW_c(true);
