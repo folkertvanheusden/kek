@@ -509,7 +509,6 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 					    result = (g_dst.value.value() - g_ssrc.value.value()) & 0xffff;
 
 					    if (set_flags) {
-						    //setPSW_v(sign(g_ssrc.value.value()) != sign(g_dst.value.value()) && sign(g_ssrc.value.value()) == sign(result));
 						    setPSW_v(((g_ssrc.value.value() ^ g_dst.value.value()) & 0x8000) && !((g_dst.value.value() ^ result) & 0x8000));
 						    setPSW_c(uint16_t(g_dst.value.value()) < uint16_t(g_ssrc.value.value()));
 					    }
@@ -518,7 +517,7 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 					    result = (g_dst.value.value() + g_ssrc.value.value()) & 0xffff;
 
 					    if (set_flags) {
-						    setPSW_v(sign(g_ssrc.value.value()) == sign(g_dst.value.value()) && sign(g_dst.value.value()) != sign(result));
+						    setPSW_v((result ^ g_ssrc.value.value()) & (result ^ g_ssrc.value.value()));
 						    setPSW_c(uint16_t(result) < uint16_t(g_ssrc.value.value()));
 					    }
 				    }
