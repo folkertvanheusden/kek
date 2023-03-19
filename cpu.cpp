@@ -514,10 +514,13 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 					    }
 				    }
 				    else {
-					    result = (g_dst.value.value() + g_ssrc.value.value()) & 0xffff;
+					    uint32_t temp = g_dst.value.value() + g_ssrc.value.value();
+
+					    result = temp;
 
 					    if (set_flags) {
-						    setPSW_v((result ^ g_ssrc.value.value()) & (result ^ g_ssrc.value.value()));
+						    setPSW_v((temp ^ g_ssrc.value.value()) & (temp ^ g_dst.value.value()));
+						    setPSW_v(SIGN((~g_ssrc.value.value() ^ g_dst.value.value()) & (g_ssrc.value.value() ^ (temp & 0xffff)), false));
 						    setPSW_c(uint16_t(result) < uint16_t(g_ssrc.value.value()));
 					    }
 				    }
