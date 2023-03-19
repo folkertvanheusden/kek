@@ -27,7 +27,7 @@ void cpu::init_interrupt_queue()
 {
 	queued_interrupts.clear();
 
-	for(int level=0; level<8; level++)
+	for(uint8_t level=0; level<8; level++)
 		queued_interrupts.insert({ level, { } });
 }
 
@@ -1311,6 +1311,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 				 auto g_dst = getGAM(dst_mode, dst_reg, word_mode, false);
 
 				 if (word_mode) {  // MFPS
+#if 0  // not in the PDP-11/70
 					 uint16_t temp      = psw & 0xff;
 					 bool     extend_b7 = psw & 128;
 
@@ -1324,6 +1325,9 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						 setPSW_v(false);
 						 setPSW_n(extend_b7);
 					 }
+#else
+					 trap(010);
+#endif
 				 }
 				 else {  // SXT
 					 int32_t  vl = -getPSW_n();
@@ -2166,6 +2170,9 @@ void cpu::step_b()
 
 	try {
 		uint16_t instr = b->readWord(temp_pc);
+
+		if (temp_pc == 025250)
+			DOLOG(debug, true, "GREP %06o %06o", temp_pc, instr);
 
 		addRegister(7, false, 2);
 
