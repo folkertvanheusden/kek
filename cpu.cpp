@@ -328,10 +328,9 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const bool word_mode
 	g.word_mode = word_mode;  // word/byte
 	g.prev_mode = prev_mode;  // run mode
 	g.set       = getBitPSW(11);
+	g.space     = reg == 7 ? i_space : (b->get_use_data_space(psw >> 14) ? d_space : i_space);
 
 	uint16_t next_word = 0;
-
-	g.space = reg == 7 ? i_space : (b->get_use_data_space(psw >> 14) ? d_space : i_space);
 
 	switch(mode) {
 		case 0: // 000 
