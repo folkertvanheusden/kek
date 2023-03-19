@@ -287,7 +287,7 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 	else
 		temp = m -> readWord(m_offset);
 
-	DOLOG(debug, !peek_only, "READ from %06o/%07o: %o", a, m_offset, temp);
+	DOLOG(debug, !peek_only, "READ from %06o/%07o %c %c: %o", a, m_offset, space == d_space ? 'D' : 'I', word_mode ? 'B' : 'W', temp);
 
 	return temp;
 }
@@ -869,7 +869,7 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 
 	uint32_t m_offset = calculate_physical_address(run_mode, a, true, true, false, space == d_space);
 
-	DOLOG(debug, true, "WRITE to %06o/%07o: %o", a, m_offset, value);
+	DOLOG(debug, true, "WRITE to %06o/%07o %c %c: %o", a, m_offset, space == d_space ? 'D' : 'I', word_mode ? 'B' : 'W', value);
 
 	if (word_mode)
 		m->writeByte(m_offset, value);
