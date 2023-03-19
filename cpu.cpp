@@ -1536,13 +1536,12 @@ bool cpu::misc_operations(const uint16_t instr)
 		int dst_mode = (instr >> 3) & 7;
 
 		if (dst_mode == 0)  // cannot jump to a register
-			trap(010);
-		else {
-			int dst_reg = instr & 7;
+			return false;
 
-			bool word_mode = false;
-			setPC(getGAMAddress(dst_mode, dst_reg, word_mode).addr.value());
-		}
+		int dst_reg = instr & 7;
+
+		bool word_mode = false;
+		setPC(getGAMAddress(dst_mode, dst_reg, word_mode).addr.value());
 
 		return true;
 	}
