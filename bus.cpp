@@ -332,6 +332,18 @@ void bus::setMMR2(const uint16_t value)
 	MMR2 = value;
 }
 
+void bus::check_odd_addressing(const uint16_t a, const int run_mode, const d_i_space_t space, const bool is_write)
+{
+	if (a & 1) {
+		if (is_write)
+			pages[run_mode][space == d_space][a >> 13].pdr |= 1 << 7;
+
+		c->schedule_trap(004);  // invalid access
+
+		throw 5;
+	}
+}
+
 memory_addresses_t bus::calculate_physical_address(const int run_mode, const uint16_t a)
 {
 	const uint8_t apf = a >> 13; // active page field
@@ -352,124 +364,6 @@ memory_addresses_t bus::calculate_physical_address(const int run_mode, const uin
 	}
 
 	return { a, apf, physical_instruction, physical_data };
-}
-
-void bus::check_address(const bool trap_on_failure, const bool is_write, const memory_addresses_t & addr, const bool word_mode, const bool is_data, const int run_mode)
-{
-	// check for odd address access
-	if ((addr.virtual_address & 1) && word_mode == 0) {
-		if (is_write)
-			pages[run_mode][is_data][addr.apf].pdr |= 1 << 7;
-
-		c->schedule_trap(004);  // invalid access
-
-		throw 5;
-	}
-
-	if (!trap_on_failure)
-		return;
-
-	// check access to page
-	if ((MMR0 & (1 << 9)) || c->get_34()) {
-		const int access_control = pages[run_mode][is_data][addr.apf].pdr & 7;
-
-		// write
-		if (is_write && access_control != 6) {
-			c->schedule_trap(0250);  // invalid address
-
-			if (is_write)
-				pages[run_mode][is_data][addr.apf].pdr |= 1 << 7;
-
-			if ((MMR0 & 0160000) == 0) {
-				MMR0 &= 017777;
-				MMR0 |= 1 << 13;  // read-only
-
-				MMR0 &= ~(3 << 5);
-				MMR0 |= run_mode << 5;  // TODO: kernel-mode or user-mode when a trap occurs in user-mode?
-
-				MMR0 &= ~14;  // add current page
-				MMR0 |= addr.apf << 1;
-			}
-
-			DOLOG(debug, true, "MMR0: %06o", MMR0);
-
-			throw 1;
-		}
-
-		// read
-		if (!is_write) {
-			if (access_control == 0 || access_control == 1 || access_control == 3 || access_control == 4 || access_control == 7) {
-				c->schedule_trap(0250);  // invalid address
-
-				if (is_write)
-					pages[run_mode][is_data][addr.apf].pdr |= 1 << 7;  // TODO: D/I
-
-				if ((MMR0 & 0160000) == 0) {
-					MMR0 &= 017777;
-
-					if (access_control == 0 || access_control == 4)
-						MMR0 |= 1 << 15;  // not resident
-					else
-						MMR0 |= 1 << 13;  // read-only
-
-					MMR0 &= ~(3 << 5);
-					MMR0 |= run_mode << 5;
-
-					MMR0 &= ~14;  // add current page
-					MMR0 |= addr.apf << 1;
-				}
-
-				throw 2;
-			}
-		}
-	}
-
-	// beyond physical range?
-	if ((is_data && addr.physical_data >= n_pages * 8192) || (!is_data && addr.physical_instruction >= n_pages * 8192)) {
-		if ((MMR0 & 0160000) == 0) {
-			MMR0 &= 017777;
-			MMR0 |= 1 << 15;  // non-resident
-
-			MMR0 &= ~14;  // add current page
-			MMR0 |= addr.apf << 1;
-
-			MMR0 &= ~(3 << 5);
-			MMR0 |= run_mode << 5;
-		}
-
-		if (is_write)
-			pages[run_mode][is_data][addr.apf].pdr |= 1 << 7;  // TODO: D/I
-
-		c->schedule_trap(04);
-
-		throw 3;
-	}
-
-	// check if invalid access IN a page
-	uint16_t pdr_len = (pages[run_mode][is_data][addr.apf].pdr >> 8) & 127;
-	uint16_t pdr_cmp = (addr.virtual_address >> 6) & 127;
-
-	bool direction = pages[run_mode][is_data][addr.apf].pdr & 8;  // TODO: D/I
-
-	if ((pdr_cmp > pdr_len && direction == false) || (pdr_cmp < pdr_len && direction == true)) {
-		c->schedule_trap(0250);  // invalid access
-
-		if ((MMR0 & 0160000) == 0) {
-			MMR0 &= 017777;
-			MMR0 |= 1 << 14;  // length
-
-			MMR0 &= ~14;  // add current page
-			MMR0 |= addr.apf << 1;
-
-			MMR0 &= ~(3 << 5);
-			MMR0 |= run_mode << 5;
-		}
-
-		if (is_write)
-			pages[run_mode][0][addr.apf].pdr |= 1 << 7;  // TODO: D/I
-
-		throw 4;
-	}
 }
 
 bool bus::get_use_data_space(const int run_mode)

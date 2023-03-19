@@ -1222,9 +1222,12 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 							 v = b -> read(a.addr.value(), false, true);
 						 }
 						 else {
-							auto phys = b->calculate_physical_address((getPSW() >> 12) & 3, a.addr.value());
+							int run_mode = (getPSW() >> 12) & 3;
+							auto phys = b->calculate_physical_address(run_mode, a.addr.value());
 
-							//b->check_address(true, true, phys, false, word_mode, (getPSW() >> 12) & 3);
+							uint32_t a = word_mode ? phys.physical_data : phys.physical_instruction;
+
+							b->check_odd_addressing(a, run_mode, word_mode ? d_space : i_space, false);
 
 							v = b->readPhysical(word_mode ? phys.physical_data : phys.physical_instruction);
 						 }
@@ -1260,7 +1263,8 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						if (a.addr.value() >= 0160000)
 							b->write(a.addr.value(), false, v, true);  // put in '13/12' address space
 						else {
-							auto phys = b->calculate_physical_address((getPSW() >> 12) & 3, a.addr.value());
+							int run_mode = (getPSW() >> 12) & 3;
+							auto phys = b->calculate_physical_address(run_mode, a.addr.value());
 
 							DOLOG(debug, true, "MTPI/D %06o -> %o / %o", a, phys.physical_instruction, phys.physical_data);
 
@@ -1271,9 +1275,11 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 							mtpi_count++;
 
-							//b->check_address(true, true, phys, false, word_mode, (getPSW() >> 12) & 3);
+							uint32_t a = word_mode ? phys.physical_data : phys.physical_instruction;
 
-							b->writePhysical(word_mode ? phys.physical_data : phys.physical_instruction, v);
+							b->check_odd_addressing(a, run_mode, word_mode ? d_space : i_space, true);
+
+							b->writePhysical(a, v);
 						}
 					 }
 
