@@ -10,8 +10,6 @@
 #include "log.h"
 #include "utils.h"
 
-uint16_t oldpc = 0;
-
 #define SIGN(x, wm) ((wm) ? (x) & 0x80 : (x) & 0x8000)
 
 #define IS_0(x, wm) ((wm) ? ((x) & 0xff) == 0 : (x) == 0)
@@ -1264,7 +1262,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 //							FILE *fh = fopen("og2-kek.dat", "a+");
 //							fprintf(fh, "%lu %06o MTPI %06o: %06o\n", mtpi_count, oldpc, a, v);
 //							fclose(fh);
-							DOLOG(debug, true, "%lu %06o MTPI %06o: %06o", mtpi_count, oldpc, a.addr.value(), v);
+							DOLOG(debug, true, "%lu %06o MTPI %06o: %06o", mtpi_count, pc-2, a.addr.value(), v);
 
 							mtpi_count++;
 
@@ -1489,7 +1487,7 @@ bool cpu::misc_operations(const uint16_t instr)
 			return true;
 
 		case 0b0000000000000100: // IOT
-			//trap(020);  disabled for debugging TODO
+			trap(020);
 			return true;
 
 		case 0b0000000000000110: // RTT
@@ -2149,7 +2147,6 @@ void cpu::step_b()
 	instruction_count++;
 
 	uint16_t temp_pc = getPC();
-	oldpc = temp_pc;
 
 	if ((b->getMMR0() & 0160000) == 0)
 		b->setMMR2(temp_pc);
@@ -2171,7 +2168,7 @@ void cpu::step_b()
 		if (misc_operations(instr))
 			return;
 
-		DOLOG(warning, true, "UNHANDLED instruction %o", instr);
+		DOLOG(warning, true, "UNHANDLED instruction %06o @ %06o", instr, temp_pc);
 
 		trap(010);
 	}

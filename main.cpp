@@ -49,7 +49,7 @@ void help()
 	printf("-b x     enable bootloader (build-in), parameter must be \"rk05\" or \"rl02\"\n");
 	printf("-n       ncurses UI\n");
 	printf("-d       enable debugger\n");
-	printf("-s x     set console switches state - octal number\n");
+	printf("-s x,y   set console switche state: set bit x (0...15) to y (0/1)\n");
 	printf("-t       enable tracing (disassemble to stderr, requires -d as well)\n");
 	printf("-l x     log to file x\n");
 	printf("-L x,y   set log level for screen (x) and file (y)\n");
@@ -94,9 +94,18 @@ int main(int argc, char *argv[])
 				test = optarg;
 				break;
 
-			case 's':
-				console_switches = strtol(optarg, NULL, 8);
-				break;
+			case 's': {
+					char *c = strchr(optarg, ',');
+					if (!c)
+						error_exit(false, "-s: parameter missing");
+					int bit = atoi(optarg);
+					int state = atoi(c + 1);
+
+					console_switches &= ~(1 << bit);
+					console_switches |= state << bit;
+
+					break;
+				  }
 
 			case '3':
 				mode_34 = true;  // switch from 11/70 to 11/34

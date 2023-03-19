@@ -222,6 +222,23 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 			continue;
 		}
+		else if (parts[0] == "toggle") {
+			auto s_it = kv.find("s");
+			auto t_it = kv.find("t");
+
+			if (s_it == kv.end() || t_it == kv.end())
+				cnsl->put_string_lf(format("toggle: parameter missing? current switches states: 0o%06o", c->getBus()->get_console_switches()));
+			else {
+				int s = std::stoi(s_it->second, nullptr, 8);
+				int t = std::stoi(t_it->second, nullptr, 8);
+
+				c->getBus()->set_console_switch(s, t);
+
+				cnsl->put_string_lf(format("Set switch %d to %d", s, t));
+			}
+
+			continue;
+		}
 		else if (parts[0] == "setmem") {
 			auto a_it = kv.find("a");
 			auto v_it = kv.find("v");
@@ -345,6 +362,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 			cnsl->put_string_lf("mmudump       - dump MMU settings (PARs/PDRs)");
 			cnsl->put_string_lf("setpc         - set PC to value");
 			cnsl->put_string_lf("setmem        - set memory (a=) to value (v=), both in octal, one byte");
+			cnsl->put_string_lf("toggle        - set switch (s=, 0...15 (decimal)) of the front panel to state (t=, 0 or 1)");
 
 			continue;
 		}

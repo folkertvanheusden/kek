@@ -101,6 +101,7 @@ public:
 	void clearmem();
 
 	void set_console_switches(const uint16_t new_state) { console_switches = new_state; }
+	void set_console_switch(const int bit, const bool state) { console_switches &= ~(1 << bit); console_switches |= state << bit; }
 	uint16_t get_console_switches() { return console_switches; }
 	void set_debug_mode() { console_switches |= 128; }
 
