@@ -1308,10 +1308,10 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 				 break;
 
 		case 0b000110111: {  // MFPS (get PSW to something) / SXT
-				 auto g_dst = getGAM(dst_mode, dst_reg, word_mode, false);
-
 				 if (word_mode) {  // MFPS
 #if 0  // not in the PDP-11/70
+					 auto g_dst = getGAM(dst_mode, dst_reg, word_mode, false);
+
 					 uint16_t temp      = psw & 0xff;
 					 bool     extend_b7 = psw & 128;
 
@@ -1330,6 +1330,8 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 #endif
 				 }
 				 else {  // SXT
+					 auto g_dst = getGAM(dst_mode, dst_reg, word_mode, false);
+
 					 int32_t  vl = -getPSW_n();
 
 					 if (put_result(g_dst, vl)) {
