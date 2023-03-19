@@ -490,8 +490,11 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 
 				    uint16_t result = g_dst.value.value() | g_src.value.value();
 
-				    if (put_result(g_dst, result))
-					    setPSW_flags_nzv(result, word_mode);
+				    if (put_result(g_dst, result)) {
+					    setPSW_n(SIGN(result, word_mode));
+					    setPSW_z(result == 0);
+					    setPSW_v(false);
+				    }
 
 				    return true;
 			    }
@@ -769,14 +772,14 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 		case 0b000101000: { // CLR/CLRB
 					  {
-						  auto     g_dst = getGAMAddress(dst_mode, dst_reg, word_mode);
+						  // read and write in word-mode but update in 'word_mode'
+						  auto     g_dst = getGAM(dst_mode, dst_reg, false, false);
 
 						  uint16_t r     = 0;
 
 						  // CLRB only clears the least significant byte
 						  if (word_mode) {
-							if (dst_mode == 0)
-								r = getRegister(dst_reg, false, false) & 0xff00;
+							r = g_dst.value.value() & 0xff00;
 
 							// both in byte and word mode the full word must be updated
 							g_dst.word_mode = false;
