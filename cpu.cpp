@@ -1291,8 +1291,12 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 		case 0b000110100: // MARK/MTPS (put something in PSW)
 				 if (word_mode) {  // MTPS
+#if 0  // not in the PDP-11/70
 					 psw &= 0xff00;  // only alter lower 8 bits
 					 psw |= getGAM(dst_mode, dst_reg, word_mode, false).value.value() & 0xef;  // can't change bit 4
+#else
+					 trap(010);
+#endif
 				 }
 				 else {
 					 setRegister(6, getPC() + dst * 2);
@@ -1301,7 +1305,6 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 					 setRegister(5, popStack());
 				 }
-
 				 break;
 
 		case 0b000110111: {  // MFPS (get PSW to something) / SXT
