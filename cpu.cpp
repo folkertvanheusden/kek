@@ -1496,7 +1496,7 @@ bool cpu::misc_operations(const uint16_t instr)
 			return true;
 
 		case 0b0000000000000100: // IOT
-			//trap(020);  disabled for debugging
+			//trap(020);  disabled for debugging TODO
 			return true;
 
 		case 0b0000000000000110: // RTT
@@ -1626,10 +1626,10 @@ void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 			// make sure the trap vector is retrieved from kernel space
 			psw &= 037777;  // mask off 14/15
 
-			setPC(b->readWord(vector + 0));
+			setPC(b->readWord(vector + 0, d_space));
 
 			// switch to kernel mode & update 'previous mode'
-			uint16_t new_psw = b->readWord(vector + 2) & 0147777;  // mask off old 'previous mode'
+			uint16_t new_psw = b->readWord(vector + 2, d_space) & 0147777;  // mask off old 'previous mode'
 			if (new_ipl != -1)
 				new_psw = (new_psw & ~0xe0) | (new_ipl << 5);
 			new_psw |= (before_psw >> 2) & 030000; // apply new 'previous mode'
