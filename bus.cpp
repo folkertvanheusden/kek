@@ -858,7 +858,7 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 		}
 
 		if (a == ADDR_CONSW) {  // switch register
-			switch_register = value;
+			console_leds = value;
 			return;
 		}
 

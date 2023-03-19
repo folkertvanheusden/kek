@@ -114,7 +114,7 @@ void console_ncurses::resize_terminal()
 
 	create_win_border(0, 0, 80, 25, "terminal", &w_main_b, &w_main, false);
 
-	create_win_border(0, 27, 100, 4, "panel", &w_panel_b, &w_panel, false);
+	create_win_border(0, 27, 100, 5, "panel", &w_panel_b, &w_panel, false);
 
 	scrollok(w_main -> win, TRUE);
 
@@ -162,6 +162,13 @@ void console_ncurses::panel_update_thread()
 
 		for(uint8_t b=0; b<16; b++)
 			mvwprintw(w_panel->win, 1, 1 + 16 - b + 17, "%c", current_instr & (1 << b) ? '1' : '0');
+
+		mvwprintw(w_panel->win, 4, 1, "LEDs:");
+
+		uint16_t leds = b->get_console_leds();
+
+		for(uint8_t b=0; b<16; b++)
+			mvwprintw(w_panel->win, 4, 1 + 22 - b,      "%c", leds          & (1 << b) ? '1' : '0');
 
 		wattron(w_panel->win, COLOR_PAIR(5));
 

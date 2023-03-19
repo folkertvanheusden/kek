@@ -84,11 +84,10 @@ private:
 
 	uint16_t MMR0 { 0 }, MMR1 { 0 }, MMR2 { 0 }, MMR3 { 0 }, CPUERR { 0 }, PIR { 0 }, CSR { 0 };
 
-	uint16_t switch_register { 0 };
-
 	uint16_t lf_csr { 0 };
 
 	uint16_t console_switches { 0 };
+	uint16_t console_leds     { 0 };
 
 	uint16_t read_pdr (const uint32_t a, const int run_mode, const bool word_mode, const bool peek_only);
 	uint16_t read_par (const uint32_t a, const int run_mode, const bool word_mode, const bool peek_only);
@@ -102,7 +101,10 @@ public:
 	void clearmem();
 
 	void set_console_switches(const uint16_t new_state) { console_switches = new_state; }
+	uint16_t get_console_switches() { return console_switches; }
 	void set_debug_mode() { console_switches |= 128; }
+
+	uint16_t get_console_leds() { return console_leds; }
 
 	void add_cpu(cpu *const c) { this -> c = c; }
 	void add_tm11(tm_11 *tm11) { this -> tm11 = tm11; } 
@@ -145,8 +147,6 @@ public:
 	void     setMMR0Bit(const int bit);
 	void     clearMMR0Bit(const int bit);
 	void     setMMR2(const uint16_t value);
-
-	uint16_t get_switch_register() const { return switch_register; }
 
 	uint32_t calculate_physical_address(const int run_mode, const uint16_t a, const bool trap_on_failure, const bool is_write, const bool peek_only, const bool is_data);
 
