@@ -1223,9 +1223,6 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 							//b->check_address(true, true, phys, false, word_mode, (getPSW() >> 12) & 3);
 
-							extern FILE *lfh;
-							fflush(lfh);
-
 							v = b->readPhysical(word_mode ? phys.physical_data : phys.physical_instruction);
 						 }
 					 }
@@ -1272,9 +1269,6 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 							mtpi_count++;
 
 							//b->check_address(true, true, phys, false, word_mode, (getPSW() >> 12) & 3);
-
-							extern FILE *lfh;
-							fflush(lfh);
 
 							b->writePhysical(word_mode ? phys.physical_data : phys.physical_instruction, v);
 						}
@@ -2162,10 +2156,6 @@ void cpu::step_b()
 
 	try {
 		uint16_t instr = b->readWord(temp_pc);
-
-//		FILE *fh = fopen("/home/folkert/kek.dat", "a+");
-//		fprintf(fh, "%06o %06o\n", temp_pc, instr);
-//		fclose(fh);
 
 		addRegister(7, false, 2);
 
