@@ -81,6 +81,8 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 	uint16_t temp = 0;
 
 	if (a >= 0160000) {
+		DOLOG(debug, !peek_only, "READ from %06o/IO %c %c", a, space == d_space ? 'D' : 'I', word_mode ? 'B' : 'W');
+
 		if (word_mode)
 			DOLOG(debug, false, "READ I/O %06o in byte mode", a);
 
@@ -680,6 +682,8 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 	}
 
 	if (a >= 0160000) {
+		DOLOG(debug, true, "WRITE to %06o/IO %c %c: %o", a, space == d_space ? 'D' : 'I', word_mode ? 'B' : 'W', value);
+
 		if (word_mode) {
 			assert(value < 256);
 			DOLOG(debug, true, "WRITE I/O %06o in byte mode", a);
