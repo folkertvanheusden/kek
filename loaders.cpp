@@ -31,7 +31,6 @@ void setBootLoader(bus *const b, const bootloader_t which)
 	int              size   = 0;
 
 	if (which == BL_RK05) {
-		/*
 		start = offset = 01000;
 
 		static uint16_t rk05_code[] = {
@@ -45,8 +44,8 @@ void setBootLoader(bus *const b, const bootloader_t which)
 			0100376,
 			0005007
 		};
-		*/
 
+#if 0
 		// from https://github.com/amakukha/PyPDP11.git
 		offset = 02000;
 		start  = 02002;
@@ -76,6 +75,7 @@ void setBootLoader(bus *const b, const bootloader_t which)
 			0105011,                        // CLRB (R1)
 			0005007                         // CLR PC
 		};
+#endif
 
 		bl = rk05_code;
 

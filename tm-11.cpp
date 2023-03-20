@@ -11,9 +11,6 @@
 
 tm_11::tm_11(const std::string & file, memory *const m) : m(m)
 {
-	offset = 0;
-	memset(registers, 0x00, sizeof registers);
-
 	fh = fopen(file.c_str(), "rb");
 }
 

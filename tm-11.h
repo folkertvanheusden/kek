@@ -20,11 +20,11 @@ class memory;
 class tm_11
 {
 private:
-	memory *const m;
-	uint16_t registers[6];
-	uint8_t xfer_buffer[65536];
-	int offset;
-	FILE *fh;
+	memory   *const m                  { nullptr };
+	uint16_t        registers[6]       { 0       };
+	uint8_t         xfer_buffer[65536];
+	int             offset             { 0       };
+	FILE           *fh                 { nullptr };
 
 public:
 	tm_11(const std::string & file, memory *const m);
