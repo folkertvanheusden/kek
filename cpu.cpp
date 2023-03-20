@@ -627,15 +627,23 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 				
 				if (shift == 0) {
 					setPSW_c(false);
+					setPSW_v(SIGN(R, false) != SIGN(oldR, false));
 				}
-				else if (shift < 32) {
+				else if (shift <= 15) {
 					R <<= shift;
 					setPSW_c(R & 0x10000);
+					setPSW_v((!!SIGN(oldR, false)) != (!!(R >> 15)));
+				}
+				else if (shift < 32) {
+					setPSW_c((R << (shift - 16)) & 1);
+					R = 0;
+					setPSW_v(!!oldR);
 				}
 				else if (shift == 32) {
 					R = -sign;
 
 					setPSW_c(sign);
+					setPSW_v(SIGN(R, false) != SIGN(oldR, false));
 				}
 				else {
 					int shift_n = (64 - shift) - 1;
@@ -643,6 +651,7 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 					R >>= shift_n;
 
 					setPSW_c(R & 1);
+					setPSW_v(SIGN(R, false) != SIGN(oldR, false));
 
 					R >>= 1;
 				}
@@ -651,7 +660,6 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 
 				setPSW_n(SIGN(R, false));
 				setPSW_z(R == 0);
-				setPSW_v(SIGN(R, false) != SIGN(oldR, false));
 
 				setRegister(reg, R);
 
@@ -1179,11 +1187,12 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						 v |= add;
 
 						 setPSW_n(SIGN(v, word_mode));
-						 setPSW_z(IS_0(v, word_mode));
+						 setPSW_z(IS_0(v, false));
 						 setPSW_c(SIGN(vl, word_mode));
 						 setPSW_v(getPSW_n() ^ getPSW_c());
 
 						 setRegister(dst_reg, false, v);
+
 					 }
 					 else {
 						 auto     a   = getGAM(dst_mode, dst_reg, word_mode, false);
@@ -1194,7 +1203,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 						 if (set_flags) {
 							 setPSW_n(SIGN(v, word_mode));
-							 setPSW_z(IS_0(v, word_mode));
+							 setPSW_z(IS_0(v, false));
 							 setPSW_c(SIGN(vl, word_mode));
 							 setPSW_v(getPSW_n() ^ getPSW_c());
 						 }
