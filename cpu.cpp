@@ -410,7 +410,7 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 	if (operation == 0b000)
 		return single_operand_instructions(instr);
 
-	if (operation == 0b111)
+	if (operation == 0b111 && word_mode == false)
 		return additional_double_operand_instructions(instr);
 
 	const uint8_t src        = (instr >> 6) & 63;
@@ -752,19 +752,18 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 		case 0b00000011: { // SWAB
 					 if (word_mode) // handled elsewhere
 						 return false;
-					 else {
-						 auto g_dst = getGAM(dst_mode, dst_reg, word_mode, false);
 
-						 uint16_t v = g_dst.value.value();
+					 auto g_dst = getGAM(dst_mode, dst_reg, word_mode, false);
 
-						 v = ((v & 0xff) << 8) | (v >> 8);
+					 uint16_t v = g_dst.value.value();
 
-						 set_flags = putGAM(g_dst, v);
+					 v = ((v & 0xff) << 8) | (v >> 8);
 
-						 if (set_flags) {
-						         setPSW_flags_nzv(v, true);
-							 setPSW_c(false);
-						 }
+					 set_flags = putGAM(g_dst, v);
+
+					 if (set_flags) {
+						 setPSW_flags_nzv(v, true);
+						 setPSW_c(false);
 					 }
 
 					 break;
@@ -1837,7 +1836,7 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 		if (text.empty() == false && next_word != -1)
 			instruction_words.push_back(next_word);
 	}
-	else if (do_opcode == 0b111) {
+	else if (do_opcode == 0b111 && word_mode == false) {
 		std::string src_text = format("R%d", (instruction >> 6) & 7);
 		auto        dst_text { addressing_to_string(dst_register, (addr + 2) & 65535, word_mode) };
 
