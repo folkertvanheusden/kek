@@ -410,8 +410,12 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 	if (operation == 0b000)
 		return single_operand_instructions(instr);
 
-	if (operation == 0b111 && word_mode == false)
+	if (operation == 0b111) {
+		if (word_mode)
+			return false;
+
 		return additional_double_operand_instructions(instr);
+	}
 
 	const uint8_t src        = (instr >> 6) & 63;
 	const uint8_t src_mode   = (src >> 3) & 7;
@@ -1836,45 +1840,49 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 		if (text.empty() == false && next_word != -1)
 			instruction_words.push_back(next_word);
 	}
-	else if (do_opcode == 0b111 && word_mode == false) {
-		std::string src_text = format("R%d", (instruction >> 6) & 7);
-		auto        dst_text { addressing_to_string(dst_register, (addr + 2) & 65535, word_mode) };
+	else if (do_opcode == 0b111) {
+		if (word_mode)
+			name = "?";
+		else {
+			std::string src_text = format("R%d", (instruction >> 6) & 7);
+			auto        dst_text { addressing_to_string(dst_register, (addr + 2) & 65535, word_mode) };
 
-		auto next_word = dst_text.instruction_part;
+			auto next_word = dst_text.instruction_part;
 
-		work_values.push_back(dst_text.work_value);
+			work_values.push_back(dst_text.work_value);
 
-		switch(ado_opcode) {  // additional double operand
-			case 0:
-				name = "MUL";
-				break;
+			switch(ado_opcode) {  // additional double operand
+				case 0:
+					name = "MUL";
+					break;
 
-			case 1:
-				name = "DIV";
-				break;
+				case 1:
+					name = "DIV";
+					break;
 
-			case 2:
-				name = "ASH";
-				break;
+				case 2:
+					name = "ASH";
+					break;
 
-			case 3:
-				name = "ASHC";
-				break;
+				case 3:
+					name = "ASHC";
+					break;
 
-			case 4:
-				name = "XOR";
-				break;
+				case 4:
+					name = "XOR";
+					break;
 
-			case 7:
-				text = std::string("SOB ") + src_text;
-				break;
+				case 7:
+					text = std::string("SOB ") + src_text;
+					break;
+			}
+
+			if (text.empty() && name.empty() == false)
+				text = name + space + src_text + comma + dst_text.operand;
+
+			if (text.empty() == false && next_word != -1)
+				instruction_words.push_back(next_word);
 		}
-
-		if (text.empty() && name.empty() == false)
-			text = name + space + src_text + comma + dst_text.operand;
-
-		if (text.empty() == false && next_word != -1)
-			instruction_words.push_back(next_word);
 	}
 	else {
 		switch(do_opcode) {
