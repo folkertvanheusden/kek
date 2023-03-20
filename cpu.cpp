@@ -778,28 +778,26 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 				 }
 
 		case 0b000101000: { // CLR/CLRB
-					  {
-						  // read and write in word-mode but update in 'word_mode'
-						  auto     g_dst = getGAM(dst_mode, dst_reg, false, false);
+					  bool set_flags = false;
 
-						  uint16_t r     = 0;
+					  if (word_mode && dst_mode == 0) {
+						  auto g_dst = getGAM(dst_mode, dst_reg, true, false);
 
-						  // CLRB only clears the least significant byte
-						  if (word_mode) {
-							r = g_dst.value.value() & 0xff00;
+						  uint16_t r = g_dst.value.value() & 0xff00;
 
-							// both in byte and word mode the full word must be updated
-							g_dst.word_mode = false;
-						  }
+						  set_flags = putGAM(g_dst, r);
+					  }
+					  else {
+						  auto     g_dst = getGAM(dst_mode, dst_reg, word_mode, word_mode, false);
 
-						  bool set_flags = putGAM(g_dst, r);
+						  set_flags = putGAM(g_dst, 0);
+					  }
 
-						  if (set_flags) {
-							  setPSW_n(false);
-							  setPSW_z(true);
-							  setPSW_v(false);
-							  setPSW_c(false);
-						  }
+					  if (set_flags) {
+						  setPSW_n(false);
+						  setPSW_z(true);
+						  setPSW_v(false);
+						  setPSW_c(false);
 					  }
 
 					  break;

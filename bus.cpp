@@ -285,6 +285,12 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 		return -1;
 	}
 
+	if (peek_only == false && word_mode == false && (a & 1)) {
+		DOLOG(debug, true, "READ from %06o - odd address!", a);
+		c->schedule_trap(004);  // invalid access
+		return 0;
+	}
+
 	int      run_mode = (c->getPSW() >> (use_prev ? 12 : 14)) & 3;
 
 	uint32_t m_offset = calculate_physical_address(run_mode, a, !peek_only, false, peek_only, space == d_space);
@@ -777,6 +783,13 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 
 //		c -> busError();
 
+		return;
+	}
+
+	if (word_mode == false && (a & 1)) {
+		DOLOG(debug, true, "WRITE to %06o (value: %06o) - odd address!", a, value);
+
+		c->schedule_trap(004);  // invalid access
 		return;
 	}
 
