@@ -1522,10 +1522,8 @@ bool cpu::misc_operations(const uint16_t instr)
 			return true;
 
 		case 0b0000000000000111: // MFPT
-			if (emulateMFPT)
-				setRegister(0, true, 1); // PDP-11/44
-			else
-				trap(012);
+			//setRegister(0, 0);
+			trap(010); // does not exist on PDP-11/70
 			return true;
 
 		case 0b0000000000000101: // RESET

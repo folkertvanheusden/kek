@@ -184,8 +184,6 @@ int main(int argc, char *argv[])
 
 	c->set_34(mode_34);
 
-	c->setEmulateMFPT(true);
-
 	std::atomic_bool interrupt_emulation { false };
 
 	if (tape.empty() == false)

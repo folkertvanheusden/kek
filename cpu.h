@@ -36,7 +36,6 @@ private:
 	uint16_t fpsr  { 0 };
 	uint16_t stackLimitRegister { 0 };
 	uint8_t  scheduled_trap     { 0 };
-	bool     emulateMFPT { false };
 	uint64_t instruction_count { 0 };
 	uint64_t running_since     { 0 };
 	bool     mode11_70   { true };
@@ -114,8 +113,6 @@ public:
 
 	void trap(uint16_t vector, const int new_ipl = -1, const bool is_interrupt = false);
 	void schedule_trap(const uint16_t vector);
-
-	void setEmulateMFPT(const bool v) { emulateMFPT = v; }
 
 	bool getPSW_c() const;
 	bool getPSW_v() const;
