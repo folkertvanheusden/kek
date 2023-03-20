@@ -617,6 +617,15 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 				c -> setStackLimitRegister(v);
 				return;
 			}
+
+			if (a == ADDR_MICROPROG_BREAK_REG) {  // microprogram break register
+				microprogram_break_register = (microprogram_break_register & 0xff00) | value;
+				return;
+			}
+			if (a == ADDR_MICROPROG_BREAK_REG + 1) {  // microprogram break register
+				microprogram_break_register = (microprogram_break_register & 0x00ff) | (value << 8);
+				return;
+			}
 		}
 		else {
 			if (a == ADDR_PSW) { // PSW
@@ -663,6 +672,7 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 			}
 
 			if (a == ADDR_MICROPROG_BREAK_REG) {  // microprogram break register
+				microprogram_break_register = value;
 				return;
 			}
 		}

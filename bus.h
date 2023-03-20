@@ -87,6 +87,8 @@ private:
 
 	uint16_t lf_csr { 0 };
 
+	uint16_t microprogram_break_register { 0 };
+
 	uint16_t console_switches { 0 };
 	uint16_t console_leds     { 0 };
 
