@@ -86,6 +86,46 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 		if (word_mode)
 			DOLOG(debug, false, "READ I/O %06o in byte mode", a);
 
+		//// REGISTERS ////
+		if (a >= ADDR_KERNEL_R && a <= ADDR_KERNEL_R + 5) { // kernel R0-R5
+			DOLOG(debug, !peek_only, "readb kernel R%d", a - ADDR_KERNEL_R);
+			return c -> getRegister(a - ADDR_KERNEL_R, 0, false) & (word_mode ? 0xff : 0xffff);
+		}
+		if (a >= ADDR_USER_R && a <= ADDR_USER_R + 5) { // user R0-R5
+			DOLOG(debug, !peek_only, "readb user R%d", a - ADDR_USER_R);
+			return c -> getRegister(a - ADDR_USER_R, 3, false) & (word_mode ? 0xff : 0xffff);
+		}
+		if (a == ADDR_KERNEL_SP) { // kernel SP
+			DOLOG(debug, !peek_only, "readb kernel sp");
+			return c -> getStackPointer(0) & (word_mode ? 0xff : 0xffff);
+		}
+		if (a == ADDR_PC) { // PC
+			DOLOG(debug, !peek_only, "readb pc");
+			return c -> getPC() & (word_mode ? 0xff : 0xffff);
+		}
+		if (a == ADDR_SV_SP) { // supervisor SP
+			DOLOG(debug, !peek_only, "readb supervisor sp");
+			return c -> getStackPointer(1) & (word_mode ? 0xff : 0xffff);
+		}
+		if (a == ADDR_USER_SP) { // user SP
+			DOLOG(debug, !peek_only, "readb user sp");
+			return c -> getStackPointer(3) & (word_mode ? 0xff : 0xffff);
+		}
+		///^ registers ^///
+
+		if (!peek_only) {
+			if (a & 1) {
+				DOLOG(debug, true, "bus::readWord: odd address UNHANDLED %06o in i/o area", a);
+				c->schedule_trap(004);  // invalid access
+				return 0;
+			}
+		}
+
+		if (a == ADDR_CPU_ERR) { // cpu error register
+			DOLOG(debug, !peek_only, "readb cpuerr");
+			return CPUERR & 0xff;
+		}
+
 		if (a == ADDR_MAINT) { // MAINT
 			DOLOG(debug, !peek_only, "read MAINT");
 			return 1; // POWER OK
@@ -155,35 +195,6 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 				DOLOG(debug, !peek_only, "readb stack limit register");
 				return c -> getStackLimitRegister() >> 8;
 			}
-
-			if (a >= ADDR_KERNEL_R && a <= ADDR_KERNEL_R + 5) { // kernel R0-R5
-				DOLOG(debug, !peek_only, "readb kernel R%d", a - ADDR_KERNEL_R);
-				return c -> getRegister(a - ADDR_KERNEL_R, 0, false) & 0xff;
-			}
-			if (a >= ADDR_USER_R && a <= ADDR_USER_R + 5) { // user R0-R5
-				DOLOG(debug, !peek_only, "readb user R%d", a - ADDR_USER_R);
-				return c -> getRegister(a - ADDR_USER_R, 3, false) & 0xff;
-			}
-			if (a == ADDR_KERNEL_SP) { // kernel SP
-				DOLOG(debug, !peek_only, "readb kernel sp");
-				return c -> getStackPointer(0) & 0xff;
-			}
-			if (a == ADDR_PC) { // PC
-				DOLOG(debug, !peek_only, "readb pc");
-				return c -> getPC() & 0xff;
-			}
-			if (a == ADDR_SV_SP) { // supervisor SP
-				DOLOG(debug, !peek_only, "readb supervisor sp");
-				return c -> getStackPointer(1) & 0xff;
-			}
-			if (a == ADDR_USER_SP) { // user SP
-				DOLOG(debug, !peek_only, "readb user sp");
-				return c -> getStackPointer(3) & 0xff;
-			}
-			if (a == ADDR_CPU_ERR) { // cpu error register
-				DOLOG(debug, !peek_only, "readb cpuerr");
-				return CPUERR & 0xff;
-			}
 		}
 		else {
 			if (a == ADDR_MMR0) {
@@ -213,31 +224,6 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 
 			if (a == ADDR_STACKLIM) { // stack limit register
 				return c -> getStackLimitRegister();
-			}
-
-			if (a >= ADDR_KERNEL_R && a <= ADDR_KERNEL_R + 5) { // kernel R0-R5
-				DOLOG(debug, !peek_only, "read kernel R%d", a - ADDR_KERNEL_R);
-				return c -> getRegister(a - ADDR_KERNEL_R, 0, false);
-			}
-			if (a >= ADDR_USER_R && a <= ADDR_USER_R + 5) { // user R0-R5
-				DOLOG(debug, !peek_only, "read user R%d", a - ADDR_USER_R);
-				return c -> getRegister(a - ADDR_USER_R, 3, false);
-			}
-			if (a == ADDR_KERNEL_SP) { // kernel SP
-				DOLOG(debug, !peek_only, "read kernel sp");
-				return c -> getStackPointer(0);
-			}
-			if (a == ADDR_PC) { // PC
-				DOLOG(debug, !peek_only, "read pc");
-				return c -> getPC();
-			}
-			if (a == ADDR_SV_SP) { // supervisor SP
-				DOLOG(debug, !peek_only, "read supervisor sp");
-				return c -> getStackPointer(1);
-			}
-			if (a == ADDR_USER_SP) { // user SP
-				DOLOG(debug, !peek_only, "read user sp");
-				return c -> getStackPointer(3);
 			}
 
 			if (a == ADDR_CPU_ERR) { // cpu error register
@@ -275,12 +261,8 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 			return system_size;
 		}
 
-		if (!peek_only) {
-			if (a & 1)
-				DOLOG(debug, true, "bus::readWord: odd address UNHANDLED %o", a);
-
+		if (!peek_only)
 			DOLOG(debug, true, "UNHANDLED read %o(%c)", a, word_mode ? 'B' : ' ');
-		}
 
 		return -1;
 	}
@@ -780,6 +762,13 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 		///////////
 
 		DOLOG(debug, true, "UNHANDLED write %o(%c): %o", a, word_mode ? 'B' : 'W', value);
+
+		if (word_mode == false && (a & 1)) {
+			DOLOG(debug, true, "WRITE to %06o (value: %06o) - odd address!", a, value);
+
+			c->schedule_trap(004);  // invalid access
+			return;
+		}
 
 //		c -> busError();
 
