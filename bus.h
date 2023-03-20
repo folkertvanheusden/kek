@@ -110,11 +110,11 @@ public:
 
 	uint16_t get_console_leds() { return console_leds; }
 
-	void add_cpu(cpu *const c) { this -> c = c; }
-	void add_tm11(tm_11 *tm11) { this -> tm11 = tm11; } 
+	void add_cpu(cpu *const c) { this -> c     = c;     }
+	void add_tm11(tm_11 *tm11) { this -> tm11  = tm11;  } 
 	void add_rk05(rk05 *rk05_) { this -> rk05_ = rk05_; } 
 	void add_rl02(rl02 *rl02_) { this -> rl02_ = rl02_; }
-	void add_tty(tty *tty_)    { this -> tty_ = tty_; }
+	void add_tty(tty *tty_)    { this -> tty_  = tty_;  }
 
 	cpu *getCpu() { return this->c; }
 
