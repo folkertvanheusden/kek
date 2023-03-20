@@ -206,12 +206,8 @@ bool cpu::getPSW_n() const
 
 void cpu::setBitPSW(const int bit, const bool v)
 {
-	const uint16_t mask = 1 << bit;
-
-	if (v)
-		psw |= mask;
-	else
-		psw &= ~mask;
+	psw &= ~(1 << bit);
+	psw |= v << bit;
 }
 
 void cpu::setPSW_c(const bool v)
@@ -512,7 +508,7 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 
 				    bool     set_flags  = g_dst.addr.has_value() ? g_dst.addr.value() != ADDR_PSW : true;
 
-				    if (instr & 0x8000) {
+				    if (instr & 0x8000) {  // SUB
 					    result = (g_dst.value.value() - g_ssrc.value.value()) & 0xffff;
 
 					    if (set_flags) {
@@ -520,13 +516,12 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 						    setPSW_c(uint16_t(g_dst.value.value()) < uint16_t(g_ssrc.value.value()));
 					    }
 				    }
-				    else {
+				    else {  // ADD
 					    uint32_t temp = g_dst.value.value() + g_ssrc.value.value();
 
 					    result = temp;
 
 					    if (set_flags) {
-						    setPSW_v((temp ^ g_ssrc.value.value()) & (temp ^ g_dst.value.value()));
 						    setPSW_v(SIGN((~g_ssrc.value.value() ^ g_dst.value.value()) & (g_ssrc.value.value() ^ (temp & 0xffff)), false));
 						    setPSW_c(uint16_t(result) < uint16_t(g_ssrc.value.value()));
 					    }
