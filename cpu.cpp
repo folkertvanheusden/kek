@@ -716,8 +716,9 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 			}
 
 		case 4: { // XOR (word only)
+			  	uint16_t reg_v = getRegister(reg);  // in case it is R7
 			        auto     g_dst = getGAM(dst_mode, dst_reg, false, false);
-				uint16_t vl    = g_dst.value.value() ^ getRegister(reg);
+				uint16_t vl    = g_dst.value.value() ^ reg_v;
 
 				bool set_flags = putGAM(g_dst, vl);
 
