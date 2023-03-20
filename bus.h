@@ -50,6 +50,7 @@
 #define ADDR_SYSSIZE 0177760
 #define ADDR_MICROPROG_BREAK_REG 0177770
 #define ADDR_CCR 0177746
+#define ADDR_SYSTEM_ID 0177764
 
 class cpu;
 class memory;

@@ -107,6 +107,11 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 			return PIR;
 		}
 
+		if (a == ADDR_SYSTEM_ID) {
+			DOLOG(debug, !peek_only, "read system id");
+			return 011064;
+		}
+
 		if (a == ADDR_LFC) { // line frequency clock and status register
 			DOLOG(debug, !peek_only, "read line freq clock");
 			return lf_csr;
