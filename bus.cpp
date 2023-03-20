@@ -177,6 +177,17 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 			return read_par(a, 3, word_mode, peek_only);
 		///////////
 
+		if (a >= 0177740 && a <= 0177753) { // cache control register and others
+			// TODO
+			return 0;
+		}
+
+		if (a >= 0170200 && a <= 0170377) { // unibus map
+			DOLOG(debug, !peek_only, "reading unibus map (%06o)", a);
+			// TODO
+			return 0;
+		}
+
 		if (word_mode) {
 			if (a == ADDR_PSW) { // PSW
 				DOLOG(debug, !peek_only, "readb PSW LSB");
@@ -275,8 +286,12 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 			return system_size;
 		}
 
-		if (!peek_only)
+		if (!peek_only) {
 			DOLOG(debug, true, "UNHANDLED read %o(%c)", a, word_mode ? 'B' : ' ');
+
+			DOLOG(debug, false, "Read non existing I/O (%06o)", a);
+			c->schedule_trap(004);  // no such i/o
+		}
 
 		return -1;
 	}
@@ -290,6 +305,11 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 	int      run_mode = (c->getPSW() >> (use_prev ? 12 : 14)) & 3;
 
 	uint32_t m_offset = calculate_physical_address(run_mode, a, !peek_only, false, peek_only, space == d_space);
+
+	if (peek_only == false && m_offset >= n_pages * 8192) {
+		DOLOG(debug, false, "Read non existing mapped memory (%o >= %o)", m_offset, n_pages * 8192);
+		c->schedule_trap(004);  // no such memory
+	}
 
 	if (word_mode)
 		temp = m -> readByte(m_offset);
@@ -766,7 +786,13 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 		}
 		////
 
-		if (a == ADDR_CCR) { // cache control register
+		if (a >= 0177740 && a <= 0177753) { // cache control register and others
+			// TODO
+			return;
+		}
+
+		if (a >= 0170200 && a <= 0170377) { // unibus map
+			DOLOG(debug, false, "writing %06o to unibus map (%06o)", value, a);
 			// TODO
 			return;
 		}
@@ -787,7 +813,8 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 			return;
 		}
 
-//		c -> busError();
+		DOLOG(debug, false, "Write non existing I/O (%06o, value: %06o)", a, value);
+		c->schedule_trap(004);  // no such i/o
 
 		return;
 	}
@@ -800,6 +827,11 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 	}
 
 	uint32_t m_offset = calculate_physical_address(run_mode, a, true, true, false, space == d_space);
+
+	if (m_offset >= n_pages * 8192) {
+		DOLOG(debug, false, "Write non existing mapped memory (%06o, value: %06o)", m_offset, value);
+		c->schedule_trap(004);  // no such memory
+	}
 
 	DOLOG(debug, true, "WRITE to %06o/%07o %c %c: %o", a, m_offset, space == d_space ? 'D' : 'I', word_mode ? 'B' : 'W', value);
 
