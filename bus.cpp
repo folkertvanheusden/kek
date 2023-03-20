@@ -195,6 +195,13 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 				DOLOG(debug, !peek_only, "readb stack limit register");
 				return c -> getStackLimitRegister() >> 8;
 			}
+
+			if (a == ADDR_MICROPROG_BREAK_REG) {  // microprogram break register
+				return microprogram_break_register & 255;
+			}
+			if (a == ADDR_MICROPROG_BREAK_REG + 1) {  // microprogram break register
+				return microprogram_break_register >> 8;
+			}
 		}
 		else {
 			if (a == ADDR_MMR0) {
@@ -229,6 +236,10 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 			if (a == ADDR_CPU_ERR) { // cpu error register
 				DOLOG(debug, !peek_only, "read CPUERR");
 				return CPUERR;
+			}
+
+			if (a == ADDR_MICROPROG_BREAK_REG) {  // microprogram break register
+				return microprogram_break_register;
 			}
 		}
 
