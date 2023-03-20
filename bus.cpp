@@ -188,18 +188,20 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 				return c -> getPSW() >> 8;
 			}
 			if (a == ADDR_STACKLIM) { // stack limit register
-				DOLOG(debug, !peek_only, "readb stack limit register");
+				DOLOG(debug, !peek_only, "readb stack limit register (low)");
 				return c -> getStackLimitRegister() & 0xff;
 			}
 			if (a == ADDR_STACKLIM + 1) { // stack limit register
-				DOLOG(debug, !peek_only, "readb stack limit register");
+				DOLOG(debug, !peek_only, "readb stack limit register (high)");
 				return c -> getStackLimitRegister() >> 8;
 			}
 
 			if (a == ADDR_MICROPROG_BREAK_REG) {  // microprogram break register
+				DOLOG(debug, !peek_only, "readb micropgrogram break register (low: %03o)", microprogram_break_register & 255);
 				return microprogram_break_register & 255;
 			}
 			if (a == ADDR_MICROPROG_BREAK_REG + 1) {  // microprogram break register
+				DOLOG(debug, !peek_only, "readb micropgrogram break register (high: %03o)", microprogram_break_register >> 8);
 				return microprogram_break_register >> 8;
 			}
 		}
@@ -239,6 +241,7 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 			}
 
 			if (a == ADDR_MICROPROG_BREAK_REG) {  // microprogram break register
+				DOLOG(debug, !peek_only, "read micropgrogram break register (%06o)", microprogram_break_register);
 				return microprogram_break_register;
 			}
 		}
@@ -618,10 +621,12 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 			}
 
 			if (a == ADDR_MICROPROG_BREAK_REG) {  // microprogram break register
+				DOLOG(debug, false, "writeb micropgrogram break register (low: %03o)", value);
 				microprogram_break_register = (microprogram_break_register & 0xff00) | value;
 				return;
 			}
 			if (a == ADDR_MICROPROG_BREAK_REG + 1) {  // microprogram break register
+				DOLOG(debug, false, "writeb micropgrogram break register (high: %03o)", value);
 				microprogram_break_register = (microprogram_break_register & 0x00ff) | (value << 8);
 				return;
 			}
@@ -671,7 +676,8 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 			}
 
 			if (a == ADDR_MICROPROG_BREAK_REG) {  // microprogram break register
-				microprogram_break_register = value;
+				DOLOG(debug, false, "write micropgrogram break register (%06o)", value);
+				microprogram_break_register = value & 0xff; // only 8b on 11/70?
 				return;
 			}
 		}
