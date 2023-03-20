@@ -1591,6 +1591,8 @@ bool cpu::misc_operations(const uint16_t instr)
 
 void cpu::schedule_trap(const uint16_t vector)
 {
+	DOLOG(debug, false, "schedule_trap @ %06o", pc);
+
 	scheduled_trap = vector;
 }
 
