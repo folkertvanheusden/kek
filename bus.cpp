@@ -17,7 +17,7 @@
 // see also https://github.com/espressif/esp-idf/issues/1934
 constexpr int n_pages = 12;
 #else
-constexpr int n_pages = 128;  // 1MB
+constexpr int n_pages = 32;  // 32=256kB (for EKBEEx.BIC)
 #endif
 
 constexpr uint16_t di_ena_mask[4] = { 4, 2, 0, 1 };
@@ -309,8 +309,11 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 	uint32_t m_offset = calculate_physical_address(run_mode, a, !peek_only, false, peek_only, space == d_space);
 
 	if (peek_only == false && m_offset >= n_pages * 8192) {
-		if (!peek_only) DOLOG(debug, false, "Read non existing mapped memory (%o >= %o)", m_offset, n_pages * 8192);
+		if (!peek_only) DOLOG(debug, true, "Read non existing mapped memory (%o >= %o)", m_offset, n_pages * 8192);
+
 		c->schedule_trap(004);  // no such memory
+
+		throw 6;
 	}
 
 	if (word_mode)
