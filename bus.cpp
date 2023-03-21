@@ -418,7 +418,17 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 			if (MMR0 & (1 << 9)) {
 				const int access_control = pages[run_mode][d][apf].pdr & 7;
 
-				if (is_write && access_control != 6) {  // write
+				bool do_trap = false;
+
+				if (access_control == 0)
+					do_trap = true;
+				else if (is_write && access_control != 6)  // write
+					do_trap = true;
+				else if (!is_write && (access_control == 0 || access_control == 1 || access_control == 3 || access_control == 4 || access_control == 7)) {
+					do_trap = true;
+				}
+
+				if (do_trap) {
 					DOLOG(debug, true, "TRAP(0250) (throw 1) for access_control %d on address %06o", access_control, a);
 
 					c->schedule_trap(0250);  // invalid address
@@ -427,46 +437,22 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 						pages[run_mode][d][apf].pdr |= 1 << 7;
 
 					if ((MMR0 & 0160000) == 0) {
-						MMR0 &= 017777;
+						MMR0 &= ~((1 << 15) | (1 << 14) | (1 << 13) | (3 << 5) | (7 << 1));
 						MMR0 |= 1 << 13;  // read-only
+								  //
+						if (access_control == 0 || access_control == 4)
+							MMR0 |= 1 << 15;  // not resident
+						else
+							MMR0 |= 1 << 13;  // read-only
 
-						MMR0 &= ~(3 << 5);
 						MMR0 |= run_mode << 5;  // TODO: kernel-mode or user-mode when a trap occurs in user-mode?
 
-						MMR0 &= ~14;  // add current page
-						MMR0 |= apf << 1;
+						MMR0 |= apf << 1; // add current page
 					}
 
 					DOLOG(debug, true, "MMR0: %06o", MMR0);
 
 					throw 1;
-				}
-				else if (!is_write) { // read
-					if (access_control == 0 || access_control == 1 || access_control == 3 || access_control == 4 || access_control == 7) {
-						DOLOG(debug, true, "TRAP(4) (throw 2) for access_control %d on address %06o", access_control, a);
-
-						c->schedule_trap(0250);  // invalid address
-
-						if (is_write)
-							pages[run_mode][d][apf].pdr |= 1 << 7;
-
-						if ((MMR0 & 0160000) == 0) {
-							MMR0 &= 017777;
-
-							if (access_control == 0 || access_control == 4)
-								MMR0 |= 1 << 15;  // not resident
-							else
-								MMR0 |= 1 << 13;  // read-only
-
-							MMR0 &= ~(3 << 5);
-							MMR0 |= run_mode << 5;
-
-							MMR0 &= ~14;  // add current page
-							MMR0 |= apf << 1;
-						}
-
-						throw 2;
-					}
 				}
 			}
 
