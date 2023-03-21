@@ -38,7 +38,6 @@ private:
 	uint8_t  scheduled_trap     { 0 };
 	uint64_t instruction_count { 0 };
 	uint64_t running_since     { 0 };
-	bool     mode11_70   { true };
 
 	uint64_t mtpi_count { 0 };
 
@@ -82,9 +81,6 @@ private:
 public:
 	explicit cpu(bus *const b, std::atomic_uint32_t *const event);
 	~cpu();
-
-	void set_34(const bool v) { mode11_70 = !v; }
-	bool get_34()             { return !mode11_70; }
 
 	bool check_breakpoint();
 	void set_breakpoint(const uint16_t addr);

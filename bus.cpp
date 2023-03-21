@@ -54,9 +54,8 @@ void bus::init()
 
 uint16_t bus::read_pdr(const uint32_t a, const int run_mode, const bool word_mode, const bool peek_only)
 {
-	bool is_11_34 = c->get_34();
 	int      page = (a >> 1) & 7;
-	bool     is_d = is_11_34 ? false : (a & 16);
+	bool     is_d = a & 16;
 	uint16_t t    = pages[run_mode][is_d][page].pdr;
 
 	DOLOG(debug, !peek_only, "read run-mode %d: %c PDR for %d: %o", run_mode, is_d ? 'D' : 'I', page, t);
@@ -66,9 +65,8 @@ uint16_t bus::read_pdr(const uint32_t a, const int run_mode, const bool word_mod
 
 uint16_t bus::read_par(const uint32_t a, const int run_mode, const bool word_mode, const bool peek_only)
 {
-	bool is_11_34 = c->get_34();
 	int      page = (a >> 1) & 7;
-	bool     is_d = is_11_34 ? false : (a & 16);
+	bool     is_d = a & 16;
 	uint16_t t    = pages[run_mode][is_d][page].par;
 
 	DOLOG(debug, !peek_only, "read run-mode %d: %c PAR for %d: %o (phys: %07o)", run_mode, is_d ? 'D' : 'I', page, t, t * 64);
@@ -417,7 +415,7 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 			m_offset &= 0x3ffff;
 
 		if (trap_on_failure) {
-			if ((MMR0 & (1 << 9)) || c->get_34()) {
+			if (MMR0 & (1 << 9)) {
 				const int access_control = pages[run_mode][d][apf].pdr & 7;
 
 				if (is_write && access_control != 6) {  // write
@@ -488,7 +486,7 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 				}
 
 				if (is_write)
-					pages[run_mode][d][apf].pdr |= 1 << 7;  // TODO: D/I
+					pages[run_mode][d][apf].pdr |= 1 << 7;
 
 				c->schedule_trap(04);
 
@@ -498,7 +496,7 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 			uint16_t pdr_len = (pages[run_mode][d][apf].pdr >> 8) & 127;
 			uint16_t pdr_cmp = (a >> 6) & 127;
 
-			bool direction = pages[run_mode][d][apf].pdr & 8;  // TODO: D/I
+			bool direction = pages[run_mode][d][apf].pdr & 8;
 
 			// DOLOG(debug, true, "p_offset %06o pdr_len %06o direction %d, run_mode %d, apf %d, pdr: %06o", p_offset, pdr_len, direction, run_mode, apf, pages[run_mode][d][apf].pdr);
 
@@ -519,13 +517,13 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 				}
 
 				if (is_write)
-					pages[run_mode][d][apf].pdr |= 1 << 7;  // TODO: D/I
+					pages[run_mode][d][apf].pdr |= 1 << 7;
 
 				throw 4;
 			}
 		}
 
-		DOLOG(debug, !peek_only, "virtual address %06o maps to physical address %08o (run_mode: %d, apf: %d, par: %08o, poff: %o, AC: %d)", a, m_offset, run_mode, apf, pages[run_mode][d][apf].par * 64, p_offset, pages[run_mode][d][apf].pdr & 7);  // TODO: D/I
+		DOLOG(debug, !peek_only, "virtual address %06o maps to physical address %08o (run_mode: %d, apf: %d, par: %08o, poff: %o, AC: %d)", a, m_offset, run_mode, apf, pages[run_mode][d][apf].par * 64, p_offset, pages[run_mode][d][apf].pdr & 7);
 	}
 
 	return m_offset;
@@ -546,8 +544,7 @@ void bus::addToMMR1(const int8_t delta, const uint8_t reg)
 
 void bus::write_pdr(const uint32_t a, const int run_mode, const uint16_t value, const bool word_mode)
 {
-	bool is_11_34 = c->get_34();
-	bool is_d = is_11_34 ? false : (a & 16);
+	bool is_d = a & 16;
 	int  page = (a >> 1) & 7;
 
 	if (word_mode) {
@@ -560,18 +557,14 @@ void bus::write_pdr(const uint32_t a, const int run_mode, const uint16_t value, 
 		pages[run_mode][is_d][page].pdr = value;
 	}
 
-	if (is_11_34)  // 11/34 has no cache bit
-		pages[run_mode][is_d][page].pdr &= 077416;
-	else
-		pages[run_mode][is_d][page].pdr &= ~(128 + 64 + 32 + 16);  // set bit 4 & 5 to 0 as they are unused and A/W are set to 0 by writes
+	pages[run_mode][is_d][page].pdr &= ~(128 + 64 + 32 + 16);  // set bit 4 & 5 to 0 as they are unused and A/W are set to 0 by writes
 
 	DOLOG(debug, true, "write run-mode %d: %c PDR for %d: %o [%d]", run_mode, is_d ? 'D' : 'I', page, value, word_mode);
 }
 
 void bus::write_par(const uint32_t a, const int run_mode, const uint16_t value, const bool word_mode)
 {
-	bool is_11_34 = c->get_34();
-	bool is_d = is_11_34 ? false : (a & 16);
+	bool is_d = a & 16;
 	int  page = (a >> 1) & 7;
 
 	if (word_mode) {
@@ -581,9 +574,6 @@ void bus::write_par(const uint32_t a, const int run_mode, const uint16_t value, 
 	else {
 		pages[run_mode][is_d][page].par = value;
 	}
-
-	if (is_11_34)  // 11/34 has 12 bit PARs
-		pages[run_mode][is_d][page].par &= 4095;
 
 	DOLOG(debug, true, "write run-mode %d: %c PAR for %d: %o (%07o)", run_mode, is_d ? 'D' : 'I', page, word_mode ? value & 0xff : value, pages[run_mode][is_d][page].par * 64);
 }

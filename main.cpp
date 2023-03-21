@@ -71,8 +71,6 @@ int main(int argc, char *argv[])
 	log_level_t  ll_screen = none;
 	log_level_t  ll_file   = none;
 
-	bool         mode_34   = false;
-
 	uint16_t     start_addr= 01000;
 	bool         sa_set    = false;
 
@@ -83,7 +81,7 @@ int main(int argc, char *argv[])
 	std::string  test;
 
 	int  opt          = -1;
-	while((opt = getopt(argc, argv, "hm:T:r:R:p:ndtL:b:l:3s:Q:")) != -1)
+	while((opt = getopt(argc, argv, "hm:T:r:R:p:ndtL:b:l:s:Q:")) != -1)
 	{
 		switch(opt) {
 			case 'h':
@@ -106,10 +104,6 @@ int main(int argc, char *argv[])
 
 					break;
 				  }
-
-			case '3':
-				mode_34 = true;  // switch from 11/70 to 11/34
-				break;
 
 			case 'b':
 				if (strcasecmp(optarg, "rk05") == 0)
@@ -181,8 +175,6 @@ int main(int argc, char *argv[])
 
 	cpu *c = new cpu(b, &event);
 	b->add_cpu(c);
-
-	c->set_34(mode_34);
 
 	std::atomic_bool interrupt_emulation { false };
 
