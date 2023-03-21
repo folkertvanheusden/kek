@@ -22,42 +22,21 @@ static const char * const regnames[] = {
 	"RK05_DATABUF      "
 	};
 
-rk05::rk05(const std::vector<std::string> & files, bus *const b, std::atomic_bool *const disk_read_acitivity, std::atomic_bool *const disk_write_acitivity) :
+rk05::rk05(const std::vector<disk_backend *> & files, bus *const b, std::atomic_bool *const disk_read_acitivity, std::atomic_bool *const disk_write_acitivity) :
 	b(b),
 	disk_read_acitivity(disk_read_acitivity),
 	disk_write_acitivity(disk_write_acitivity)
 {
-	memset(registers, 0x00, sizeof registers);
+	memset(registers,   0x00, sizeof registers  );
 	memset(xfer_buffer, 0x00, sizeof xfer_buffer);
 
-	for(auto file : files) {
-#if defined(ESP32)
-		File32 *fh = new File32();
-
-		if (!fh->open(file.c_str(), O_RDWR)) {
-			delete fh;
-			error_exit(true, "rk05: cannot open \"%s\"", file.c_str());
-		}
-#else
-		FILE *fh = fopen(file.c_str(), "rb");
-		if (!fh)
-			error_exit(true, "rk05: cannot open \"%s\"", file.c_str());
-#endif
-
-		fhs.push_back(fh);
-	}
+	fhs = files;
 }
 
 rk05::~rk05()
 {
-	for(auto fh : fhs) {
-#if defined(ESP32)
-		fh->close();
+	for(auto fh : fhs)
 		delete fh;
-#else
-		fclose(fh);
-#endif
-	}
 }
 
 uint8_t rk05::readByte(const uint16_t addr)
@@ -158,19 +137,8 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 				for(size_t i=0; i<reclen; i++)
 					xfer_buffer[i] = b->readUnibusByte(memoff + i);
 
-#if defined(ESP32)
-				File32 *fh = fhs.at(device);
-				if (!fh->seek(diskoffb))
-					DOLOG(ll_error, true, "RK05 seek error %s", strerror(errno));
-				if (fh->write(xfer_buffer, reclen) != reclen)
-                                        DOLOG(ll_error, true, "RK05 fwrite error %s", strerror(errno));
-#else
-				FILE *fh = fhs.at(device);
-				if (fseek(fh, diskoffb, SEEK_SET) == -1)
-					DOLOG(ll_error, true, "RK05 seek error %s", strerror(errno));
-				if (fwrite(xfer_buffer, 1, reclen, fh) != reclen)
-					DOLOG(ll_error, true, "RK05 fwrite error %s", strerror(errno));
-#endif
+				if (!fhs.at(device)->write(diskoffb, reclen, xfer_buffer))
+					DOLOG(ll_error, true, "RK05 pwrite error %s", strerror(errno));
 
 				if (v & 2048)
 					DOLOG(debug, true, "RK05 inhibit BA increase");
@@ -194,43 +162,19 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 
 				DOLOG(debug, true, "RK05 drive %d position sec %d surf %d cyl %d, reclen %zo, READ from %o, mem: %o", device, sector, surface, cylinder, reclen, diskoffb, memoff);
 
-				bool proceed = true;
-
-#if defined(ESP32)
-				File32 *fh = fhs.at(device);
-				if (!fh->seek(diskoffb)) {
-					DOLOG(ll_error, true, "RK05 seek error %s", strerror(errno));
-					proceed = false;
-				}
-#else
-				FILE *fh = nullptr;
-
-				if (device >= fhs.size())
-					proceed = false;
-				else {
-					fh = fhs.at(device);
-
-					if (fseek(fh, diskoffb, SEEK_SET) == -1) {
-						DOLOG(ll_error, true, "RK05 seek error %s", strerror(errno));
-						proceed = false;
-					}
-				}
-#endif
+				int      temp_diskoffb = diskoffb;
 
 				uint32_t temp = reclen;
 				uint32_t p = memoff;
-				while(proceed && temp > 0) {
+				while(temp > 0) {
 					uint32_t cur = std::min(uint32_t(sizeof xfer_buffer), temp);
 
-#if defined(ESP32)
-					yield();
+					if (!fhs.at(device)->read(temp_diskoffb, cur, xfer_buffer)) {
+						DOLOG(ll_error, true, "RK05 read error %s", strerror(errno));
+						break;
+					}
 
-					if (fh->read(xfer_buffer, cur) != size_t(cur))
-						DOLOG(debug, true, "RK05 fread error: %s", strerror(errno));
-#else
-					if (fread(xfer_buffer, 1, cur, fh) != size_t(cur))
-						DOLOG(debug, true, "RK05 fread error: %s", strerror(errno));
-#endif
+					temp_diskoffb += cur;
 
 					for(uint32_t i=0; i<cur; i++) {
 						if (p < 0160000)

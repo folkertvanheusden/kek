@@ -1,4 +1,4 @@
-// (C) 2022 by Folkert van Heusden
+// (C) 2023 by Folkert van Heusden
 // Released under Apache License v2.0
 #pragma once
 
@@ -8,9 +8,8 @@
 #include <string>
 #include <vector>
 
-#if defined(ESP32)
-#include "esp32.h"
-#endif
+#include "disk_backend.h"
+
 
 #define RL02_CSR 0174400  // control status register
 #define RL02_BAR 0174402  // bus address register
@@ -27,12 +26,7 @@ private:
 	bus      *const b;
 	uint16_t        registers[4];
 	uint8_t         xfer_buffer[512];
-
-#if defined(ESP32)
-	std::vector<File32 *> fhs;
-#else
-	std::vector<FILE *> fhs;
-#endif
+	std::vector<disk_backend *> fhs;
 
 	std::atomic_bool *const disk_read_acitivity  { nullptr };
 	std::atomic_bool *const disk_write_acitivity { nullptr };
@@ -40,7 +34,7 @@ private:
 	uint32_t calcOffset(uint16_t);
 
 public:
-	rl02(const std::vector<std::string> & files, bus *const b, std::atomic_bool *const disk_read_acitivity, std::atomic_bool *const disk_write_acitivity);
+	rl02(const std::vector<disk_backend *> & files, bus *const b, std::atomic_bool *const disk_read_acitivity, std::atomic_bool *const disk_write_acitivity);
 	virtual ~rl02();
 
 	uint8_t  readByte(const uint16_t addr);

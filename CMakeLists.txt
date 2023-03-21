@@ -14,6 +14,8 @@ add_executable(
   console_posix.cpp
   cpu.cpp
   debugger.cpp
+  disk_backend.cpp
+  disk_backend_file.cpp
   error.cpp
   kw11-l.cpp
   loaders.cpp

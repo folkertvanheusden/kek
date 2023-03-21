@@ -22,7 +22,7 @@ static const char * const regnames[] = {
 	"multipurpose  "
 	};
 
-rl02::rl02(const std::vector<std::string> & files, bus *const b, std::atomic_bool *const disk_read_acitivity, std::atomic_bool *const disk_write_acitivity) :
+rl02::rl02(const std::vector<disk_backend *> & files, bus *const b, std::atomic_bool *const disk_read_acitivity, std::atomic_bool *const disk_write_acitivity) :
 	b(b),
 	disk_read_acitivity(disk_read_acitivity),
 	disk_write_acitivity(disk_write_acitivity)
@@ -30,34 +30,13 @@ rl02::rl02(const std::vector<std::string> & files, bus *const b, std::atomic_boo
 	memset(registers, 0x00, sizeof registers);
 	memset(xfer_buffer, 0x00, sizeof xfer_buffer);
 
-	for(auto file : files) {
-#if defined(ESP32)
-		File32 *fh = new File32();
-
-		if (!fh->open(file.c_str(), O_RDWR)) {
-			delete fh;
-			error_exit(true, "rl02: cannot open \"%s\"", file.c_str());
-		}
-#else
-		FILE *fh = fopen(file.c_str(), "rb");
-		if (!fh)
-			error_exit(true, "rl02: cannot open \"%s\"", file.c_str());
-#endif
-
-		fhs.push_back(fh);
-	}
+	fhs = files;
 }
 
 rl02::~rl02()
 {
-	for(auto fh : fhs) {
-#if defined(ESP32)
-		fh->close();
+	for(auto fh : fhs)
 		delete fh;
-#else
-		fclose(fh);
-#endif
-	}
 }
 
 uint8_t rl02::readByte(const uint16_t addr)
@@ -138,44 +117,13 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 
 		if (command == 2) {  // get status
 			registers[(RL02_MPR - RL02_BASE) / 2] = 0;
-#if 0
-			if (registers[(RL02_DAR - RL02_BASE) / 2] & 2) {  // get status -> load status word in MPR
-				registers[(RL02_MPR - RL02_BASE) / 2] = 5 |  // lock on
-					(1 << 3) |  // brushes are home
-					(1 << 7) |  // this is an RL02
-					0;
-
-				DOLOG(debug, true, "RL02 set MPR for status to %06o", registers[(RL02_MPR - RL02_BASE) / 2]);
-			}
-#endif
 		}
 		else if (command == 6 || command == 7) {  // read data / read data without header check
 			*disk_read_acitivity = true;
 
 			bool proceed = true;
 
-#if defined(ESP32)
-			File32 *fh = fhs.at(device);
-
-			if (!fh->seek(disk_offset)) {
-				DOLOG(ll_error, true, "RL02 seek to %d error %s", disk_offset, strerror(errno));
-
-				proceed = false;
-			}
-#else
-			FILE *fh = nullptr;
-
-			if (size_t(device) >= fhs.size())
-				proceed = false;
-			else {
-				fh = fhs.at(device);
-
-				if (fseek(fh, disk_offset, SEEK_SET) == -1) {
-					DOLOG(ll_error, true, "RL02 seek error %s", strerror(errno));
-					proceed = false;
-				}
-			}
-#endif
+			uint32_t temp_disk_offset = disk_offset;
 
 			uint32_t memory_address = registers[(RL02_BAR - RL02_BASE) / 2];
 
@@ -187,18 +135,15 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 			while(proceed && count > 0) {
 				uint32_t cur = std::min(uint32_t(sizeof xfer_buffer), count);
 
-#if defined(ESP32)
-				yield();
-
-				if (fh->read(xfer_buffer, cur) != size_t(cur))
-					DOLOG(info, true, "RL02 fread error: %s", strerror(errno));
-#else
-				if (fread(xfer_buffer, 1, cur, fh) != size_t(cur))
-					DOLOG(info, true, "RL02 fread error: %s", strerror(errno));
-#endif
+				if (!fhs.at(device)->read(temp_disk_offset, cur, xfer_buffer)) {
+					DOLOG(ll_error, true, "RL02 read error %s", strerror(errno));
+					break;
+				}
 
 				for(uint32_t i=0; i<cur; i++, p++)
 					b->writeByte(p, xfer_buffer[i]);
+
+				temp_disk_offset += cur;
 
 				count -= cur;
 			}

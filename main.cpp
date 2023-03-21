@@ -12,6 +12,8 @@
 #include "console_posix.h"
 #include "cpu.h"
 #include "debugger.h"
+#include "disk_backend.h"
+#include "disk_backend_file.h"
 #include "gen.h"
 #include "kw11-l.h"
 #include "loaders.h"
@@ -59,8 +61,8 @@ int main(int argc, char *argv[])
 {
 	//setlocale(LC_ALL, "");
 
-	std::vector<std::string> rk05_files;
-	std::vector<std::string> rl02_files;
+	std::vector<disk_backend *> rk05_files;
+	std::vector<disk_backend *> rl02_files;
 
 	bool run_debugger = false;
 	bool tracing      = false;
@@ -132,11 +134,11 @@ int main(int argc, char *argv[])
 				break;
 
 			case 'R':
-				rk05_files.push_back(optarg);
+				rk05_files.push_back(new disk_backend_file(optarg));
 				break;
 
 			case 'r':
-				rl02_files.push_back(optarg);
+				rl02_files.push_back(new disk_backend_file(optarg));
 				break;
 
 			case 'p':
