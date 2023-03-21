@@ -541,14 +541,14 @@ void bus::write_pdr(const uint32_t a, const int run_mode, const uint16_t value, 
 	if (word_mode) {
 		assert(a != 0 || value < 256);
 
-		a & 1 ? (pages[run_mode][is_d][page].pdr &= 0xff,   pages[run_mode][is_d][page].pdr |= value << 8) :
-			(pages[run_mode][is_d][page].pdr &= 0xff00, pages[run_mode][is_d][page].pdr |= value);
+		a & 1 ? (pages[run_mode][is_d][page].pdr &= 0x00ff, pages[run_mode][is_d][page].pdr |= value << 8) :
+			(pages[run_mode][is_d][page].pdr &= 0xff00, pages[run_mode][is_d][page].pdr |= value     );
 	}
 	else {
 		pages[run_mode][is_d][page].pdr = value;
 	}
 
-	pages[run_mode][is_d][page].pdr &= ~(128 + 64 + 32 + 16);  // set bit 4 & 5 to 0 as they are unused and A/W are set to 0 by writes
+	pages[run_mode][is_d][page].pdr &= ~(32768 + 128 /*A*/ + 64 /*W*/ + 32 + 16);  // set bit 4, 5 & 15 to 0 as they are unused and A/W are set to 0 by writes
 
 	DOLOG(debug, true, "write run-mode %d: %c PDR for %d: %o [%d]", run_mode, is_d ? 'D' : 'I', page, value, word_mode);
 }
@@ -559,12 +559,14 @@ void bus::write_par(const uint32_t a, const int run_mode, const uint16_t value, 
 	int  page = (a >> 1) & 7;
 
 	if (word_mode) {
-		a & 1 ? (pages[run_mode][is_d][page].par &= 0xff,   pages[run_mode][is_d][page].par |= value << 8) :
-			(pages[run_mode][is_d][page].par &= 0xff00, pages[run_mode][is_d][page].par |= value);
+		a & 1 ? (pages[run_mode][is_d][page].par &= 0x00ff, pages[run_mode][is_d][page].par |= value << 8) :
+			(pages[run_mode][is_d][page].par &= 0xff00, pages[run_mode][is_d][page].par |= value     );
 	}
 	else {
 		pages[run_mode][is_d][page].par = value;
 	}
+
+	pages[run_mode][is_d][page].pdr &= ~(128 /*A*/ + 64 /*W*/);  // reset PDR A/W when PAR is written to
 
 	DOLOG(debug, true, "write run-mode %d: %c PAR for %d: %o (%07o)", run_mode, is_d ? 'D' : 'I', page, word_mode ? value & 0xff : value, pages[run_mode][is_d][page].par * 64);
 }
