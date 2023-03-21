@@ -402,7 +402,7 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 {
 	uint32_t m_offset = a;
 
-	if (MMR0 & 1) {
+	if ((MMR0 & 1) || (is_write && (MMR0 & (1 << 8)))) {
 		const uint8_t apf = a >> 13; // active page field
 
 		bool          d   = is_data & (!!(MMR3 & di_ena_mask[run_mode])) ? is_data : false;
