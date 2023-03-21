@@ -12,6 +12,8 @@
 #include "console_esp32.h"
 #include "cpu.h"
 #include "debugger.h"
+#include "disk_backend.h"
+#include "disk_backend_esp32.h"
 #include "error.h"
 #include "esp32.h"
 #include "gen.h"
@@ -104,7 +106,7 @@ void setup_wifi_stations()
 }
 
 // RK05, RL02 files
-std::pair<std::vector<std::string>, std::vector<std::string> > select_disk_files(console *const c)
+std::pair<std::vector<disk_backend *>, std::vector<disk_backend *> > select_disk_files(console *const c)
 {
 	c->debug("MISO: %d", int(MISO));
 	c->debug("MOSI: %d", int(MOSI));
@@ -146,10 +148,10 @@ std::pair<std::vector<std::string>, std::vector<std::string> > select_disk_files
 			fh.close();
 
 			if (ch == '1')
-				return { { selected_file }, { } };
+				return { { new disk_backend_esp32(selected_file) }, { } };
 
 			if (ch == '2')
-				return { { }, { selected_file } };
+				return { { }, { new disk_backend_esp32(selected_file) } };
 		}
 
 		c->put_string_lf("open failed");

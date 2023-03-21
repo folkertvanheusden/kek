@@ -95,10 +95,6 @@ uint32_t rl02::calcOffset(const uint16_t da)
 
 void rl02::writeWord(const uint16_t addr, uint16_t v)
 {
-#if defined(ESP32)
-	digitalWrite(LED_BUILTIN, LOW);
-#endif
-
 	DOLOG(debug, true, "RL02 write %06o: %06o", addr, v);
 
 	const int reg = (addr - RL02_BASE) / 2;
@@ -157,8 +153,4 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 			*disk_read_acitivity = false;
 		}
 	}
-
-#if defined(ESP32)
-	digitalWrite(LED_BUILTIN, HIGH);
-#endif
 }

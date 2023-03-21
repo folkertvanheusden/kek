@@ -96,10 +96,6 @@ void rk05::writeByte(const uint16_t addr, const uint8_t v)
 
 void rk05::writeWord(const uint16_t addr, uint16_t v)
 {
-#if defined(ESP32)
-	digitalWrite(LED_BUILTIN, LOW);
-#endif
-
 	const int reg = (addr - RK05_BASE) / 2;
 
 	registers[reg] = v;
@@ -228,8 +224,4 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 			}
 		}
 	}
-
-#if defined(ESP32)
-	digitalWrite(LED_BUILTIN, HIGH);
-#endif
 }

@@ -7,6 +7,8 @@
 
 
 #if defined(ESP32)
+#include "esp32.h"
+
 void setBootLoader(bus *const b);
 #endif
 
