@@ -361,7 +361,8 @@ void bus::clearMMR0Bit(const int bit)
 
 void bus::setMMR2(const uint16_t value) 
 {
-	MMR2 = value;
+	if ((MMR0 & 0xe000) == 0)
+		MMR2 = value;
 }
 
 void bus::check_odd_addressing(const uint16_t a, const int run_mode, const d_i_space_t space, const bool is_write)
