@@ -7,10 +7,9 @@
 
 
 disk_backend_esp32::disk_backend_esp32(const std::string & filename) :
+	filename(filename),
 	fh(new File32())
 {
-	if (!fh->open(filename.c_str(), O_RDWR))
-		error_exit(true, "rk05: cannot open \"%s\"", filename.c_str());
 }
 
 disk_backend_esp32::~disk_backend_esp32()
@@ -18,6 +17,17 @@ disk_backend_esp32::~disk_backend_esp32()
 	fh->close();
 
 	delete fh;
+}
+
+bool disk_backend_esp32::begin()
+{
+	if (!fh->open(filename.c_str(), O_RDWR)) {
+		DOLOG(ll_error, true, "rk05: cannot open \"%s\"", filename.c_str());
+
+		return false;
+	}
+
+	return true;
 }
 
 bool disk_backend_esp32::read(const off_t offset, const size_t n, uint8_t *const target)

@@ -82,6 +82,8 @@ int main(int argc, char *argv[])
 
 	std::string  test;
 
+	disk_backend *temp_d = nullptr;
+
 	int  opt          = -1;
 	while((opt = getopt(argc, argv, "hm:T:r:R:p:ndtL:b:l:s:Q:")) != -1)
 	{
@@ -134,11 +136,17 @@ int main(int argc, char *argv[])
 				break;
 
 			case 'R':
-				rk05_files.push_back(new disk_backend_file(optarg));
+				temp_d = new disk_backend_file(optarg);
+				if (!temp_d->begin())
+					error_exit(false, "Cannot use file \"%s\" for RK05", optarg);
+				rk05_files.push_back(temp_d);
 				break;
 
 			case 'r':
-				rl02_files.push_back(new disk_backend_file(optarg));
+				temp_d = new disk_backend_file(optarg);
+				if (!temp_d->begin())
+					error_exit(false, "Cannot use file \"%s\" for RL02", optarg);
+				rl02_files.push_back(temp_d);
 				break;
 
 			case 'p':
