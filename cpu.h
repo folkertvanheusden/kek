@@ -132,7 +132,7 @@ public:
 	void setStackLimitRegister(const uint16_t v) { stackLimitRegister = v; }
 
 	uint16_t getStackPointer(const int which) const { assert(which >= 0 && which < 4); return sp[which]; }
-	uint16_t getPC() const { return pc; }
+	uint16_t getPC() const { b->setMMR2(pc); return pc; }
 
 	void setRegister(const int nr, const bool reg_set, const bool prev_mode, const uint16_t value);
 	void setRegister(const int nr, const bool prev_mode, const uint16_t v) { setRegister(nr, (getPSW() >> 11) & 1, prev_mode, v); }
