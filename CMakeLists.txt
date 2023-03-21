@@ -16,6 +16,7 @@ add_executable(
   debugger.cpp
   disk_backend.cpp
   disk_backend_file.cpp
+  disk_backend_nbd.cpp
   error.cpp
   kw11-l.cpp
   loaders.cpp
