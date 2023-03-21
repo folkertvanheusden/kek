@@ -58,7 +58,8 @@ uint16_t bus::read_pdr(const uint32_t a, const int run_mode, const bool word_mod
 	bool     is_d = a & 16;
 	uint16_t t    = pages[run_mode][is_d][page].pdr;
 
-	DOLOG(debug, !peek_only, "read run-mode %d: %c PDR for %d: %o", run_mode, is_d ? 'D' : 'I', page, t);
+	if (!peek_only)
+		DOLOG(debug, false, "read run-mode %d: %c PDR for %d: %o", run_mode, is_d ? 'D' : 'I', page, t);
 
 	return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
 }
@@ -69,7 +70,8 @@ uint16_t bus::read_par(const uint32_t a, const int run_mode, const bool word_mod
 	bool     is_d = a & 16;
 	uint16_t t    = pages[run_mode][is_d][page].par;
 
-	DOLOG(debug, !peek_only, "read run-mode %d: %c PAR for %d: %o (phys: %07o)", run_mode, is_d ? 'D' : 'I', page, t, t * 64);
+	if (!peek_only)
+		DOLOG(debug, false, "read run-mode %d: %c PAR for %d: %o (phys: %07o)", run_mode, is_d ? 'D' : 'I', page, t, t * 64);
 
 	return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
 }
@@ -79,34 +81,36 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 	uint16_t temp = 0;
 
 	if (a >= 0160000) {
-		DOLOG(debug, !peek_only, "READ from %06o/IO %c %c", a, space == d_space ? 'D' : 'I', word_mode ? 'B' : 'W');
+		if (!peek_only) {
+			DOLOG(debug, false, "READ from %06o/IO %c %c", a, space == d_space ? 'D' : 'I', word_mode ? 'B' : 'W');
 
-		if (word_mode)
-			DOLOG(debug, false, "READ I/O %06o in byte mode", a);
+			if (word_mode)
+				DOLOG(debug, false, "READ I/O %06o in byte mode", a);
+		}
 
 		//// REGISTERS ////
 		if (a >= ADDR_KERNEL_R && a <= ADDR_KERNEL_R + 5) { // kernel R0-R5
-			DOLOG(debug, !peek_only, "readb kernel R%d", a - ADDR_KERNEL_R);
+			if (!peek_only) DOLOG(debug, false, "readb kernel R%d", a - ADDR_KERNEL_R);
 			return c -> getRegister(a - ADDR_KERNEL_R, 0, false) & (word_mode ? 0xff : 0xffff);
 		}
 		if (a >= ADDR_USER_R && a <= ADDR_USER_R + 5) { // user R0-R5
-			DOLOG(debug, !peek_only, "readb user R%d", a - ADDR_USER_R);
+			if (!peek_only) DOLOG(debug, false, "readb user R%d", a - ADDR_USER_R);
 			return c -> getRegister(a - ADDR_USER_R, 3, false) & (word_mode ? 0xff : 0xffff);
 		}
 		if (a == ADDR_KERNEL_SP) { // kernel SP
-			DOLOG(debug, !peek_only, "readb kernel sp");
+			if (!peek_only) DOLOG(debug, false, "readb kernel sp");
 			return c -> getStackPointer(0) & (word_mode ? 0xff : 0xffff);
 		}
 		if (a == ADDR_PC) { // PC
-			DOLOG(debug, !peek_only, "readb pc");
+			if (!peek_only) DOLOG(debug, false, "readb pc");
 			return c -> getPC() & (word_mode ? 0xff : 0xffff);
 		}
 		if (a == ADDR_SV_SP) { // supervisor SP
-			DOLOG(debug, !peek_only, "readb supervisor sp");
+			if (!peek_only) DOLOG(debug, false, "readb supervisor sp");
 			return c -> getStackPointer(1) & (word_mode ? 0xff : 0xffff);
 		}
 		if (a == ADDR_USER_SP) { // user SP
-			DOLOG(debug, !peek_only, "readb user sp");
+			if (!peek_only) DOLOG(debug, false, "readb user sp");
 			return c -> getStackPointer(3) & (word_mode ? 0xff : 0xffff);
 		}
 		///^ registers ^///
@@ -120,43 +124,42 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 		}
 
 		if (a == ADDR_CPU_ERR) { // cpu error register
-			DOLOG(debug, !peek_only, "readb cpuerr");
+			if (!peek_only) DOLOG(debug, false, "readb cpuerr");
 			return CPUERR & 0xff;
 		}
 
 		if (a == ADDR_MAINT) { // MAINT
-			DOLOG(debug, !peek_only, "read MAINT");
+			if (!peek_only) DOLOG(debug, false, "read MAINT");
 			return 1; // POWER OK
 		}
 
 		if (a == ADDR_CONSW) { // console switch & display register
-			DOLOG(debug, !peek_only, "read console switch (%06o)", console_switches);
-
+			if (!peek_only) DOLOG(debug, false, "read console switch (%06o)", console_switches);
 			return console_switches;
 		}
 
 		if (a == ADDR_KW11P) { // KW11P programmable clock
-			DOLOG(debug, !peek_only, "read programmable clock");
+			if (!peek_only) DOLOG(debug, false, "read programmable clock");
 			return 128;
 		}
 
 		if (a == ADDR_PIR) { // PIR
-			DOLOG(debug, !peek_only, "read PIR");
+			if (!peek_only) DOLOG(debug, false, "read PIR");
 			return PIR;
 		}
 
 		if (a == ADDR_SYSTEM_ID) {
-			DOLOG(debug, !peek_only, "read system id");
+			if (!peek_only) DOLOG(debug, false, "read system id");
 			return 011064;
 		}
 
 		if (a == ADDR_LFC) { // line frequency clock and status register
-			DOLOG(debug, !peek_only, "read line freq clock");
+			if (!peek_only) DOLOG(debug, false, "read line freq clock");
 			return lf_csr;
 		}
 
 		if (a == ADDR_LP11CSR) { // printer, CSR register, LP11
-			DOLOG(debug, !peek_only, "read LP11 CSR");
+			if (!peek_only) DOLOG(debug, false, "read LP11 CSR");
 			return 0x80;
 		}
 
@@ -181,76 +184,77 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 		}
 
 		if (a >= 0170200 && a <= 0170377) { // unibus map
-			DOLOG(debug, !peek_only, "reading unibus map (%06o)", a);
+			if (!peek_only) DOLOG(debug, false, "reading unibus map (%06o)", a);
 			// TODO
 			return 0;
 		}
 
 		if (word_mode) {
 			if (a == ADDR_PSW) { // PSW
-				DOLOG(debug, !peek_only, "readb PSW LSB");
+				if (!peek_only) DOLOG(debug, false, "readb PSW LSB");
 				return c -> getPSW() & 255;
 			}
 
 			if (a == ADDR_PSW + 1) {
-				DOLOG(debug, !peek_only, "readb PSW MSB");
+				if (!peek_only) DOLOG(debug, false, "readb PSW MSB");
 				return c -> getPSW() >> 8;
 			}
 			if (a == ADDR_STACKLIM) { // stack limit register
-				DOLOG(debug, !peek_only, "readb stack limit register (low)");
+				if (!peek_only) DOLOG(debug, false, "readb stack limit register (low)");
 				return c -> getStackLimitRegister() & 0xff;
 			}
 			if (a == ADDR_STACKLIM + 1) { // stack limit register
-				DOLOG(debug, !peek_only, "readb stack limit register (high)");
+				if (!peek_only) DOLOG(debug, false, "readb stack limit register (high)");
 				return c -> getStackLimitRegister() >> 8;
 			}
 
 			if (a == ADDR_MICROPROG_BREAK_REG) {  // microprogram break register
-				DOLOG(debug, !peek_only, "readb micropgrogram break register (low: %03o)", microprogram_break_register & 255);
+				if (!peek_only) DOLOG(debug, false, "readb micropgrogram break register (low: %03o)", microprogram_break_register & 255);
 				return microprogram_break_register & 255;
 			}
 			if (a == ADDR_MICROPROG_BREAK_REG + 1) {  // microprogram break register
-				DOLOG(debug, !peek_only, "readb micropgrogram break register (high: %03o)", microprogram_break_register >> 8);
+				if (!peek_only) DOLOG(debug, false, "readb micropgrogram break register (high: %03o)", microprogram_break_register >> 8);
 				return microprogram_break_register >> 8;
 			}
 		}
 		else {
 			if (a == ADDR_MMR0) {
-				DOLOG(debug, !peek_only, "read MMR0");
+				if (!peek_only) DOLOG(debug, false, "read MMR0");
 				return MMR0;
 			}
 
 			if (a == ADDR_MMR1) { // MMR1
-				DOLOG(debug, !peek_only, "read MMR1");
+				if (!peek_only) DOLOG(debug, false, "read MMR1");
 				return MMR1;
 			}
 
 			if (a == ADDR_MMR2) { // MMR2
-				DOLOG(debug, !peek_only, "read MMR2");
+				if (!peek_only) DOLOG(debug, false, "read MMR2");
 				return MMR2;
 			}
 
 			if (a == ADDR_MMR3) { // MMR3
-				DOLOG(debug, !peek_only, "read MMR3");
+				if (!peek_only) DOLOG(debug, false, "read MMR3");
 				return MMR3;
 			}
 
 			if (a == ADDR_PSW) { // PSW
-				DOLOG(debug, !peek_only, "read PSW");
+				if (!peek_only) DOLOG(debug, false, "read PSW");
 				return c -> getPSW();
 			}
 
 			if (a == ADDR_STACKLIM) { // stack limit register
+				if (!peek_only) DOLOG(debug, false, "read stack limit register");
 				return c -> getStackLimitRegister();
 			}
 
 			if (a == ADDR_CPU_ERR) { // cpu error register
-				DOLOG(debug, !peek_only, "read CPUERR");
+				if (!peek_only) DOLOG(debug, false, "read CPUERR");
 				return CPUERR;
 			}
 
 			if (a == ADDR_MICROPROG_BREAK_REG) {  // microprogram break register
-				DOLOG(debug, !peek_only, "read micropgrogram break register (%06o)", microprogram_break_register);
+				if (!peek_only) DOLOG(debug, false, "read micropgrogram break register (%06o)", microprogram_break_register);
 				return microprogram_break_register;
 			}
 		}
@@ -275,12 +279,12 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 		constexpr uint32_t system_size = n_pages * 8192 / 64 - 1;
 
 		if (a == ADDR_SYSSIZE + 2) {  // system size HI
-                        // printf("accessing system size HI\r\n");
+			if (!peek_only) DOLOG(debug, false, "accessing system size HI");
 			return system_size >> 16;
 		}
 
 		if (a == ADDR_SYSSIZE) {  // system size LO
-                        // printf("accessing system size LO\r\n");
+			if (!peek_only) DOLOG(debug, false, "accessing system size LO");
 			return system_size;
 		}
 
@@ -295,7 +299,7 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 	}
 
 	if (peek_only == false && word_mode == false && (a & 1)) {
-		DOLOG(debug, true, "READ from %06o - odd address!", a);
+		if (!peek_only) DOLOG(debug, true, "READ from %06o - odd address!", a);
 		c->schedule_trap(004);  // invalid access
 		return 0;
 	}
@@ -305,7 +309,7 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 	uint32_t m_offset = calculate_physical_address(run_mode, a, !peek_only, false, peek_only, space == d_space);
 
 	if (peek_only == false && m_offset >= n_pages * 8192) {
-		DOLOG(debug, false, "Read non existing mapped memory (%o >= %o)", m_offset, n_pages * 8192);
+		if (!peek_only) DOLOG(debug, false, "Read non existing mapped memory (%o >= %o)", m_offset, n_pages * 8192);
 		c->schedule_trap(004);  // no such memory
 	}
 
@@ -314,7 +318,7 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 	else
 		temp = m -> readWord(m_offset);
 
-	DOLOG(debug, !peek_only, "READ from %06o/%07o %c %c: %o", a, m_offset, space == d_space ? 'D' : 'I', word_mode ? 'B' : 'W', temp);
+	if (!peek_only) DOLOG(debug, false, "READ from %06o/%07o %c %c: %o", a, m_offset, space == d_space ? 'D' : 'I', word_mode ? 'B' : 'W', temp);
 
 	return temp;
 }
