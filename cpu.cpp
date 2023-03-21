@@ -324,6 +324,8 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const bool word_mode
 	g.set       = getBitPSW(11);
 	g.space     = reg == 7 ? i_space : (b->get_use_data_space(psw >> 14) ? d_space : i_space);
 
+	addToMMR1(mode, reg, word_mode);
+
 	uint16_t next_word = 0;
 
 	switch(mode) {
@@ -430,8 +432,6 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 
 	switch(operation) {
 		case 0b001: { // MOV/MOVB Move Word/Byte
-				    addToMMR1(src_mode, src_reg, word_mode);
-
 				    if (word_mode && dst_mode == 0)
 					    setRegister(dst_reg, false, int8_t(g_src.value.value()));  // int8_t: sign extension
 				    else {
@@ -440,8 +440,6 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 					    set_flags = putGAM(g_dst, g_src.value.value());
 				    }
 
-				    addToMMR1(dst_mode, dst_reg, word_mode);
-
 				    if (set_flags)
 					    setPSW_flags_nzv(g_src.value.value(), word_mode);
 
@@ -449,13 +447,9 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 			    }
 
 		case 0b010: { // CMP/CMPB Compare Word/Byte
-				    addToMMR1(src_mode, src_reg, word_mode);
-
 				    auto g_dst = getGAM(dst_mode, dst_reg, word_mode, false);
 
 				    uint16_t temp      = (g_src.value.value() - g_dst.value.value()) & (word_mode ? 0xff : 0xffff);
-
-				    addToMMR1(dst_mode, dst_reg, word_mode);
 
 				    setPSW_n(SIGN(temp, word_mode));
 				    setPSW_z(IS_0(temp, word_mode));
@@ -1209,8 +1203,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 		case 0b00110101: { // MFPD/MFPI
 					 // always words: word_mode-bit is to select between MFPI and MFPD
 
-					 if ((b->getMMR0() & 0160000) == 0)
-						 b->addToMMR1(-2, 6);
+					 b->addToMMR1(-2, 6);
 
 					 bool     set_flags = true;
 					 uint16_t v         = 0xffff;
@@ -1251,8 +1244,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 		case 0b00110110: { // MTPI/MTPD
 					 // always words: word_mode-bit is to select between MTPI and MTPD
 
-					 if ((b->getMMR0() & 0160000) == 0)
-						 b->addToMMR1(2, 6);
+					 b->addToMMR1(2, 6);
 
 					 // retrieve word from '15/14'-stack
 					 uint16_t v = popStack();
@@ -1627,10 +1619,10 @@ void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 				before_psw = getPSW();
 				before_pc  = getPC();
 
-				if ((b->getMMR0() & 0160000) == 0 && vector != 4) {
+				if ((b->getMMR0() & 0160000) == 0) {
+					b->addToMMR1(-2, 6);
+					b->addToMMR1(-2, 6);
 					b->setMMR2(vector);
-					b->addToMMR1(-2, 6);
-					b->addToMMR1(-2, 6);
 				}
 
 				if (is_interrupt)
