@@ -1599,7 +1599,7 @@ void cpu::schedule_trap(const uint16_t vector)
 // 'is_interrupt' is not correct naming; it is true for mmu faults and interrupts
 void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 {
-	DOLOG(debug, true, "*** CPU::TRAP, MMR0: %06o, MMR2: %06o ***", b->getMMR0(), b->getMMR2());
+	DOLOG(debug, true, "*** CPU::TRAP %o, new-ipl: %d, is-interrupt: %d ***", vector, new_ipl, is_interrupt);
 
 	int      processing_trap_depth = 0;
 	uint16_t before_psw            = 0;
