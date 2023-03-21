@@ -435,8 +435,10 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 				if (do_trap) {
 					DOLOG(debug, true, "TRAP(0250) (throw 1) for access_control %d on address %06o", access_control, a);
 
-					if (MMR0 & (1 << 9))
+					if ((MMR0 & (1 << 9)) && (MMR0 & 0xf000) == 0)
 						c->schedule_trap(0250);  // invalid address
+
+					MMR0 |= 1 << 12;  // set trap-flag
 
 					if (is_write)
 						pages[run_mode][d][apf].pdr |= 1 << 7;
