@@ -181,8 +181,6 @@ void setup() {
 	Serial.println(F("Connect CPU to BUS"));
 	b->add_cpu(c);
 
-	c->setEmulateMFPT(true);
-
 	Serial.println(F("Init console"));
 	cnsl = new console_esp32(&stop_event, b);
 
