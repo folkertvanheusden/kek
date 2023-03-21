@@ -12,21 +12,36 @@
 
 
 disk_backend_nbd::disk_backend_nbd(const std::string & host, const int port) :
-	fd(socket(AF_INET, SOCK_STREAM, 0))
+	host(host),
+	port(port)
 {
-	struct addrinfo hints, *res;
-	int status;
-	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = AF_INET;
-	hints.ai_socktype = SOCK_STREAM;
-	char *host = "esp-942daf.local";
-	char *port = "5556";
-	status = getaddrinfo(host, port, &hints, &res)
 }
 
 disk_backend_nbd::~disk_backend_nbd()
 {
 	close(fd);
+}
+
+bool disk_backend_nbd::begin()
+{
+	addrinfo *res   = nullptr;
+
+	addrinfo hints { 0 };
+	hints.ai_family = AF_INET;
+	hints.ai_socktype = SOCK_STREAM;
+
+	char port_str[8] { 0 };
+	snprintf(port_str, sizeof port_str, "%d", port);
+
+	int rc = getaddrinfo(host.c_str(), port_str, &hints, &res);
+
+	if (rc != 0) {
+		DOLOG(ll_error, true, "disk_backend_nbd: cannot resolve \"%s\":%s: %s", host.c_str(), port_str, gai_strerror(rc));
+
+		return false;
+	}
+
+	return true;
 }
 
 bool disk_backend_nbd::read(const off_t offset, const size_t n, uint8_t *const target)
