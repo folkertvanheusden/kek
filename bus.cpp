@@ -433,12 +433,19 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 				}
 
 				if (do_trap) {
-					DOLOG(debug, true, "TRAP(0250) (throw 1) for access_control %d on address %06o", access_control, a);
+					bool do_trap_250 = false;
 
-					if ((MMR0 & (1 << 9)) && (MMR0 & 0xf000) == 0)
-						c->schedule_trap(0250);  // invalid address
+					if ((MMR0 & (1 << 9)) && (MMR0 & 0xf000) == 0) {
+						DOLOG(debug, true, "TRAP(0250) (throw 1) for access_control %d on address %06o", access_control, a);
 
-					MMR0 |= 1 << 12;  // set trap-flag
+						do_trap_250 = true;
+					}
+					else {
+						DOLOG(debug, true, "A.C.F. triggger for %d on address %06o", access_control, a);
+					}
+
+					if (access_control == 1 || access_control == 4 || access_control == 5)
+						MMR0 |= 1 << 12;  // set trap-flag
 
 					if (is_write)
 						pages[run_mode][d][apf].pdr |= 1 << 7;
@@ -459,7 +466,11 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 
 					DOLOG(debug, true, "MMR0: %06o", MMR0);
 
-					throw 1;
+					if (do_trap_250) {
+						c->schedule_trap(0250);  // invalid address
+
+						throw 1;
+					}
 				}
 			}
 
