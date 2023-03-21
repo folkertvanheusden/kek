@@ -1,4 +1,5 @@
 #include <fcntl.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "disk_backend_file.h"
@@ -6,13 +7,26 @@
 
 
 disk_backend_file::disk_backend_file(const std::string & filename) :
-	fd(open(filename.c_str(), O_RDWR))
+	filename(filename)
 {
 }
 
 disk_backend_file::~disk_backend_file()
 {
 	close(fd);
+}
+
+bool disk_backend_file::begin()
+{
+	fd = open(filename.c_str(), O_RDWR);
+
+	if (fd == -1) {
+		DOLOG(ll_error, true, "disk_backend_file: cannot open \"%s\": %s", filename.c_str(), strerror(errno));
+
+		return false;
+	}
+
+	return true;
 }
 
 bool disk_backend_file::read(const off_t offset, const size_t n, uint8_t *const target)

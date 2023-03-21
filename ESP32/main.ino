@@ -147,11 +147,22 @@ std::pair<std::vector<disk_backend *>, std::vector<disk_backend *> > select_disk
 		if (fh.open(selected_file.c_str(), O_RDWR)) {
 			fh.close();
 
+			disk_backend *temp = new disk_backend_esp32(selected_file);
+
+			if (!temp->begin()) {
+				c->put_string("Cannot use: ");
+				c->put_string_lf(selected_file.c_str());
+
+				delete temp;
+
+				continue;
+			}
+
 			if (ch == '1')
-				return { { new disk_backend_esp32(selected_file) }, { } };
+				return { { temp }, { } };
 
 			if (ch == '2')
-				return { { }, { new disk_backend_esp32(selected_file) } };
+				return { { }, { temp } };
 		}
 
 		c->put_string_lf("open failed");
