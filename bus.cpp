@@ -428,11 +428,9 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 
 				bool do_trap = false;
 
-				if (access_control == 0)
+				if (is_write && access_control != 6)  // write
 					do_trap = true;
-				else if (is_write && access_control != 6)  // write
-					do_trap = true;
-				else if (!is_write && (access_control == 0 || access_control == 1 || access_control == 3 || access_control == 4 || access_control == 7)) {
+				else if (!is_write && (access_control == 0 || access_control == 1 || access_control == 3 || access_control == 4 || access_control == 7)) {  // read
 					do_trap = true;
 				}
 
