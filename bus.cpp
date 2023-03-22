@@ -148,7 +148,7 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 		if (!peek_only) {
 			if ((a & 1) && word_mode == false) {
 				DOLOG(debug, true, "bus::readWord: odd address UNHANDLED %06o in i/o area", a);
-				c->schedule_trap(004);  // invalid access
+				c->trap(004);  // invalid access
 				return 0;
 			}
 		}
@@ -322,7 +322,8 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 			DOLOG(debug, true, "UNHANDLED read %o(%c)", a, word_mode ? 'B' : ' ');
 
 			DOLOG(debug, false, "Read non existing I/O (%06o)", a);
-			c->schedule_trap(004);  // no such i/o
+			c->trap(004);  // no such i/o
+			throw 1;
 		}
 
 		return -1;
@@ -330,7 +331,8 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 
 	if (peek_only == false && word_mode == false && (a & 1)) {
 		if (!peek_only) DOLOG(debug, true, "READ from %06o - odd address!", a);
-		c->schedule_trap(004);  // invalid access
+		c->trap(004);  // invalid access
+		throw 1;
 		return 0;
 	}
 
@@ -341,7 +343,7 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 	if (peek_only == false && m_offset >= n_pages * 8192) {
 		if (!peek_only) DOLOG(debug, true, "Read non existing mapped memory (%o >= %o)", m_offset, n_pages * 8192);
 
-		c->schedule_trap(004);  // no such memory
+		c->trap(004);  // no such memory
 
 		throw 6;
 	}
@@ -401,7 +403,7 @@ void bus::check_odd_addressing(const uint16_t a, const int run_mode, const d_i_s
 		if (is_write)
 			pages[run_mode][space == d_space][a >> 13].pdr |= 1 << 7;
 
-		c->schedule_trap(004);  // invalid access
+		c->trap(004);  // invalid access
 
 		throw 5;
 	}
@@ -499,7 +501,7 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 					DOLOG(debug, true, "MMR0: %06o", MMR0);
 
 					if (do_trap_250) {
-						c->schedule_trap(0250);  // invalid address
+						c->trap(0250);  // invalid address
 
 						throw 1;
 					}
@@ -524,7 +526,7 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 				if (is_write)
 					pages[run_mode][d][apf].pdr |= 1 << 7;
 
-				c->schedule_trap(04);
+				c->trap(04);
 
 				throw 3;
 			}
@@ -539,7 +541,7 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 			if ((pdr_cmp > pdr_len && direction == false) || (pdr_cmp < pdr_len && direction == true)) {
 				DOLOG(debug, !peek_only, "bus::calculate_physical_address::p_offset %o versus %o direction %d", pdr_cmp, pdr_len, direction);
 				DOLOG(debug, true, "TRAP(0250) (throw 4) on address %06o", a);
-				c->schedule_trap(0250);  // invalid access
+				c->trap(0250);  // invalid access
 
 				if ((MMR0 & 0160000) == 0) {
 					MMR0 &= 017777;
@@ -837,28 +839,29 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 		if (word_mode == false && (a & 1)) {
 			DOLOG(debug, true, "WRITE to %06o (value: %06o) - odd address!", a, value);
 
-			c->schedule_trap(004);  // invalid access
-			return;
+			c->trap(004);  // invalid access
+			throw 1;
 		}
 
 		DOLOG(debug, false, "Write non existing I/O (%06o, value: %06o)", a, value);
-		c->schedule_trap(004);  // no such i/o
+		c->trap(004);  // no such i/o
 
-		return;
+		throw 1;
 	}
 
 	if (word_mode == false && (a & 1)) {
 		DOLOG(debug, true, "WRITE to %06o (value: %06o) - odd address!", a, value);
 
-		c->schedule_trap(004);  // invalid access
-		return;
+		c->trap(004);  // invalid access
+		throw 1;
 	}
 
 	uint32_t m_offset = calculate_physical_address(run_mode, a, true, true, false, space == d_space);
 
 	if (m_offset >= n_pages * 8192) {
 		DOLOG(debug, false, "Write non existing mapped memory (%06o, value: %06o)", m_offset, value);
-		c->schedule_trap(004);  // no such memory
+		c->trap(004);  // no such memory
+		throw 1;
 	}
 
 	DOLOG(debug, true, "WRITE to %06o/%07o %c %c: %o", a, m_offset, space == d_space ? 'D' : 'I', word_mode ? 'B' : 'W', value);
@@ -875,7 +878,8 @@ void bus::writePhysical(const uint32_t a, const uint16_t value)
 
 	if (a >= n_pages * 8192) {
 		DOLOG(debug, true, "physicalWRITE to %o: trap 004", a);
-		c->schedule_trap(004);
+		c->trap(004);
+		throw 1;
 	}
 	else {
 		m->writeWord(a, value);
@@ -886,15 +890,15 @@ uint16_t bus::readPhysical(const uint32_t a)
 {
 	if (a >= n_pages * 8192) {
 		DOLOG(debug, true, "physicalREAD from %o: trap 004", a);
-		c->schedule_trap(004);
+		c->trap(004);
+		throw 1;
+	}
 
-		return 0;
-	}
-	else {
-		uint16_t value = m->readWord(a);
-		DOLOG(debug, true, "physicalREAD %06o from %o", value, a);
-		return value;
-	}
+	uint16_t value = m->readWord(a);
+
+	DOLOG(debug, true, "physicalREAD %06o from %o", value, a);
+
+	return value;
 }
 
 uint16_t bus::readWord(const uint16_t a, const d_i_space_t s)
