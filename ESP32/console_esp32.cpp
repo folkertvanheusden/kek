@@ -37,7 +37,7 @@ int console_esp32::wait_for_char_ll(const short timeout)
 
 void console_esp32::put_char_ll(const char c)
 {
-	for(auto & port : io_ports)
+	for(auto port : io_ports)
 		port->print(c);
 }
 
