@@ -1,5 +1,6 @@
 // (C) 2018-2023 by Folkert van Heusden
 // Released under Apache License v2.0
+#include <Arduino.h>
 #include <atomic>
 #include <stdio.h>
 #include <string.h>
@@ -317,7 +318,8 @@ void setup() {
 	b->add_cpu(c);
 
 	Serial.println(F("Init console"));
-	cnsl = new console_esp32(&stop_event, b, Serial);
+	std::vector<Stream *> serial_ports { &Serial, &Serial1 };
+	cnsl = new console_esp32(&stop_event, b, serial_ports);
 
 	Serial.println(F("Start line-frequency interrupt"));
 	kw11_l *lf = new kw11_l(b, cnsl);

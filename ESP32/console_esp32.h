@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <vector>
 
 #include "console.h"
 
@@ -6,7 +7,7 @@
 class console_esp32 : public console
 {
 private:
-	Stream & io_port;
+	std::vector<Stream *> io_ports;
 
 protected:
 	int wait_for_char_ll(const short timeout) override;
@@ -14,7 +15,7 @@ protected:
 	void put_char_ll(const char c) override;
 
 public:
-	console_esp32(std::atomic_uint32_t *const stop_event, bus *const b, Stream & io_port);
+	console_esp32(std::atomic_uint32_t *const stop_event, bus *const b, std::vector<Stream *> & io_ports);
 	virtual ~console_esp32();
 
 	void put_string_lf(const std::string & what) override;
