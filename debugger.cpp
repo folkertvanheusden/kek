@@ -506,7 +506,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 #endif
 			continue;
 		}
-#if defined(ESP32) || define(RP2040)
+#if defined(ESP32) || defined(RP2040)
 		else if (cmd == "cfgdisk") {
 			configure_disk(cnsl);
 
@@ -534,7 +534,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 		else if (cmd == "help" || cmd == "h" || cmd == "?") {
 			cnsl->put_string_lf("disassemble/d - show current instruction (pc=/n=)");
 			cnsl->put_string_lf("go            - run until trap or ^e");
-#if !defined(ESP32) && !define(RP2040)
+#if !defined(ESP32) && !defined(RP2040)
 			cnsl->put_string_lf("quit/q        - stop emulator");
 #endif
 			cnsl->put_string_lf("examine/e     - show memory address (<b|w> <octal address> [<n>])");
@@ -551,7 +551,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 			cnsl->put_string_lf("cfgnet        - configure network (e.g. WiFi)");
 			cnsl->put_string_lf("startnet      - start network");
 #endif
-#if defined(ESP32) || define(RP2040)
+#if defined(ESP32) || defined(RP2040)
 			cnsl->put_string_lf("cfgdisk       - configure disk");
 #endif
 

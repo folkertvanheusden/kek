@@ -14,6 +14,7 @@
 
 #include "bus.h"
 
+
 typedef struct {
 	word_mode_t word_mode;
 	rm_selection_t mode_selection;
