@@ -332,7 +332,7 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 	if (peek_only == false && word_mode == false && (a & 1)) {
 		if (!peek_only) DOLOG(debug, true, "READ from %06o - odd address!", a);
 		c->trap(004);  // invalid access
-		throw 1;
+		throw 2;
 		return 0;
 	}
 
@@ -345,7 +345,7 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 
 		c->trap(004);  // no such memory
 
-		throw 6;
+		throw 3;
 	}
 
 	if (word_mode)
@@ -405,7 +405,7 @@ void bus::check_odd_addressing(const uint16_t a, const int run_mode, const d_i_s
 
 		c->trap(004);  // invalid access
 
-		throw 5;
+		throw 4;
 	}
 }
 
@@ -470,7 +470,7 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 					bool do_trap_250 = false;
 
 					if ((MMR0 & (1 << 9)) && (MMR0 & 0xf000) == 0) {
-						DOLOG(debug, true, "TRAP(0250) (throw 1) for access_control %d on address %06o", access_control, a);
+						DOLOG(debug, true, "TRAP(0250) (throw 5) for access_control %d on address %06o", access_control, a);
 
 						do_trap_250 = true;
 					}
@@ -503,14 +503,14 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 					if (do_trap_250) {
 						c->trap(0250);  // invalid address
 
-						throw 1;
+						throw 5;
 					}
 				}
 			}
 
 			if (m_offset >= n_pages * 8192) {
 				DOLOG(debug, !peek_only, "bus::calculate_physical_address %o >= %o", m_offset, n_pages * 8192);
-				DOLOG(debug, true, "TRAP(04) (throw 3) on address %06o", a);
+				DOLOG(debug, true, "TRAP(04) (throw 6) on address %06o", a);
 
 				if ((MMR0 & 0160000) == 0) {
 					MMR0 &= 017777;
@@ -528,7 +528,7 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 
 				c->trap(04);
 
-				throw 3;
+				throw 6;
 			}
 
 			uint16_t pdr_len = (pages[run_mode][d][apf].pdr >> 8) & 127;
@@ -540,7 +540,7 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 
 			if ((pdr_cmp > pdr_len && direction == false) || (pdr_cmp < pdr_len && direction == true)) {
 				DOLOG(debug, !peek_only, "bus::calculate_physical_address::p_offset %o versus %o direction %d", pdr_cmp, pdr_len, direction);
-				DOLOG(debug, true, "TRAP(0250) (throw 4) on address %06o", a);
+				DOLOG(debug, true, "TRAP(0250) (throw 7) on address %06o", a);
 				c->trap(0250);  // invalid access
 
 				if ((MMR0 & 0160000) == 0) {
@@ -557,7 +557,7 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 				if (is_write)
 					pages[run_mode][d][apf].pdr |= 1 << 7;
 
-				throw 4;
+				throw 7;
 			}
 		}
 
@@ -840,20 +840,20 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 			DOLOG(debug, true, "WRITE to %06o (value: %06o) - odd address!", a, value);
 
 			c->trap(004);  // invalid access
-			throw 1;
+			throw 8;
 		}
 
 		DOLOG(debug, false, "Write non existing I/O (%06o, value: %06o)", a, value);
 		c->trap(004);  // no such i/o
 
-		throw 1;
+		throw 9;
 	}
 
 	if (word_mode == false && (a & 1)) {
 		DOLOG(debug, true, "WRITE to %06o (value: %06o) - odd address!", a, value);
 
 		c->trap(004);  // invalid access
-		throw 1;
+		throw 10;
 	}
 
 	uint32_t m_offset = calculate_physical_address(run_mode, a, true, true, false, space == d_space);
@@ -861,7 +861,7 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 	if (m_offset >= n_pages * 8192) {
 		DOLOG(debug, false, "Write non existing mapped memory (%06o, value: %06o)", m_offset, value);
 		c->trap(004);  // no such memory
-		throw 1;
+		throw 11;
 	}
 
 	DOLOG(debug, true, "WRITE to %06o/%07o %c %c: %o", a, m_offset, space == d_space ? 'D' : 'I', word_mode ? 'B' : 'W', value);
@@ -879,7 +879,7 @@ void bus::writePhysical(const uint32_t a, const uint16_t value)
 	if (a >= n_pages * 8192) {
 		DOLOG(debug, true, "physicalWRITE to %o: trap 004", a);
 		c->trap(004);
-		throw 1;
+		throw 12;
 	}
 	else {
 		m->writeWord(a, value);
@@ -891,7 +891,7 @@ uint16_t bus::readPhysical(const uint32_t a)
 	if (a >= n_pages * 8192) {
 		DOLOG(debug, true, "physicalREAD from %o: trap 004", a);
 		c->trap(004);
-		throw 1;
+		throw 13;
 	}
 
 	uint16_t value = m->readWord(a);
