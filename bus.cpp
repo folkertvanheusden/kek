@@ -41,6 +41,36 @@ bus::~bus()
 	delete m;
 }
 
+void bus::add_cpu(cpu *const c)
+{
+	delete this->c;
+	this->c     = c;
+}
+
+void bus::add_tm11(tm_11 *tm11)
+{
+	delete this->tm11;
+	this->tm11  = tm11;
+} 
+
+void bus::add_rk05(rk05 *rk05_)
+{
+	delete this->rk05_;
+	this->rk05_ = rk05_;
+} 
+
+void bus::add_rl02(rl02 *rl02_)
+{
+	delete this->rl02_;
+	this->rl02_ = rl02_;
+}
+
+void bus::add_tty(tty *tty_)
+{
+	delete this->tty_;
+	this->tty_  = tty_;
+}
+
 void bus::clearmem()
 {
 	m -> reset();
