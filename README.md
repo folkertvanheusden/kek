@@ -37,8 +37,8 @@ Wiring of SDCARD (or use disk-images exported via NBD over wifi using nbdkit (be
 * and of course connect VCC/GND of the SD-card
 
 Wiring of the MAX232 connection:
-* TX  : 22
-* RX  : 21
+* TX  : 17
+* RX  : 16
 
 
 Released under Apache License v2.0
