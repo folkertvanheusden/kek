@@ -10,8 +10,12 @@
 #include "utils.h"
 
 
+#if defined(ESP32) || defined(RP2040)
 #if defined(ESP32)
 #include "esp32.h"
+#else
+#include "rp2040.h"
+#endif
 
 void setBootLoader(bus *const b);
 
@@ -498,9 +502,85 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 			*cnsl->get_running_flag() = false;
 
-			if (!single_step) {
-				auto speed = c->get_mips_rel_speed();
-				cnsl->debug("MIPS: %.2f, relative speed: %.2f%%, instructions executed: %lu", std::get<0>(speed), std::get<1>(speed), std::get<2>(speed));
+			c->reset();
+#endif
+			continue;
+		}
+#if defined(ESP32) || define(RP2040)
+		else if (cmd == "cfgdisk") {
+			configure_disk(cnsl);
+
+			continue;
+		}
+#endif
+#if defined(ESP32)
+		else if (cmd == "cfgnet") {
+			configure_network(cnsl);
+
+			continue;
+		}
+		else if (cmd == "startnet") {
+			start_network(cnsl);
+
+			continue;
+		}
+#endif
+		else if (cmd == "quit" || cmd == "q") {
+#if defined(ESP32)
+			ESP.restart();
+#endif
+			break;
+		}
+		else if (cmd == "help" || cmd == "h" || cmd == "?") {
+			cnsl->put_string_lf("disassemble/d - show current instruction (pc=/n=)");
+			cnsl->put_string_lf("go            - run until trap or ^e");
+#if !defined(ESP32) && !define(RP2040)
+			cnsl->put_string_lf("quit/q        - stop emulator");
+#endif
+			cnsl->put_string_lf("examine/e     - show memory address (<b|w> <octal address> [<n>])");
+			cnsl->put_string_lf("reset/r       - reset cpu/bus/etc");
+			cnsl->put_string_lf("single/s      - run 1 instruction (implicit 'disassemble' command)");
+			cnsl->put_string_lf("sbp/cbp/lbp   - set/clear/list breakpoint(s)");
+			cnsl->put_string_lf("trace/t       - toggle tracing");
+			cnsl->put_string_lf("strace        - start tracing from address - invoke without address to disable");
+			cnsl->put_string_lf("mmudump       - dump MMU settings (PARs/PDRs)");
+			cnsl->put_string_lf("setpc         - set PC to value");
+			cnsl->put_string_lf("setmem        - set memory (a=) to value (v=), both in octal, one byte");
+			cnsl->put_string_lf("toggle        - set switch (s=, 0...15 (decimal)) of the front panel to state (t=, 0 or 1)");
+#if defined(ESP32)
+			cnsl->put_string_lf("cfgnet        - configure network (e.g. WiFi)");
+			cnsl->put_string_lf("startnet      - start network");
+#endif
+#if defined(ESP32) || define(RP2040)
+			cnsl->put_string_lf("cfgdisk       - configure disk");
+#endif
+
+			continue;
+		}
+		else {
+			cnsl->put_string_lf("?");
+			continue;
+		}
+
+		c->emulation_start();
+
+		*cnsl->get_running_flag() = true;
+
+		while(*stop_event == EVENT_NONE) {
+			if (!single_step)
+				DOLOG(debug, false, "---");
+
+			c->step_a();
+
+			if (trace_start_addr != -1 && c->getPC() == trace_start_addr)
+				tracing = true;
+
+			if (tracing || single_step)
+				disassemble(c, single_step ? cnsl : nullptr, c->getPC(), false);
+
+			if (c->check_breakpoint() && !single_step) {
+				cnsl->put_string_lf("Breakpoint");
+				break;
 			}
 
 			if (*stop_event == EVENT_INTERRUPT) {
