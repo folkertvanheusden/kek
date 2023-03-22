@@ -245,7 +245,7 @@ int main(int argc, char *argv[])
 
 	b->add_tty(tty_);
 
-	DOLOG(info, true, "Start running at %o", c->getRegister(7));
+	DOLOG(info, true, "Start running at %06o", c->getRegister(7));
 
 	struct sigaction sa { };
 	sa.sa_handler = sw_handler;
