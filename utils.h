@@ -18,3 +18,6 @@ uint64_t get_us();
 void myusleep(uint64_t us);
 
 void set_thread_name(std::string name);
+
+ssize_t WRITE(int fd, const char *whereto, size_t len);
+ssize_t READ(int fd, char *whereto, size_t len);

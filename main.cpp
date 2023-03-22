@@ -14,6 +14,7 @@
 #include "debugger.h"
 #include "disk_backend.h"
 #include "disk_backend_file.h"
+#include "disk_backend_nbd.h"
 #include "gen.h"
 #include "kw11-l.h"
 #include "loaders.h"
@@ -47,6 +48,7 @@ void help()
 	printf("-T t.bin load file as a binary tape file (like simh \"load\" command)\n");
 	printf("-R d.rk  load file as a RK05 disk device\n");
 	printf("-r d.rl  load file as a RL02 disk device\n");
+	printf("-N host:port:type  use NBD-server as disk device, type being either \"rk05\" or \"rl02\"\n");
 	printf("-p 123   set CPU start pointer to decimal(!) value\n");
 	printf("-b x     enable bootloader (build-in), parameter must be \"rk05\" or \"rl02\"\n");
 	printf("-n       ncurses UI\n");
@@ -85,7 +87,7 @@ int main(int argc, char *argv[])
 	disk_backend *temp_d = nullptr;
 
 	int  opt          = -1;
-	while((opt = getopt(argc, argv, "hm:T:r:R:p:ndtL:b:l:s:Q:")) != -1)
+	while((opt = getopt(argc, argv, "hm:T:r:R:p:ndtL:b:l:s:Q:N:")) != -1)
 	{
 		switch(opt) {
 			case 'h':
@@ -148,6 +150,22 @@ int main(int argc, char *argv[])
 					error_exit(false, "Cannot use file \"%s\" for RL02", optarg);
 				rl02_files.push_back(temp_d);
 				break;
+
+			case 'N': {
+					  auto parts = split(optarg, ":");
+					  if (parts.size() != 3)
+						  error_exit(false, "-N: parameter missing");
+
+					  temp_d = new disk_backend_nbd(parts.at(0), atoi(parts.at(1).c_str()));
+
+					  if (parts.at(2) == "rk05")
+						rk05_files.push_back(temp_d);
+					  else if (parts.at(2) == "rl02")
+						rl02_files.push_back(temp_d);
+					  else
+					  	error_exit(false, "\"%s\" is not recognized as a disk type", parts.at(2).c_str());
+				  }
+				  break;
 
 			case 'p':
 				start_addr = atoi(optarg);
