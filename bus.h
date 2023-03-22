@@ -56,7 +56,7 @@ class cpu;
 class memory;
 class tty;
 
-typedef enum { i_space, d_space } d_i_space_t;
+typedef enum { d_space, i_space } d_i_space_t;
 
 typedef struct {
 	uint16_t virtual_address;
