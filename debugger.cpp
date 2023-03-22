@@ -141,6 +141,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 	int32_t trace_start_addr = -1;
 	bool    tracing          = tracing_in;
 	int     n_single_step    = 1;
+	bool    turbo            = false;
 
 	cpu *const c = b->getCpu();
 
@@ -364,6 +365,13 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 			continue;
 		}
+		else if (cmd == "turbo") {
+			turbo = !turbo;
+
+			cnsl->put_string_lf(format("Turbo set to %s", turbo ? "ON" : "OFF"));
+
+			continue;
+		}
 #endif
 		else if (cmd == "quit" || cmd == "q") {
 #if defined(ESP32)
@@ -382,6 +390,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 			cnsl->put_string_lf("single/s      - run 1 instruction (implicit 'disassemble' command)");
 			cnsl->put_string_lf("sbp/cbp/lbp   - set/clear/list breakpoint(s)");
 			cnsl->put_string_lf("trace/t       - toggle tracing");
+			cnsl->put_string_lf("turbo         - toggle turbo mode (cannot be interrupted)");
 			cnsl->put_string_lf("strace        - start tracing from address - invoke without address to disable");
 			cnsl->put_string_lf("mmudump       - dump MMU settings (PARs/PDRs)");
 			cnsl->put_string_lf("setpc         - set PC to value");
@@ -404,27 +413,35 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 		*cnsl->get_running_flag() = true;
 
-		while(*stop_event == EVENT_NONE) {
-			if (!single_step)
-				DOLOG(debug, false, "---");
-
-			c->step_a();
-
-			if (trace_start_addr != -1 && c->getPC() == trace_start_addr)
-				tracing = true;
-
-			if (tracing || single_step)
-				disassemble(c, single_step ? cnsl : nullptr, c->getPC(), false);
-
-			if (c->check_breakpoint() && !single_step) {
-				cnsl->put_string_lf("Breakpoint");
-				break;
+		if (turbo) {
+			while(*stop_event == EVENT_NONE) {
+				c->step_a();
+				c->step_b();
 			}
+		}
+		else {
+			while(*stop_event == EVENT_NONE) {
+				if (!single_step)
+					DOLOG(debug, false, "---");
 
-			c->step_b();
+				c->step_a();
 
-			if (single_step && --n_single_step == 0)
-				break;
+				if (trace_start_addr != -1 && c->getPC() == trace_start_addr)
+					tracing = true;
+
+				if (tracing || single_step)
+					disassemble(c, single_step ? cnsl : nullptr, c->getPC(), false);
+
+				if (c->check_breakpoint() && !single_step) {
+					cnsl->put_string_lf("Breakpoint");
+					break;
+				}
+
+				c->step_b();
+
+				if (single_step && --n_single_step == 0)
+					break;
+			}
 		}
 
 		*cnsl->get_running_flag() = false;
