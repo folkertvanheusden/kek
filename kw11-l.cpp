@@ -6,6 +6,11 @@
 #include "utils.h"
 
 #if defined(ESP32)
+#include "esp32.h"
+#endif
+
+
+#if defined(ESP32)
 void thread_wrapper_kw11(void *p)
 {
 	kw11_l *const kw11l = reinterpret_cast<kw11_l *>(p);

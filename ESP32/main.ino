@@ -1,4 +1,4 @@
-// (C) 2018-2022 by Folkert van Heusden
+// (C) 2018-2023 by Folkert van Heusden
 // Released under Apache License v2.0
 #include <atomic>
 #include <stdio.h>
@@ -12,6 +12,9 @@
 #include "console_esp32.h"
 #include "cpu.h"
 #include "debugger.h"
+#include "disk_backend.h"
+#include "disk_backend_esp32.h"
+#include "disk_backend_nbd.h"
 #include "error.h"
 #include "esp32.h"
 #include "gen.h"
@@ -53,58 +56,87 @@ void console_thread_wrapper_io(void *const c)
 	cnsl->operator()();
 }
 
-void setup_wifi_stations()
+typedef enum { BE_NETWORK, BE_SD } disk_backend_t;
+std::optional<disk_backend_t> select_disk_backend(console *const c)
 {
-#if 0
-	WiFi.mode(WIFI_STA);
+	c->put_string("1. network (NBD), 2. local SD card, 9. abort");
 
-	WiFi.softAP("PDP-11 KEK", nullptr, 5, 0, 4);
+	int ch = -1;
+	while(ch == -1 && ch != '1' && ch != '2' && ch != '9')
+		ch = c->wait_char(500);
 
-#if 0
-	Serial.println(F("Scanning for WiFi access points..."));
+	c->put_string_lf(format("%c", ch));
 
-	int n = WiFi.scanNetworks();
+	if (ch == '9')
+		return { };
 
-	Serial.println(F("scan done"));
+	if (ch == '1')
+		return BE_NETWORK;
 
-	if (n == 0)
-		Serial.println(F("no networks found"));
-	else {
-		for (int i = 0; i < n; ++i) {
-			// Print SSID and RSSI for each network found
-			Serial.print(i + 1);
-			Serial.print(F(": "));
-			Serial.print(WiFi.SSID(i));
-			Serial.print(F(" ("));
-			Serial.print(WiFi.RSSI(i));
-			Serial.print(F(")"));
-			Serial.println(WiFi.encryptionType(i) == WIFI_AUTH_OPEN ? " " : "*");
-			delay(10);
-		}
+//	if (ch == '2')
+		return BE_SD;
+}
+
+typedef enum { DT_RK05, DT_RL02 } disk_type_t;
+
+std::optional<disk_type_t> select_disk_type(console *const c)
+{
+	c->put_string("1. RK05, 2. RL02, 9. abort");
+
+	int ch = -1;
+	while(ch == -1 && ch != '1' && ch != '2' && ch != '9')
+		ch = c->wait_char(500);
+
+	c->put_string_lf(format("%c", ch));
+
+	if (ch == '9')
+		return { };
+
+	if (ch == '1')
+		return DT_RK05;
+
+//	if (ch == '2')
+		return DT_RL02;
+}
+
+std::optional<std::pair<std::vector<disk_backend *>, std::vector<disk_backend *> > > select_nbd_server(console *const c)
+{
+	c->flush_input();
+
+	std::string hostname = c->read_line("Enter hostname (or empty to abort): ");
+
+	if (hostname.empty())
+		return { };
+
+	std::string port_str = c->read_line("Enter port number (or empty to abort): ");
+
+	if (port_str.empty())
+		return { };
+
+	auto disk_type = select_disk_type(c);
+
+	if (disk_type.has_value() == false)
+		return { };
+
+	disk_backend *d = new disk_backend_nbd(hostname, atoi(port_str.c_str()));
+
+	if (d->begin() == false) {
+		c->put_string_lf("Cannot initialize NBD client");
+		delete d;
+		return { };
 	}
 
-	std::string ssid = read_terminal_line("SSID: ");
-	std::string password = read_terminal_line("password: ");
-	WiFi.begin(ssid.c_str(), password.c_str());
-#else
-	WiFi.begin("www.vanheusden.com", "Ditiseentest31415926");
-	//WiFi.begin("NURDspace-guest", "harkharkhark");
-#endif
+	if (disk_type.value() == DT_RK05)
+		return { { { d }, { } } };
 
-	while (WiFi.status() != WL_CONNECTED) {
-		Serial.print('.');
+	if (disk_type.value() == DT_RL02)
+		return { { { }, { d } } };
 
-		delay(250);
-	}
-
-	on_wifi = true;
-
-	Serial.println(WiFi.localIP());
-#endif
+	return { };
 }
 
 // RK05, RL02 files
-std::pair<std::vector<std::string>, std::vector<std::string> > select_disk_files(console *const c)
+std::optional<std::pair<std::vector<disk_backend *>, std::vector<disk_backend *> > > select_disk_files(console *const c)
 {
 	c->debug("MISO: %d", int(MISO));
 	c->debug("MOSI: %d", int(MOSI));
@@ -126,16 +158,10 @@ std::pair<std::vector<std::string>, std::vector<std::string> > select_disk_files
 		if (selected_file.empty())
 			continue;
 
-		c->put_string("1. RK05, 2. RL02, 3. re-select file");
+		auto disk_type = select_disk_type(c);
 
-		int ch = -1;
-		while(ch == -1 && ch != '1' && ch != '2' && ch != '3')
-			ch = c->wait_char(500);
-
-		c->put_string_lf(format("%c", ch));
-
-		if (ch == '3')
-			continue;
+		if (disk_type.has_value() == false)
+			return { };
 
 		c->put_string("Opening file: ");
 		c->put_string_lf(selected_file.c_str());
@@ -145,15 +171,124 @@ std::pair<std::vector<std::string>, std::vector<std::string> > select_disk_files
 		if (fh.open(selected_file.c_str(), O_RDWR)) {
 			fh.close();
 
-			if (ch == '1')
-				return { { selected_file }, { } };
+			disk_backend *temp = new disk_backend_esp32(selected_file);
 
-			if (ch == '2')
-				return { { }, { selected_file } };
+			if (!temp->begin()) {
+				c->put_string("Cannot use: ");
+				c->put_string_lf(selected_file.c_str());
+
+				delete temp;
+
+				continue;
+			}
+
+			if (disk_type.value() == DT_RK05)
+				return { { { temp }, { } } };
+
+			if (disk_type.value() == DT_RL02)
+				return { { { }, { temp } } };
 		}
 
 		c->put_string_lf("open failed");
 	}
+}
+
+void configure_disk(console *const c)
+{
+	for(;;) {
+		Serial.println(F("Load disk"));
+
+		auto backend = select_disk_backend(cnsl);
+
+		if (backend.has_value() == false)
+			break;
+
+		std::optional<std::pair<std::vector<disk_backend *>, std::vector<disk_backend *> > > files;
+
+		if (backend == BE_NETWORK)
+			files = select_nbd_server(cnsl);
+		else // if (backend == BE_SD)
+			files = select_disk_files(cnsl);
+
+		if (files.has_value() == false)
+			break;
+
+		if (files.value().first.empty() == false)
+			b->add_rk05(new rk05(files.value().first, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
+
+		if (files.value().second.empty() == false)
+			b->add_rl02(new rl02(files.value().second, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
+
+		// TODO: allow bootloader to be selected
+		if (files.value().first.empty() == false)
+			setBootLoader(b, BL_RK05);
+		else
+			setBootLoader(b, BL_RL02);
+
+		break;
+	}
+}
+
+void set_hostname()
+{
+	WiFi.setHostname("PDP-11");
+}
+
+void configure_network(console *const c)
+{
+	WiFi.persistent(true);
+
+	WiFi.setAutoReconnect(true);
+
+	WiFi.mode(WIFI_STA);
+
+	c->put_string_lf("Scanning for wireless networks...");
+
+	int n_ssids = WiFi.scanNetworks();
+
+	c->put_string_lf("Wireless networks:");
+
+	for(int i=0; i<n_ssids; i++)
+		c->put_string_lf(format("\t%s", WiFi.SSID(i).c_str()));
+
+	c->flush_input();
+
+	std::string wifi_ap = c->read_line("Enter SSID[|PSK]: ");
+
+	auto parts = split(wifi_ap, "|");
+
+	if (parts.size() > 2) {
+		c->put_string_lf("Invalid SSID/PSK: should not contain '|'");
+		return;
+	}
+
+	set_hostname();
+
+	if (parts.size() == 1)
+		WiFi.begin(parts.at(0).c_str());
+	else
+		WiFi.begin(parts.at(0).c_str(), parts.at(1).c_str());
+}
+
+void start_network(console *const c)
+{
+	WiFi.mode(WIFI_STA);
+
+	set_hostname();
+
+	WiFi.begin();
+
+	int i = 0;
+	while (WiFi.waitForConnectResult() != WL_CONNECTED && i < 10 * 3) {
+		c->put_string(".");
+
+		delay(1000 / 3);
+
+		i++;
+	}
+
+	c->put_string_lf("");
+	c->put_string_lf(format("Local IP address: %s", WiFi.localIP().toString().c_str()));
 }
 
 void setup() {
@@ -181,8 +316,6 @@ void setup() {
 	Serial.println(F("Connect CPU to BUS"));
 	b->add_cpu(c);
 
-	c->setEmulateMFPT(true);
-
 	Serial.println(F("Init console"));
 	cnsl = new console_esp32(&stop_event, b);
 
@@ -204,20 +337,6 @@ void setup() {
 	xTaskCreatePinnedToCore(&console_thread_wrapper_io,    "c-io",  2048, cnsl, 1, nullptr, 0);
 
 	// setup_wifi_stations();
-
-	Serial.println(F("Load RK05"));
-	auto disk_files = select_disk_files(cnsl);
-
-	if (disk_files.first.empty() == false)
-		b->add_rk05(new rk05(disk_files.first, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
-
-	if (disk_files.second.empty() == false)
-		b->add_rl02(new rl02(disk_files.second, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
-
-	if (disk_files.first.empty() == false)
-		setBootLoader(b, BL_RK05);
-	else
-		setBootLoader(b, BL_RL02);
 
 	Serial.print(F("Free RAM after init: "));
 	Serial.println(ESP.getFreeHeap());

@@ -17,7 +17,7 @@
 // see also https://github.com/espressif/esp-idf/issues/1934
 constexpr int n_pages = 12;
 #else
-constexpr int n_pages = 128;  // 1MB
+constexpr int n_pages = 32;  // 32=256kB (for EKBEEx.BIC)
 #endif
 
 constexpr uint16_t di_ena_mask[4] = { 4, 2, 0, 1 };
@@ -309,8 +309,11 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 	uint32_t m_offset = calculate_physical_address(run_mode, a, !peek_only, false, peek_only, space == d_space);
 
 	if (peek_only == false && m_offset >= n_pages * 8192) {
-		if (!peek_only) DOLOG(debug, false, "Read non existing mapped memory (%o >= %o)", m_offset, n_pages * 8192);
+		if (!peek_only) DOLOG(debug, true, "Read non existing mapped memory (%o >= %o)", m_offset, n_pages * 8192);
+
 		c->schedule_trap(004);  // no such memory
+
+		throw 6;
 	}
 
 	if (word_mode)
@@ -358,7 +361,8 @@ void bus::clearMMR0Bit(const int bit)
 
 void bus::setMMR2(const uint16_t value) 
 {
-	MMR2 = value;
+	if ((MMR0 & 0xe000) == 0)
+		MMR2 = value;
 }
 
 void bus::check_odd_addressing(const uint16_t a, const int run_mode, const d_i_space_t space, const bool is_write)
@@ -424,19 +428,26 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 
 				bool do_trap = false;
 
-				if (access_control == 0)
+				if (is_write && access_control != 6)  // write
 					do_trap = true;
-				else if (is_write && access_control != 6)  // write
-					do_trap = true;
-				else if (!is_write && (access_control == 0 || access_control == 1 || access_control == 3 || access_control == 4 || access_control == 7)) {
+				else if (!is_write && (access_control == 0 || access_control == 1 || access_control == 3 || access_control == 4 || access_control == 7)) {  // read
 					do_trap = true;
 				}
 
 				if (do_trap) {
-					DOLOG(debug, true, "TRAP(0250) (throw 1) for access_control %d on address %06o", access_control, a);
+					bool do_trap_250 = false;
 
-					if (MMR0 & (1 << 9))
-						c->schedule_trap(0250);  // invalid address
+					if ((MMR0 & (1 << 9)) && (MMR0 & 0xf000) == 0) {
+						DOLOG(debug, true, "TRAP(0250) (throw 1) for access_control %d on address %06o", access_control, a);
+
+						do_trap_250 = true;
+					}
+					else {
+						DOLOG(debug, true, "A.C.F. triggger for %d on address %06o", access_control, a);
+					}
+
+					if (access_control == 1 || access_control == 4 || access_control == 5)
+						MMR0 |= 1 << 12;  // set trap-flag
 
 					if (is_write)
 						pages[run_mode][d][apf].pdr |= 1 << 7;
@@ -457,7 +468,11 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 
 					DOLOG(debug, true, "MMR0: %06o", MMR0);
 
-					throw 1;
+					if (do_trap_250) {
+						c->schedule_trap(0250);  // invalid address
+
+						throw 1;
+					}
 				}
 			}
 

@@ -1293,7 +1293,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					 psw &= 0xff00;  // only alter lower 8 bits
 					 psw |= getGAM(dst_mode, dst_reg, word_mode, false).value.value() & 0xef;  // can't change bit 4
 #else
-					 schedule_trap(010);
+					 trap(010);
 #endif
 				 }
 				 else {
@@ -1324,7 +1324,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						 setPSW_n(extend_b7);
 					 }
 #else
-					 schedule_trap(010);
+					 trap(010);
 #endif
 				 }
 				 else {  // SXT
@@ -1438,7 +1438,7 @@ bool cpu::condition_code_operations(const uint16_t instr)
 		setPSW_spl(level);
 
 //		// trap via vector 010  only(?) on an 11/60 and not(?) on an 11/70
-//		schedule_trap(010);
+//		trap(010);
 
 		return true;
 	}
@@ -1466,7 +1466,7 @@ void cpu::pushStack(const uint16_t v)
 	if (getRegister(6) == stackLimitRegister) {
 		DOLOG(debug, true, "stackLimitRegister reached %06o while pushing %06o", stackLimitRegister, v);
 
-		schedule_trap(123);
+		trap(123, 7);  // TODO
 	}
 	else {
 		uint16_t a = addRegister(6, false, -2);
@@ -1501,11 +1501,11 @@ bool cpu::misc_operations(const uint16_t instr)
 			return true;
 
 		case 0b0000000000000011: // BPT
-			schedule_trap(014);
+			trap(014);
 			return true;
 
 		case 0b0000000000000100: // IOT
-			schedule_trap(020);
+			trap(020);
 			return true;
 
 		case 0b0000000000000110: // RTT
@@ -1515,7 +1515,7 @@ bool cpu::misc_operations(const uint16_t instr)
 
 		case 0b0000000000000111: // MFPT
 			//setRegister(0, 0);
-			schedule_trap(010); // does not exist on PDP-11/70
+			trap(010); // does not exist on PDP-11/70
 			return true;
 
 		case 0b0000000000000101: // RESET
@@ -1525,12 +1525,12 @@ bool cpu::misc_operations(const uint16_t instr)
 	}
 
 	if ((instr >> 8) == 0b10001000) { // EMT
-		schedule_trap(030);
+		trap(030);
 		return true;
 	}
 
 	if ((instr >> 8) == 0b10001001) { // TRAP
-		schedule_trap(034);
+		trap(034);
 		return true;
 	}
 
@@ -1583,7 +1583,7 @@ bool cpu::misc_operations(const uint16_t instr)
 
 void cpu::schedule_trap(const uint16_t vector)
 {
-	DOLOG(debug, false, "schedule_trap @ %06o", pc);
+	DOLOG(debug, true, "schedule_trap @ %06o", pc);
 
 	scheduled_trap = vector;
 }
@@ -2169,8 +2169,14 @@ void cpu::step_b()
 
 	uint16_t temp_pc = getPC();
 
+	if ((b->getMMR0() & 0160000) == 0)
+		b->setMMR2(temp_pc);
+
 	try {
 		uint16_t instr = b->readWord(temp_pc);
+
+		if (temp_pc == 025250)
+			DOLOG(debug, true, "GREP %06o %06o", temp_pc, instr);
 
 		addRegister(7, false, 2);
 
@@ -2188,7 +2194,7 @@ void cpu::step_b()
 
 		DOLOG(warning, true, "UNHANDLED instruction %06o @ %06o", instr, temp_pc);
 
-		schedule_trap(010);
+		trap(010);
 	}
 	catch(const int exception) {
 		DOLOG(debug, true, "bus-trap during execution of command (%d)", exception);

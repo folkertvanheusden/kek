@@ -7,7 +7,14 @@
 
 
 #if defined(ESP32)
+#include "esp32.h"
+
 void setBootLoader(bus *const b);
+
+void configure_disk(console *const c);
+
+void configure_network(console *const c);
+void start_network(console *const c);
 #endif
 
 // returns size of instruction (in bytes)
@@ -341,6 +348,23 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 #endif
 			continue;
 		}
+#if defined(ESP32)
+		else if (cmd == "cfgdisk") {
+			configure_disk(cnsl);
+
+			continue;
+		}
+		else if (cmd == "cfgnet") {
+			configure_network(cnsl);
+
+			continue;
+		}
+		else if (cmd == "startnet") {
+			start_network(cnsl);
+
+			continue;
+		}
+#endif
 		else if (cmd == "quit" || cmd == "q") {
 #if defined(ESP32)
 			ESP.restart();
@@ -363,6 +387,11 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 			cnsl->put_string_lf("setpc         - set PC to value");
 			cnsl->put_string_lf("setmem        - set memory (a=) to value (v=), both in octal, one byte");
 			cnsl->put_string_lf("toggle        - set switch (s=, 0...15 (decimal)) of the front panel to state (t=, 0 or 1)");
+#if defined(ESP32)
+			cnsl->put_string_lf("cfgnet        - configure network (e.g. WiFi)");
+			cnsl->put_string_lf("startnet      - start network");
+			cnsl->put_string_lf("cfgdisk       - configure disk");
+#endif
 
 			continue;
 		}

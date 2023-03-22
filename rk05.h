@@ -1,4 +1,4 @@
-// (C) 2018-2022 by Folkert van Heusden
+// (C) 2018-2023 by Folkert van Heusden
 // Released under Apache License v2.0
 #pragma once
 
@@ -8,9 +8,7 @@
 #include <string>
 #include <vector>
 
-#if defined(ESP32)
-#include "esp32.h"
-#endif
+#include "disk_backend.h"
 
 
 #define RK05_DS		0177400	// drive status
@@ -28,19 +26,16 @@ class bus;
 class rk05
 {
 private:
-	bus *const b;
-	uint16_t registers[7];
-	uint8_t xfer_buffer[512];
-#if defined(ESP32)
-	std::vector<File32 *> fhs;
-#else
-	std::vector<FILE *> fhs;
-#endif
+	bus      *const b { nullptr };
+	uint16_t        registers  [  7];
+	uint8_t         xfer_buffer[512];
+	std::vector<disk_backend *> fhs;
+
 	std::atomic_bool *const disk_read_acitivity  { nullptr };
 	std::atomic_bool *const disk_write_acitivity { nullptr };
 
 public:
-	rk05(const std::vector<std::string> & files, bus *const b, std::atomic_bool *const disk_read_acitivity, std::atomic_bool *const disk_write_acitivity);
+	rk05(const std::vector<disk_backend *> & files, bus *const b, std::atomic_bool *const disk_read_acitivity, std::atomic_bool *const disk_write_acitivity);
 	virtual ~rk05();
 
 	uint8_t readByte(const uint16_t addr);
