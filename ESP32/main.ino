@@ -153,10 +153,10 @@ std::optional<std::pair<std::vector<disk_backend *>, std::vector<disk_backend *>
 
 		c->flush_input();
 
-		std::string selected_file = c->read_line("Enter filename: ");
+		std::string selected_file = c->read_line("Enter filename (or empty to abort): ");
 
 		if (selected_file.empty())
-			continue;
+			return { };
 
 		auto disk_type = select_disk_type(c);
 
