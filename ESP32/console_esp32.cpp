@@ -10,8 +10,9 @@
 
 #define NEOPIXELS_PIN	25
 
-console_esp32::console_esp32(std::atomic_uint32_t *const stop_event, bus *const b) :
-	console(stop_event, b)
+console_esp32::console_esp32(std::atomic_uint32_t *const stop_event, bus *const b, Stream & io_port) :
+	console(stop_event, b),
+	io_port(io_port)
 {
 }
 
@@ -23,8 +24,8 @@ console_esp32::~console_esp32()
 int console_esp32::wait_for_char_ll(const short timeout)
 {
 	for(short i=0; i<timeout / 10; i++) {
-		if (Serial.available())
-			return Serial.read();
+		if (io_port.available())
+			return io_port.read();
 
 		delay(10);
 	}
@@ -34,7 +35,7 @@ int console_esp32::wait_for_char_ll(const short timeout)
 
 void console_esp32::put_char_ll(const char c)
 {
-	Serial.print(c);
+	io_port.print(c);
 }
 
 void console_esp32::put_string_lf(const std::string & what)
@@ -54,7 +55,7 @@ void console_esp32::refresh_virtual_terminal()
 
 void console_esp32::panel_update_thread()
 {
-	Serial.println(F("panel task started"));
+	io_port.println(F("panel task started"));
 
 	cpu *const c = b->getCpu();
 
