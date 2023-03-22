@@ -365,6 +365,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 			continue;
 		}
+#endif
 		else if (cmd == "turbo") {
 			turbo = !turbo;
 
@@ -372,7 +373,6 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 			continue;
 		}
-#endif
 		else if (cmd == "quit" || cmd == "q") {
 #if defined(ESP32)
 			ESP.restart();
