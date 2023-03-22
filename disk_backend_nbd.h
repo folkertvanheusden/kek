@@ -1,6 +1,4 @@
-#include <netdb.h>
 #include <string>
-#include <sys/socket.h>
 #include <sys/types.h>
 
 #include "disk_backend.h"
@@ -10,8 +8,10 @@ class disk_backend_nbd : public disk_backend
 {
 private:
 	const std::string host;
-	const int         port;
+	const int         port {  0 };
 	int               fd   { -1 };
+
+	bool connect(const bool retry);
 
 public:
 	disk_backend_nbd(const std::string & host, const int port);
