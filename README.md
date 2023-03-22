@@ -22,6 +22,19 @@ To run a tape image:
     ./kek -T filename.bin -b 2> /dev/null
 
 
+The ESP32 version needs platformio to be build.
+
+    cd ESP32
+    pio run -t upload
+
+That should build & upload it to a connected ESP32.
+
+Wiring of SDCARD (or use disk-images exported via NBD over wifi using nbdkit (because of older NBD protocol implementation)):
+* MISO: 19
+* MOSI: 23
+* SCK : 18
+* SS  : 5
+* and of course connect VCC/GND of the SD-card
 
 
 Released under Apache License v2.0
