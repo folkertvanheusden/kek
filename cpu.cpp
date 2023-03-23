@@ -2134,6 +2134,7 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 	out.insert({ "work-values", work_values_str });
 
 	out.insert({ "MMR0", { format("%06o", b->getMMR0()) } });
+	out.insert({ "MMR1", { format("%06o", b->getMMR1()) } });
 	out.insert({ "MMR2", { format("%06o", b->getMMR2()) } });
 
 	return out;
