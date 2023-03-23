@@ -134,7 +134,7 @@ public:
 
 	void write(const uint16_t a, const bool word_mode, uint16_t value, const bool use_prev, const d_i_space_t s = i_space);
 	void writeByte(const uint16_t a, const uint8_t value) { return write(a, true, value, false); }
-	void writeWord(const uint16_t a, const uint16_t value);
+	void writeWord(const uint16_t a, const uint16_t value, const d_i_space_t s = i_space);
 
 	uint16_t readPhysical(const uint32_t a);
 	void writePhysical(const uint32_t a, const uint16_t value);

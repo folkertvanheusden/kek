@@ -1473,14 +1473,14 @@ void cpu::pushStack(const uint16_t v)
 	else {
 		uint16_t a = addRegister(6, false, -2);
 
-		b->writeWord(a, v);
+		b->writeWord(a, v, d_space);
 	}
 }
 
 uint16_t cpu::popStack()
 {
 	uint16_t a    = getRegister(6);
-	uint16_t temp = b->readWord(a);
+	uint16_t temp = b->readWord(a, d_space);
 
 	addRegister(6, false, 2);
 

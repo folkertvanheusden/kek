@@ -935,9 +935,9 @@ uint16_t bus::peekWord(const uint16_t a)
 	return read(a, false, false, true);
 }
 
-void bus::writeWord(const uint16_t a, const uint16_t value)
+void bus::writeWord(const uint16_t a, const uint16_t value, const d_i_space_t s)
 {
-	write(a, false, value, false);
+	write(a, false, value, false, s);
 }
 
 uint16_t bus::readUnibusByte(const uint16_t a)
