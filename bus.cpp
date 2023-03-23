@@ -402,8 +402,7 @@ void bus::clearMMR0Bit(const int bit)
 
 void bus::setMMR2(const uint16_t value) 
 {
-	if ((MMR0 & 0xe000) == 0)
-		MMR2 = value;
+	MMR2 = value;
 }
 
 void bus::check_odd_addressing(const uint16_t a, const int run_mode, const d_i_space_t space, const bool is_write)
@@ -487,15 +486,14 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 						DOLOG(debug, true, "A.C.F. triggger for %d on address %06o, run mode %d", access_control, a, run_mode);
 					}
 
-					if (access_control == 1 || access_control == 4 || access_control == 5)
-						MMR0 |= 1 << 12;  // set trap-flag
-
 					if (is_write)
 						pages[run_mode][d][apf].pdr |= 1 << 7;
 
 					if ((MMR0 & 0160000) == 0) {
-						MMR0 &= ~((1 << 15) | (1 << 14) | (1 << 13) | (3 << 5) | (7 << 1));
-						MMR0 |= 1 << 13;  // read-only
+						MMR0 &= ~((1 << 15) | (1 << 14) | (1 << 13) | (1 << 12) | (3 << 5) | (7 << 1));
+
+						if (is_write && access_control != 6)
+							MMR0 |= 1 << 13;  // read-only
 								  //
 						if (access_control == 0 || access_control == 4)
 							MMR0 |= 1 << 15;  // not resident

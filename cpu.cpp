@@ -1615,17 +1615,11 @@ void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 				if ((b->getMMR0() & 0160000) == 0) {
 					b->addToMMR1(-2, 6);
 					b->addToMMR1(-2, 6);
-					b->setMMR2(vector);
 				}
-
-				if (is_interrupt)
-					b->clearMMR0Bit(12);
-				else
-					b->setMMR0Bit(12);  // it's a trap
 			}
 
 			// make sure the trap vector is retrieved from kernel space
-			psw &= 037777;  // mask off 14/15
+			psw &= 037777;  // mask off 14/15 TODO: still required? readWord gets a d_space parameter
 
 			setPC(b->readWord(vector + 0, d_space));
 
@@ -2153,12 +2147,12 @@ void cpu::step_b()
 {
 	instruction_count++;
 
-	uint16_t temp_pc = getPC();
-
-	if ((b->getMMR0() & 0160000) == 0)
-		b->setMMR2(temp_pc);
-
 	try {
+		uint16_t temp_pc = getPC();
+
+		if ((b->getMMR0() & 0160000) == 0)
+			b->setMMR2(temp_pc);
+
 		uint16_t instr = b->readWord(temp_pc);
 
 		if (temp_pc == 025250)
