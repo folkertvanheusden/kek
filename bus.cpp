@@ -17,7 +17,7 @@
 // see also https://github.com/espressif/esp-idf/issues/1934
 constexpr int n_pages = 12;
 #else
-constexpr int n_pages = 32;  // 32=256kB (for EKBEEx.BIC)
+constexpr int n_pages = 30;  // 30=240kB (for EKBEEx.BIC)
 #endif
 
 constexpr uint16_t di_ena_mask[4] = { 4, 2, 0, 1 };
