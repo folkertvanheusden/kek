@@ -478,13 +478,13 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 				if (do_trap) {
 					bool do_trap_250 = false;
 
-					if ((MMR0 & (1 << 9)) && (MMR0 & 0xf000) == 0) {
-						DOLOG(debug, true, "TRAP(0250) (throw 5) for access_control %d on address %06o", access_control, a);
+					if ((MMR0 & 0xf000) == 0) {
+						DOLOG(debug, true, "TRAP(0250) (throw 5) for access_control %d on address %06o, run mode %d", access_control, a, run_mode);
 
 						do_trap_250 = true;
 					}
 					else {
-						DOLOG(debug, true, "A.C.F. triggger for %d on address %06o", access_control, a);
+						DOLOG(debug, true, "A.C.F. triggger for %d on address %06o, run mode %d", access_control, a, run_mode);
 					}
 
 					if (access_control == 1 || access_control == 4 || access_control == 5)
