@@ -1240,6 +1240,8 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					 // put on current stack
 					 pushStack(v);
 
+					 b->addToMMR1(-2, 6);
+
 					 break;
 				 }
 
@@ -1472,8 +1474,6 @@ void cpu::pushStack(const uint16_t v)
 		uint16_t a = addRegister(6, false, -2);
 
 		b->writeWord(a, v);
-
-		b->addToMMR1(-2, 6);
 	}
 }
 
@@ -1483,8 +1483,6 @@ uint16_t cpu::popStack()
 	uint16_t temp = b->readWord(a);
 
 	addRegister(6, false, 2);
-
-	b->addToMMR1(2, 6);
 
 	return temp;
 }
@@ -1564,6 +1562,8 @@ bool cpu::misc_operations(const uint16_t instr)
 
 		// JMP dst
 		setPC(dst_value);
+
+		b->addToMMR1(-2, 6);
 
 		return true;
 	}
