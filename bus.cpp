@@ -604,10 +604,18 @@ void bus::write_pdr(const uint32_t a, const int run_mode, const uint16_t value, 
 		assert(a != 0 || value < 256);
 
 		a & 1 ? (pages[run_mode][is_d][page].pdr &= 0x00ff, pages[run_mode][is_d][page].pdr |= value << 8) :
+#ifdef SYSTEM_11_44
+			(pages[run_mode][is_d][page].pdr &= 0xff00, pages[run_mode][is_d][page].pdr |= value & ~0361);
+#else
 			(pages[run_mode][is_d][page].pdr &= 0xff00, pages[run_mode][is_d][page].pdr |= value     );
+#endif
 	}
 	else {
+#ifdef SYSTEM_11_44
+		pages[run_mode][is_d][page].pdr = value & ~0361;
+#else
 		pages[run_mode][is_d][page].pdr = value;
+#endif
 	}
 
 	pages[run_mode][is_d][page].pdr &= ~(32768 + 128 /*A*/ + 64 /*W*/ + 32 + 16);  // set bit 4, 5 & 15 to 0 as they are unused and A/W are set to 0 by writes

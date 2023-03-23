@@ -1,6 +1,8 @@
-// (C) 2018 by Folkert van Heusden
+// (C) 2018-2023 by Folkert van Heusden
 // Released under Apache License v2.0
 #pragma once
+
+// #define SYSTEM_11_44
 
 #include <assert.h>
 #include <stdint.h>
