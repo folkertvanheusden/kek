@@ -322,7 +322,9 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const bool word_mode
 	g.word_mode = word_mode;  // word/byte
 	g.prev_mode = prev_mode;  // run mode
 	g.set       = getBitPSW(11);
+
 	g.space     = reg == 7 ? i_space : (b->get_use_data_space(psw >> 14) ? d_space : i_space);
+	//                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ always d_space here? TODO
 
 	addToMMR1(mode, reg, word_mode);
 
@@ -354,7 +356,7 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const bool word_mode
 			addRegister(reg, prev_mode, !word_mode || reg == 7 || reg == 6 ? -2 : -1);
 			g.addr  = getRegister(reg, g.set, prev_mode);
 			if (read_value)
-				g.value = b->read(g.addr.value(), word_mode, prev_mode, false, d_space);
+				g.value = b->read(g.addr.value(), word_mode, prev_mode, false, g.space);
 			break;
 		case 5:
 			addRegister(reg, prev_mode, -2);
@@ -363,16 +365,16 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const bool word_mode
 				g.value = b->read(g.addr.value(), word_mode, prev_mode, d_space);
 			break;
 		case 6:
-			next_word = b -> read(getPC(), false, prev_mode);
+			next_word = b->read(getPC(), false, prev_mode, i_space);
 			addRegister(7, prev_mode, + 2);
 			g.addr  = getRegister(reg, g.set, prev_mode) + next_word;
 			if (read_value)
 				g.value = b->read(g.addr.value(), word_mode, prev_mode, d_space);
 			break;
 		case 7:
-			next_word = b -> read(getPC(), false, prev_mode);
+			next_word = b->read(getPC(), false, prev_mode, i_space);
 			addRegister(7, prev_mode, + 2);
-			g.addr  = b->read(getRegister(reg, g.set, prev_mode) + next_word, false, prev_mode);
+			g.addr  = b->read(getRegister(reg, g.set, prev_mode) + next_word, false, prev_mode, d_space);
 			if (read_value)
 				g.value = b->read(g.addr.value(), word_mode, prev_mode, d_space);
 			break;
@@ -1216,7 +1218,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 						 if (a.addr.value() >= 0160000) {
 							 // read from previous space
-							 v = b -> read(a.addr.value(), false, true);
+							 v = b->read(a.addr.value(), false, true);
 						 }
 						 else {
 							int run_mode = (getPSW() >> 12) & 3;
