@@ -867,6 +867,9 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 		if (a == ADDR_SYSSIZE || a == ADDR_SYSSIZE + 2)  // system size (is read-only)
 			return;
 
+		if (a == ADDR_SYSTEM_ID)  // is r/o
+			return;
+
 		///////////
 
 		DOLOG(debug, true, "UNHANDLED write %o(%c): %o", a, word_mode ? 'B' : 'W', value);
