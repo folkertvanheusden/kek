@@ -1203,8 +1203,6 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 		case 0b00110101: { // MFPD/MFPI
 					 // always words: word_mode-bit is to select between MFPI and MFPD
 
-					 b->addToMMR1(-2, 6);
-
 					 bool     set_flags = true;
 					 uint16_t v         = 0xffff;
 
@@ -1243,8 +1241,6 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 		case 0b00110110: { // MTPI/MTPD
 					 // always words: word_mode-bit is to select between MTPI and MTPD
-
-					 b->addToMMR1(2, 6);
 
 					 // retrieve word from '15/14'-stack
 					 uint16_t v = popStack();
@@ -1471,16 +1467,20 @@ void cpu::pushStack(const uint16_t v)
 	else {
 		uint16_t a = addRegister(6, false, -2);
 
-		b -> writeWord(a, v);
+		b->writeWord(a, v);
+
+		b->addToMMR1(-2, 6);
 	}
 }
 
 uint16_t cpu::popStack()
 {
 	uint16_t a    = getRegister(6);
-	uint16_t temp = b -> readWord(a);
+	uint16_t temp = b->readWord(a);
 
 	addRegister(6, false, 2);
+
+	b->addToMMR1(2, 6);
 
 	return temp;
 }
