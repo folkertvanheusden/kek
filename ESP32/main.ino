@@ -1,6 +1,8 @@
 // (C) 2018-2023 by Folkert van Heusden
 // Released under Apache License v2.0
+#include <Arduino.h>
 #include <atomic>
+#include <HardwareSerial.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -39,6 +41,8 @@ std::atomic_uint32_t stop_event      { EVENT_NONE };
 std::atomic_bool    *running         { nullptr };
 
 bool                 trace_output    { false };
+
+HardwareSerial       Serial_RS232(2);
 
 // std::atomic_bool on_wifi   { false };
 
@@ -153,10 +157,10 @@ std::optional<std::pair<std::vector<disk_backend *>, std::vector<disk_backend *>
 
 		c->flush_input();
 
-		std::string selected_file = c->read_line("Enter filename: ");
+		std::string selected_file = c->read_line("Enter filename (or empty to abort): ");
 
 		if (selected_file.empty())
-			continue;
+			return { };
 
 		auto disk_type = select_disk_type(c);
 
@@ -317,7 +321,13 @@ void setup() {
 	b->add_cpu(c);
 
 	Serial.println(F("Init console"));
-	cnsl = new console_esp32(&stop_event, b);
+	constexpr uint32_t hwSerialConfig = SERIAL_8N1;
+	Serial_RS232.begin(115200, hwSerialConfig, 16, 17);
+	Serial_RS232.setHwFlowCtrlMode(0);
+	Serial_RS232.println(F("Console enabled on TTY"));
+
+	std::vector<Stream *> serial_ports { &Serial_RS232, &Serial };
+	cnsl = new console_esp32(&stop_event, b, serial_ports);
 
 	Serial.println(F("Start line-frequency interrupt"));
 	kw11_l *lf = new kw11_l(b, cnsl);

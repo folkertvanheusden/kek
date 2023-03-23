@@ -1581,13 +1581,6 @@ bool cpu::misc_operations(const uint16_t instr)
 	return false;
 }
 
-void cpu::schedule_trap(const uint16_t vector)
-{
-	DOLOG(debug, true, "schedule_trap @ %06o", pc);
-
-	scheduled_trap = vector;
-}
-
 // 'is_interrupt' is not correct naming; it is true for mmu faults and interrupts
 void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 {
@@ -2150,14 +2143,6 @@ void cpu::step_a()
 {
 	if ((b->getMMR0() & 0160000) == 0)
 		b->clearMMR1();
-
-	if (scheduled_trap) {
-		trap(scheduled_trap, 7, true);
-
-		scheduled_trap = 0;
-
-		return;
-	}
 
 	if (check_queued_interrupts())
 	       return;
