@@ -774,7 +774,7 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 
 		if (a == ADDR_MMR3) { // MMR3
 			DOLOG(debug, true, "write set MMR3: %o", value);
-			MMR3 = value & 047;  // bit5: enable "unibus mapping" (not implemented TODO)
+			MMR3 = value & 067;
 			return;
 		}
 
