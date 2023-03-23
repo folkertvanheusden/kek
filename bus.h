@@ -153,6 +153,7 @@ public:
 	void     setMMR2(const uint16_t value);
 
 	void     check_odd_addressing(const uint16_t a, const int run_mode, const d_i_space_t space, const bool is_write);
+	void     trap_odd(const uint16_t a);
 
 	uint32_t calculate_physical_address(const int run_mode, const uint16_t a, const bool trap_on_failure, const bool is_write, const bool peek_only, const bool is_data);
 

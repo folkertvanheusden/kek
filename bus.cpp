@@ -106,6 +106,14 @@ uint16_t bus::read_par(const uint32_t a, const int run_mode, const bool word_mod
 	return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
 }
 
+void bus::trap_odd(const uint16_t a)
+{
+	MMR0 &= ~(7 << 1);
+	MMR0 |= (a >> 13) << 1;
+
+	c->trap(004);  // invalid access
+}
+
 uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, const bool peek_only, const d_i_space_t space)
 {
 	uint16_t temp = 0;
@@ -148,7 +156,7 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 		if (!peek_only) {
 			if ((a & 1) && word_mode == false) {
 				DOLOG(debug, true, "bus::readWord: odd address UNHANDLED %06o in i/o area", a);
-				c->trap(004);  // invalid access
+				trap_odd(a);
 				return 0;
 			}
 		}
@@ -340,7 +348,7 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 
 	if (peek_only == false && word_mode == false && (a & 1)) {
 		if (!peek_only) DOLOG(debug, true, "READ from %06o - odd address!", a);
-		c->trap(004);  // invalid access
+		trap_odd(a);
 		throw 2;
 		return 0;
 	}
@@ -411,7 +419,7 @@ void bus::check_odd_addressing(const uint16_t a, const int run_mode, const d_i_s
 		if (is_write)
 			pages[run_mode][space == d_space][a >> 13].pdr |= 1 << 7;
 
-		c->trap(004);  // invalid access
+		trap_odd(a);
 
 		throw 4;
 	}
@@ -855,7 +863,7 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 		if (word_mode == false && (a & 1)) {
 			DOLOG(debug, true, "WRITE to %06o (value: %06o) - odd address!", a, value);
 
-			c->trap(004);  // invalid access
+			trap_odd(a);
 			throw 8;
 		}
 
@@ -868,7 +876,7 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 	if (word_mode == false && (a & 1)) {
 		DOLOG(debug, true, "WRITE to %06o (value: %06o) - odd address!", a, value);
 
-		c->trap(004);  // invalid access
+		trap_odd(a);
 		throw 10;
 	}
 
