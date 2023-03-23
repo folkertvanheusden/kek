@@ -73,7 +73,7 @@ void bus::add_tty(tty *tty_)
 
 void bus::clearmem()
 {
-	m -> reset();
+	m->reset();
 }
 
 void bus::init()
@@ -129,27 +129,27 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 		//// REGISTERS ////
 		if (a >= ADDR_KERNEL_R && a <= ADDR_KERNEL_R + 5) { // kernel R0-R5
 			if (!peek_only) DOLOG(debug, false, "readb kernel R%d", a - ADDR_KERNEL_R);
-			return c -> getRegister(a - ADDR_KERNEL_R, 0, false) & (word_mode ? 0xff : 0xffff);
+			return c->getRegister(a - ADDR_KERNEL_R, 0, false) & (word_mode ? 0xff : 0xffff);
 		}
 		if (a >= ADDR_USER_R && a <= ADDR_USER_R + 5) { // user R0-R5
 			if (!peek_only) DOLOG(debug, false, "readb user R%d", a - ADDR_USER_R);
-			return c -> getRegister(a - ADDR_USER_R, 3, false) & (word_mode ? 0xff : 0xffff);
+			return c->getRegister(a - ADDR_USER_R, 3, false) & (word_mode ? 0xff : 0xffff);
 		}
 		if (a == ADDR_KERNEL_SP) { // kernel SP
 			if (!peek_only) DOLOG(debug, false, "readb kernel sp");
-			return c -> getStackPointer(0) & (word_mode ? 0xff : 0xffff);
+			return c->getStackPointer(0) & (word_mode ? 0xff : 0xffff);
 		}
 		if (a == ADDR_PC) { // PC
 			if (!peek_only) DOLOG(debug, false, "readb pc");
-			return c -> getPC() & (word_mode ? 0xff : 0xffff);
+			return c->getPC() & (word_mode ? 0xff : 0xffff);
 		}
 		if (a == ADDR_SV_SP) { // supervisor SP
 			if (!peek_only) DOLOG(debug, false, "readb supervisor sp");
-			return c -> getStackPointer(1) & (word_mode ? 0xff : 0xffff);
+			return c->getStackPointer(1) & (word_mode ? 0xff : 0xffff);
 		}
 		if (a == ADDR_USER_SP) { // user SP
 			if (!peek_only) DOLOG(debug, false, "readb user sp");
-			return c -> getStackPointer(3) & (word_mode ? 0xff : 0xffff);
+			return c->getStackPointer(3) & (word_mode ? 0xff : 0xffff);
 		}
 		///^ registers ^///
 
@@ -230,20 +230,20 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 		if (word_mode) {
 			if (a == ADDR_PSW) { // PSW
 				if (!peek_only) DOLOG(debug, false, "readb PSW LSB");
-				return c -> getPSW() & 255;
+				return c->getPSW() & 255;
 			}
 
 			if (a == ADDR_PSW + 1) {
 				if (!peek_only) DOLOG(debug, false, "readb PSW MSB");
-				return c -> getPSW() >> 8;
+				return c->getPSW() >> 8;
 			}
 			if (a == ADDR_STACKLIM) { // stack limit register
 				if (!peek_only) DOLOG(debug, false, "readb stack limit register (low)");
-				return c -> getStackLimitRegister() & 0xff;
+				return c->getStackLimitRegister() & 0xff;
 			}
 			if (a == ADDR_STACKLIM + 1) { // stack limit register
 				if (!peek_only) DOLOG(debug, false, "readb stack limit register (high)");
-				return c -> getStackLimitRegister() >> 8;
+				return c->getStackLimitRegister() >> 8;
 			}
 
 			if (a == ADDR_MICROPROG_BREAK_REG) {  // microprogram break register
@@ -287,12 +287,12 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 
 			if (a == ADDR_PSW) { // PSW
 				if (!peek_only) DOLOG(debug, false, "read PSW");
-				return c -> getPSW();
+				return c->getPSW();
 			}
 
 			if (a == ADDR_STACKLIM) { // stack limit register
 				if (!peek_only) DOLOG(debug, false, "read stack limit register");
-				return c -> getStackLimitRegister();
+				return c->getStackLimitRegister();
 			}
 
 			if (a == ADDR_CPU_ERR) { // cpu error register
@@ -307,19 +307,19 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 		}
 
 		if (tm11 && a >= TM_11_BASE && a < TM_11_END)
-			return word_mode ? tm11 -> readByte(a) : tm11 -> readWord(a);
+			return word_mode ? tm11->readByte(a) : tm11->readWord(a);
 
 		if (rk05_ && a >= RK05_BASE && a < RK05_END)
-			return word_mode ? rk05_ -> readByte(a) : rk05_ -> readWord(a);
+			return word_mode ? rk05_->readByte(a) : rk05_->readWord(a);
 
 		if (rl02_ && a >= RL02_BASE && a < RL02_END)
-			return word_mode ? rl02_ -> readByte(a) : rl02_ -> readWord(a);
+			return word_mode ? rl02_->readByte(a) : rl02_->readWord(a);
 
 		if (tty_ && a >= PDP11TTY_BASE && a < PDP11TTY_END) {
 			if (peek_only)
 				return 012345;
 
-			return word_mode ? tty_ -> readByte(a) : tty_ -> readWord(a);
+			return word_mode ? tty_->readByte(a) : tty_->readWord(a);
 		}
 
 		// LO size register field must be all 1s, so subtract 1
@@ -366,9 +366,9 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 	}
 
 	if (word_mode)
-		temp = m -> readByte(m_offset);
+		temp = m->readByte(m_offset);
 	else
-		temp = m -> readWord(m_offset);
+		temp = m->readWord(m_offset);
 
 	if (!peek_only) DOLOG(debug, false, "READ from %06o/%07o %c %c: %o", a, m_offset, space == d_space ? 'D' : 'I', word_mode ? 'B' : 'W', temp);
 
@@ -666,7 +666,7 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 		if (word_mode) {
 			if (a == ADDR_PSW || a == ADDR_PSW + 1) { // PSW
 				DOLOG(debug, true, "writeb PSW %s", a & 1 ? "MSB" : "LSB");
-				uint16_t vtemp = c -> getPSW();
+				uint16_t vtemp = c->getPSW();
 
 				if (a & 1)
 					vtemp = (vtemp & 0x00ff) | (value << 8);
@@ -675,21 +675,21 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 
 				vtemp &= ~16;  // cannot set T bit via this
 
-				c -> setPSW(vtemp, false);
+				c->setPSW(vtemp, false);
 
 				return;
 			}
 
 			if (a == ADDR_STACKLIM || a == ADDR_STACKLIM + 1) { // stack limit register
 				DOLOG(debug, true, "writeb Set stack limit register: %o", value);
-				uint16_t v = c -> getStackLimitRegister();
+				uint16_t v = c->getStackLimitRegister();
 
-				if (a & 1)
-					v = (v & 0x00ff) | (value << 8);
-				else
+				if (a == ADDR_STACKLIM)
 					v = (v & 0xff00) | value;
+				else
+					v = (v & 0x00ff) | (value << 8);
 
-				c -> setStackLimitRegister(v);
+				c->setStackLimitRegister(v);
 				return;
 			}
 
@@ -718,44 +718,44 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 		else {
 			if (a == ADDR_PSW) { // PSW
 				DOLOG(debug, true, "write PSW %o", value);
-				c -> setPSW(value & ~16, false);
+				c->setPSW(value & ~16, false);
 				return;
 			}
 
 			if (a == ADDR_STACKLIM) { // stack limit register
 				DOLOG(debug, true, "write Set stack limit register: %o", value);
-				c -> setStackLimitRegister(value);
+				c->setStackLimitRegister(value);
 				return;
 			}
 
 			if (a >= ADDR_KERNEL_R && a <= ADDR_KERNEL_R + 5) { // kernel R0-R5
 				DOLOG(debug, true, "write kernel R%d: %o", a - ADDR_KERNEL_R, value);
-				c -> setRegister(a - ADDR_KERNEL_R, false, false, value);
+				c->setRegister(a - ADDR_KERNEL_R, false, false, value);
 				return;
 			}
 			if (a >= ADDR_USER_R && a <= ADDR_USER_R + 5) { // user R0-R5
 				DOLOG(debug, true, "write user R%d: %o", a - ADDR_USER_R, value);
-				c -> setRegister(a - ADDR_USER_R, true, false, value);
+				c->setRegister(a - ADDR_USER_R, true, false, value);
 				return;
 			}
 			if (a == ADDR_KERNEL_SP) { // kernel SP
 				DOLOG(debug, true, "write kernel SP: %o", value);
-				c -> setStackPointer(0, value);
+				c->setStackPointer(0, value);
 				return;
 			}
 			if (a == ADDR_PC) { // PC
 				DOLOG(debug, true, "write PC: %o", value);
-				c -> setPC(value);
+				c->setPC(value);
 				return;
 			}
 			if (a == ADDR_SV_SP) { // supervisor SP
 				DOLOG(debug, true, "write supervisor sp: %o", value);
-				c -> setStackPointer(1, value);
+				c->setStackPointer(1, value);
 				return;
 			}
 			if (a == ADDR_USER_SP) { // user SP
 				DOLOG(debug, true, "write user sp: %o", value);
-				c -> setStackPointer(3, value);
+				c->setStackPointer(3, value);
 				return;
 			}
 
@@ -797,22 +797,22 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 		}
 
 		if (tm11 && a >= TM_11_BASE && a < TM_11_END) {
-			word_mode ? tm11 -> writeByte(a, value) : tm11 -> writeWord(a, value);
+			word_mode ? tm11->writeByte(a, value) : tm11->writeWord(a, value);
 			return;
 		}
 
 		if (rk05_ && a >= RK05_BASE && a < RK05_END) {
-			word_mode ? rk05_ -> writeByte(a, value) : rk05_ -> writeWord(a, value);
+			word_mode ? rk05_->writeByte(a, value) : rk05_->writeWord(a, value);
 			return;
 		}
 
 		if (rl02_ && a >= RL02_BASE && a < RL02_END) {
-			word_mode ? rl02_ -> writeByte(a, value) : rl02_ -> writeWord(a, value);
+			word_mode ? rl02_->writeByte(a, value) : rl02_->writeWord(a, value);
 			return;
 		}
 
 		if (tty_ && a >= PDP11TTY_BASE && a < PDP11TTY_END) {
-			word_mode ? tty_ -> writeByte(a, value) : tty_ -> writeWord(a, value);
+			word_mode ? tty_->writeByte(a, value) : tty_->writeWord(a, value);
 			return;
 		}
 
