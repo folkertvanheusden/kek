@@ -796,7 +796,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						  set_flags = putGAM(g_dst, r);
 					  }
 					  else {
-						  auto     g_dst = getGAM(dst_mode, dst_reg, word_mode, word_mode, false);
+						  auto     g_dst = getGAM(dst_mode, dst_reg, word_mode, false, false);
 
 						  set_flags = putGAM(g_dst, 0);
 					  }
