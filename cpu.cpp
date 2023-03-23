@@ -304,7 +304,7 @@ void cpu::queue_interrupt(const uint8_t level, const uint8_t vector)
 
 void cpu::addToMMR1(const uint8_t mode, const uint8_t reg, const bool word_mode)
 {
-	if (mode == 0 || mode == 1 || (b->getMMR0() & 0160000 /* bits frozen? */))
+	if (b->getMMR0() & 0160000 /* bits frozen? */)
 		return;
 
 	bool neg = mode == 4 || mode == 5;
@@ -326,8 +326,6 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const bool word_mode
 	g.space     = reg == 7 ? i_space : (b->get_use_data_space(psw >> 14) ? d_space : i_space);
 	//                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ always d_space here? TODO
 
-	addToMMR1(mode, reg, word_mode);
-
 	uint16_t next_word = 0;
 
 	switch(mode) {
@@ -345,24 +343,28 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const bool word_mode
 			if (read_value)
 				g.value = b->read(g.addr.value(), word_mode, prev_mode, false, g.space);
 			addRegister(reg, prev_mode, !word_mode || reg == 7 || reg == 6 ? 2 : 1);
+			addToMMR1(mode, reg, word_mode);
 			break;
 		case 3:
 			g.addr  = b->read(getRegister(reg, g.set, prev_mode), false, prev_mode, g.space);
 			addRegister(reg, prev_mode, 2);
 			if (read_value)
 				g.value = b->read(g.addr.value(), word_mode, prev_mode, false, d_space);
+			addToMMR1(mode, reg, word_mode);
 			break;
 		case 4:
 			addRegister(reg, prev_mode, !word_mode || reg == 7 || reg == 6 ? -2 : -1);
 			g.addr  = getRegister(reg, g.set, prev_mode);
 			if (read_value)
 				g.value = b->read(g.addr.value(), word_mode, prev_mode, false, g.space);
+			addToMMR1(mode, reg, word_mode);
 			break;
 		case 5:
 			addRegister(reg, prev_mode, -2);
 			g.addr  = b->read(getRegister(reg, g.set, prev_mode), false, prev_mode, g.space);
 			if (read_value)
 				g.value = b->read(g.addr.value(), word_mode, prev_mode, d_space);
+			addToMMR1(mode, reg, word_mode);
 			break;
 		case 6:
 			next_word = b->read(getPC(), false, prev_mode, i_space);
