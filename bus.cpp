@@ -246,6 +246,15 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 				if (!peek_only) DOLOG(debug, false, "readb micropgrogram break register (high: %03o)", microprogram_break_register >> 8);
 				return microprogram_break_register >> 8;
 			}
+
+			if (a == ADDR_MMR0) {
+				if (!peek_only) DOLOG(debug, false, "read MMR0 LO");
+				return MMR0 & 255;
+			}
+			if (a == ADDR_MMR0 + 1) {
+				if (!peek_only) DOLOG(debug, false, "read MMR0 HI");
+				return MMR0 >> 8;
+			}
 		}
 		else {
 			if (a == ADDR_MMR0) {
@@ -680,6 +689,17 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 				microprogram_break_register = (microprogram_break_register & 0x00ff) | (value << 8);
 				return;
 			}
+
+			if (a == ADDR_MMR0) { // MMR0
+				DOLOG(debug, true, "write set MMR0: %o", value);
+				MMR0 = (MMR0 & 0xff00) | value;
+				return;
+			}
+			if (a == ADDR_MMR0 + 1) { // MMR0
+				DOLOG(debug, true, "write set MMR0: %o", value);
+				MMR0 = (MMR0 & 0x00ff) | (value << 8);
+				return;
+			}
 		}
 		else {
 			if (a == ADDR_PSW) { // PSW
@@ -746,9 +766,7 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 
 		if (a == ADDR_MMR0) { // MMR0
 			DOLOG(debug, true, "write set MMR0: %o", value);
-
 			setMMR0(value);
-
 			return;
 		}
 
