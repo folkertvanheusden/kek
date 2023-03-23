@@ -27,8 +27,7 @@ rk05::rk05(const std::vector<disk_backend *> & files, bus *const b, std::atomic_
 	disk_read_acitivity(disk_read_acitivity),
 	disk_write_acitivity(disk_write_acitivity)
 {
-	memset(registers,   0x00, sizeof registers  );
-	memset(xfer_buffer, 0x00, sizeof xfer_buffer);
+	memset(registers, 0x00, sizeof registers);
 
 	fhs = files;
 }
@@ -129,12 +128,14 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 
 				DOLOG(debug, true, "RK05 drive %d position sec %d surf %d cyl %d, reclen %zo, WRITE to %o, mem: %o", device, sector, surface, cylinder, reclen, diskoffb, memoff);
 
+				uint8_t *xfer_buffer = new uint8_t[reclen];
+
 				uint32_t p = reclen;
 				for(size_t i=0; i<reclen; i++)
 					xfer_buffer[i] = b->readUnibusByte(memoff + i);
 
 				if (!fhs.at(device)->write(diskoffb, reclen, xfer_buffer))
-					DOLOG(ll_error, true, "RK05 pwrite error %s", strerror(errno));
+					DOLOG(ll_error, true, "RK05(%d) write error %s", device, strerror(errno));
 
 				if (v & 2048)
 					DOLOG(debug, true, "RK05 inhibit BA increase");
@@ -151,12 +152,16 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 
 				registers[(RK05_DA - RK05_BASE) / 2] = sector | (surface << 4) | (cylinder << 5);
 
+				delete [] xfer_buffer;
+
 				*disk_write_acitivity = false;
 			}
 			else if (func == 2) { // read
 				*disk_read_acitivity = true;
 
 				DOLOG(debug, true, "RK05 drive %d position sec %d surf %d cyl %d, reclen %zo, READ from %o, mem: %o", device, sector, surface, cylinder, reclen, diskoffb, memoff);
+
+				uint8_t xfer_buffer[512];
 
 				int      temp_diskoffb = diskoffb;
 
