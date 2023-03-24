@@ -331,23 +331,23 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const bool word_mode
 	uint16_t next_word = 0;
 
 	switch(mode) {
-		case 0: // 000 
+		case 0:  // Rn
 			g.reg   = reg;
 			g.value = getRegister(reg, g.set, prev_mode) & (word_mode ? 0xff : 0xffff);
 			break;
-		case 1:
+		case 1:  // (Rn)
 			g.addr  = getRegister(reg, g.set, prev_mode);
 			if (read_value)
 				g.value = b->read(g.addr.value(), word_mode, prev_mode, false, isR7_space);
 			break;
-		case 2:
+		case 2:  // (Rn)+  /  #n
 			g.addr  = getRegister(reg, g.set, prev_mode);
 			if (read_value)
 				g.value = b->read(g.addr.value(), word_mode, prev_mode, false, isR7_space);
 			addRegister(reg, prev_mode, !word_mode || reg == 7 || reg == 6 ? 2 : 1);
 			addToMMR1(mode, reg, word_mode);
 			break;
-		case 3:
+		case 3:  // @(Rn)+  /  @#a
 			g.addr  = b->read(getRegister(reg, g.set, prev_mode), false, prev_mode, isR7_space);
 			addRegister(reg, prev_mode, 2);
 			if (read_value) {
@@ -356,14 +356,14 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const bool word_mode
 			}
 			addToMMR1(mode, reg, word_mode);
 			break;
-		case 4:
+		case 4:  // -(Rn)
 			addRegister(reg, prev_mode, !word_mode || reg == 7 || reg == 6 ? -2 : -1);
 			g.addr  = getRegister(reg, g.set, prev_mode);
 			if (read_value)
 				g.value = b->read(g.addr.value(), word_mode, prev_mode, false, isR7_space);
 			addToMMR1(mode, reg, word_mode);
 			break;
-		case 5:
+		case 5:  // @-(Rn)
 			addRegister(reg, prev_mode, -2);
 			g.addr  = b->read(getRegister(reg, g.set, prev_mode), false, prev_mode, isR7_space);
 			if (read_value) {
@@ -372,7 +372,7 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const bool word_mode
 			}
 			addToMMR1(mode, reg, word_mode);
 			break;
-		case 6:
+		case 6:  // x(Rn)  /  a
 			next_word = b->read(getPC(), false, prev_mode, i_space);
 			addRegister(7, prev_mode, + 2);
 			g.addr  = getRegister(reg, g.set, prev_mode) + next_word;
@@ -381,7 +381,7 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const bool word_mode
 				g.value = b->read(g.addr.value(), word_mode, prev_mode, g.space);
 			}
 			break;
-		case 7:
+		case 7:  // @x(Rn)  /  @a
 			next_word = b->read(getPC(), false, prev_mode, i_space);
 			addRegister(7, prev_mode, + 2);
 			g.addr  = b->read(getRegister(reg, g.set, prev_mode) + next_word, false, prev_mode, d_space);
@@ -1289,6 +1289,8 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 					 if (set_flags)
 						 setPSW_flags_nzv(v, false);
+
+					 b->addToMMR1(2, 6);
 
 					 break;
 				 }
