@@ -449,7 +449,7 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 				    if (word_mode && dst_mode == 0)
 					    setRegister(dst_reg, false, int8_t(g_src.value.value()));  // int8_t: sign extension
 				    else {
-					    auto g_dst = getGAM(dst_mode, dst_reg, word_mode, false);
+					    auto g_dst = getGAM(dst_mode, dst_reg, word_mode, false, false);
 
 					    set_flags = putGAM(g_dst, g_src.value.value());
 				    }
@@ -2168,9 +2168,6 @@ void cpu::step_b()
 			b->setMMR2(temp_pc);
 
 		uint16_t instr = b->readWord(temp_pc);
-
-		if (temp_pc == 025250)
-			DOLOG(debug, true, "GREP %06o %06o", temp_pc, instr);
 
 		addRegister(7, false, 2);
 
