@@ -157,6 +157,7 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 			if ((a & 1) && word_mode == false) {
 				DOLOG(debug, true, "bus::readWord: odd address UNHANDLED %06o in i/o area", a);
 				trap_odd(a);
+				throw 0;
 				return 0;
 			}
 		}
