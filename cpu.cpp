@@ -149,7 +149,7 @@ void cpu::setRegisterLowByte(const int nr, const bool word_mode, const uint16_t 
 bool cpu::put_result(const gam_rc_t & g, const uint16_t value)
 {
 	if (g.addr.has_value() == false) {
-		setRegisterLowByte(g.reg, g.word_mode, value);
+		setRegisterLowByte(g.reg.value(), g.word_mode, value);
 
 		return true;
 	}
@@ -397,7 +397,7 @@ bool cpu::putGAM(const gam_rc_t & g, const uint16_t value)
 		return g.addr.value() != ADDR_PSW;
 	}
 
-	setRegister(g.reg, value, g.prev_mode);
+	setRegister(g.reg.value(), value, g.prev_mode);
 
 	return true;
 }

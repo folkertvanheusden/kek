@@ -17,10 +17,8 @@ typedef struct {
 	bool prev_mode;
 	d_i_space_t space;
 
-	union {
-		std::optional<uint16_t> addr;
-		int reg;
-	};
+	std::optional<uint16_t> addr;
+	std::optional<int> reg;
 
 	std::optional<uint16_t> value;
 } gam_rc_t;
