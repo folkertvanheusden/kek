@@ -796,7 +796,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						  set_flags = putGAM(g_dst, r);
 					  }
 					  else {
-						  auto     g_dst = getGAM(dst_mode, dst_reg, word_mode, false, false);
+						  auto g_dst = getGAM(dst_mode, dst_reg, word_mode, false, false);
 
 						  set_flags = putGAM(g_dst, 0);
 					  }
@@ -2124,6 +2124,13 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 
 	out.insert({ "registers", registers });
 
+	std::vector<std::string> registers_sp;
+
+	for(int i=0; i<4; i++)
+		registers_sp.push_back(format("%06o", sp[i]));
+
+	out.insert({ "sp", registers_sp });
+
 	// PSW
 	std::string psw_str = format("%d%d|%d|%d|%c%c%c%c%c", psw >> 14, (psw >> 12) & 3, (psw >> 11) & 1, (psw >> 5) & 7,
                         psw & 16?'t':'-', psw & 8?'n':'-', psw & 4?'z':'-', psw & 2 ? 'v':'-', psw & 1 ? 'c':'-');
@@ -2179,7 +2186,7 @@ void cpu::step_b()
 
 		DOLOG(warning, true, "UNHANDLED instruction %06o @ %06o", instr, temp_pc);
 
-//		trap(010);  floating point nog niet geimplementeerd
+		trap(010);  // floating point nog niet geimplementeerd
 	}
 	catch(const int exception) {
 		DOLOG(debug, true, "bus-trap during execution of command (%d)", exception);

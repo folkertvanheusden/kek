@@ -76,6 +76,12 @@ int disassemble(cpu *const c, console *const cnsl, const int pc, const bool inst
 	else
 		DOLOG(debug, true, "%s", result.c_str());
 
+	std::string sp;
+	for(auto sp_val : data["sp"])
+		sp += (sp.empty() ? "" : ",") + sp_val;
+
+	DOLOG(debug, true, "SP: %s", sp.c_str());
+
 	return data["instruction-values"].size() * 2;
 }
 
