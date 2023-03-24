@@ -788,7 +788,17 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 
 		if (a == ADDR_PIR) { // PIR
 			DOLOG(debug, true, "write set PIR: %o", value);
-			PIR = value; // TODO
+
+			value &= 0177000;
+
+			int bits = value >> 9;
+
+			while(bits) {
+				value += 042;  // bit 1...3 and 5...7
+				bits >>= 1;
+			}
+
+			PIR = value;
 			return;
 		}
 
