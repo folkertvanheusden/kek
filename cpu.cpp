@@ -1276,13 +1276,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 							int run_mode = (getPSW() >> 12) & 3;
 							auto phys = b->calculate_physical_address(run_mode, a.addr.value());
 
-							DOLOG(debug, true, "MTPI/D %06o -> %o / %o", a, phys.physical_instruction, phys.physical_data);
-
-//							FILE *fh = fopen("og2-kek.dat", "a+");
-//							fprintf(fh, "%lu %06o MTPI %06o: %06o\n", mtpi_count, oldpc, a, v);
-//							fclose(fh);
-							DOLOG(debug, true, "%lu %06o MTPI %06o: %06o", mtpi_count, pc-2, a.addr.value(), v);
-
+							DOLOG(debug, true, "%lu %06o MTP%c %06o: %06o", mtpi_count, pc-2, word_mode ? 'D' : 'I', a.addr.value(), v);
 							mtpi_count++;
 
 							uint32_t a = word_mode ? phys.physical_data : phys.physical_instruction;

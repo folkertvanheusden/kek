@@ -429,6 +429,9 @@ memory_addresses_t bus::calculate_physical_address(const int run_mode, const uin
 {
 	const uint8_t apf = a >> 13; // active page field
 
+	if ((MMR0 & 1) == 0)
+		return { a, apf, a, a };
+
 	uint32_t physical_instruction = pages[run_mode][0][apf].par * 64;
 	uint32_t physical_data        = pages[run_mode][1][apf].par * 64;
 
@@ -437,11 +440,9 @@ memory_addresses_t bus::calculate_physical_address(const int run_mode, const uin
 	physical_instruction += p_offset;
 	physical_data        += p_offset;
 
-	if (MMR0 & 1) {  // MMU enabled?
-		if ((MMR3 & 16) == 0) {  // offset is 18bit
-			physical_instruction &= 0x3ffff;
-			physical_data        &= 0x3ffff;
-		}
+	if ((MMR3 & 16) == 0) {  // offset is 18bit
+		physical_instruction &= 0x3ffff;
+		physical_data        &= 0x3ffff;
 	}
 
 	return { a, apf, physical_instruction, physical_data };
