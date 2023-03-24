@@ -684,14 +684,14 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 
 			if (a == ADDR_STACKLIM || a == ADDR_STACKLIM + 1) { // stack limit register
 				DOLOG(debug, true, "writeb Set stack limit register: %o", value);
-				uint16_t v = c->getStackLimitRegister();
 
-				if (a == ADDR_STACKLIM)
-					v = (v & 0xff00) | value;
-				else
+				if (a == ADDR_STACKLIM + 1) {
+					uint16_t v = c->getStackLimitRegister();
+
 					v = (v & 0x00ff) | (value << 8);
 
-				c->setStackLimitRegister(v);
+					c->setStackLimitRegister(v);
+				}
 				return;
 			}
 
@@ -726,7 +726,7 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 
 			if (a == ADDR_STACKLIM) { // stack limit register
 				DOLOG(debug, true, "write Set stack limit register: %o", value);
-				c->setStackLimitRegister(value);
+				c->setStackLimitRegister(value & 0xff00);
 				return;
 			}
 
