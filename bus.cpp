@@ -182,9 +182,13 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 			return 128;
 		}
 
-		if (a == ADDR_PIR) { // PIR
+		if (a == ADDR_PIR || a == ADDR_PIR + 1) { // PIR
 			if (!peek_only) DOLOG(debug, false, "read PIR");
-			return PIR;
+
+			if (word_mode == false)
+				return PIR;
+
+			return a == ADDR_PIR ? PIR & 255 : PIR >> 8;
 		}
 
 		if (a == ADDR_SYSTEM_ID) {
