@@ -112,11 +112,11 @@ public:
 
 	uint16_t get_console_leds() { return console_leds; }
 
-	void add_cpu(cpu *const c);
-	void add_tm11(tm_11 *tm11);
-	void add_rk05(rk05 *rk05_);
-	void add_rl02(rl02 *rl02_);
-	void add_tty(tty *tty_);
+	void add_cpu (cpu *const c);
+	void add_tm11(tm_11 *const tm11);
+	void add_rk05(rk05 *const rk05_);
+	void add_rl02(rl02 *const rl02_);
+	void add_tty (tty *const tty_);
 
 	cpu *getCpu() { return this->c; }
 

@@ -47,25 +47,25 @@ void bus::add_cpu(cpu *const c)
 	this->c     = c;
 }
 
-void bus::add_tm11(tm_11 *tm11)
+void bus::add_tm11(tm_11 *const tm11)
 {
 	delete this->tm11;
 	this->tm11  = tm11;
 } 
 
-void bus::add_rk05(rk05 *rk05_)
+void bus::add_rk05(rk05 *const rk05_)
 {
 	delete this->rk05_;
 	this->rk05_ = rk05_;
 } 
 
-void bus::add_rl02(rl02 *rl02_)
+void bus::add_rl02(rl02 *const rl02_)
 {
 	delete this->rl02_;
 	this->rl02_ = rl02_;
 }
 
-void bus::add_tty(tty *tty_)
+void bus::add_tty(tty *const tty_)
 {
 	delete this->tty_;
 	this->tty_  = tty_;
