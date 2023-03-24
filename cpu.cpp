@@ -630,12 +630,12 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 				
 				if (shift == 0) {
 					setPSW_c(false);
-					setPSW_v(SIGN(R, false) != SIGN(oldR, false));
+					setPSW_v(false);
 				}
 				else if (shift <= 15) {
 					R <<= shift;
 					setPSW_c(R & 0x10000);
-					setPSW_v((!!SIGN(oldR, false)) != (!!(R >> 15)));
+					setPSW_v(SIGN(oldR, false) != SIGN(R, false));
 				}
 				else if (shift < 32) {
 					setPSW_c((R << (shift - 16)) & 1);
@@ -2185,7 +2185,7 @@ void cpu::step_b()
 
 		DOLOG(warning, true, "UNHANDLED instruction %06o @ %06o", instr, temp_pc);
 
-		trap(010);
+//		trap(010);  floating point nog niet geimplementeerd
 	}
 	catch(const int exception) {
 		DOLOG(debug, true, "bus-trap during execution of command (%d)", exception);
