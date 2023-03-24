@@ -15,7 +15,6 @@
 typedef struct {
 	bool word_mode;
 	bool prev_mode;
-	bool set;
 	d_i_space_t space;
 
 	union {
@@ -132,17 +131,14 @@ public:
 	uint16_t getStackPointer(const int which) const { assert(which >= 0 && which < 4); return sp[which]; }
 	uint16_t getPC() const { return pc; }
 
-	void setRegister(const int nr, const bool reg_set, const bool prev_mode, const uint16_t value);
-	void setRegister(const int nr, const bool prev_mode, const uint16_t v) { setRegister(nr, (getPSW() >> 11) & 1, prev_mode, v); }
-	void setRegister(const int nr, const uint16_t v) { setRegister(nr, (getPSW() >> 11) & 1, false, v); }
+	void setRegister(const int nr, const uint16_t value, const bool prev_mode = false);
 
 	void setRegisterLowByte(const int nr, const bool prev_mode, const uint16_t value);
 
 	void setStackPointer(const int which, const uint16_t value) { assert(which >= 0 && which < 4); sp[which] = value; }
 	void setPC(const uint16_t value) { pc = value; }
 
-	uint16_t getRegister(const int nr, const int mode, const bool sp_prev_mode) const;
-	uint16_t getRegister(const int nr) const;
+	uint16_t getRegister(const int nr, const bool sp_prev_mode = false) const;
 
 	bool put_result(const gam_rc_t & g, const uint16_t value);
 };

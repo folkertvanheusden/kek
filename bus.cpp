@@ -121,12 +121,12 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 	if (a >= 0160000) {
 		//// REGISTERS ////
 		if (a >= ADDR_KERNEL_R && a <= ADDR_KERNEL_R + 5) { // kernel R0-R5
-			uint16_t temp = c->getRegister(a - ADDR_KERNEL_R, 0, false) & (word_mode ? 0xff : 0xffff);
+			uint16_t temp = c->getRegister(a - ADDR_KERNEL_R) & (word_mode ? 0xff : 0xffff);
 			if (!peek_only) DOLOG(debug, false, "READ-I/O kernel R%d: %06o", a - ADDR_KERNEL_R, temp);
 			return temp;
 		}
 		if (a >= ADDR_USER_R && a <= ADDR_USER_R + 5) { // user R0-R5
-			uint16_t temp = c->getRegister(a - ADDR_USER_R, 3, false) & (word_mode ? 0xff : 0xffff);
+			uint16_t temp = c->getRegister(a - ADDR_USER_R) & (word_mode ? 0xff : 0xffff);
 			if (!peek_only) DOLOG(debug, false, "READ-I/O user R%d: %06o", a - ADDR_USER_R, temp);
 			return temp;
 		}
@@ -768,13 +768,13 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 			if (a >= ADDR_KERNEL_R && a <= ADDR_KERNEL_R + 5) { // kernel R0-R5
 				int reg = a - ADDR_KERNEL_R;
 				DOLOG(debug, true, "WRITE-I/O kernel R%d: %06o", reg, value);
-				c->setRegister(reg, false, false, value);
+				c->setRegister(reg, value);
 				return;
 			}
 			if (a >= ADDR_USER_R && a <= ADDR_USER_R + 5) { // user R0-R5
 				int reg = a - ADDR_USER_R;
 				DOLOG(debug, true, "WRITE-I/O user R%d: %06o", reg, value);
-				c->setRegister(reg, true, false, value);
+				c->setRegister(reg, value);
 				return;
 			}
 			if (a == ADDR_KERNEL_SP) { // kernel SP
