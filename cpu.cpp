@@ -1557,8 +1557,15 @@ bool cpu::misc_operations(const uint16_t instr)
 	}
 
 	if ((instr & 0b1111111000000000) == 0b0000100000000000) { // JSR
+		int dst_mode = (instr >> 3) & 7;
+		if (dst_mode == 0)  // cannot jump to a register
+			return false;
+
+		int dst_reg  = instr & 7;
+
+		auto dst_value = getGAMAddress(dst_mode, dst_reg, false).addr.value();
+
 		int  link_reg  = (instr >> 6) & 7;
-		auto dst_value = getGAMAddress((instr >> 3) & 7, instr & 7, false).addr.value();
 
 		// PUSH link
 		pushStack(getRegister(link_reg));
