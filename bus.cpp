@@ -627,7 +627,7 @@ void bus::write_pdr(const uint32_t a, const int run_mode, const uint16_t value, 
 
 	pages[run_mode][is_d][page].pdr &= ~(32768 + 128 /*A*/ + 64 /*W*/ + 32 + 16);  // set bit 4, 5 & 15 to 0 as they are unused and A/W are set to 0 by writes
 
-	DOLOG(debug, true, "write run-mode %d: %c PDR for %d: %o [%d]", run_mode, is_d ? 'D' : 'I', page, value, word_mode);
+	DOLOG(debug, true, "WRITE-I/O PDR run-mode %d: %c for %d: %o [%d]", run_mode, is_d ? 'D' : 'I', page, value, word_mode);
 }
 
 void bus::write_par(const uint32_t a, const int run_mode, const uint16_t value, const bool word_mode)
@@ -645,7 +645,7 @@ void bus::write_par(const uint32_t a, const int run_mode, const uint16_t value, 
 
 	pages[run_mode][is_d][page].pdr &= ~(128 /*A*/ + 64 /*W*/);  // reset PDR A/W when PAR is written to
 
-	DOLOG(debug, true, "write run-mode %d: %c PAR for %d: %o (%07o)", run_mode, is_d ? 'D' : 'I', page, word_mode ? value & 0xff : value, pages[run_mode][is_d][page].par * 64);
+	DOLOG(debug, true, "WRITE-I/O PAR run-mode %d: %c for %d: %o (%07o)", run_mode, is_d ? 'D' : 'I', page, word_mode ? value & 0xff : value, pages[run_mode][is_d][page].par * 64);
 }
 
 void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bool use_prev, const d_i_space_t space)
@@ -663,22 +663,16 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 	}
 
 	if (a >= 0160000) {
-		DOLOG(debug, true, "WRITE to %06o/IO %c %c: %o", a, space == d_space ? 'D' : 'I', word_mode ? 'B' : 'W', value);
-
-		if (word_mode) {
-			assert(value < 256);
-			DOLOG(debug, true, "WRITE I/O %06o in byte mode", a);
-		}
-
 		if (word_mode) {
 			if (a == ADDR_PSW || a == ADDR_PSW + 1) { // PSW
-				DOLOG(debug, true, "writeb PSW %s", a & 1 ? "MSB" : "LSB");
+				DOLOG(debug, true, "WRITE-I/O PSW %s: %03o", a & 1 ? "MSB" : "LSB", value);
+
 				uint16_t vtemp = c->getPSW();
 
-				if (a & 1)
-					vtemp = (vtemp & 0x00ff) | (value << 8);
-				else
+				if (a == ADDR_PSW)
 					vtemp = (vtemp & 0xff00) | value;
+				else
+					vtemp = (vtemp & 0x00ff) | (value << 8);
 
 				vtemp &= ~16;  // cannot set T bit via this
 
@@ -688,7 +682,7 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 			}
 
 			if (a == ADDR_STACKLIM || a == ADDR_STACKLIM + 1) { // stack limit register
-				DOLOG(debug, true, "writeb Set stack limit register: %o", value);
+				DOLOG(debug, true, "WRITE-I/O stack limit register %s: %03o", a & 1 ? "MSB" : "LSB", value);
 
 				if (a == ADDR_STACKLIM + 1) {
 					uint16_t v = c->getStackLimitRegister();
@@ -697,102 +691,105 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 
 					c->setStackLimitRegister(v);
 				}
+
 				return;
 			}
 
-			if (a == ADDR_MICROPROG_BREAK_REG) {  // microprogram break register
-				DOLOG(debug, false, "writeb micropgrogram break register (low: %03o)", value);
-				microprogram_break_register = (microprogram_break_register & 0xff00) | value;
-				return;
-			}
-			if (a == ADDR_MICROPROG_BREAK_REG + 1) {  // microprogram break register
-				DOLOG(debug, false, "writeb micropgrogram break register (high: %03o)", value);
-				microprogram_break_register = (microprogram_break_register & 0x00ff) | (value << 8);
+			if (a == ADDR_MICROPROG_BREAK_REG || a == ADDR_MICROPROG_BREAK_REG + 1) {  // microprogram break register
+				DOLOG(debug, false, "WRITE-I/O micropram break register %s: %03o", a & 1 ? "MSB" : "LSB", value);
+
+				if (a == ADDR_MICROPROG_BREAK_REG)
+					microprogram_break_register = (microprogram_break_register & 0xff00) | value;
+				else
+					microprogram_break_register = (microprogram_break_register & 0x00ff) | (value << 8);
+
 				return;
 			}
 
-			if (a == ADDR_MMR0) { // MMR0
-				DOLOG(debug, true, "write set MMR0: %o", value);
-				MMR0 = (MMR0 & 0xff00) | value;
-				return;
-			}
-			if (a == ADDR_MMR0 + 1) { // MMR0
-				DOLOG(debug, true, "write set MMR0: %o", value);
-				MMR0 = (MMR0 & 0x00ff) | (value << 8);
+			if (a == ADDR_MMR0 || a == ADDR_MMR0 + 1) { // MMR0
+				DOLOG(debug, true, "WRITE-I/O MMR0 register %s: %03o", a & 1 ? "MSB" : "LSB", value);
+
+				if (a == ADDR_MMR0)
+					MMR0 = (MMR0 & 0xff00) | value;
+				else
+					MMR0 = (MMR0 & 0x00ff) | (value << 8);
+
 				return;
 			}
 		}
 		else {
 			if (a == ADDR_PSW) { // PSW
-				DOLOG(debug, true, "write PSW %o", value);
+				DOLOG(debug, true, "WRITE-I/O PSW: %06o", value);
 				c->setPSW(value & ~16, false);
 				return;
 			}
 
 			if (a == ADDR_STACKLIM) { // stack limit register
-				DOLOG(debug, true, "write Set stack limit register: %o", value);
+				DOLOG(debug, true, "WRITE-I/O stack limit register: %06o", value);
 				c->setStackLimitRegister(value & 0xff00);
 				return;
 			}
 
 			if (a >= ADDR_KERNEL_R && a <= ADDR_KERNEL_R + 5) { // kernel R0-R5
-				DOLOG(debug, true, "write kernel R%d: %o", a - ADDR_KERNEL_R, value);
-				c->setRegister(a - ADDR_KERNEL_R, false, false, value);
+				int reg = a - ADDR_KERNEL_R;
+				DOLOG(debug, true, "WRITE-I/O kernel R%d: %06o", reg, value);
+				c->setRegister(reg, false, false, value);
 				return;
 			}
 			if (a >= ADDR_USER_R && a <= ADDR_USER_R + 5) { // user R0-R5
-				DOLOG(debug, true, "write user R%d: %o", a - ADDR_USER_R, value);
-				c->setRegister(a - ADDR_USER_R, true, false, value);
+				int reg = a - ADDR_USER_R;
+				DOLOG(debug, true, "WRITE-I/O user R%d: %06o", reg, value);
+				c->setRegister(reg, true, false, value);
 				return;
 			}
 			if (a == ADDR_KERNEL_SP) { // kernel SP
-				DOLOG(debug, true, "write kernel SP: %o", value);
+				DOLOG(debug, true, "WRITE-I/O kernel SP: %06o", value);
 				c->setStackPointer(0, value);
 				return;
 			}
 			if (a == ADDR_PC) { // PC
-				DOLOG(debug, true, "write PC: %o", value);
+				DOLOG(debug, true, "WRITE-I/O PC: %06o", value);
 				c->setPC(value);
 				return;
 			}
 			if (a == ADDR_SV_SP) { // supervisor SP
-				DOLOG(debug, true, "write supervisor sp: %o", value);
+				DOLOG(debug, true, "WRITE-I/O supervisor sp: %06o", value);
 				c->setStackPointer(1, value);
 				return;
 			}
 			if (a == ADDR_USER_SP) { // user SP
-				DOLOG(debug, true, "write user sp: %o", value);
+				DOLOG(debug, true, "WRITE-I/O user sp: %06o", value);
 				c->setStackPointer(3, value);
 				return;
 			}
 
 			if (a == ADDR_MICROPROG_BREAK_REG) {  // microprogram break register
-				DOLOG(debug, false, "write micropgrogram break register (%06o)", value);
+				DOLOG(debug, false, "WRITE-I/O micropgrogram break register: %06o", value);
 				microprogram_break_register = value & 0xff; // only 8b on 11/70?
 				return;
 			}
 		}
 
 		if (a == ADDR_CPU_ERR) { // cpu error register
-			DOLOG(debug, true, "write CPUERR: %o", value);
+			DOLOG(debug, true, "WRITE-I/O CPUERR: %06o", value);
 			CPUERR = 0;
 			return;
 		}
 
 		if (a == ADDR_MMR3) { // MMR3
-			DOLOG(debug, true, "write set MMR3: %o", value);
+			DOLOG(debug, true, "WRITE-I/O set MMR3: %06o", value);
 			MMR3 = value & 067;
 			return;
 		}
 
 		if (a == ADDR_MMR0) { // MMR0
-			DOLOG(debug, true, "write set MMR0: %o", value);
+			DOLOG(debug, true, "WRITE-I/O set MMR0: %06o", value);
 			setMMR0(value);
 			return;
 		}
 
 		if (a == ADDR_PIR) { // PIR
-			DOLOG(debug, true, "write set PIR: %o", value);
+			DOLOG(debug, true, "WRITE-I/O set PIR: %06o", value);
 
 			value &= 0177000;
 
@@ -808,27 +805,31 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 		}
 
 		if (a == ADDR_LFC) { // line frequency clock and status register
-			DOLOG(debug, true, "write set LFC/SR: %o", value);
+			DOLOG(debug, true, "WRITE-I/O set LFC/SR: %06o", value);
 			lf_csr = value;
 			return;
 		}
 
 		if (tm11 && a >= TM_11_BASE && a < TM_11_END) {
+			DOLOG(debug, false, "WRITE-I/O TM11 register %d: %06o", (a - TM_11_BASE) / 2, value);
 			word_mode ? tm11->writeByte(a, value) : tm11->writeWord(a, value);
 			return;
 		}
 
 		if (rk05_ && a >= RK05_BASE && a < RK05_END) {
+			DOLOG(debug, false, "WRITE-I/O RK05 register %d: %06o", (a - RK05_BASE) / 2, value);
 			word_mode ? rk05_->writeByte(a, value) : rk05_->writeWord(a, value);
 			return;
 		}
 
 		if (rl02_ && a >= RL02_BASE && a < RL02_END) {
+			DOLOG(debug, false, "WRITE-I/O RL02 register %d: %06o", (a - RL02_BASE) / 2, value);
 			word_mode ? rl02_->writeByte(a, value) : rl02_->writeWord(a, value);
 			return;
 		}
 
 		if (tty_ && a >= PDP11TTY_BASE && a < PDP11TTY_END) {
+			DOLOG(debug, false, "WRITE-I/O TTY register %d: %06o", (a - PDP11TTY_BASE) / 2, value);
 			word_mode ? tty_->writeByte(a, value) : tty_->writeWord(a, value);
 			return;
 		}
@@ -889,16 +890,15 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 
 		///////////
 
-		DOLOG(debug, true, "UNHANDLED write %o(%c): %o", a, word_mode ? 'B' : 'W', value);
+		DOLOG(debug, true, "WRITE-I/O UNHANDLED %06o(%c): %06o", a, word_mode ? 'B' : 'W', value);
 
 		if (word_mode == false && (a & 1)) {
-			DOLOG(debug, true, "WRITE to %06o (value: %06o) - odd address!", a, value);
+			DOLOG(debug, true, "WRITE-I/O to %06o (value: %06o) - odd address!", a, value);
 
 			trap_odd(a);
 			throw 8;
 		}
 
-		DOLOG(debug, false, "Write non existing I/O (%06o, value: %06o)", a, value);
 		c->trap(004);  // no such i/o
 
 		throw 9;
@@ -919,7 +919,7 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 		throw 11;
 	}
 
-	DOLOG(debug, true, "WRITE to %06o/%07o %c %c: %o", a, m_offset, space == d_space ? 'D' : 'I', word_mode ? 'B' : 'W', value);
+	DOLOG(debug, true, "WRITE to %06o/%07o %c %c: %06o", a, m_offset, space == d_space ? 'D' : 'I', word_mode ? 'B' : 'W', value);
 
 	if (word_mode)
 		m->writeByte(m_offset, value);
