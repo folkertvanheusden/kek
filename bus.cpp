@@ -332,7 +332,7 @@ uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, 
 
 			if (a == ADDR_MICROPROG_BREAK_REG) {  // microprogram break register
 				uint16_t temp = microprogram_break_register;
-				if (!peek_only) DOLOG(debug, false, "READ-I/O micropgrogram break register: %06o", temp);
+				if (!peek_only) DOLOG(debug, false, "READ-I/O microprogram break register: %06o", temp);
 				return temp;
 			}
 		}
@@ -799,7 +799,7 @@ void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bo
 			}
 
 			if (a == ADDR_MICROPROG_BREAK_REG) {  // microprogram break register
-				DOLOG(debug, false, "WRITE-I/O micropgrogram break register: %06o", value);
+				DOLOG(debug, false, "WRITE-I/O microprogram break register: %06o", value);
 				microprogram_break_register = value & 0xff; // only 8b on 11/70?
 				return;
 			}
