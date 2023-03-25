@@ -313,9 +313,7 @@ void cpu::addToMMR1(const uint8_t mode, const uint8_t reg, const word_mode_t wor
 // GAM = general addressing modes
 gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t word_mode, const bool prev_mode, const bool read_value)
 {
-	gam_rc_t g { wm_word, false, i_space, { }, 0, 0 };
-	g.word_mode = word_mode;  // word/byte
-	g.prev_mode = prev_mode;  // run mode
+	gam_rc_t g { word_mode, prev_mode, i_space, { }, { }, { } };
 
 	d_i_space_t isR7_space = reg == 7 ? i_space : (b->get_use_data_space(psw >> 14) ? d_space : i_space);
 	//                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ always d_space here? TODO
@@ -427,7 +425,7 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 	const uint8_t src_mode   = (src >> 3) & 7;
 	const uint8_t src_reg    = src & 7;
 
-	gam_rc_t g_src { wm_word, false, i_space, { }, 0, 0 };
+	gam_rc_t g_src { wm_word, false, i_space, { }, { }, { } };
 
 	if (operation != 0b110)
 		g_src = getGAM(src_mode, src_reg, word_mode, false);
