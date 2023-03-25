@@ -114,11 +114,18 @@ void bus::trap_odd(const uint16_t a)
 	c->trap(004);  // invalid access
 }
 
-uint16_t bus::read(const uint16_t a, const word_mode_t word_mode, const rm_selection_t mode_selection, const bool peek_only, const d_i_space_t space)
+uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm_selection_t mode_selection, const bool peek_only, const d_i_space_t space)
 {
-	uint16_t temp = 0;
+	int  run_mode     = mode_selection == rm_cur ? c->getPSW_runmode() : c->getPSW_prev_runmode();
 
-	if (a >= 0160000) {
+	uint32_t m_offset = calculate_physical_address(run_mode, addr_in, !peek_only, false, peek_only, space);
+
+	uint32_t io_base  = MMR0 & 1 ? (MMR3 & 16 ? 017760000 : 0760000) : 0160000;
+	bool     is_io    = m_offset >= io_base;
+
+	if (is_io) {
+		uint16_t a = m_offset - io_base + 0160000;  // TODO
+
 		//// REGISTERS ////
 		if (a >= ADDR_KERNEL_R && a <= ADDR_KERNEL_R + 5) { // kernel R0-R5
 			uint16_t temp = c->getRegister(a - ADDR_KERNEL_R) & (word_mode ? 0xff : 0xffff);
@@ -387,31 +394,21 @@ uint16_t bus::read(const uint16_t a, const word_mode_t word_mode, const rm_selec
 		return -1;
 	}
 
-	if (peek_only == false && word_mode == false && (a & 1)) {
-		if (!peek_only) DOLOG(debug, true, "READ from %06o - odd address!", a);
-		trap_odd(a);
+	if (peek_only == false && word_mode == false && (addr_in & 1)) {
+		if (!peek_only) DOLOG(debug, true, "READ from %06o - odd address!", addr_in);
+		trap_odd(addr_in);
 		throw 2;
 		return 0;
 	}
 
-	int      run_mode = mode_selection == rm_cur ? c->getPSW_runmode() : c->getPSW_prev_runmode();
-
-	uint32_t m_offset = calculate_physical_address(run_mode, a, !peek_only, false, peek_only, space);
-
-	if (peek_only == false && m_offset >= n_pages * 8192) {
-		if (!peek_only) DOLOG(debug, true, "Read non existing mapped memory (%o >= %o)", m_offset, n_pages * 8192);
-
-		c->trap(004);  // no such memory
-
-		throw 3;
-	}
+	uint16_t temp   = 0;
 
 	if (word_mode)
 		temp = m->readByte(m_offset);
 	else
 		temp = m->readWord(m_offset);
 
-	if (!peek_only) DOLOG(debug, false, "READ from %06o/%07o %c %c: %o", a, m_offset, space == d_space ? 'D' : 'I', word_mode ? 'B' : 'W', temp);
+	if (!peek_only) DOLOG(debug, false, "READ from %06o/%07o %c %c: %o", addr_in, m_offset, space == d_space ? 'D' : 'I', word_mode ? 'B' : 'W', temp);
 
 	return temp;
 }
@@ -498,18 +495,12 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 {
 	uint32_t m_offset = a;
 
-	if (a == 0100000)
-		DOLOG(info, true, "0100000: MMR0=%d", MMR0);
-
 	if ((MMR0 & 1) || (is_write && (MMR0 & (1 << 8)))) {
 		const uint8_t apf = a >> 13; // active page field
 
 		bool          d   = space == d_space && get_use_data_space(run_mode) ? space == d_space : false;
 
 		uint16_t p_offset = a & 8191;  // page offset
-					       //
-		if (a == 0100000)
-			DOLOG(info, true, "0100000: APF=%d, d=%d, MMR3=%06o, run_mode=%d, mask=%d, space=%d", apf, d, MMR3, run_mode, get_use_data_space(run_mode), space);
 
 		m_offset  = pages[run_mode][d][apf].par * 64;  // memory offset  TODO: handle 16b int-s
 
@@ -517,6 +508,9 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 
 		if ((MMR3 & 16) == 0)  // off is 18bit
 			m_offset &= 0x3ffff;
+
+		uint32_t io_base  = MMR3 & 16 ? 017760000 : 0760000;
+		bool     is_io    = m_offset >= io_base;
 
 		if (trap_on_failure) {
 			{
@@ -529,9 +523,6 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 				else if (!is_write && (access_control == 0 || access_control == 1 || access_control == 3 || access_control == 4 || access_control == 7)) {  // read
 					do_trap = true;
 				}
-
-				if (a == 0100000)
-					DOLOG(info, true, "0100000: access_control=%d, do_trap=%d", access_control, do_trap);
 
 				if (do_trap) {
 					bool do_trap_250 = false;
@@ -576,7 +567,7 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 				}
 			}
 
-			if (m_offset >= n_pages * 8192) {
+			if (m_offset >= n_pages * 8192 && !is_io) {
 				DOLOG(debug, !peek_only, "bus::calculate_physical_address %o >= %o", m_offset, n_pages * 8192);
 				DOLOG(debug, true, "TRAP(04) (throw 6) on address %06o", a);
 
@@ -696,21 +687,27 @@ void bus::write_par(const uint32_t a, const int run_mode, const uint16_t value, 
 	DOLOG(debug, true, "WRITE-I/O PAR run-mode %d: %c for %d: %o (%07o)", run_mode, is_d ? 'D' : 'I', page, word_mode ? value & 0xff : value, pages[run_mode][is_d][page].par * 64);
 }
 
-void bus::write(const uint16_t a, const word_mode_t word_mode, uint16_t value, const rm_selection_t mode_selection, const d_i_space_t space)
+void bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t value, const rm_selection_t mode_selection, const d_i_space_t space)
 {
-	int run_mode = mode_selection == rm_cur ? c->getPSW_runmode() : c->getPSW_prev_runmode();
+	int           run_mode = mode_selection == rm_cur ? c->getPSW_runmode() : c->getPSW_prev_runmode();
 
-	if ((MMR0 & 1) == 1 && (a & 1) == 0 && a != ADDR_MMR0) {
-		const uint8_t apf     = a >> 13; // active page field
+	const uint8_t apf      = addr_in >> 13; // active page field
 
-		bool          is_data = space == d_space;
+	bool          is_data  = space == d_space;
 
-		bool          d       = is_data && get_use_data_space(run_mode) ? is_data : false;
+	bool          d        = is_data && get_use_data_space(run_mode) ? is_data : false;
 
+	if ((MMR0 & 1) == 1 && (addr_in & 1) == 0 && addr_in != ADDR_MMR0)
                 pages[run_mode][d][apf].pdr |= 64;  // set 'W' (written to) bit
-	}
 
-	if (a >= 0160000) {
+	uint32_t m_offset = calculate_physical_address(run_mode, addr_in, true, true, false, space);
+
+	uint32_t io_base  = MMR0 & 1 ? (MMR3 & 16 ? 017760000 : 0760000) : 0160000;
+	bool     is_io    = m_offset >= io_base;
+
+	if (is_io) {
+		uint16_t a = m_offset - io_base + 0160000;  // TODO
+
 		if (word_mode) {
 			if (a == ADDR_PSW || a == ADDR_PSW + 1) { // PSW
 				DOLOG(debug, true, "WRITE-I/O PSW %s: %03o", a & 1 ? "MSB" : "LSB", value);
@@ -952,22 +949,14 @@ void bus::write(const uint16_t a, const word_mode_t word_mode, uint16_t value, c
 		throw 9;
 	}
 
-	if (word_mode == false && (a & 1)) {
-		DOLOG(debug, true, "WRITE to %06o (value: %06o) - odd address!", a, value);
+	if (word_mode == false && (addr_in & 1)) {
+		DOLOG(debug, true, "WRITE to %06o (value: %06o) - odd address!", addr_in, value);
 
-		trap_odd(a);
+		trap_odd(addr_in);
 		throw 10;
 	}
 
-	uint32_t m_offset = calculate_physical_address(run_mode, a, true, true, false, space);
-
-	if (m_offset >= n_pages * 8192) {
-		DOLOG(debug, false, "Write non existing mapped memory (%06o, value: %06o)", m_offset, value);
-		c->trap(004);  // no such memory
-		throw 11;
-	}
-
-	DOLOG(debug, true, "WRITE to %06o/%07o %c %c: %06o", a, m_offset, space == d_space ? 'D' : 'I', word_mode ? 'B' : 'W', value);
+	DOLOG(debug, true, "WRITE to %06o/%07o %c %c: %06o", addr_in, m_offset, space == d_space ? 'D' : 'I', word_mode ? 'B' : 'W', value);
 
 	if (word_mode)
 		m->writeByte(m_offset, value);
