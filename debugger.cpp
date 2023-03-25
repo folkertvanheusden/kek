@@ -14,6 +14,7 @@ void setBootLoader(bus *const b);
 void configure_disk(console *const c);
 
 void configure_network(console *const c);
+void check_network(console *const c);
 void start_network(console *const c);
 #endif
 
@@ -367,6 +368,11 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 			continue;
 		}
+		else if (cmd == "chknet") {
+			check_network(cnsl);
+
+			continue;
+		}
 		else if (cmd == "startnet") {
 			start_network(cnsl);
 
@@ -406,6 +412,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 #if defined(ESP32)
 			cnsl->put_string_lf("cfgnet        - configure network (e.g. WiFi)");
 			cnsl->put_string_lf("startnet      - start network");
+			cnsl->put_string_lf("chknet        - check network status");
 			cnsl->put_string_lf("cfgdisk       - configure disk");
 #endif
 

@@ -274,22 +274,38 @@ void configure_network(console *const c)
 		WiFi.begin(parts.at(0).c_str(), parts.at(1).c_str());
 }
 
-void start_network(console *const c)
-{
-	WiFi.mode(WIFI_STA);
-
-	set_hostname();
-
-	WiFi.begin();
+void wait_network(console *const c) {
+	constexpr const int timeout = 10 * 3;
 
 	int i = 0;
-	while (WiFi.waitForConnectResult() != WL_CONNECTED && i < 10 * 3) {
+
+	while (WiFi.waitForConnectResult() != WL_CONNECTED && i < timeout) {
 		c->put_string(".");
 
 		delay(1000 / 3);
 
 		i++;
 	}
+
+	if (i == timeout)
+		c->put_string_lf("Time out connecting");
+}
+
+void check_network(console *const c) {
+	wait_network(c);
+
+	c->put_string_lf("");
+	c->put_string_lf(format("Local IP address: %s", WiFi.localIP().toString().c_str()));
+}
+
+void start_network(console *const c) {
+	WiFi.mode(WIFI_STA);
+
+	set_hostname();
+
+	WiFi.begin();
+
+	wait_network(c);
 
 	c->put_string_lf("");
 	c->put_string_lf(format("Local IP address: %s", WiFi.localIP().toString().c_str()));
