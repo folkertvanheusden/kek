@@ -394,7 +394,7 @@ uint16_t bus::read(const uint16_t a, const word_mode_t word_mode, const rm_selec
 		return 0;
 	}
 
-	int      run_mode = (c->getPSW() >> (mode_selection == rm_prev ? 12 : 14)) & 3;
+	int      run_mode = mode_selection == rm_cur ? c->getPSW_runmode() : c->getPSW_prev_runmode();
 
 	uint32_t m_offset = calculate_physical_address(run_mode, a, !peek_only, false, peek_only, space);
 
@@ -498,12 +498,18 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 {
 	uint32_t m_offset = a;
 
+	if (a == 0100000)
+		DOLOG(info, true, "0100000: MMR0=%d", MMR0);
+
 	if ((MMR0 & 1) || (is_write && (MMR0 & (1 << 8)))) {
 		const uint8_t apf = a >> 13; // active page field
 
 		bool          d   = (space == d_space) & ((!!(MMR3 & di_ena_mask[run_mode])) ? space == d_space : false);
 
 		uint16_t p_offset = a & 8191;  // page offset
+					       //
+		if (a == 0100000)
+			DOLOG(info, true, "0100000: APF=%d, d=%d, MMR3=%d, run_mode=%d, mask=%d, space=%d", apf, d, MMR3, run_mode, !!(MMR3 & di_ena_mask[run_mode]), space);
 
 		m_offset  = pages[run_mode][d][apf].par * 64;  // memory offset  TODO: handle 16b int-s
 
@@ -523,6 +529,9 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 				else if (!is_write && (access_control == 0 || access_control == 1 || access_control == 3 || access_control == 4 || access_control == 7)) {  // read
 					do_trap = true;
 				}
+
+				if (a == 0100000)
+					DOLOG(info, true, "0100000: access_control=%d, do_trap=%d", access_control, do_trap);
 
 				if (do_trap) {
 					bool do_trap_250 = false;
@@ -685,7 +694,7 @@ void bus::write_par(const uint32_t a, const int run_mode, const uint16_t value, 
 
 void bus::write(const uint16_t a, const word_mode_t word_mode, uint16_t value, const rm_selection_t mode_selection, const d_i_space_t space)
 {
-	int run_mode = (c->getPSW() >> (mode_selection == rm_prev ? 12 : 14)) & 3;
+	int run_mode = mode_selection == rm_cur ? c->getPSW_runmode() : c->getPSW_prev_runmode();
 
 	if ((MMR0 & 1) == 1 && (a & 1) == 0 && a != ADDR_MMR0) {
 		const uint8_t apf     = a >> 13; // active page field

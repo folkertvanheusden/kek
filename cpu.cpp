@@ -103,9 +103,9 @@ uint16_t cpu::getRegister(const int nr, const rm_selection_t mode_selection) con
 
 	if (nr == 6) {
 		if (mode_selection == rm_prev)
-			return sp[(getPSW() >> 12) & 3];
+			return sp[getPSW_prev_runmode()];
 
-		return sp[getPSW() >> 14];
+		return sp[getPSW_runmode()];
 	}
 
 	return pc;
@@ -120,9 +120,9 @@ void cpu::setRegister(const int nr, const uint16_t value, const rm_selection_t m
 	}
 	else if (nr == 6) {
 		if (mode_selection == rm_prev)
-			sp[(getPSW() >> 12) & 3] = value;
+			sp[getPSW_prev_runmode()] = value;
 		else
-			sp[getPSW() >> 14] = value;
+			sp[getPSW_runmode()] = value;
 	}
 	else {
 		pc = value;
@@ -166,9 +166,9 @@ uint16_t cpu::addRegister(const int nr, const rm_selection_t mode_selection, con
 
 	if (nr == 6) {
 		if (mode_selection == rm_prev)
-			return sp[(getPSW() >> 12) & 3] += value;
+			return sp[getPSW_prev_runmode()] += value;
 
-		return sp[getPSW() >> 14] += value;
+		return sp[getPSW_runmode()] += value;
 	}
 
 	return pc += value;
@@ -315,7 +315,7 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t wo
 {
 	gam_rc_t g { word_mode, mode_selection, i_space, { }, { }, { } };
 
-	d_i_space_t isR7_space = reg == 7 ? i_space : (b->get_use_data_space(psw >> 14) ? d_space : i_space);
+	d_i_space_t isR7_space = reg == 7 ? i_space : (b->get_use_data_space(getPSW_runmode()) ? d_space : i_space);
 	//                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ always d_space here? TODO
 
 	g.space     = isR7_space;
@@ -1225,8 +1225,8 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 							 v = b->read(a.addr.value(), wm_word, rm_prev);
 						 }
 						 else {
-							int run_mode = (getPSW() >> 12) & 3;
-							auto phys = b->calculate_physical_address(run_mode, a.addr.value());
+							int  run_mode = getPSW_prev_runmode();
+							auto phys     = b->calculate_physical_address(run_mode, a.addr.value());
 
 							uint32_t a = word_mode == wm_byte ? phys.physical_data : phys.physical_instruction;
 
@@ -1265,7 +1265,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						if (a.addr.value() >= 0160000)
 							b->write(a.addr.value(), wm_word, v, rm_prev);  // put in '13/12' address space
 						else {
-							int run_mode = (getPSW() >> 12) & 3;
+							int run_mode = getPSW_prev_runmode();
 							auto phys = b->calculate_physical_address(run_mode, a.addr.value());
 
 							DOLOG(debug, true, "%lu %06o MTP%c %06o: %06o", mtpi_count, pc-2, word_mode == wm_byte ? 'D' : 'I', a.addr.value(), v);
@@ -1497,7 +1497,7 @@ bool cpu::misc_operations(const uint16_t instr)
 
 		case 0b0000000000000010: // RTI
 			setPC(popStack());
-			setPSW(popStack(), !!((getPSW() >> 12) & 3));
+			setPSW(popStack(), !!getPSW_prev_runmode());
 			return true;
 
 		case 0b0000000000000011: // BPT
@@ -1510,7 +1510,7 @@ bool cpu::misc_operations(const uint16_t instr)
 
 		case 0b0000000000000110: // RTT
 			setPC(popStack());
-			setPSW(popStack(), !!((getPSW() >> 12) & 3));
+			setPSW(popStack(), !!getPSW_prev_runmode());
 			return true;
 
 		case 0b0000000000000111: // MFPT
@@ -1603,7 +1603,7 @@ void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 		try {
 			processing_trap_depth++;
 
-			bool kernel_mode = psw >> 14;
+			bool kernel_mode = psw >> 14;  // TODO wrong?
 
 			if (processing_trap_depth >= 2) {
 				DOLOG(debug, true, "Trap depth %d", processing_trap_depth);

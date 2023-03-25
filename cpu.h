@@ -111,6 +111,8 @@ public:
 	bool getPSW_n() const;
 	int  getPSW_spl() const;
 	bool getBitPSW(const int bit) const;
+	int  getPSW_runmode() const { return psw >> 14; };
+	int  getPSW_prev_runmode() const { return (psw >> 12) & 3; };
 
 	void setPSW_c(const bool v);
 	void setPSW_v(const bool v);
