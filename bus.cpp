@@ -509,7 +509,7 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 		uint16_t p_offset = a & 8191;  // page offset
 					       //
 		if (a == 0100000)
-			DOLOG(info, true, "0100000: APF=%d, d=%d, MMR3=%d, run_mode=%d, mask=%d, space=%d", apf, d, MMR3, run_mode, get_use_data_space(run_mode), space);
+			DOLOG(info, true, "0100000: APF=%d, d=%d, MMR3=%06o, run_mode=%d, mask=%d, space=%d", apf, d, MMR3, run_mode, get_use_data_space(run_mode), space);
 
 		m_offset  = pages[run_mode][d][apf].par * 64;  // memory offset  TODO: handle 16b int-s
 
@@ -822,7 +822,7 @@ void bus::write(const uint16_t a, const word_mode_t word_mode, uint16_t value, c
 
 		if (a == ADDR_MMR3) { // MMR3
 			DOLOG(debug, true, "WRITE-I/O set MMR3: %06o", value);
-			MMR3 = value & 067;
+			MMR3 = value;
 			return;
 		}
 
