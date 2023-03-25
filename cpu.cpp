@@ -342,10 +342,9 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t wo
 		case 3:  // @(Rn)+  /  @#a
 			g.addr  = b->read(getRegister(reg, mode_selection), wm_word, mode_selection, false, isR7_space);
 			addRegister(reg, mode_selection, 2);
-			if (read_value) {
-				g.space = d_space;
+			g.space = d_space;
+			if (read_value)
 				g.value = b->read(g.addr.value(), word_mode, mode_selection, false, g.space);
-			}
 			addToMMR1(mode, reg, word_mode);
 			break;
 		case 4:  // -(Rn)
@@ -358,29 +357,26 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t wo
 		case 5:  // @-(Rn)
 			addRegister(reg, mode_selection, -2);
 			g.addr  = b->read(getRegister(reg, mode_selection), wm_word, mode_selection, false, isR7_space);
-			if (read_value) {
-				g.space = d_space;
+			g.space = d_space;
+			if (read_value)
 				g.value = b->read(g.addr.value(), word_mode, mode_selection, false, g.space);
-			}
 			addToMMR1(mode, reg, word_mode);
 			break;
 		case 6:  // x(Rn)  /  a
 			next_word = b->read(getPC(), wm_word, mode_selection, false, i_space);
 			addRegister(7, mode_selection, + 2);
 			g.addr  = getRegister(reg, mode_selection) + next_word;
-			if (read_value) {
-				g.space = d_space;
+			g.space = d_space;
+			if (read_value)
 				g.value = b->read(g.addr.value(), word_mode, mode_selection, false, g.space);
-			}
 			break;
 		case 7:  // @x(Rn)  /  @a
 			next_word = b->read(getPC(), wm_word, mode_selection, false, i_space);
 			addRegister(7, mode_selection, + 2);
 			g.addr  = b->read(getRegister(reg, mode_selection) + next_word, wm_word, mode_selection, false, d_space);
-			if (read_value) {
-				g.space = d_space;
+			g.space = d_space;
+			if (read_value)
 				g.value = b->read(g.addr.value(), word_mode, mode_selection, false, g.space);
-			}
 			break;
 	}
 
@@ -453,9 +449,9 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 			    }
 
 		case 0b010: { // CMP/CMPB Compare Word/Byte
-				    auto g_dst = getGAM(dst_mode, dst_reg, word_mode, rm_cur);
+				    auto     g_dst = getGAM(dst_mode, dst_reg, word_mode, rm_cur);
 
-				    uint16_t temp      = (g_src.value.value() - g_dst.value.value()) & (word_mode == wm_byte ? 0xff : 0xffff);
+				    uint16_t temp  = (g_src.value.value() - g_dst.value.value()) & (word_mode == wm_byte ? 0xff : 0xffff);
 
 				    setPSW_n(SIGN(temp, word_mode));
 				    setPSW_z(IS_0(temp, word_mode));
@@ -2144,6 +2140,7 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 	out.insert({ "MMR0", { format("%06o", b->getMMR0()) } });
 	out.insert({ "MMR1", { format("%06o", b->getMMR1()) } });
 	out.insert({ "MMR2", { format("%06o", b->getMMR2()) } });
+	out.insert({ "MMR3", { format("%06o", b->getMMR3()) } });
 
 	return out;
 }
