@@ -396,7 +396,7 @@ uint16_t bus::read(const uint16_t a, const word_mode_t word_mode, const bool use
 
 	int      run_mode = (c->getPSW() >> (use_prev ? 12 : 14)) & 3;
 
-	uint32_t m_offset = calculate_physical_address(run_mode, a, !peek_only, false, peek_only, space == d_space);
+	uint32_t m_offset = calculate_physical_address(run_mode, a, !peek_only, false, peek_only, space);
 
 	if (peek_only == false && m_offset >= n_pages * 8192) {
 		if (!peek_only) DOLOG(debug, true, "Read non existing mapped memory (%o >= %o)", m_offset, n_pages * 8192);
@@ -494,14 +494,14 @@ bool bus::get_use_data_space(const int run_mode)
 	return !!(MMR3 & di_ena_mask[run_mode]);
 }
 
-uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, const bool trap_on_failure, const bool is_write, const bool peek_only, const bool is_data)
+uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, const bool trap_on_failure, const bool is_write, const bool peek_only, const d_i_space_t space)
 {
 	uint32_t m_offset = a;
 
 	if ((MMR0 & 1) || (is_write && (MMR0 & (1 << 8)))) {
 		const uint8_t apf = a >> 13; // active page field
 
-		bool          d   = is_data & (!!(MMR3 & di_ena_mask[run_mode])) ? is_data : false;
+		bool          d   = space == d_space & (!!(MMR3 & di_ena_mask[run_mode])) ? space == d_space : false;
 
 		uint16_t p_offset = a & 8191;  // page offset
 
@@ -946,7 +946,7 @@ void bus::write(const uint16_t a, const word_mode_t word_mode, uint16_t value, c
 		throw 10;
 	}
 
-	uint32_t m_offset = calculate_physical_address(run_mode, a, true, true, false, space == d_space);
+	uint32_t m_offset = calculate_physical_address(run_mode, a, true, true, false, space);
 
 	if (m_offset >= n_pages * 8192) {
 		DOLOG(debug, false, "Write non existing mapped memory (%06o, value: %06o)", m_offset, value);
