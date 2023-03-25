@@ -154,7 +154,7 @@ bool cpu::put_result(const gam_rc_t & g, const uint16_t value)
 		return true;
 	}
 
-	b->write(g.addr.value(), g.word_mode, value, rm_cur);
+	b->write(g.addr.value(), g.word_mode, value, g.mode_selection, g.space);
 	
 	return g.addr.value() != ADDR_PSW;
 }
