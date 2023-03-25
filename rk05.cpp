@@ -178,9 +178,10 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 					temp_diskoffb += cur;
 
 					for(uint32_t i=0; i<cur; i++) {
-						if (p < 0160000)
-							b -> writeUnibusByte(p, xfer_buffer[i]);
-						p++;
+						if (p >= 0160000)
+							break;
+
+						b->writeUnibusByte(p++, xfer_buffer[i]);
 					}
 
 					temp -= cur;
