@@ -41,6 +41,7 @@ int disassemble(cpu *const c, console *const cnsl, const int pc, const bool inst
 	std::string MMR0 = data["MMR0"].at(0);
 	std::string MMR1 = data["MMR1"].at(0);
 	std::string MMR2 = data["MMR2"].at(0);
+	std::string MMR3 = data["MMR3"].at(0);
 
 	std::string result;
 
@@ -52,13 +53,13 @@ int disassemble(cpu *const c, console *const cnsl, const int pc, const bool inst
 				work_values.c_str()
 				);
 	else
-		result = format("R0: %s, R1: %s, R2: %s, R3: %s, R4: %s, R5: %s, SP: %s, PC: %06o, PSW: %s, instr: %s: %s - MMR0/1/2: %s/%s/%s",
+		result = format("R0: %s, R1: %s, R2: %s, R3: %s, R4: %s, R5: %s, SP: %s, PC: %06o, PSW: %s, instr: %s: %s - MMR0/1/2/3: %s/%s/%s/%s",
 				registers[0].c_str(), registers[1].c_str(), registers[2].c_str(), registers[3].c_str(), registers[4].c_str(), registers[5].c_str(),
 				registers[6].c_str(), pc, 
 				psw.c_str(),
 				instruction_values.c_str(),
 				instruction.c_str(),
-				MMR0.c_str(), MMR1.c_str(), MMR2.c_str()
+				MMR0.c_str(), MMR1.c_str(), MMR2.c_str(), MMR3.c_str()
 				);
 #if defined(COMPARE_OUTPUT)
 	{
