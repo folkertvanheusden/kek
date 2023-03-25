@@ -1599,7 +1599,7 @@ void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 		try {
 			processing_trap_depth++;
 
-			bool kernel_mode = psw >> 14;  // TODO wrong?
+			bool kernel_mode = !(psw >> 14);
 
 			if (processing_trap_depth >= 2) {
 				DOLOG(debug, true, "Trap depth %d", processing_trap_depth);
