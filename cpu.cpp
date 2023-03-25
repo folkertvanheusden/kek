@@ -238,15 +238,10 @@ int cpu::getPSW_spl() const
 
 void cpu::setPSW(const uint16_t v, const bool limited)
 {
-	if (limited) {
-		psw |= v & 0174000;  // current & previous mode can only be increased, 11 can only be set
-
-		psw &= 0174000;  // retain upper 5 bit
-		psw |= v & ~0174000;
-	}
-	else {
-		psw = v;
-	}
+	if (limited)
+		psw = (v & 0174037) | (psw & 0174340);
+	else
+		psw = v & 0174377;
 }
 
 void cpu::setPSW_flags_nzv(const uint16_t value, const word_mode_t word_mode)
