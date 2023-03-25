@@ -20,7 +20,7 @@ constexpr int n_pages = 12;
 constexpr int n_pages = 30;  // 30=240kB (for EKBEEx.BIC)
 #endif
 
-constexpr uint16_t di_ena_mask[4] = { 4, 2, 0, 1 };
+constexpr const int di_ena_mask[4] = { 4, 2, 0, 1 };
 
 bus::bus()
 {
@@ -504,12 +504,12 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 	if ((MMR0 & 1) || (is_write && (MMR0 & (1 << 8)))) {
 		const uint8_t apf = a >> 13; // active page field
 
-		bool          d   = (space == d_space) & ((!!(MMR3 & di_ena_mask[run_mode])) ? space == d_space : false);
+		bool          d   = space == d_space && get_use_data_space(run_mode) ? space == d_space : false;
 
 		uint16_t p_offset = a & 8191;  // page offset
 					       //
 		if (a == 0100000)
-			DOLOG(info, true, "0100000: APF=%d, d=%d, MMR3=%d, run_mode=%d, mask=%d, space=%d", apf, d, MMR3, run_mode, !!(MMR3 & di_ena_mask[run_mode]), space);
+			DOLOG(info, true, "0100000: APF=%d, d=%d, MMR3=%d, run_mode=%d, mask=%d, space=%d", apf, d, MMR3, run_mode, get_use_data_space(run_mode), space);
 
 		m_offset  = pages[run_mode][d][apf].par * 64;  // memory offset  TODO: handle 16b int-s
 
@@ -701,7 +701,7 @@ void bus::write(const uint16_t a, const word_mode_t word_mode, uint16_t value, c
 
 		bool          is_data = space == d_space;
 
-		bool          d       = is_data & (!!(MMR3 & di_ena_mask[run_mode])) ? is_data : false;
+		bool          d       = is_data && get_use_data_space(run_mode) ? is_data : false;
 
                 pages[run_mode][d][apf].pdr |= 64;  // set 'W' (written to) bit
 	}
