@@ -342,7 +342,7 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const bool word_mode
 			addToMMR1(mode, reg, word_mode);
 			break;
 		case 3:  // @(Rn)+  /  @#a
-			g.addr  = b->read(getRegister(reg, prev_mode), false, prev_mode, isR7_space);
+			g.addr  = b->read(getRegister(reg, prev_mode), false, prev_mode, false, isR7_space);
 			addRegister(reg, prev_mode, 2);
 			if (read_value) {
 				g.space = d_space;
@@ -359,29 +359,29 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const bool word_mode
 			break;
 		case 5:  // @-(Rn)
 			addRegister(reg, prev_mode, -2);
-			g.addr  = b->read(getRegister(reg, prev_mode), false, prev_mode, isR7_space);
+			g.addr  = b->read(getRegister(reg, prev_mode), false, prev_mode, false, isR7_space);
 			if (read_value) {
 				g.space = d_space;
-				g.value = b->read(g.addr.value(), word_mode, prev_mode, g.space);
+				g.value = b->read(g.addr.value(), word_mode, prev_mode, false, g.space);
 			}
 			addToMMR1(mode, reg, word_mode);
 			break;
 		case 6:  // x(Rn)  /  a
-			next_word = b->read(getPC(), false, prev_mode, i_space);
+			next_word = b->read(getPC(), false, prev_mode, false, i_space);
 			addRegister(7, prev_mode, + 2);
 			g.addr  = getRegister(reg, prev_mode) + next_word;
 			if (read_value) {
 				g.space = d_space;
-				g.value = b->read(g.addr.value(), word_mode, prev_mode, g.space);
+				g.value = b->read(g.addr.value(), word_mode, prev_mode, false, g.space);
 			}
 			break;
 		case 7:  // @x(Rn)  /  @a
-			next_word = b->read(getPC(), false, prev_mode, i_space);
+			next_word = b->read(getPC(), false, prev_mode, false, i_space);
 			addRegister(7, prev_mode, + 2);
-			g.addr  = b->read(getRegister(reg, prev_mode) + next_word, false, prev_mode, d_space);
+			g.addr  = b->read(getRegister(reg, prev_mode) + next_word, false, prev_mode, false, d_space);
 			if (read_value) {
 				g.space = d_space;
-				g.value = b->read(g.addr.value(), word_mode, prev_mode, g.space);
+				g.value = b->read(g.addr.value(), word_mode, prev_mode, false, g.space);
 			}
 			break;
 	}
