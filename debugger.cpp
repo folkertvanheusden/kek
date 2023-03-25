@@ -111,8 +111,8 @@ void dump_par_pdr(console *const cnsl, bus *const b, const uint16_t pdrs, const 
 	cnsl->put_string_lf("   PAR             PDR");
 
 	for(int i=0; i<8; i++) {
-		uint16_t par_value = b->read(pars + i * 2, false, false, true);
-		uint16_t pdr_value = b->read(pdrs + i * 2, false, false, true);
+		uint16_t par_value = b->read(pars + i * 2, wm_word, false, true);
+		uint16_t pdr_value = b->read(pdrs + i * 2, wm_word, false, true);
 
 		uint16_t pdr_len   = (((pdr_value >> 8) & 127) + 1) * 64;
 
@@ -317,9 +317,9 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 				for(int i=0; i<n; i++) {
 					if (!word)
-						val = b->read(addr + i, true, false, true);
+						val = b->read(addr + i, wm_byte, false, true);
 					else if (word)
-						val = b->read(addr + i, false, false, true);
+						val = b->read(addr + i, wm_word, false, true);
 
 					if (val == -1) {
 						cnsl->put_string_lf(format("Can't read from %06o\n", addr + i));

@@ -82,7 +82,7 @@ void bus::init()
 	MMR3 = 0;
 }
 
-uint16_t bus::read_pdr(const uint32_t a, const int run_mode, const bool word_mode, const bool peek_only)
+uint16_t bus::read_pdr(const uint32_t a, const int run_mode, const word_mode_t word_mode, const bool peek_only)
 {
 	int      page = (a >> 1) & 7;
 	bool     is_d = a & 16;
@@ -94,7 +94,7 @@ uint16_t bus::read_pdr(const uint32_t a, const int run_mode, const bool word_mod
 	return word_mode ? (a & 1 ? t >> 8 : t & 255) : t;
 }
 
-uint16_t bus::read_par(const uint32_t a, const int run_mode, const bool word_mode, const bool peek_only)
+uint16_t bus::read_par(const uint32_t a, const int run_mode, const word_mode_t word_mode, const bool peek_only)
 {
 	int      page = (a >> 1) & 7;
 	bool     is_d = a & 16;
@@ -114,7 +114,7 @@ void bus::trap_odd(const uint16_t a)
 	c->trap(004);  // invalid access
 }
 
-uint16_t bus::read(const uint16_t a, const bool word_mode, const bool use_prev, const bool peek_only, const d_i_space_t space)
+uint16_t bus::read(const uint16_t a, const word_mode_t word_mode, const bool use_prev, const bool peek_only, const d_i_space_t space)
 {
 	uint16_t temp = 0;
 
@@ -637,7 +637,7 @@ void bus::addToMMR1(const int8_t delta, const uint8_t reg)
 	MMR1 |= reg;
 }
 
-void bus::write_pdr(const uint32_t a, const int run_mode, const uint16_t value, const bool word_mode)
+void bus::write_pdr(const uint32_t a, const int run_mode, const uint16_t value, const word_mode_t word_mode)
 {
 	bool is_d = a & 16;
 	int  page = (a >> 1) & 7;
@@ -665,7 +665,7 @@ void bus::write_pdr(const uint32_t a, const int run_mode, const uint16_t value, 
 	DOLOG(debug, true, "WRITE-I/O PDR run-mode %d: %c for %d: %o [%d]", run_mode, is_d ? 'D' : 'I', page, value, word_mode);
 }
 
-void bus::write_par(const uint32_t a, const int run_mode, const uint16_t value, const bool word_mode)
+void bus::write_par(const uint32_t a, const int run_mode, const uint16_t value, const word_mode_t word_mode)
 {
 	bool is_d = a & 16;
 	int  page = (a >> 1) & 7;
@@ -683,7 +683,7 @@ void bus::write_par(const uint32_t a, const int run_mode, const uint16_t value, 
 	DOLOG(debug, true, "WRITE-I/O PAR run-mode %d: %c for %d: %o (%07o)", run_mode, is_d ? 'D' : 'I', page, word_mode ? value & 0xff : value, pages[run_mode][is_d][page].par * 64);
 }
 
-void bus::write(const uint16_t a, const bool word_mode, uint16_t value, const bool use_prev, const d_i_space_t space)
+void bus::write(const uint16_t a, const word_mode_t word_mode, uint16_t value, const bool use_prev, const d_i_space_t space)
 {
 	int run_mode = (c->getPSW() >> (use_prev ? 12 : 14)) & 3;
 
@@ -993,17 +993,17 @@ uint16_t bus::readPhysical(const uint32_t a)
 
 uint16_t bus::readWord(const uint16_t a, const d_i_space_t s)
 {
-	return read(a, false, false, false, s);
+	return read(a, wm_word, false, false, s);
 }
 
 uint16_t bus::peekWord(const uint16_t a)
 {
-	return read(a, false, false, true);
+	return read(a, wm_word, false, true);
 }
 
 void bus::writeWord(const uint16_t a, const uint16_t value, const d_i_space_t s)
 {
-	write(a, false, value, false, s);
+	write(a, wm_word, value, false, s);
 }
 
 uint16_t bus::readUnibusByte(const uint16_t a)

@@ -13,7 +13,7 @@
 #include "bus.h"
 
 typedef struct {
-	bool word_mode;
+	word_mode_t word_mode;
 	bool prev_mode;
 	d_i_space_t space;
 
@@ -51,11 +51,11 @@ private:
 
 	uint16_t addRegister(const int nr, const bool prev_mode, const uint16_t value);
 
-	void     addToMMR1(const uint8_t mode, const uint8_t reg, const bool word_mode);
+	void     addToMMR1(const uint8_t mode, const uint8_t reg, const word_mode_t word_mode);
 
 
-	gam_rc_t getGAM(const uint8_t mode, const uint8_t reg, const bool word_mode, const bool prev_mode, const bool read_value = true);
-	gam_rc_t getGAMAddress(const uint8_t mode, const int reg, const bool word_mode);
+	gam_rc_t getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t word_mode, const bool prev_mode, const bool read_value = true);
+	gam_rc_t getGAMAddress(const uint8_t mode, const int reg, const word_mode_t word_mode);
 	bool     putGAM(const gam_rc_t & g, const uint16_t value); // returns false when flag registers should not be updated
 
 	bool double_operand_instructions(const uint16_t instr);
@@ -72,7 +72,7 @@ private:
 		uint16_t    work_value;
 	};
 
-	operand_parameters addressing_to_string(const uint8_t mode_register, const uint16_t pc, const bool word_mode) const;
+	operand_parameters addressing_to_string(const uint8_t mode_register, const uint16_t pc, const word_mode_t word_mode) const;
 
 public:
 	explicit cpu(bus *const b, std::atomic_uint32_t *const event);
@@ -118,7 +118,7 @@ public:
 	void setPSW_n(const bool v);
 	void setPSW_spl(const int v);
 	void setBitPSW(const int bit, const bool v);
-	void setPSW_flags_nzv(const uint16_t value, const bool word_mode);
+	void setPSW_flags_nzv(const uint16_t value, const word_mode_t word_mode);
 
 	uint16_t getPSW() const { return psw; }
 	void setPSW(const uint16_t v, const bool limited);
@@ -131,7 +131,7 @@ public:
 
 	void setRegister(const int nr, const uint16_t value, const bool prev_mode = false);
 
-	void setRegisterLowByte(const int nr, const bool prev_mode, const uint16_t value);
+	void setRegisterLowByte(const int nr, const word_mode_t word_mode, const uint16_t value);
 
 	void setStackPointer(const int which, const uint16_t value) { assert(which >= 0 && which < 4); sp[which] = value; }
 	void setPC(const uint16_t value) { pc = value; }
