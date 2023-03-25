@@ -62,6 +62,8 @@ typedef enum { d_space, i_space } d_i_space_t;
 
 typedef enum { wm_word = 0, wm_byte = 1 } word_mode_t;
 
+typedef enum { rm_prev, rm_cur } rm_selection_t;
+
 typedef struct {
 	uint16_t virtual_address;
 	uint8_t  apf;  // active page field
@@ -129,15 +131,15 @@ public:
 	void    set_lf_crs_b7();
 	uint8_t get_lf_crs();
 
-	uint16_t read(const uint16_t a, const word_mode_t word_mode, const bool use_prev, const bool peek_only=false, const d_i_space_t s = i_space);
-	uint16_t readByte(const uint16_t a) { return read(a, wm_byte, false); }
+	uint16_t read(const uint16_t a, const word_mode_t word_mode, const rm_selection_t mode_selection, const bool peek_only=false, const d_i_space_t s = i_space);
+	uint16_t readByte(const uint16_t a) { return read(a, wm_byte, rm_cur); }
 	uint16_t readWord(const uint16_t a, const d_i_space_t s = i_space);
 	uint16_t peekWord(const uint16_t a);
 
 	uint16_t readUnibusByte(const uint16_t a);
 
-	void write(const uint16_t a, const word_mode_t word_mode, uint16_t value, const bool use_prev, const d_i_space_t s = i_space);
-	void writeByte(const uint16_t a, const uint8_t value) { return write(a, wm_byte, value, false); }
+	void write(const uint16_t a, const word_mode_t word_mode, uint16_t value, const rm_selection_t mode_selection, const d_i_space_t s = i_space);
+	void writeByte(const uint16_t a, const uint8_t value) { return write(a, wm_byte, value, rm_cur); }
 	void writeWord(const uint16_t a, const uint16_t value, const d_i_space_t s = i_space);
 
 	uint16_t readPhysical(const uint32_t a);

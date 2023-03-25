@@ -14,7 +14,7 @@
 
 typedef struct {
 	word_mode_t word_mode;
-	bool prev_mode;
+	rm_selection_t mode_selection;
 	d_i_space_t space;
 
 	std::optional<uint16_t> addr;
@@ -49,12 +49,12 @@ private:
 
 	bool check_queued_interrupts();
 
-	uint16_t addRegister(const int nr, const bool prev_mode, const uint16_t value);
+	uint16_t addRegister(const int nr, const rm_selection_t mode_selection, const uint16_t value);
 
 	void     addToMMR1(const uint8_t mode, const uint8_t reg, const word_mode_t word_mode);
 
 
-	gam_rc_t getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t word_mode, const bool prev_mode, const bool read_value = true);
+	gam_rc_t getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t word_mode, const rm_selection_t mode_selection, const bool read_value = true);
 	gam_rc_t getGAMAddress(const uint8_t mode, const int reg, const word_mode_t word_mode);
 	bool     putGAM(const gam_rc_t & g, const uint16_t value); // returns false when flag registers should not be updated
 
@@ -129,14 +129,14 @@ public:
 	uint16_t getStackPointer(const int which) const { assert(which >= 0 && which < 4); return sp[which]; }
 	uint16_t getPC() const { return pc; }
 
-	void setRegister(const int nr, const uint16_t value, const bool prev_mode = false);
+	void setRegister(const int nr, const uint16_t value, const rm_selection_t mode_selection = rm_cur);
 
 	void setRegisterLowByte(const int nr, const word_mode_t word_mode, const uint16_t value);
 
 	void setStackPointer(const int which, const uint16_t value) { assert(which >= 0 && which < 4); sp[which] = value; }
 	void setPC(const uint16_t value) { pc = value; }
 
-	uint16_t getRegister(const int nr, const bool sp_prev_mode = false) const;
+	uint16_t getRegister(const int nr, const rm_selection_t mode_selection = rm_cur) const;
 
 	bool put_result(const gam_rc_t & g, const uint16_t value);
 };

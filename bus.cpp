@@ -114,7 +114,7 @@ void bus::trap_odd(const uint16_t a)
 	c->trap(004);  // invalid access
 }
 
-uint16_t bus::read(const uint16_t a, const word_mode_t word_mode, const bool use_prev, const bool peek_only, const d_i_space_t space)
+uint16_t bus::read(const uint16_t a, const word_mode_t word_mode, const rm_selection_t mode_selection, const bool peek_only, const d_i_space_t space)
 {
 	uint16_t temp = 0;
 
@@ -394,7 +394,7 @@ uint16_t bus::read(const uint16_t a, const word_mode_t word_mode, const bool use
 		return 0;
 	}
 
-	int      run_mode = (c->getPSW() >> (use_prev ? 12 : 14)) & 3;
+	int      run_mode = (c->getPSW() >> (mode_selection == rm_prev ? 12 : 14)) & 3;
 
 	uint32_t m_offset = calculate_physical_address(run_mode, a, !peek_only, false, peek_only, space);
 
@@ -683,9 +683,9 @@ void bus::write_par(const uint32_t a, const int run_mode, const uint16_t value, 
 	DOLOG(debug, true, "WRITE-I/O PAR run-mode %d: %c for %d: %o (%07o)", run_mode, is_d ? 'D' : 'I', page, word_mode ? value & 0xff : value, pages[run_mode][is_d][page].par * 64);
 }
 
-void bus::write(const uint16_t a, const word_mode_t word_mode, uint16_t value, const bool use_prev, const d_i_space_t space)
+void bus::write(const uint16_t a, const word_mode_t word_mode, uint16_t value, const rm_selection_t mode_selection, const d_i_space_t space)
 {
-	int run_mode = (c->getPSW() >> (use_prev ? 12 : 14)) & 3;
+	int run_mode = (c->getPSW() >> (mode_selection == rm_prev ? 12 : 14)) & 3;
 
 	if ((MMR0 & 1) == 1 && (a & 1) == 0 && a != ADDR_MMR0) {
 		const uint8_t apf     = a >> 13; // active page field
@@ -993,17 +993,17 @@ uint16_t bus::readPhysical(const uint32_t a)
 
 uint16_t bus::readWord(const uint16_t a, const d_i_space_t s)
 {
-	return read(a, wm_word, false, false, s);
+	return read(a, wm_word, rm_cur, false, s);
 }
 
 uint16_t bus::peekWord(const uint16_t a)
 {
-	return read(a, wm_word, false, true);
+	return read(a, wm_word, rm_cur, true);
 }
 
 void bus::writeWord(const uint16_t a, const uint16_t value, const d_i_space_t s)
 {
-	write(a, wm_word, value, false, s);
+	write(a, wm_word, value, rm_cur, s);
 }
 
 uint16_t bus::readUnibusByte(const uint16_t a)
