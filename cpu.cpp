@@ -845,7 +845,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 							  setPSW_v(word_mode == wm_byte ? vl == 0x80 : vl == 0x8000);
 						  }
 
-						  b->write(a.addr.value(), word_mode, vl, rm_cur);
+						  b->write(a.addr.value(), a.word_mode, vl, a.mode_selection, a.space);
 					  }
 
 					  break;
@@ -879,7 +879,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 							  setPSW_v(word_mode == wm_byte ? vl == 0x7f : vl == 0x7fff);
 						  }
 
-						  b->write(a.addr.value(), word_mode, vl, rm_cur);
+						  b->write(a.addr.value(), a.word_mode, vl, a.mode_selection, a.space);
 					  }
 
 					  break;
@@ -904,7 +904,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						  auto     a = getGAM(dst_mode, dst_reg, word_mode, rm_cur);
 						  uint16_t v = -a.value.value();
 
-						  b->write(a.addr.value(), word_mode, v, rm_cur);
+						  b->write(a.addr.value(), a.word_mode, v, a.mode_selection, a.space);
 
 						  bool set_flags = a.addr.value() != ADDR_PSW;
 
@@ -942,7 +942,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						  bool           org_c = getPSW_c();
 						  uint16_t       v     = (vo + org_c) & (word_mode == wm_byte ? 0x00ff : 0xffff);
 
-						  b->write(a.addr.value(), word_mode, v, rm_cur);
+						  b->write(a.addr.value(), a.word_mode, v, a.mode_selection, a.space);
 
 						  bool set_flags = a.addr.value() != ADDR_PSW;
 
@@ -984,7 +984,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						  bool           org_c = getPSW_c();
 						  uint16_t       v     = (vo - org_c) & (word_mode == wm_byte ? 0xff : 0xffff);
 
-						  b->write(a.addr.value(), word_mode, v, rm_cur);
+						  b->write(a.addr.value(), a.word_mode, v, a.mode_selection, a.space);
 
 						  bool set_flags = a.addr.value() != ADDR_PSW;
 
@@ -1044,7 +1044,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						  else
 							  temp = (t >> 1) | (getPSW_c() << 15);
 
-						  b->write(a.addr.value(), word_mode, temp, rm_cur);
+						  b->write(a.addr.value(), a.word_mode, temp, a.mode_selection, a.space);
 
 						  bool set_flags = a.addr.value() != ADDR_PSW;
 
@@ -1095,7 +1095,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 							  temp = (t << 1) | getPSW_c();
 						  }
 
-						  b->write(a.addr.value(), word_mode, temp, rm_cur);
+						  b->write(a.addr.value(), a.word_mode, temp, a.mode_selection, a.space);
 
 						  bool set_flags = a.addr.value() != ADDR_PSW;
 
@@ -1154,7 +1154,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 							  v |= hb << 15;
 						  }
 
-						  b->write(a.addr.value(), word_mode, v, rm_cur);
+						  b->write(a.addr.value(), a.word_mode, v, a.mode_selection, a.space);
 
 						  bool set_flags = a.addr.value() != ADDR_PSW;
 
@@ -1197,7 +1197,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 							 setPSW_v(getPSW_n() ^ getPSW_c());
 						 }
 
-						 b->write(a.addr.value(), word_mode, v, rm_cur);
+						  b->write(a.addr.value(), a.word_mode, v, a.mode_selection, a.space);
 					 }
 					 break;
 				 }
