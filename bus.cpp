@@ -562,6 +562,8 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 						MMR0 |= run_mode << 5;  // TODO: kernel-mode or user-mode when a trap occurs in user-mode?
 
 						MMR0 |= apf << 1; // add current page
+
+						MMR0 |= d << 4;
 					}
 
 					DOLOG(debug, true, "MMR0: %06o", MMR0);
@@ -618,6 +620,8 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 
 					MMR0 &= ~(3 << 5);
 					MMR0 |= run_mode << 5;
+
+					MMR0 |= d << 4;
 				}
 
 				if (is_write)
