@@ -311,6 +311,10 @@ void start_network(console *const c) {
 	c->put_string_lf(format("Local IP address: %s", WiFi.localIP().toString().c_str()));
 }
 
+void set_tty_serial_speed(const int bps) {
+	Serial_RS232.begin(bps);
+}
+
 void setup() {
 	Serial.begin(115200);
 
@@ -340,6 +344,8 @@ void setup() {
 	constexpr uint32_t hwSerialConfig = SERIAL_8N1;
 	Serial_RS232.begin(115200, hwSerialConfig, 16, 17);
 	Serial_RS232.setHwFlowCtrlMode(0);
+	const char clear_screen = 12;
+	Serial_RS232.print(clear_screen);
 	Serial_RS232.println(F("Console enabled on TTY"));
 
 	std::vector<Stream *> serial_ports { &Serial_RS232, &Serial };

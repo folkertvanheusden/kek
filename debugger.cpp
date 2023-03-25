@@ -16,6 +16,8 @@ void configure_disk(console *const c);
 void configure_network(console *const c);
 void check_network(console *const c);
 void start_network(console *const c);
+
+void set_tty_serial_speed(const int bps);
 #endif
 
 // returns size of instruction (in bytes)
@@ -378,7 +380,27 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 			continue;
 		}
+		else if (parts.at(0) == "serspd") {
+			if (parts.size() == 2) {
+				int speed = std::stoi(parts.at(1), nullptr, 10);
+				set_tty_serial_speed(speed);
+
+				cnsl->put_string_lf(format("Set baudrate to %d", speed));
+			}
+			else {
+				cnsl->put_string_lf("serspd requires an (decimal) parameter");
+			}
+
+			continue;
+		}
 #endif
+		else if (cmd == "cls") {
+			const char cls[] = { 12, 0 };
+
+			cnsl->put_string_lf(cls);
+
+			continue;
+		}
 		else if (cmd == "turbo") {
 			turbo = !turbo;
 
@@ -409,11 +431,13 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 			cnsl->put_string_lf("setpc         - set PC to value");
 			cnsl->put_string_lf("setmem        - set memory (a=) to value (v=), both in octal, one byte");
 			cnsl->put_string_lf("toggle        - set switch (s=, 0...15 (decimal)) of the front panel to state (t=, 0 or 1)");
+			cnsl->put_string_lf("cls           - clear screen");
 #if defined(ESP32)
 			cnsl->put_string_lf("cfgnet        - configure network (e.g. WiFi)");
 			cnsl->put_string_lf("startnet      - start network");
 			cnsl->put_string_lf("chknet        - check network status");
 			cnsl->put_string_lf("cfgdisk       - configure disk");
+			cnsl->put_string_lf("serspd        - set serial speed in bps (8N1 are default)");
 #endif
 
 			continue;
