@@ -1460,7 +1460,7 @@ void cpu::pushStack(const uint16_t v)
 	if (getRegister(6) == stackLimitRegister) {
 		DOLOG(debug, true, "stackLimitRegister reached %06o while pushing %06o", stackLimitRegister, v);
 
-		trap(123, 7);  // TODO
+		trap(04, 7);
 	}
 	else {
 		uint16_t a = addRegister(6, rm_cur, -2);
