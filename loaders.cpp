@@ -137,12 +137,12 @@ void setBootLoader(bus *const b, const bootloader_t which)
 	c -> setRegister(7, start);
 }
 
-uint16_t loadTape(bus *const b, const std::string & file)
+std::optional<uint16_t> loadTape(bus *const b, const std::string & file)
 {
 	FILE *fh = fopen(file.c_str(), "rb");
 	if (!fh) {
 		DOLOG(ll_error, true, "Cannot open %s", file.c_str());
-		return -1;
+		return { };
 	}
 
 	uint16_t start = 0, end = 0;
@@ -154,11 +154,14 @@ uint16_t loadTape(bus *const b, const std::string & file)
 			break;
 
 		int count = (buffer[3] << 8) | buffer[2];
-		int p = (buffer[5] << 8) | buffer[4];
+		int p     = (buffer[5] << 8) | buffer[4];
 
 		uint8_t csum = 0;
 		for(int i=2; i<6; i++)
 			csum += buffer[i];
+
+		if (count == 0 || p == 1)
+			break;
 
 		if (count == 6) { // eg no data
 			if (p != 1) {

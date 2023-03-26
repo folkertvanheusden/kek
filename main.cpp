@@ -206,8 +206,14 @@ int main(int argc, char *argv[])
 
 	std::atomic_bool interrupt_emulation { false };
 
-	if (tape.empty() == false)
-		c->setRegister(7, loadTape(b, tape));
+	if (tape.empty() == false) {
+		auto addr = loadTape(b, tape);
+
+		if (addr.has_value() == false)
+			return 1;  // fail
+
+		c->setRegister(7, addr.value());
+	}
 
 	if (sa_set)
 		c->setRegister(7, start_addr);
