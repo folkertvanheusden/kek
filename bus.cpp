@@ -416,7 +416,7 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 	return temp;
 }
 
-void bus::setMMR0(int value)
+void bus::setMMR0(const uint16_t value)
 {
 	value &= ~(3 << 10);  // bit 10 & 11 always read as 0
 
