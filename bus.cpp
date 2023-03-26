@@ -743,6 +743,8 @@ void bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 				else
 					v = (v & 0x00ff) | (value << 8);
 
+				v |= 0377;
+
 				c->setStackLimitRegister(v);
 
 				return;
