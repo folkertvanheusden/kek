@@ -160,7 +160,7 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 		///^ registers ^///
 
 		if (!peek_only) {
-			if ((a & 1) && word_mode == false) {
+			if ((a & 1) && word_mode == wm_word) {
 				DOLOG(debug, true, "READ-I/O odd address %06o UNHANDLED", a);
 				trap_odd(a);
 				throw 0;
@@ -195,7 +195,7 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 		if (a == ADDR_PIR || a == ADDR_PIR + 1) { // PIR
 			uint16_t temp = 0;
 
-			if (word_mode == false)
+			if (word_mode == wm_word)
 				temp = PIR;
 			else
 				temp = a == ADDR_PIR ? PIR & 255 : PIR >> 8;
@@ -396,7 +396,7 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 		return -1;
 	}
 
-	if (peek_only == false && word_mode == false && (addr_in & 1)) {
+	if (peek_only == false && word_mode == wm_word && (addr_in & 1)) {
 		if (!peek_only) DOLOG(debug, true, "READ from %06o - odd address!", addr_in);
 		trap_odd(addr_in);
 		throw 2;
@@ -946,7 +946,7 @@ void bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 
 		DOLOG(debug, true, "WRITE-I/O UNHANDLED %06o(%c): %06o", a, word_mode ? 'B' : 'W', value);
 
-		if (word_mode == false && (a & 1)) {
+		if (word_mode == wm_word && (a & 1)) {
 			DOLOG(debug, true, "WRITE-I/O to %06o (value: %06o) - odd address!", a, value);
 
 			trap_odd(a);
@@ -958,7 +958,7 @@ void bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 		throw 9;
 	}
 
-	if (word_mode == false && (addr_in & 1)) {
+	if (word_mode == wm_word && (addr_in & 1)) {
 		DOLOG(debug, true, "WRITE to %06o (value: %06o) - odd address!", addr_in, value);
 
 		trap_odd(addr_in);
