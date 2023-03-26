@@ -56,10 +56,7 @@ void closelog()
 
 void dolog(const log_level_t ll, const char *fmt, ...)
 {
-	if ((ll < log_level_file && ll < log_level_screen) || !logfile)
-		return;
-
-	if (!lfh) {
+	if (!lfh && logfile != nullptr) {
 #if !defined(ESP32)
 		lfh = fopen(logfile, "a+");
 		if (!lfh)
@@ -96,7 +93,7 @@ void dolog(const log_level_t ll, const char *fmt, ...)
 	va_end(ap);
 
 #if !defined(ESP32)
-	if (ll >= log_level_file)
+	if (ll >= log_level_file && lfh != nullptr)
 		fprintf(lfh, "%s%s\n", ts_str, str);
 #endif
 
