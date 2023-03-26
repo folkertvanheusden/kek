@@ -578,7 +578,7 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 					return true;
 				}
 
-				int32_t R0R1    = (getRegister(reg) << 16) | getRegister(reg | 1);
+				int32_t R0R1    = (uint32_t(getRegister(reg)) << 16) | getRegister(reg | 1);
 
 				int32_t  quot   = R0R1 / divider;
 				uint16_t rem    = R0R1 % divider;
@@ -657,7 +657,7 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 			}
 
 		case 3: { // ASHC
-				uint32_t R0R1  = (getRegister(reg) << 16) | getRegister(reg | 1);
+				uint32_t R0R1  = (uint32_t(getRegister(reg)) << 16) | getRegister(reg | 1);
 
 			        auto     g_dst = getGAM(dst_mode, dst_reg, wm_word, rm_cur);
 				uint16_t shift = g_dst.value.value() & 077;

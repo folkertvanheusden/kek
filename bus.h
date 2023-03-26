@@ -159,7 +159,7 @@ public:
 	void     setMMR0(const uint16_t value);
 	void     setMMR0Bit(const int bit);
 	void     clearMMR0Bit(const int bit);
-	void     setMMR2(const uint16_t value);
+	void     setMMR2(uint16_t value);
 
 	void     check_odd_addressing(const uint16_t a, const int run_mode, const d_i_space_t space, const bool is_write);
 	void     trap_odd(const uint16_t a);

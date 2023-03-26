@@ -124,7 +124,7 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 
 			uint32_t memory_address = registers[(RL02_BAR - RL02_BASE) / 2];
 
-			uint32_t count          = (65536 - registers[(RL02_MPR - RL02_BASE) / 2]) * 2;
+			uint32_t count          = (65536l - registers[(RL02_MPR - RL02_BASE) / 2]) * 2;
 
 			DOLOG(debug, true, "RL02 read %d bytes (dec) from %d (dec) to %06o (oct)", count, disk_offset, memory_address);
 

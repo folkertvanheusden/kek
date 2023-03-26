@@ -119,10 +119,10 @@ void console_esp32::panel_update_thread()
 			pixels.setPixelColor(b, full_addr & (1 << b) ? led_color : 0);
 
 		for(uint8_t b=0; b<16; b++)
-			pixels.setPixelColor(b + 22, current_PSW & (1 << b) ? magenta : 0);
+			pixels.setPixelColor(b + 22, current_PSW & (1l << b) ? magenta : 0);
 
 		for(uint8_t b=0; b<16; b++)
-			pixels.setPixelColor(b + 38, current_instr & (1 << b) ? red : 0);
+			pixels.setPixelColor(b + 38, current_instr & (1l << b) ? red : 0);
 
 		pixels.setPixelColor(54, running_flag             ? white : 0);
 

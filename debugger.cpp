@@ -27,7 +27,7 @@ void recall_configuration(console *const c);
 #endif
 
 // returns size of instruction (in bytes)
-int disassemble(cpu *const c, console *const cnsl, const int pc, const bool instruction_only)
+int disassemble(cpu *const c, console *const cnsl, const uint16_t pc, const bool instruction_only)
 {
 	auto data      = c->disassemble(pc);
 
@@ -220,7 +220,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 				continue;
 			}
 			else if (parts[0] == "disassemble" || parts[0] == "d") {
-				int pc = kv.find("pc") != kv.end() ? std::stoi(kv.find("pc")->second, nullptr, 8)  : c->getPC();
+				uint16_t pc = kv.find("pc") != kv.end() ? std::stoi(kv.find("pc")->second, nullptr, 8)  : c->getPC();
 				int n  = kv.find("n")  != kv.end() ? std::stoi(kv.find("n") ->second, nullptr, 10) : 1;
 
 				cnsl->put_string_lf(format("Disassemble %d instructions starting at %o", n, pc));
@@ -312,7 +312,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 				if (parts.size() < 3)
 					cnsl->put_string_lf("parameter missing");
 				else {
-					int  addr       = std::stoi(parts[2], nullptr, 8);
+					uint16_t addr   = std::stoi(parts[2], nullptr, 8);
 					int  val        = -1;
 
 					int  n          = parts.size() == 4 ? atoi(parts[3].c_str()) : 1;

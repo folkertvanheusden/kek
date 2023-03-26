@@ -3,13 +3,14 @@
 
 #pragma once
 
+#include <assert.h>
 #include <stdint.h>
 
 class memory
 {
 private:
-	const uint32_t size;
-	uint8_t *m { nullptr };
+	const uint32_t size { 0       };
+	uint8_t       *m    { nullptr };
 
 public:
 	memory(const uint32_t size);
@@ -18,8 +19,8 @@ public:
 	void reset();
 
 	uint16_t readByte(const uint32_t a) const { return m[a]; }
-	void writeByte(const uint32_t a, const uint16_t v) { m[a] = v; }
+	void writeByte(const uint32_t a, const uint16_t v) { assert(a < size); m[a] = v; }
 
 	uint16_t readWord(const uint32_t a) const { return m[a] | (m[a + 1] << 8); }
-	void writeWord(const uint32_t a, const uint16_t v) { m[a] = v; m[a + 1] = v >> 8; }
+	void writeWord(const uint32_t a, const uint16_t v) { assert(a < size - 1); m[a] = v; m[a + 1] = v >> 8; }
 };

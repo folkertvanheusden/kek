@@ -23,7 +23,7 @@
 #define NTOHLL(x) ((1==ntohl(1)) ? (x) : (((uint64_t)ntohl((x) & 0xFFFFFFFFUL)) << 32) | ntohl((uint32_t)((x) >> 32)))
 
 
-disk_backend_nbd::disk_backend_nbd(const std::string & host, const int port) :
+disk_backend_nbd::disk_backend_nbd(const std::string & host, const unsigned port) :
 	host(host),
 	port(port)
 {
@@ -57,7 +57,7 @@ bool disk_backend_nbd::connect(const bool retry)
 		hints.ai_socktype = SOCK_STREAM;
 
 		char port_str[8] { 0 };
-		snprintf(port_str, sizeof port_str, "%d", port);
+		snprintf(port_str, sizeof port_str, "%u", port);
 
 		int rc = getaddrinfo(host.c_str(), port_str, &hints, &res);
 

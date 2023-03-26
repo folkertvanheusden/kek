@@ -25,7 +25,7 @@ constexpr const int di_ena_mask[4] = { 4, 2, 0, 1 };
 
 bus::bus()
 {
-	m = new memory(n_pages * 8192);
+	m = new memory(n_pages * 8192l);
 
 	memset(pages, 0x00, sizeof pages);
 
@@ -372,7 +372,7 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 		}
 
 		// LO size register field must be all 1s, so subtract 1
-		constexpr uint32_t system_size = n_pages * 8192 / 64 - 1;
+		constexpr uint32_t system_size = n_pages * 8192l / 64 - 1;
 
 		if (a == ADDR_SYSSIZE + 2) {  // system size HI
 			uint16_t temp = system_size >> 16;
@@ -416,12 +416,12 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 	return temp;
 }
 
-void bus::setMMR0(const uint16_t value)
+void bus::setMMR0(uint16_t value)
 {
 	value &= ~(3 << 10);  // bit 10 & 11 always read as 0
 
 	if (value & 1)
-		value &= ~(7 << 13);  // reset error bits
+		value &= ~(7l << 13);  // reset error bits
 
 	if (MMR0 & 0160000) {
 		if ((value & 1) == 0)
@@ -543,13 +543,13 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 						pages[run_mode][d][apf].pdr |= 1 << 7;
 
 					if ((MMR0 & 0160000) == 0) {
-						MMR0 &= ~((1 << 15) | (1 << 14) | (1 << 13) | (1 << 12) | (3 << 5) | (7 << 1));
+						MMR0 &= ~((1l << 15) | (1 << 14) | (1 << 13) | (1 << 12) | (3 << 5) | (7 << 1));
 
 						if (is_write && access_control != 6)
 							MMR0 |= 1 << 13;  // read-only
 								  //
 						if (access_control == 0 || access_control == 4)
-							MMR0 |= 1 << 15;  // not resident
+							MMR0 |= 1l << 15;  // not resident
 						else
 							MMR0 |= 1 << 13;  // read-only
 
@@ -570,13 +570,13 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 				}
 			}
 
-			if (m_offset >= n_pages * 8192 && !is_io) {
-				DOLOG(debug, !peek_only, "bus::calculate_physical_address %o >= %o", m_offset, n_pages * 8192);
+			if (m_offset >= n_pages * 8192l && !is_io) {
+				DOLOG(debug, !peek_only, "bus::calculate_physical_address %o >= %o", m_offset, n_pages * 8192l);
 				DOLOG(debug, true, "TRAP(04) (throw 6) on address %06o", a);
 
 				if ((MMR0 & 0160000) == 0) {
 					MMR0 &= 017777;
-					MMR0 |= 1 << 15;  // non-resident
+					MMR0 |= 1l << 15;  // non-resident
 
 					MMR0 &= ~14;  // add current page
 					MMR0 |= apf << 1;
@@ -981,7 +981,7 @@ void bus::writePhysical(const uint32_t a, const uint16_t value)
 {
 	DOLOG(debug, true, "physicalWRITE %06o to %o", value, a);
 
-	if (a >= n_pages * 8192) {
+	if (a >= n_pages * 8192l) {
 		DOLOG(debug, true, "physicalWRITE to %o: trap 004", a);
 		c->trap(004);
 		throw 12;
@@ -993,7 +993,7 @@ void bus::writePhysical(const uint32_t a, const uint16_t value)
 
 uint16_t bus::readPhysical(const uint32_t a)
 {
-	if (a >= n_pages * 8192) {
+	if (a >= n_pages * 8192l) {
 		DOLOG(debug, true, "physicalREAD from %o: trap 004", a);
 		c->trap(004);
 		throw 13;

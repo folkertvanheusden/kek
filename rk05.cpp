@@ -111,11 +111,11 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 			uint8_t  surface  = (temp >> 4) & 1;
 			int      track    = (temp >> 4) & 511;
 			uint16_t cylinder = (temp >> 5) & 255;
-			uint8_t  device   = temp >> 13;
+			uint16_t device   = temp >> 13;
 
-			const int diskoff = track * 12 + sector;
+			const uint32_t diskoff = track * 12 + sector;
 
-			const int diskoffb = diskoff * 512; // RK05 is high density
+			const uint32_t diskoffb = diskoff * 512l; // RK05 is high density
 			const uint16_t memoff = registers[(RK05_BA - RK05_BASE) / 2];
 
 			registers[(RK05_CS - RK05_BASE) / 2] &= ~(1 << 13); // reset search complete
@@ -164,7 +164,7 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 
 				uint8_t xfer_buffer[512];
 
-				int      temp_diskoffb = diskoffb;
+				uint32_t temp_diskoffb = diskoffb;
 
 				uint32_t temp = reclen;
 				uint32_t p = memoff;
@@ -224,7 +224,7 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 
 			// bit 6, invoke interrupt when done vector address 220, see http://www.pdp-11.nl/peripherals/disk/rk05-info.html
 			if (v & 64) {
-				registers[(RK05_DS - RK05_BASE) / 2] &= ~(7 << 13);  // store id of the device that caused the interrupt
+				registers[(RK05_DS - RK05_BASE) / 2] &= ~(7l << 13);  // store id of the device that caused the interrupt
 				registers[(RK05_DS - RK05_BASE) / 2] |= device << 13;
 
 				b->getCpu()->queue_interrupt(5, 0220);

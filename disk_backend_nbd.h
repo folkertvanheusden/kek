@@ -11,13 +11,13 @@ class disk_backend_nbd : public disk_backend
 {
 private:
 	const std::string host;
-	const int         port {  0 };
+	const unsigned    port {  0 };
 	int               fd   { -1 };
 
 	bool connect(const bool retry);
 
 public:
-	disk_backend_nbd(const std::string & host, const int port);
+	disk_backend_nbd(const std::string & host, const unsigned port);
 	virtual ~disk_backend_nbd();
 
 	bool begin() override;
