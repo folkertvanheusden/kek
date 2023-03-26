@@ -23,10 +23,15 @@ tty::tty(console *const c, bus *const b) :
 	c(c),
 	b(b)
 {
+	th = new std::thread(std::ref(*this));
 }
 
 tty::~tty()
 {
+	stop_flag = true;
+
+	th->join();
+	delete th;
 }
 
 uint8_t tty::readByte(const uint16_t addr)
@@ -44,27 +49,31 @@ uint16_t tty::readWord(const uint16_t addr)
 	const int reg = (addr - PDP11TTY_BASE) / 2;
 	uint16_t vtemp = registers[reg];
 
-	if (have_char_1) {
-		have_char_1 = false;
-		have_char_2 = true;
-	}
-	else if (have_char_2 == false) {
-		have_char_1 = c->poll_char();
-	}
-
 	if (addr == PDP11TTY_TKS) {
-		vtemp = (have_char_2 ? 1 << 7 : 0) | (have_char_1 ? 1 << 11 : 0);
+		std::unique_lock<std::mutex> lck(chars_lock);
+
+		bool have_char = chars.empty() == false;
+
+		vtemp &= ~128;
+		vtemp |= have_char ? 128 : 0;
 	}
 	else if (addr == PDP11TTY_TKB) {
-		if (have_char_2) {
-			uint8_t ch = c->get_char();
+		std::unique_lock<std::mutex> lck(chars_lock);
+
+		if (chars.empty())
+			vtemp = 0;
+		else {
+			uint8_t ch = chars.front();
+			chars.erase(chars.begin());
 
 			vtemp = ch | (parity(ch) << 7);
 
-			have_char_2 = false;
-		}
-		else {
-			vtemp = 0;
+			if (chars.empty() == false) {
+				registers[(PDP11TTY_TKS - PDP11TTY_BASE) / 2] |= 128;
+
+				if (registers[(PDP11TTY_TKS - PDP11TTY_BASE) / 2] & 64)
+					b->getCpu()->queue_interrupt(4, 060);
+			}
 		}
 	}
 	else if (addr == PDP11TTY_TPS) {
@@ -76,6 +85,25 @@ uint16_t tty::readWord(const uint16_t addr)
 	registers[reg] = vtemp;
 
 	return vtemp;
+}
+
+void tty::operator()()
+{
+	while(!stop_flag) {
+		if (c->poll_char()) {
+			std::unique_lock<std::mutex> lck(chars_lock);
+
+			chars.push_back(c->get_char());
+
+			registers[(PDP11TTY_TKS - PDP11TTY_BASE) / 2] |= 128;
+
+			if (registers[(PDP11TTY_TKS - PDP11TTY_BASE) / 2] & 64)
+				b->getCpu()->queue_interrupt(4, 060);
+		}
+		else {
+			myusleep(100000);
+		}
+	}
 }
 
 void tty::writeByte(const uint16_t addr, const uint8_t v)

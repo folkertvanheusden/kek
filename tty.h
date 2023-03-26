@@ -2,9 +2,13 @@
 // Released under Apache License v2.0
 #pragma once
 
+#include <atomic>
+#include <mutex>
 #include <stdint.h>
 #include <stdio.h>
 #include <string>
+#include <thread>
+#include <vector>
 
 #include "bus.h"
 #include "console.h"
@@ -24,9 +28,11 @@ class tty
 private:
 	console *const c      { nullptr };
 	bus     *const b      { nullptr };
-	bool     have_char_1  { false };  // RCVR BUSY bit high (11)
-	bool     have_char_2  { false };  // RCVR DONE bit high (7)
+	std::mutex chars_lock;
+	std::vector<char> chars;
 	uint16_t registers[4] { 0 };
+	std::thread *th       { nullptr };
+	std::atomic_bool stop_flag { false };
 
 public:
 	tty(console *const c, bus *const b);
@@ -37,4 +43,6 @@ public:
 
 	void writeByte(const uint16_t addr, const uint8_t v);
 	void writeWord(const uint16_t addr, uint16_t v);
+
+	void operator()();
 };
