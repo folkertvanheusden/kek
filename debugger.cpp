@@ -505,9 +505,9 @@ void run_bic(console *const cnsl, bus *const b, std::atomic_uint32_t *const stop
 
 	c->setRegister(7, start_addr);
 
-	tty *const t = b->getTty();
+	*cnsl->get_running_flag() = true;
 
-	while(*stop_event == EVENT_NONE && t->get_reset_0x0a() == false) {
+	while(*stop_event == EVENT_NONE) {
 		c->step_a();
 
 		if (tracing)
@@ -515,4 +515,6 @@ void run_bic(console *const cnsl, bus *const b, std::atomic_uint32_t *const stop
 
 		c->step_b();
 	}
+
+	*cnsl->get_running_flag() = false;
 }
