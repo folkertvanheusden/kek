@@ -1,8 +1,9 @@
-// (C) 2018-2022 by Folkert van Heusden
+// (C) 2018-2023 by Folkert van Heusden
 // Released under Apache License v2.0
 #pragma once
 
 #include <assert.h>
+#include <condition_variable>
 #include <map>
 #include <mutex>
 #include <optional>
@@ -39,7 +40,8 @@ private:
 
 	// level, vector
 	std::map<uint8_t, std::set<uint8_t> > queued_interrupts;
-	std::mutex qi_lock;
+	std::mutex              qi_lock;
+	std::condition_variable qi_cv;
 
 	std::set<uint16_t> breakpoints;
 

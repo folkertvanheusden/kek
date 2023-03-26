@@ -289,6 +289,8 @@ void cpu::queue_interrupt(const uint8_t level, const uint8_t vector)
 
 	it->second.insert(vector);
 
+	qi_cv.notify_all();
+
 	DOLOG(debug, true, "Queueing interrupt vector %o (IPL %d, current: %d), n: %zu", vector, level, getPSW_spl(), it->second.size());
 }
 
@@ -1485,6 +1487,14 @@ bool cpu::misc_operations(const uint16_t instr)
 			return true;
 
 		case 0b0000000000000001: // WAIT
+			{
+				std::unique_lock<std::mutex> lck(qi_lock);
+
+				qi_cv.wait(lck);
+			}
+
+			DOLOG(debug, false, "WAIT returned");
+
 			return true;
 
 		case 0b0000000000000010: // RTI
