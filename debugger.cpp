@@ -18,7 +18,7 @@ void configure_network(console *const c);
 void check_network(console *const c);
 void start_network(console *const c);
 
-void set_tty_serial_speed(const int bps);
+void set_tty_serial_speed(console *const c, const uint32_t bps);
 
 void recall_configuration(console *const c);
 #endif
@@ -387,8 +387,8 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 			}
 			else if (parts.at(0) == "serspd") {
 				if (parts.size() == 2) {
-					int speed = std::stoi(parts.at(1), nullptr, 10);
-					set_tty_serial_speed(speed);
+					uint32_t speed = std::stoi(parts.at(1), nullptr, 10);
+					set_tty_serial_speed(cnsl, speed);
 
 					cnsl->put_string_lf(format("Set baudrate to %d", speed));
 				}

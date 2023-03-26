@@ -29,7 +29,9 @@
 #include "utils.h"
 
 
-constexpr const char CFG_FILE[] = "/net-disk.json";
+constexpr const char NET_DISK_CFG_FILE[] = "/net-disk.json";
+
+constexpr const char SERIAL_CFG_FILE[] = "/serial.json";
 
 #define MAX_CFG_SIZE 1024
 StaticJsonDocument<MAX_CFG_SIZE> json_doc;
@@ -68,11 +70,45 @@ void console_thread_wrapper_io(void *const c)
 	cnsl->operator()();
 }
 
+uint32_t load_serial_speed_configuration()
+{
+	File dataFile = LittleFS.open(SERIAL_CFG_FILE, "r");
+
+	if (!dataFile)
+		return 115200;
+
+	size_t size = dataFile.size();
+
+	uint8_t buffer[4] { 0 };
+
+	dataFile.read(buffer, 4);
+
+	dataFile.close();
+
+	return (buffer[0] << 24) | (buffer[1] << 16) | (buffer[2] << 8) | buffer[3];
+}
+
+bool save_serial_speed_configuration(const uint32_t bps)
+{
+	File dataFile = LittleFS.open(SERIAL_CFG_FILE, "w");
+
+	if (!dataFile)
+		return false;
+
+	const uint8_t buffer[] = { uint8_t(bps >> 24), uint8_t(bps >> 16), uint8_t(bps >> 8), uint8_t(bps) };
+
+	dataFile.write(buffer, 4);
+
+	dataFile.close();
+
+	return true;
+}
+
 typedef enum { DT_RK05, DT_RL02 } disk_type_t;
 
 std::optional<std::pair<std::vector<disk_backend *>, std::vector<disk_backend *> > > load_disk_configuration(console *const c)
 {
-	File dataFile = LittleFS.open(CFG_FILE, "r");
+	File dataFile = LittleFS.open(NET_DISK_CFG_FILE, "r");
 
 	if (!dataFile)
 		return { };
@@ -133,7 +169,7 @@ bool save_disk_configuration(const std::string & nbd_host, const int nbd_port, c
 
 	json_doc["disk-type"] = dt == DT_RK05 ? "rk05" : "rl02";
 
-	File dataFile = LittleFS.open(CFG_FILE, "w");
+	File dataFile = LittleFS.open(NET_DISK_CFG_FILE, "w");
 
 	if (!dataFile)
 		return false;
@@ -405,9 +441,12 @@ void start_network(console *const c)
 	c->put_string_lf(format("Local IP address: %s", WiFi.localIP().toString().c_str()));
 }
 
-void set_tty_serial_speed(const int bps)
+void set_tty_serial_speed(console *const c, const uint32_t bps)
 {
 	Serial_RS232.begin(bps);
+
+	if (save_serial_speed_configuration(bps) == false)
+		c->put_string_lf("Failed to store configuration file with serial settings");
 }
 
 void recall_configuration(console *const c)
@@ -452,13 +491,17 @@ void setup()
 	Serial.println(F("Connect CPU to BUS"));
 	b->add_cpu(c);
 
-	Serial.println(F("Init console"));
 	constexpr uint32_t hwSerialConfig = SERIAL_8N1;
-	Serial_RS232.begin(115200, hwSerialConfig, 16, 17);
+	uint32_t bitrate = load_serial_speed_configuration();
+
+	Serial.print(F("Init console, baudrate: "));
+	Serial.print(bitrate);
+	Serial.println(F("bps"));
+
+	Serial_RS232.begin(bitrate, hwSerialConfig, 16, 17);
 	Serial_RS232.setHwFlowCtrlMode(0);
-	const char clear_screen = 12;
-	Serial_RS232.print(clear_screen);
-	Serial_RS232.println(F("Console enabled on TTY"));
+
+	Serial_RS232.println(F("\014Console enabled on TTY"));
 
 	std::vector<Stream *> serial_ports { &Serial_RS232, &Serial };
 	cnsl = new console_esp32(&stop_event, b, serial_ports);
