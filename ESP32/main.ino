@@ -1,8 +1,10 @@
 // (C) 2018-2023 by Folkert van Heusden
 // Released under Apache License v2.0
 #include <Arduino.h>
+#include <ArduinoJson.h>
 #include <atomic>
 #include <HardwareSerial.h>
+#include <LittleFS.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -25,6 +27,12 @@
 #include "memory.h"
 #include "tty.h"
 #include "utils.h"
+
+
+constexpr const char CFG_FILE[] = "/net-disk.json";
+
+#define MAX_CFG_SIZE 1024
+StaticJsonDocument<MAX_CFG_SIZE> json_doc;
 
 
 bus     *b    = nullptr;
@@ -60,6 +68,83 @@ void console_thread_wrapper_io(void *const c)
 	cnsl->operator()();
 }
 
+typedef enum { DT_RK05, DT_RL02 } disk_type_t;
+
+std::optional<std::pair<std::vector<disk_backend *>, std::vector<disk_backend *> > > load_disk_configuration(console *const c)
+{
+	File dataFile = LittleFS.open(CFG_FILE, "r");
+
+	if (!dataFile)
+		return { };
+
+	size_t size = dataFile.size();
+
+	char buffer[MAX_CFG_SIZE];
+
+	if (size > sizeof buffer) {  // this should not happen
+		dataFile.close();
+
+		return { };
+	}
+
+	dataFile.read(reinterpret_cast<uint8_t *>(buffer), size);
+	buffer[(sizeof buffer) - 1] = 0x00;
+
+	dataFile.close();
+
+	auto error = deserializeJson(json_doc, buffer);
+
+	if (error)  // this should not happen
+		return { };
+
+	String nbd_host = json_doc["NBD-host"];
+	int    nbd_port = json_doc["NBD-port"];
+
+	String disk_type_temp = json_doc["disk-type"];
+
+	disk_type_t disk_type = DT_RK05;
+
+	if (disk_type_temp == "rl02")
+		disk_type = DT_RL02;
+
+	disk_backend *d = new disk_backend_nbd(nbd_host.c_str(), nbd_port);
+
+	if (d->begin() == false) {
+		c->put_string_lf("Cannot initialize NBD client from configuration file");
+		delete d;
+		return { };
+	}
+
+	c->put_string_lf(format("Connection to NBD server at %s:%d success", nbd_host.c_str(), nbd_port));
+
+	if (disk_type == DT_RK05)
+		return { { { d }, { } } };
+
+	if (disk_type == DT_RL02)
+		return { { { }, { d } } };
+
+	return { };
+}
+
+bool save_disk_configuration(const std::string & nbd_host, const int nbd_port, const disk_type_t dt)
+{
+	json_doc["NBD-host"] = nbd_host;
+	json_doc["NBD-port"] = nbd_port;
+
+	json_doc["disk-type"] = dt == DT_RK05 ? "rk05" : "rl02";
+
+	File dataFile = LittleFS.open(CFG_FILE, "w");
+
+	if (!dataFile)
+		return false;
+
+	serializeJson(json_doc, dataFile);
+
+	dataFile.close();
+
+	return true;
+}
+
 typedef enum { BE_NETWORK, BE_SD } disk_backend_t;
 std::optional<disk_backend_t> select_disk_backend(console *const c)
 {
@@ -80,8 +165,6 @@ std::optional<disk_backend_t> select_disk_backend(console *const c)
 //	if (ch == '2')
 		return BE_SD;
 }
-
-typedef enum { DT_RK05, DT_RL02 } disk_type_t;
 
 std::optional<disk_type_t> select_disk_type(console *const c)
 {
@@ -129,6 +212,11 @@ std::optional<std::pair<std::vector<disk_backend *>, std::vector<disk_backend *>
 		delete d;
 		return { };
 	}
+
+	if (save_disk_configuration(hostname, atoi(port_str.c_str()), disk_type.value()))
+		c->put_string_lf("NBD disk configuration saved");
+	else
+		c->put_string_lf("NBD disk configuration NOT saved");
 
 	if (disk_type.value() == DT_RK05)
 		return { { { d }, { } } };
@@ -197,6 +285,21 @@ std::optional<std::pair<std::vector<disk_backend *>, std::vector<disk_backend *>
 	}
 }
 
+void set_disk_configuration(std::pair<std::vector<disk_backend *>, std::vector<disk_backend *> > & disk_files)
+{
+	if (disk_files.first.empty() == false)
+		b->add_rk05(new rk05(disk_files.first, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
+
+	if (disk_files.second.empty() == false)
+		b->add_rl02(new rl02(disk_files.second, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
+
+	// TODO: allow bootloader to be selected
+	if (disk_files.first.empty() == false)
+		setBootLoader(b, BL_RK05);
+	else
+		setBootLoader(b, BL_RL02);
+}
+
 void configure_disk(console *const c)
 {
 	for(;;) {
@@ -217,17 +320,7 @@ void configure_disk(console *const c)
 		if (files.has_value() == false)
 			break;
 
-		if (files.value().first.empty() == false)
-			b->add_rk05(new rk05(files.value().first, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
-
-		if (files.value().second.empty() == false)
-			b->add_rl02(new rl02(files.value().second, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
-
-		// TODO: allow bootloader to be selected
-		if (files.value().first.empty() == false)
-			setBootLoader(b, BL_RK05);
-		else
-			setBootLoader(b, BL_RL02);
+		set_disk_configuration(files.value());
 
 		break;
 	}
@@ -266,15 +359,14 @@ void configure_network(console *const c)
 		return;
 	}
 
-	set_hostname();
-
 	if (parts.size() == 1)
 		WiFi.begin(parts.at(0).c_str());
 	else
 		WiFi.begin(parts.at(0).c_str(), parts.at(1).c_str());
 }
 
-void wait_network(console *const c) {
+void wait_network(console *const c)
+{
 	constexpr const int timeout = 10 * 3;
 
 	int i = 0;
@@ -291,17 +383,19 @@ void wait_network(console *const c) {
 		c->put_string_lf("Time out connecting");
 }
 
-void check_network(console *const c) {
+void check_network(console *const c)
+{
 	wait_network(c);
 
 	c->put_string_lf("");
 	c->put_string_lf(format("Local IP address: %s", WiFi.localIP().toString().c_str()));
 }
 
-void start_network(console *const c) {
-	WiFi.mode(WIFI_STA);
-
+void start_network(console *const c)
+{
 	set_hostname();
+
+	WiFi.mode(WIFI_STA);
 
 	WiFi.begin();
 
@@ -311,11 +405,26 @@ void start_network(console *const c) {
 	c->put_string_lf(format("Local IP address: %s", WiFi.localIP().toString().c_str()));
 }
 
-void set_tty_serial_speed(const int bps) {
+void set_tty_serial_speed(const int bps)
+{
 	Serial_RS232.begin(bps);
 }
 
-void setup() {
+void recall_configuration(console *const c)
+{
+	c->put_string_lf("Starting network...");
+	start_network(cnsl);
+
+	auto disk_configuration = load_disk_configuration(c);
+
+	if (disk_configuration.has_value()) {
+		c->put_string_lf("Starting disk...");
+		set_disk_configuration(disk_configuration.value());
+	}
+}
+
+void setup()
+{
 	Serial.begin(115200);
 
 	Serial.println(F("This PDP-11 emulator is called \"kek\" (reason for that is forgotten) and was written by Folkert van Heusden."));
@@ -327,6 +436,9 @@ void setup() {
 
 	Serial.print(F("CPU clock frequency (MHz): "));
 	Serial.println(getCpuFrequencyMhz());
+
+	if (!LittleFS.begin(true))
+		Serial.println(F("LittleFS.begin() failed"));
 
 	Serial.print(F("Free RAM before init (decimal bytes): "));
 	Serial.println(ESP.getFreeHeap());
@@ -380,7 +492,8 @@ void setup() {
 	cnsl->start_thread();
 }
 
-void loop() {
+void loop()
+{
 	debugger(cnsl, b, &stop_event, false);
 
 	c->reset();

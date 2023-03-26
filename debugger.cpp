@@ -19,6 +19,8 @@ void check_network(console *const c);
 void start_network(console *const c);
 
 void set_tty_serial_speed(const int bps);
+
+void recall_configuration(console *const c);
 #endif
 
 // returns size of instruction (in bytes)
@@ -162,339 +164,353 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 	bool single_step = false;
 
 	while(*stop_event != EVENT_TERMINATE) {
-		std::string cmd   = cnsl->read_line(format("%d", stop_event->load()));
-		auto        parts = split(cmd, " ");
-		auto        kv    = split(parts, "=");
+		try {
+			std::string cmd   = cnsl->read_line(format("%d", stop_event->load()));
+			auto        parts = split(cmd, " ");
+			auto        kv    = split(parts, "=");
 
-		if (parts.empty())
-			continue;
+			if (parts.empty())
+				continue;
 
-		if (cmd == "go") {
-			single_step = false;
+			if (cmd == "go") {
+				single_step = false;
 
-			*stop_event = EVENT_NONE;
-		}
-		else if (parts[0] == "single" || parts[0] == "s") {
-			single_step = true;
-
-			if (parts.size() == 2)
-				n_single_step = atoi(parts[1].c_str());
-			else
-				n_single_step = 1;
-
-			*stop_event = EVENT_NONE;
-		}
-		else if ((parts[0] == "sbp" || parts[0] == "cbp") && parts.size() == 2){
-			uint16_t pc = std::stoi(parts[1].c_str(), nullptr, 8);
-
-			if (parts[0] == "sbp") {
-				c->set_breakpoint(pc);
-
-				cnsl->put_string_lf(format("Set breakpoint at %06o", pc));
+				*stop_event = EVENT_NONE;
 			}
-			else {
-				c->remove_breakpoint(pc);
+			else if (parts[0] == "single" || parts[0] == "s") {
+				single_step = true;
 
-				cnsl->put_string_lf(format("Clear breakpoint at %06o", pc));
+				if (parts.size() == 2)
+					n_single_step = atoi(parts[1].c_str());
+				else
+					n_single_step = 1;
+
+				*stop_event = EVENT_NONE;
 			}
+			else if ((parts[0] == "sbp" || parts[0] == "cbp") && parts.size() == 2){
+				uint16_t pc = std::stoi(parts[1].c_str(), nullptr, 8);
 
-			continue;
-		}
-		else if (cmd == "lbp") {
-			auto bps = c->list_breakpoints();
+				if (parts[0] == "sbp") {
+					c->set_breakpoint(pc);
 
-			cnsl->put_string_lf("Breakpoints:");
+					cnsl->put_string_lf(format("Set breakpoint at %06o", pc));
+				}
+				else {
+					c->remove_breakpoint(pc);
 
-			for(auto a : bps) {
-				cnsl->put_string(format("   %06o> ", a));
-
-				disassemble(c, cnsl, a, true);
-			}
-
-			continue;
-		}
-		else if (parts[0] == "disassemble" || parts[0] == "d") {
-			int pc = kv.find("pc") != kv.end() ? std::stoi(kv.find("pc")->second, nullptr, 8)  : c->getPC();
-			int n  = kv.find("n")  != kv.end() ? std::stoi(kv.find("n") ->second, nullptr, 10) : 1;
-
-			cnsl->put_string_lf(format("Disassemble %d instructions starting at %o", n, pc));
-
-			bool show_registers = kv.find("pc") == kv.end();
-
-			for(int i=0; i<n; i++) {
-				pc += disassemble(c, cnsl, pc, !show_registers);
-
-				show_registers = false;
-			}
-
-			continue;
-		}
-		else if (parts[0] == "setpc") {
-			if (parts.size() == 2) {
-				uint16_t new_pc = std::stoi(parts.at(1), nullptr, 8);
-				c->setPC(new_pc);
-
-				cnsl->put_string_lf(format("Set PC to %06o", new_pc));
-			}
-			else {
-				cnsl->put_string_lf("setpc requires an (octal address as) parameter");
-			}
-
-			continue;
-		}
-		else if (parts[0] == "toggle") {
-			auto s_it = kv.find("s");
-			auto t_it = kv.find("t");
-
-			if (s_it == kv.end() || t_it == kv.end())
-				cnsl->put_string_lf(format("toggle: parameter missing? current switches states: 0o%06o", c->getBus()->get_console_switches()));
-			else {
-				int s = std::stoi(s_it->second, nullptr, 8);
-				int t = std::stoi(t_it->second, nullptr, 8);
-
-				c->getBus()->set_console_switch(s, t);
-
-				cnsl->put_string_lf(format("Set switch %d to %d", s, t));
-			}
-
-			continue;
-		}
-		else if (parts[0] == "setmem") {
-			auto a_it = kv.find("a");
-			auto v_it = kv.find("v");
-
-			if (a_it == kv.end() || v_it == kv.end())
-				cnsl->put_string_lf("setmem: parameter missing?");
-			else {
-				uint16_t a = std::stoi(a_it->second, nullptr, 8);
-				uint8_t  v = std::stoi(v_it->second, nullptr, 8);
-
-				c->getBus()->writeByte(a, v);
-
-				cnsl->put_string_lf(format("Set %06o to %03o", a, v));
-			}
-
-			continue;
-		}
-		else if (parts[0] == "trace" || parts[0] == "t") {
-			tracing = !tracing;
-
-			cnsl->put_string_lf(format("Tracing set to %s", tracing ? "ON" : "OFF"));
-
-			continue;
-		}
-		else if (parts[0] == "mmudump") {
-			mmu_dump(cnsl, b);
-
-			continue;
-		}
-		else if (parts[0] == "strace") {
-			if (parts.size() != 2) {
-				trace_start_addr = -1;
-
-				cnsl->put_string_lf("Tracing start address reset");
-			}
-			else {
-				trace_start_addr = std::stoi(parts[1], nullptr, 8);
-
-				cnsl->put_string_lf(format("Tracing start address set to %06o", trace_start_addr));
-			}
-
-			continue;
-		}
-		else if (parts[0] == "examine" || parts[0] == "e") {
-			if (parts.size() < 3)
-				cnsl->put_string_lf("parameter missing");
-			else {
-				int  addr       = std::stoi(parts[2], nullptr, 8);
-				int  val        = -1;
-
-				int  n          = parts.size() == 4 ? atoi(parts[3].c_str()) : 1;
-				bool word       = parts[1] == "w";
-
-				if (parts[1] != "w" && parts[1] != "b") {
-					cnsl->put_string_lf("expected b or w");
-
-					continue;
+					cnsl->put_string_lf(format("Clear breakpoint at %06o", pc));
 				}
 
-				std::string out;
+				continue;
+			}
+			else if (cmd == "lbp") {
+				auto bps = c->list_breakpoints();
+
+				cnsl->put_string_lf("Breakpoints:");
+
+				for(auto a : bps) {
+					cnsl->put_string(format("   %06o> ", a));
+
+					disassemble(c, cnsl, a, true);
+				}
+
+				continue;
+			}
+			else if (parts[0] == "disassemble" || parts[0] == "d") {
+				int pc = kv.find("pc") != kv.end() ? std::stoi(kv.find("pc")->second, nullptr, 8)  : c->getPC();
+				int n  = kv.find("n")  != kv.end() ? std::stoi(kv.find("n") ->second, nullptr, 10) : 1;
+
+				cnsl->put_string_lf(format("Disassemble %d instructions starting at %o", n, pc));
+
+				bool show_registers = kv.find("pc") == kv.end();
 
 				for(int i=0; i<n; i++) {
-					if (!word)
-						val = b->read(addr + i, wm_byte, rm_cur, true);
-					else if (word)
-						val = b->read(addr + i, wm_word, rm_cur, true);
+					pc += disassemble(c, cnsl, pc, !show_registers);
 
-					if (val == -1) {
-						cnsl->put_string_lf(format("Can't read from %06o\n", addr + i));
+					show_registers = false;
+				}
+
+				continue;
+			}
+			else if (parts[0] == "setpc") {
+				if (parts.size() == 2) {
+					uint16_t new_pc = std::stoi(parts.at(1), nullptr, 8);
+					c->setPC(new_pc);
+
+					cnsl->put_string_lf(format("Set PC to %06o", new_pc));
+				}
+				else {
+					cnsl->put_string_lf("setpc requires an (octal address as) parameter");
+				}
+
+				continue;
+			}
+			else if (parts[0] == "toggle") {
+				auto s_it = kv.find("s");
+				auto t_it = kv.find("t");
+
+				if (s_it == kv.end() || t_it == kv.end())
+					cnsl->put_string_lf(format("toggle: parameter missing? current switches states: 0o%06o", c->getBus()->get_console_switches()));
+				else {
+					int s = std::stoi(s_it->second, nullptr, 8);
+					int t = std::stoi(t_it->second, nullptr, 8);
+
+					c->getBus()->set_console_switch(s, t);
+
+					cnsl->put_string_lf(format("Set switch %d to %d", s, t));
+				}
+
+				continue;
+			}
+			else if (parts[0] == "setmem") {
+				auto a_it = kv.find("a");
+				auto v_it = kv.find("v");
+
+				if (a_it == kv.end() || v_it == kv.end())
+					cnsl->put_string_lf("setmem: parameter missing?");
+				else {
+					uint16_t a = std::stoi(a_it->second, nullptr, 8);
+					uint8_t  v = std::stoi(v_it->second, nullptr, 8);
+
+					c->getBus()->writeByte(a, v);
+
+					cnsl->put_string_lf(format("Set %06o to %03o", a, v));
+				}
+
+				continue;
+			}
+			else if (parts[0] == "trace" || parts[0] == "t") {
+				tracing = !tracing;
+
+				cnsl->put_string_lf(format("Tracing set to %s", tracing ? "ON" : "OFF"));
+
+				continue;
+			}
+			else if (parts[0] == "mmudump") {
+				mmu_dump(cnsl, b);
+
+				continue;
+			}
+			else if (parts[0] == "strace") {
+				if (parts.size() != 2) {
+					trace_start_addr = -1;
+
+					cnsl->put_string_lf("Tracing start address reset");
+				}
+				else {
+					trace_start_addr = std::stoi(parts[1], nullptr, 8);
+
+					cnsl->put_string_lf(format("Tracing start address set to %06o", trace_start_addr));
+				}
+
+				continue;
+			}
+			else if (parts[0] == "examine" || parts[0] == "e") {
+				if (parts.size() < 3)
+					cnsl->put_string_lf("parameter missing");
+				else {
+					int  addr       = std::stoi(parts[2], nullptr, 8);
+					int  val        = -1;
+
+					int  n          = parts.size() == 4 ? atoi(parts[3].c_str()) : 1;
+					bool word       = parts[1] == "w";
+
+					if (parts[1] != "w" && parts[1] != "b") {
+						cnsl->put_string_lf("expected b or w");
+
+						continue;
+					}
+
+					std::string out;
+
+					for(int i=0; i<n; i++) {
+						if (!word)
+							val = b->read(addr + i, wm_byte, rm_cur, true);
+						else if (word)
+							val = b->read(addr + i, wm_word, rm_cur, true);
+
+						if (val == -1) {
+							cnsl->put_string_lf(format("Can't read from %06o\n", addr + i));
+							break;
+						}
+
+						if (n == 1)
+							cnsl->put_string_lf(format("value at %06o, octal: %o, hex: %x, dec: %d\n", addr + i, val, val, val));
+
+						if (n > 1) {
+							if (i > 0)
+								out += " ";
+
+							if (word)
+								out += format("%06o", val);
+							else
+								out += format("%03o", val);
+						}
+					}
+
+					if (n > 1)
+						cnsl->put_string_lf(out);
+				}
+
+				continue;
+			}
+			else if (cmd == "reset" || cmd == "r") {
+#if defined(ESP32)
+				ESP.restart();
+#else
+				*stop_event = EVENT_NONE;
+
+				c->reset();
+#endif
+				continue;
+			}
+#if defined(ESP32)
+			else if (cmd == "cfgdisk") {
+				configure_disk(cnsl);
+
+				continue;
+			}
+			else if (cmd == "cfgnet") {
+				configure_network(cnsl);
+
+				continue;
+			}
+			else if (cmd == "chknet") {
+				check_network(cnsl);
+
+				continue;
+			}
+			else if (cmd == "startnet") {
+				start_network(cnsl);
+
+				continue;
+			}
+			else if (parts.at(0) == "serspd") {
+				if (parts.size() == 2) {
+					int speed = std::stoi(parts.at(1), nullptr, 10);
+					set_tty_serial_speed(speed);
+
+					cnsl->put_string_lf(format("Set baudrate to %d", speed));
+				}
+				else {
+					cnsl->put_string_lf("serspd requires an (decimal) parameter");
+				}
+
+				continue;
+			}
+#endif
+			else if (cmd == "cls") {
+				const char cls[] = { 27, '[', '2', 'J', 12, 0 };
+
+				cnsl->put_string_lf(cls);
+
+				continue;
+			}
+			else if (cmd == "turbo") {
+				turbo = !turbo;
+
+				cnsl->put_string_lf(format("Turbo set to %s", turbo ? "ON" : "OFF"));
+
+				continue;
+			}
+			else if (cmd == "init") {
+				recall_configuration(cnsl);
+
+				continue;
+			}
+			else if (cmd == "quit" || cmd == "q") {
+#if defined(ESP32)
+				ESP.restart();
+#endif
+				break;
+			}
+			else if (cmd == "help" || cmd == "h" || cmd == "?") {
+				cnsl->put_string_lf("disassemble/d - show current instruction (pc=/n=)");
+				cnsl->put_string_lf("go            - run until trap or ^e");
+#if !defined(ESP32)
+				cnsl->put_string_lf("quit/q        - stop emulator");
+#endif
+				cnsl->put_string_lf("examine/e     - show memory address (<b|w> <octal address> [<n>])");
+				cnsl->put_string_lf("reset/r       - reset cpu/bus/etc");
+				cnsl->put_string_lf("single/s      - run 1 instruction (implicit 'disassemble' command)");
+				cnsl->put_string_lf("sbp/cbp/lbp   - set/clear/list breakpoint(s)");
+				cnsl->put_string_lf("trace/t       - toggle tracing");
+				cnsl->put_string_lf("turbo         - toggle turbo mode (cannot be interrupted)");
+				cnsl->put_string_lf("strace        - start tracing from address - invoke without address to disable");
+				cnsl->put_string_lf("mmudump       - dump MMU settings (PARs/PDRs)");
+				cnsl->put_string_lf("setpc         - set PC to value");
+				cnsl->put_string_lf("setmem        - set memory (a=) to value (v=), both in octal, one byte");
+				cnsl->put_string_lf("toggle        - set switch (s=, 0...15 (decimal)) of the front panel to state (t=, 0 or 1)");
+				cnsl->put_string_lf("cls           - clear screen");
+#if defined(ESP32)
+				cnsl->put_string_lf("cfgnet        - configure network (e.g. WiFi)");
+				cnsl->put_string_lf("startnet      - start network");
+				cnsl->put_string_lf("chknet        - check network status");
+				cnsl->put_string_lf("cfgdisk       - configure disk");
+				cnsl->put_string_lf("serspd        - set serial speed in bps (8N1 are default)");
+				cnsl->put_string_lf("init          - reload (disk-)configuration from flash");
+#endif
+
+				continue;
+			}
+			else {
+				cnsl->put_string_lf("?");
+				continue;
+			}
+
+			c->emulation_start();
+
+			*cnsl->get_running_flag() = true;
+
+			if (turbo) {
+				while(*stop_event == EVENT_NONE) {
+					c->step_a();
+					c->step_b();
+				}
+			}
+			else {
+				while(*stop_event == EVENT_NONE) {
+					if (!single_step)
+						DOLOG(debug, false, "---");
+
+					c->step_a();
+
+					if (trace_start_addr != -1 && c->getPC() == trace_start_addr)
+						tracing = true;
+
+					if (tracing || single_step)
+						disassemble(c, single_step ? cnsl : nullptr, c->getPC(), false);
+
+					if (c->check_breakpoint() && !single_step) {
+						cnsl->put_string_lf("Breakpoint");
 						break;
 					}
 
-					if (n == 1)
-						cnsl->put_string_lf(format("value at %06o, octal: %o, hex: %x, dec: %d\n", addr + i, val, val, val));
+					c->step_b();
 
-					if (n > 1) {
-						if (i > 0)
-							out += " ";
-
-						if (word)
-							out += format("%06o", val);
-						else
-							out += format("%03o", val);
-					}
+					if (single_step && --n_single_step == 0)
+						break;
 				}
-
-				if (n > 1)
-					cnsl->put_string_lf(out);
 			}
 
-			continue;
-		}
-		else if (cmd == "reset" || cmd == "r") {
-#if defined(ESP32)
-			ESP.restart();
-#else
-			*stop_event = EVENT_NONE;
+			*cnsl->get_running_flag() = false;
 
-			c->reset();
-#endif
-			continue;
-		}
-#if defined(ESP32)
-		else if (cmd == "cfgdisk") {
-			configure_disk(cnsl);
-
-			continue;
-		}
-		else if (cmd == "cfgnet") {
-			configure_network(cnsl);
-
-			continue;
-		}
-		else if (cmd == "chknet") {
-			check_network(cnsl);
-
-			continue;
-		}
-		else if (cmd == "startnet") {
-			start_network(cnsl);
-
-			continue;
-		}
-		else if (parts.at(0) == "serspd") {
-			if (parts.size() == 2) {
-				int speed = std::stoi(parts.at(1), nullptr, 10);
-				set_tty_serial_speed(speed);
-
-				cnsl->put_string_lf(format("Set baudrate to %d", speed));
-			}
-			else {
-				cnsl->put_string_lf("serspd requires an (decimal) parameter");
+			if (!single_step) {
+				auto speed = c->get_mips_rel_speed();
+				cnsl->debug("MIPS: %.2f, relative speed: %.2f%%, instructions executed: %lu", std::get<0>(speed), std::get<1>(speed), std::get<2>(speed));
 			}
 
-			continue;
-		}
-#endif
-		else if (cmd == "cls") {
-			const char cls[] = { 12, 0 };
+			if (*stop_event == EVENT_INTERRUPT) {
+				single_step = true;
 
-			cnsl->put_string_lf(cls);
-
-			continue;
-		}
-		else if (cmd == "turbo") {
-			turbo = !turbo;
-
-			cnsl->put_string_lf(format("Turbo set to %s", turbo ? "ON" : "OFF"));
-
-			continue;
-		}
-		else if (cmd == "quit" || cmd == "q") {
-#if defined(ESP32)
-			ESP.restart();
-#endif
-			break;
-		}
-		else if (cmd == "help" || cmd == "h" || cmd == "?") {
-			cnsl->put_string_lf("disassemble/d - show current instruction (pc=/n=)");
-			cnsl->put_string_lf("go            - run until trap or ^e");
-#if !defined(ESP32)
-			cnsl->put_string_lf("quit/q        - stop emulator");
-#endif
-			cnsl->put_string_lf("examine/e     - show memory address (<b|w> <octal address> [<n>])");
-			cnsl->put_string_lf("reset/r       - reset cpu/bus/etc");
-			cnsl->put_string_lf("single/s      - run 1 instruction (implicit 'disassemble' command)");
-			cnsl->put_string_lf("sbp/cbp/lbp   - set/clear/list breakpoint(s)");
-			cnsl->put_string_lf("trace/t       - toggle tracing");
-			cnsl->put_string_lf("turbo         - toggle turbo mode (cannot be interrupted)");
-			cnsl->put_string_lf("strace        - start tracing from address - invoke without address to disable");
-			cnsl->put_string_lf("mmudump       - dump MMU settings (PARs/PDRs)");
-			cnsl->put_string_lf("setpc         - set PC to value");
-			cnsl->put_string_lf("setmem        - set memory (a=) to value (v=), both in octal, one byte");
-			cnsl->put_string_lf("toggle        - set switch (s=, 0...15 (decimal)) of the front panel to state (t=, 0 or 1)");
-			cnsl->put_string_lf("cls           - clear screen");
-#if defined(ESP32)
-			cnsl->put_string_lf("cfgnet        - configure network (e.g. WiFi)");
-			cnsl->put_string_lf("startnet      - start network");
-			cnsl->put_string_lf("chknet        - check network status");
-			cnsl->put_string_lf("cfgdisk       - configure disk");
-			cnsl->put_string_lf("serspd        - set serial speed in bps (8N1 are default)");
-#endif
-
-			continue;
-		}
-		else {
-			cnsl->put_string_lf("?");
-			continue;
-		}
-
-		c->emulation_start();
-
-		*cnsl->get_running_flag() = true;
-
-		if (turbo) {
-			while(*stop_event == EVENT_NONE) {
-				c->step_a();
-				c->step_b();
+				*stop_event = EVENT_NONE;
 			}
 		}
-		else {
-			while(*stop_event == EVENT_NONE) {
-				if (!single_step)
-					DOLOG(debug, false, "---");
-
-				c->step_a();
-
-				if (trace_start_addr != -1 && c->getPC() == trace_start_addr)
-					tracing = true;
-
-				if (tracing || single_step)
-					disassemble(c, single_step ? cnsl : nullptr, c->getPC(), false);
-
-				if (c->check_breakpoint() && !single_step) {
-					cnsl->put_string_lf("Breakpoint");
-					break;
-				}
-
-				c->step_b();
-
-				if (single_step && --n_single_step == 0)
-					break;
-			}
+		catch(const std::exception & e) {
+			cnsl->put_string_lf(format("Exception caught: %s", e.what()));
 		}
-
-		*cnsl->get_running_flag() = false;
-
-		if (!single_step) {
-			auto speed = c->get_mips_rel_speed();
-			cnsl->debug("MIPS: %.2f, relative speed: %.2f%%, instructions executed: %lu", std::get<0>(speed), std::get<1>(speed), std::get<2>(speed));
-		}
-
-		if (*stop_event == EVENT_INTERRUPT) {
-			single_step = true;
-
-			*stop_event = EVENT_NONE;
+		catch(...) {
+			cnsl->put_string_lf("Unspecified exception caught");
 		}
 	}
 }
