@@ -5,6 +5,7 @@
 // #define SYSTEM_11_44
 
 #include <assert.h>
+#include <mutex>
 #include <stdint.h>
 #include <stdio.h>
 
@@ -91,7 +92,8 @@ private:
 
 	uint16_t MMR0 { 0 }, MMR1 { 0 }, MMR2 { 0 }, MMR3 { 0 }, CPUERR { 0 }, PIR { 0 }, CSR { 0 };
 
-	uint16_t lf_csr { 0 };
+	std::mutex lf_csr_lock;
+	uint16_t   lf_csr { 0 };
 
 	uint16_t microprogram_break_register { 0 };
 

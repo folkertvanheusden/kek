@@ -211,6 +211,8 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 		}
 
 		if (a == ADDR_LFC) { // line frequency clock and status register
+			std::unique_lock<std::mutex> lck(lf_csr_lock);
+
 			uint16_t temp = lf_csr;
 			if (!peek_only) DOLOG(debug, false, "READ-I/O line frequency clock: %o", temp);
 			return temp;
@@ -855,6 +857,8 @@ void bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 		}
 
 		if (a == ADDR_LFC) { // line frequency clock and status register
+			std::unique_lock<std::mutex> lck(lf_csr_lock);
+
 			DOLOG(debug, true, "WRITE-I/O set line frequency clock/status register: %06o", value);
 			lf_csr = value;
 			return;
@@ -1025,10 +1029,14 @@ void bus::writeUnibusByte(const uint16_t a, const uint8_t v)
 
 void bus::set_lf_crs_b7()
 {
+	std::unique_lock<std::mutex> lck(lf_csr_lock);
+
 	lf_csr |= 128;
 }
 
 uint8_t bus::get_lf_crs()
 {
+	std::unique_lock<std::mutex> lck(lf_csr_lock);
+
 	return lf_csr;
 }
