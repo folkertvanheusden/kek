@@ -26,6 +26,15 @@ tty::~tty()
 {
 }
 
+bool tty::get_reset_0x0a()
+{
+	bool temp = had_0x0a;
+
+	had_0x0a = false;
+
+	return temp;
+}
+
 uint8_t tty::readByte(const uint16_t addr)
 {
 	uint16_t v = readWord(addr & ~1);
@@ -103,6 +112,8 @@ void tty::writeWord(const uint16_t addr, uint16_t v)
 		DOLOG(debug, true, "PDP11TTY print '%c'", ch);
 
 		c->put_char(ch);
+
+		had_0x0a |= ch == 0x0a;  // for diagnostics
 	}
 
 	DOLOG(debug, true, "set register %o to %o", addr, v);

@@ -45,7 +45,8 @@ void sw_handler(int s)
 void help()
 {
 	printf("-h       this help\n");
-	printf("-T t.bin load file as a binary tape file (like simh \"load\" command)\n");
+	printf("-T t.bin load file as a binary tape file (like simh \"load\" command), also for .BIC files\n");
+	printf("-B       run tape file as a unit test (for .BIC files)\n");
 	printf("-R d.rk  load file as a RK05 disk device\n");
 	printf("-r d.rl  load file as a RL02 disk device\n");
 	printf("-N host:port:type  use NBD-server as disk device, type being either \"rk05\" or \"rl02\"\n");
@@ -79,6 +80,7 @@ int main(int argc, char *argv[])
 	bool         sa_set    = false;
 
 	std::string  tape;
+	bool         is_bic    = false;
 
 	uint16_t     console_switches = 0;
 
@@ -87,7 +89,7 @@ int main(int argc, char *argv[])
 	disk_backend *temp_d = nullptr;
 
 	int  opt          = -1;
-	while((opt = getopt(argc, argv, "hm:T:r:R:p:ndtL:b:l:s:Q:N:")) != -1)
+	while((opt = getopt(argc, argv, "hm:T:Br:R:p:ndtL:b:l:s:Q:N:")) != -1)
 	{
 		switch(opt) {
 			case 'h':
@@ -135,6 +137,10 @@ int main(int argc, char *argv[])
 
 			case 'T':
 				tape = optarg;
+				break;
+
+			case 'B':
+				is_bic = true;
 				break;
 
 			case 'R':
@@ -206,13 +212,15 @@ int main(int argc, char *argv[])
 
 	std::atomic_bool interrupt_emulation { false };
 
-	if (tape.empty() == false) {
-		auto addr = loadTape(b, tape);
+	std::optional<uint16_t> bic_start;
 
-		if (addr.has_value() == false)
+	if (tape.empty() == false) {
+		bic_start = loadTape(b, tape);
+
+		if (bic_start.has_value() == false)
 			return 1;  // fail
 
-		c->setRegister(7, addr.value());
+		c->setRegister(7, bic_start.value());
 	}
 
 	if (sa_set)
@@ -271,7 +279,9 @@ int main(int argc, char *argv[])
 
 	cnsl->start_thread();
 
-	if (run_debugger || (bootloader == BL_NONE && test.empty()))
+	if (is_bic)
+		run_bic(cnsl, b, &event, tracing, bic_start.value());
+	else if (run_debugger || (bootloader == BL_NONE && test.empty()))
 		debugger(cnsl, b, &event, tracing);
 	else {
 		c->emulation_start();  // for statistics

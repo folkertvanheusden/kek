@@ -25,10 +25,13 @@ private:
 	bool     have_char_1  { false };  // RCVR BUSY bit high (11)
 	bool     have_char_2  { false };  // RCVR DONE bit high (7)
 	uint16_t registers[4] { 0 };
+	bool     had_0x0a     { false };  // used for diagnostics
 
 public:
 	tty(console *const c);
 	virtual ~tty();
+
+	bool get_reset_0x0a();
 
 	uint8_t readByte(const uint16_t addr);
 	uint16_t readWord(const uint16_t addr);

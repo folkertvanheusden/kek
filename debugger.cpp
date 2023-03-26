@@ -3,6 +3,7 @@
 #include "cpu.h"
 #include "gen.h"
 #include "log.h"
+#include "tty.h"
 #include "utils.h"
 
 
@@ -495,5 +496,23 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 			*stop_event = EVENT_NONE;
 		}
+	}
+}
+
+void run_bic(console *const cnsl, bus *const b, std::atomic_uint32_t *const stop_event, const bool tracing, const uint16_t start_addr)
+{
+	cpu *const c = b->getCpu();
+
+	c->setRegister(7, start_addr);
+
+	tty *const t = b->getTty();
+
+	while(*stop_event == EVENT_NONE && t->get_reset_0x0a() == false) {
+		c->step_a();
+
+		if (tracing)
+			disassemble(c, cnsl, c->getPC(), false);
+
+		c->step_b();
 	}
 }

@@ -145,7 +145,7 @@ std::optional<uint16_t> loadTape(bus *const b, const std::string & file)
 		return { };
 	}
 
-	uint16_t start = 0, end = 0;
+	std::optional<uint16_t> start;
 
 	for(;!feof(fh);) {
 		uint8_t buffer[6];
@@ -181,9 +181,6 @@ std::optional<uint16_t> loadTape(bus *const b, const std::string & file)
 
 			csum += c;
 			b -> writeByte(p++, c);
-
-			if (p > end)
-				end = p;
 		}
 
 		int fcs = fgetc(fh);
@@ -194,6 +191,9 @@ std::optional<uint16_t> loadTape(bus *const b, const std::string & file)
 	}
 
 	fclose(fh);
+
+	if (start.has_value() == false)
+		start = 0200;  // assume BIC file
 
 	return start;
 }
