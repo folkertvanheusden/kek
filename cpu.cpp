@@ -336,6 +336,7 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t wo
 			break;
 		case 3:  // @(Rn)+  /  @#a
 			g.addr  = b->read(getRegister(reg, mode_selection), wm_word, mode_selection, false, isR7_space);
+			// might be wrong: the adds should happen when the read is really performed, because of traps
 			addRegister(reg, mode_selection, 2);
 			addToMMR1(mode, reg, word_mode);
 			g.space = d_space;
@@ -1609,13 +1610,15 @@ void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 				}
 			}
 			else {
-				before_psw = getPSW();
-				before_pc  = getPC();
+				bool mmr1_locked = b->getMMR0() & 0160000;
 
-				if ((b->getMMR0() & 0160000) == 0) {
+				before_psw = getPSW();
+				if (!mmr1_locked)
 					b->addToMMR1(-2, 6);
+
+				before_pc  = getPC();
+				if (!mmr1_locked)
 					b->addToMMR1(-2, 6);
-				}
 			}
 
 			// make sure the trap vector is retrieved from kernel space
