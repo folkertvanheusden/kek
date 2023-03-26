@@ -635,6 +635,11 @@ void bus::clearMMR1()
 
 void bus::addToMMR1(const int8_t delta, const uint8_t reg)
 {
+	assert(reg >= 0 && reg <= 7);
+	assert(delta >= -2 && delta <= 2);
+
+	assert(MMR1 < 256);
+
 	MMR1 <<= 8;
 
 	MMR1 |= (delta & 31) << 3;
