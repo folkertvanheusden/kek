@@ -1,5 +1,6 @@
 // (C) 2018-2023 by Folkert van Heusden
-// Released under Apache License v2.0
+// Released under MIT license
+
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <atomic>

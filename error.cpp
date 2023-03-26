@@ -1,4 +1,6 @@
-// (C) 2018 by folkert@vanheusden.com, released under AGPL 3.0
+// (C) 2018-2023 by Folkert van Heusden
+// Released under MIT license
+
 #include <errno.h>
 #include <string.h>
 #include <stdarg.h>

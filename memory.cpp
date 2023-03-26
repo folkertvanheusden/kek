@@ -1,5 +1,6 @@
-// (C) 2018 by Folkert van Heusden
-// Released under Apache License v2.0
+// (C) 2018-2023 by Folkert van Heusden
+// Released under MIT license
+
 #if defined(ESP32)
 #include <Arduino.h>
 #endif

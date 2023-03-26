@@ -1,5 +1,6 @@
-// this program is in the public domain
-// written by Folkert van Heusden <mail@vanheusden.com>
+// (C) 2018-2023 by Folkert van Heusden
+// Released in the public domain
+
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>

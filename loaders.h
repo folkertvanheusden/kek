@@ -1,3 +1,6 @@
+// (C) 2018-2023 by Folkert van Heusden
+// Released under MIT license
+
 #include <optional>
 #include <stdint.h>
 #include <string>
