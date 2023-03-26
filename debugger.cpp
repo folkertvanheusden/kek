@@ -401,6 +401,11 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 				continue;
 			}
+			else if (cmd == "init") {
+				recall_configuration(cnsl);
+
+				continue;
+			}
 #endif
 			else if (cmd == "cls") {
 				const char cls[] = { 27, '[', '2', 'J', 12, 0 };
@@ -413,11 +418,6 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 				turbo = !turbo;
 
 				cnsl->put_string_lf(format("Turbo set to %s", turbo ? "ON" : "OFF"));
-
-				continue;
-			}
-			else if (cmd == "init") {
-				recall_configuration(cnsl);
 
 				continue;
 			}
