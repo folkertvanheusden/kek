@@ -357,7 +357,7 @@ void setup() {
 	running = cnsl->get_running_flag();
 
 	Serial.println(F("Init TTY"));
-	tty_ = new tty(cnsl);
+	tty_ = new tty(cnsl, b);
 	Serial.println(F("Connect TTY to bus"));
 	b->add_tty(tty_);
 
