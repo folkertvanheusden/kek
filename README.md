@@ -1,5 +1,5 @@
 KEK
-Kek might (I work occasionally on it so don't hold your breath) become a DEC PDP-11 (11/70) emulator capable of running UNIX-v5.
+Kek might become a DEC PDP-11 (11/70) emulator capable of running UNIX-v6.
 
 Run:
     make all
