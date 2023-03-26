@@ -736,13 +736,14 @@ void bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 			if (a == ADDR_STACKLIM || a == ADDR_STACKLIM + 1) { // stack limit register
 				DOLOG(debug, true, "WRITE-I/O stack limit register %s: %03o", a & 1 ? "MSB" : "LSB", value);
 
-				if (a == ADDR_STACKLIM + 1) {
-					uint16_t v = c->getStackLimitRegister();
+				uint16_t v = c->getStackLimitRegister();
 
+				if (a == ADDR_STACKLIM)
+					v = (v & 0xff00) | value;
+				else
 					v = (v & 0x00ff) | (value << 8);
 
-					c->setStackLimitRegister(v);
-				}
+				c->setStackLimitRegister(v);
 
 				return;
 			}
