@@ -1,10 +1,11 @@
-// (C) 2018 by Folkert van Heusden
+// (C) 2018-2023 by Folkert van Heusden
 // // Released under Apache License v2.0
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>
 
 #include "tty.h"
+#include "cpu.h"
 #include "gen.h"
 #include "log.h"
 #include "memory.h"
@@ -18,7 +19,9 @@ const char * const regnames[] = {
 	"puncher buffer"
 	};
 
-tty::tty(console *const c) : c(c)
+tty::tty(console *const c, bus *const b) :
+	c(c),
+	b(b)
 {
 }
 
@@ -65,7 +68,7 @@ uint16_t tty::readWord(const uint16_t addr)
 		}
 	}
 	else if (addr == PDP11TTY_TPS) {
-		vtemp = 128;
+		vtemp |= 128;
 	}
 
 	DOLOG(debug, true, "PDP11TTY read addr %o (%s): %d, 7bit: %d", addr, regnames[reg], vtemp, vtemp & 127);
@@ -103,6 +106,11 @@ void tty::writeWord(const uint16_t addr, uint16_t v)
 		DOLOG(debug, true, "PDP11TTY print '%c'", ch);
 
 		c->put_char(ch);
+
+		registers[(PDP11TTY_TPS - PDP11TTY_BASE) / 2] |= 128;
+
+		if (registers[(PDP11TTY_TPS - PDP11TTY_BASE) / 2] & 64)
+			b->getCpu()->queue_interrupt(4, 064);
 	}
 
 	DOLOG(debug, true, "set register %o to %o", addr, v);

@@ -1,4 +1,4 @@
-// (C) 2018-2022 by Folkert van Heusden
+// (C) 2018-2023 by Folkert van Heusden
 // Released under Apache License v2.0
 #pragma once
 
@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <string>
 
+#include "bus.h"
 #include "console.h"
 
 
@@ -22,12 +23,13 @@ class tty
 {
 private:
 	console *const c      { nullptr };
+	bus     *const b      { nullptr };
 	bool     have_char_1  { false };  // RCVR BUSY bit high (11)
 	bool     have_char_2  { false };  // RCVR DONE bit high (7)
 	uint16_t registers[4] { 0 };
 
 public:
-	tty(console *const c);
+	tty(console *const c, bus *const b);
 	virtual ~tty();
 
 	uint8_t readByte(const uint16_t addr);

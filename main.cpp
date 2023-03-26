@@ -255,7 +255,7 @@ int main(int argc, char *argv[])
 
 	running = cnsl->get_running_flag();
 
-	tty *tty_ = new tty(cnsl);
+	tty *tty_ = new tty(cnsl, b);
 
 	b->add_tty(tty_);
 
