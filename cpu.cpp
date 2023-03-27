@@ -71,7 +71,7 @@ std::tuple<double, double, uint64_t> cpu::get_mips_rel_speed()
 {
 	uint64_t instr_count = get_instructions_executed_count();
 
-        uint32_t t_diff = get_ms() - running_since;
+        uint32_t t_diff = get_ms() - running_since;  // TODO fix this because we now implement WAIT where it sits idle
 
         double mips = instr_count / (1000.0 * t_diff);
 
