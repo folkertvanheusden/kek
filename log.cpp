@@ -7,10 +7,12 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include <sys/types.h>
 
 #include "error.h"
 #include "log.h"
 #include "utils.h"
+#include "windows/win32.h"
 
 
 static const char *logfile          = strdup("/tmp/myip.log");
@@ -65,11 +67,13 @@ void dolog(const log_level_t ll, const char *fmt, ...)
 		if (!lfh)
 			error_exit(true, "Cannot access log-file %s", logfile);
 
+#if !defined(_WIN32)
 		if (lf_uid != -1 && fchown(fileno(lfh), lf_uid, lf_gid) == -1)
 			error_exit(true, "Cannot change logfile (%s) ownership", logfile);
 
 		if (fcntl(fileno(lfh), F_SETFD, FD_CLOEXEC) == -1)
 			error_exit(true, "fcntl(FD_CLOEXEC) failed");
+#endif
 #endif
 	}
 
@@ -77,8 +81,12 @@ void dolog(const log_level_t ll, const char *fmt, ...)
 	time_t t_now = now / 1000000;
 
 	tm tm { 0 };
+#if defined(_WIN32)
+	tm = *localtime(&t_now);
+#else
 	if (!localtime_r(&t_now, &tm))
 		error_exit(true, "localtime_r failed");
+#endif
 
 	char *ts_str = nullptr;
 

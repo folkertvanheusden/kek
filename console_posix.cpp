@@ -1,9 +1,15 @@
 // (C) 2018-2023 by Folkert van Heusden
 // Released under MIT license
 
+#if defined(_WIN32)
+#include <conio.h>
+
+#include <winsock2.h>
+#else
 #include <poll.h>
+#endif
+
 #include <stdio.h>
-#include <termios.h>
 #include <unistd.h>
 
 #include "console_posix.h"
@@ -13,6 +19,7 @@
 console_posix::console_posix(std::atomic_uint32_t *const stop_event, bus *const b) :
 	console(stop_event, b)
 {
+#if !defined(_WIN32)
 	if (tcgetattr(STDIN_FILENO, &org_tty_opts) == -1)
 		error_exit(true, "console_posix: tcgetattr failed");
 
@@ -21,22 +28,36 @@ console_posix::console_posix(std::atomic_uint32_t *const stop_event, bus *const 
 
 	if (tcsetattr(STDIN_FILENO, TCSANOW, &tty_opts_raw) == -1)
 		error_exit(true, "console_posix: tcsetattr failed");
+#endif
 }
 
 console_posix::~console_posix()
 {
 	stop_thread();
 
+#if !defined(_WIN32)
 	if (tcsetattr(STDIN_FILENO, TCSANOW, &org_tty_opts) == -1)
 		error_exit(true, "~console_posix: tcsetattr failed");
+#endif
 }
 
 int console_posix::wait_for_char_ll(const short timeout)
 {
+#if defined(_WIN32)
+	fd_set rfds;
+	FD_ZERO(&rfds);
+	FD_SET(STDIN_FILENO, &rfds);
+
+	timeval to { timeout / 1000000, timeout % 1000000 };
+
+	if (select(STDIN_FILENO + 1, &rfds, nullptr, nullptr, &to) == 1 && FD_ISSET(STDIN_FILENO, &rfds))
+		return _getch();
+#else
 	struct pollfd fds[] = { { STDIN_FILENO, POLLIN, timeout } };
 
 	if (poll(fds, 1, timeout) == 1 && fds[0].revents)
 		return getchar();
+#endif
 
 	return -1;
 }

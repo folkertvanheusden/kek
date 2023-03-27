@@ -34,6 +34,30 @@ add_executable(
   utils.cpp
 )
 
+add_executable(
+  kek-win32
+  bus.cpp
+  console.cpp
+  console_posix.cpp
+  cpu.cpp
+  debugger.cpp
+  disk_backend.cpp
+  disk_backend_file.cpp
+  disk_backend_nbd.cpp
+  error.cpp
+  kw11-l.cpp
+  loaders.cpp
+  log.cpp
+  main.cpp
+  memory.cpp
+  rk05.cpp
+  rl02.cpp
+  tm-11.cpp
+  tty.cpp
+  utils.cpp
+  windows/win32.cpp
+)
+
 include(CheckIPOSupported)
 check_ipo_supported(RESULT supported)
 
@@ -45,6 +69,9 @@ set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 set(THREADS_PREFER_PTHREAD_FLAG TRUE)
 find_package(Threads)
 target_link_libraries(kek Threads::Threads)
+target_link_libraries(kek-win32 Threads::Threads)
+
+target_link_libraries(kek-win32 ws2_32)
 
 include(FindPkgConfig)
 

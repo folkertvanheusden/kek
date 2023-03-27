@@ -1,12 +1,18 @@
 KEK
 Kek is a DEC PDP-11 (11/70) emulator capable of running UNIX-v6.
 
-Run:
-    make all
-to build.
+To build for e.g. linux:
+
+    make kek
+
+To build for e.g. windows:
+
+    make kek-win32
+
 
 
 Required:
+
 * libncursesw5-dev
 
 

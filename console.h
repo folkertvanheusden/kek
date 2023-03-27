@@ -10,6 +10,10 @@
 
 #include "bus.h"
 
+#if defined(_WIN32)
+#include "windows/win32.h"
+#endif
+
 
 constexpr const int t_width  { 80 };
 constexpr const int t_height { 25 };

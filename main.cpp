@@ -9,7 +9,9 @@
 #include <unistd.h>
 
 #include "error.h"
+#if !defined(_WIN32)
 #include "console_ncurses.h"
+#endif
 #include "console_posix.h"
 #include "cpu.h"
 #include "debugger.h"
@@ -21,7 +23,9 @@
 #include "loaders.h"
 #include "log.h"
 #include "memory.h"
+#if !defined(_WIN32)
 #include "terminal.h"
+#endif
 #include "tty.h"
 #include "utils.h"
 
@@ -32,6 +36,7 @@ std::atomic_bool *running      { nullptr };
 
 std::atomic_bool  sigw_event   { false };
 
+#if !defined(_WIN32)
 void sw_handler(int s)
 {
 	if (s == SIGWINCH)
@@ -42,6 +47,7 @@ void sw_handler(int s)
 		event = EVENT_TERMINATE;
 	}
 }
+#endif
 
 void help()
 {
@@ -227,9 +233,12 @@ int main(int argc, char *argv[])
 	if (sa_set)
 		c->setRegister(7, start_addr);
 
+#if !defined(_WIN32)
 	if (withUI)
 		cnsl = new console_ncurses(&event, b);
-	else {
+	else
+#endif
+	{
 		DOLOG(info, true, "This PDP-11 emulator is called \"kek\" (reason for that is forgotten) and was written by Folkert van Heusden.");
 
 		DOLOG(info, true, "Built on: " __DATE__ " " __TIME__);
@@ -262,6 +271,7 @@ int main(int argc, char *argv[])
 
 	DOLOG(info, true, "Start running at %06o", c->getRegister(7));
 
+#if !defined(_WIN32)
 	struct sigaction sa { };
 	sa.sa_handler = sw_handler;
 	sigemptyset(&sa.sa_mask);
@@ -272,6 +282,7 @@ int main(int argc, char *argv[])
 
 	sigaction(SIGTERM, &sa, nullptr);
 	sigaction(SIGINT , &sa, nullptr);
+#endif
 
 	if (test.empty() == false)
 		load_p11_x11(b, test);
