@@ -278,7 +278,9 @@ bool cpu::check_queued_interrupts()
 			return true;
 		}
 	}
-	
+
+	any_queued_interrupts = false;
+
 	return false;
 }
 
@@ -291,6 +293,8 @@ void cpu::queue_interrupt(const uint8_t level, const uint8_t vector)
 	it->second.insert(vector);
 
 	qi_cv.notify_all();
+
+	any_queued_interrupts = true;
 
 	DOLOG(debug, true, "Queueing interrupt vector %o (IPL %d, current: %d), n: %zu", vector, level, getPSW_spl(), it->second.size());
 }
@@ -2159,8 +2163,8 @@ void cpu::step_a()
 	if ((b->getMMR0() & 0160000) == 0)
 		b->clearMMR1();
 
-	if (check_queued_interrupts())
-	       return;
+	if (any_queued_interrupts && check_queued_interrupts())
+	       return; // documentation
 }
 
 void cpu::step_b()

@@ -43,6 +43,7 @@ private:
 	std::map<uint8_t, std::set<uint8_t> > queued_interrupts;
 	std::mutex              qi_lock;
 	std::condition_variable qi_cv;
+	std::atomic_bool        any_queued_interrupts { false };
 
 	std::set<uint16_t> breakpoints;
 
