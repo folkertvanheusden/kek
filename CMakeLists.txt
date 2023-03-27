@@ -55,7 +55,7 @@ add_executable(
   tm-11.cpp
   tty.cpp
   utils.cpp
-  windows/win32.cpp
+  win32.cpp
 )
 
 include(CheckIPOSupported)

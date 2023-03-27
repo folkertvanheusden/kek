@@ -11,7 +11,7 @@
 #include "bus.h"
 
 #if defined(_WIN32)
-#include "windows/win32.h"
+#include "win32.h"
 #endif
 
 

@@ -16,7 +16,7 @@
 #include <vector>
 #include <sys/time.h>
 
-#include "windows/win32.h"
+#include "win32.h"
 
 
 void setBit(uint16_t & v, const int bit, const bool vb)

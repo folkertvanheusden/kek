@@ -12,7 +12,7 @@
 #include "error.h"
 #include "log.h"
 #include "utils.h"
-#include "windows/win32.h"
+#include "win32.h"
 
 
 static const char *logfile          = strdup("/tmp/myip.log");
