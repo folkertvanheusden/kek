@@ -403,12 +403,12 @@ gam_rc_t cpu::getGAMAddress(const uint8_t mode, const int reg, const word_mode_t
 
 bool cpu::double_operand_instructions(const uint16_t instr)
 {
-	const word_mode_t word_mode = instr & 0x8000 ? wm_byte : wm_word;
-
 	const uint8_t     operation = (instr >> 12) & 7;
 
 	if (operation == 0b000)
 		return single_operand_instructions(instr);
+
+	const word_mode_t word_mode = instr & 0x8000 ? wm_byte : wm_word;
 
 	if (operation == 0b111) {
 		if (word_mode == wm_byte)
@@ -464,6 +464,7 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 				    gam_rc_t g_src  = getGAM(src_mode, src_reg, word_mode, rm_cur);
 
 				    auto g_dst      = getGAM(dst_mode, dst_reg, word_mode, rm_cur);
+
 				    uint16_t result = (g_dst.value.value() & g_src.value.value()) & (word_mode == wm_byte ? 0xff : 0xffff);
 
 				    setPSW_flags_nzv(result, word_mode);
@@ -1551,8 +1552,7 @@ bool cpu::misc_operations(const uint16_t instr)
 
 		int dst_reg = instr & 7;
 
-		word_mode_t word_mode = wm_word;
-		setPC(getGAMAddress(dst_mode, dst_reg, word_mode).addr.value());
+		setPC(getGAMAddress(dst_mode, dst_reg, wm_word).addr.value());
 
 		return true;
 	}
