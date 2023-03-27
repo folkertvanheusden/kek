@@ -1,7 +1,9 @@
 // (C) 2018-2023 by Folkert van Heusden
 // Released under MIT license
 
+#if !defined(_WIN32)
 #include <termios.h>
+#endif
 
 #include "console.h"
 
@@ -9,7 +11,9 @@
 class console_posix : public console
 {
 private:
+#if !defined(_WIN32)
 	struct termios org_tty_opts { 0 };
+#endif
 
 protected:
 	int wait_for_char_ll(const short timeout) override;

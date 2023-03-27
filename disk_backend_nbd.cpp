@@ -4,18 +4,31 @@
 #include <fcntl.h>
 #include <string.h>
 #include <unistd.h>
-#include <arpa/inet.h>
 #include <sys/types.h>
 
 #include "disk_backend_nbd.h"
 #include "log.h"
 #include "utils.h"
 
-#ifdef ESP32
+#if defined(ESP32)
 #include <lwip/netdb.h>
 #include <lwip/sockets.h>
+#elif defined(_WIN32)
+// from https://stackoverflow.com/questions/12765743/implicit-declaration-of-function-getaddrinfo-on-mingw
+#define _NTDDI_VERSION_FROM_WIN32_WINNT2(ver)    ver##0000
+#define _NTDDI_VERSION_FROM_WIN32_WINNT(ver)     _NTDDI_VERSION_FROM_WIN32_WINNT2(ver)
+
+#ifndef _WIN32_WINNT
+#  define _WIN32_WINNT 0x501
+#endif
+#ifndef NTDDI_VERSION
+#  define NTDDI_VERSION _NTDDI_VERSION_FROM_WIN32_WINNT(_WIN32_WINNT)
+#endif
+#include <ws2tcpip.h>
+#include <winsock2.h>
 #else
 #include <netdb.h>
+#include <arpa/inet.h>
 #include <sys/socket.h>
 #endif
 
