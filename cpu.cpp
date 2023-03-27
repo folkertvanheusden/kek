@@ -301,9 +301,6 @@ void cpu::queue_interrupt(const uint8_t level, const uint8_t vector)
 
 void cpu::addToMMR1(const uint8_t mode, const uint8_t reg, const word_mode_t word_mode)
 {
-	if (b->getMMR0() & 0160000 /* bits frozen? */)
-		return;
-
 	bool neg = mode == 4 || mode == 5;
 
 	if (word_mode == wm_word || reg >= 6 || mode == 6 || mode == 7)
@@ -424,11 +421,6 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 	const uint8_t src_mode   = (src >> 3) & 7;
 	const uint8_t src_reg    = src & 7;
 
-	gam_rc_t g_src { wm_word, rm_cur, i_space, { }, { }, { } };
-
-	if (operation != 0b110)
-		g_src = getGAM(src_mode, src_reg, word_mode, rm_cur);
-
 	const uint8_t dst        = instr & 63;
 	const uint8_t dst_mode   = (dst >> 3) & 7;
 	const uint8_t dst_reg    = dst & 7;
@@ -437,6 +429,8 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 
 	switch(operation) {
 		case 0b001: { // MOV/MOVB Move Word/Byte
+				    gam_rc_t g_src = getGAM(src_mode, src_reg, word_mode, rm_cur);
+
 				    if (word_mode == wm_byte && dst_mode == 0)
 					    setRegister(dst_reg, int8_t(g_src.value.value()));  // int8_t: sign extension
 				    else {
@@ -452,6 +446,8 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 			    }
 
 		case 0b010: { // CMP/CMPB Compare Word/Byte
+				    gam_rc_t g_src = getGAM(src_mode, src_reg, word_mode, rm_cur);
+
 				    auto     g_dst = getGAM(dst_mode, dst_reg, word_mode, rm_cur);
 
 				    uint16_t temp  = (g_src.value.value() - g_dst.value.value()) & (word_mode == wm_byte ? 0xff : 0xffff);
@@ -465,6 +461,8 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 			    }
 
 		case 0b011: { // BIT/BITB Bit Test Word/Byte
+				    gam_rc_t g_src  = getGAM(src_mode, src_reg, word_mode, rm_cur);
+
 				    auto g_dst      = getGAM(dst_mode, dst_reg, word_mode, rm_cur);
 				    uint16_t result = (g_dst.value.value() & g_src.value.value()) & (word_mode == wm_byte ? 0xff : 0xffff);
 
@@ -474,6 +472,8 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 			    }
 
 		case 0b100: { // BIC/BICB Bit Clear Word/Byte
+				    gam_rc_t g_src  = getGAM(src_mode, src_reg, word_mode, rm_cur);
+
 				    auto     g_dst  = getGAM(dst_mode, dst_reg, word_mode, rm_cur);
 
 				    uint16_t result = g_dst.value.value() & ~g_src.value.value();
@@ -485,6 +485,8 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 			    }
 
 		case 0b101: { // BIS/BISB Bit Set Word/Byte
+				    gam_rc_t g_src  = getGAM(src_mode, src_reg, word_mode, rm_cur);
+
 				    auto     g_dst  = getGAM(dst_mode, dst_reg, word_mode, rm_cur);
 
 				    uint16_t result = g_dst.value.value() | g_src.value.value();

@@ -14,6 +14,8 @@
 #include "tty.h"
 
 #if defined(ESP32)
+#include <esp_debug_helpers.h>
+
 // ESP32 goes in a crash-loop when allocating 128kB
 // see also https://github.com/espressif/esp-idf/issues/1934
 constexpr int n_pages = 12;
@@ -641,7 +643,15 @@ void bus::addToMMR1(const int8_t delta, const uint8_t reg)
 	assert(reg >= 0 && reg <= 7);
 	assert(delta >= -2 && delta <= 2);
 
+	if (getMMR0() & 0160000)  // MMR1 etc are locked
+		return;
+
+#if defined(ESP32)
+	if (MMR1 > 255)
+		esp_backtrace_print(32);
+#else
 	assert(MMR1 < 256);
+#endif
 
 	MMR1 <<= 8;
 
