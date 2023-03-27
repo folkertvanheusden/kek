@@ -259,7 +259,7 @@ bool cpu::check_queued_interrupts()
 	uint8_t current_level = getPSW_spl();
 
 	// uint8_t start_level = current_level <= 3 ? 0 : current_level + 1;
-	uint8_t start_level = current_level + 1;
+	uint8_t start_level   = current_level + 1;
 
 	for(uint8_t i=start_level; i < 8; i++) {
 		auto interrupts = queued_interrupts.find(i);
@@ -1627,15 +1627,13 @@ void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 				}
 			}
 			else {
-				bool mmr1_locked = b->getMMR0() & 0160000;
-
 				before_psw = getPSW();
-				if (!mmr1_locked)
-					b->addToMMR1(-2, 6);
+				b->addToMMR1(-2, 6);
 
 				before_pc  = getPC();
-				if (!mmr1_locked)
-					b->addToMMR1(-2, 6);
+				b->addToMMR1(-2, 6);
+
+				// TODO set MMR2?
 			}
 
 			// make sure the trap vector is retrieved from kernel space
