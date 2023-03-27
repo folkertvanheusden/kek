@@ -50,6 +50,6 @@ Wiring of the MAX232 connection:
 * RX  : 16
 
 
-Released under Apache License v2.0
+Released under MIT license.
 
 Folkert van Heusden
