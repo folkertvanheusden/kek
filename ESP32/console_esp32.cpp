@@ -9,6 +9,7 @@
 #include "console_esp32.h"
 #include "cpu.h"
 #include "error.h"
+#include "utils.h"
 
 
 #define NEOPIXELS_PIN	25
@@ -104,31 +105,39 @@ void console_esp32::panel_update_thread()
 	for(;;) {
 		vTaskDelay(20 / portTICK_RATE_MS);
 
-		// note that these are approximately as there's no mutex on the emulation
-		uint16_t current_PSW   = c->getPSW();
-		int      run_mode      = current_PSW >> 14;
+		try {
+			// note that these are approximately as there's no mutex on the emulation
+			uint16_t current_PSW   = c->getPSW();
+			int      run_mode      = current_PSW >> 14;
 
-		uint16_t current_PC    = c->getPC();
-		uint32_t full_addr     = b->calculate_physical_address(run_mode, current_PC, false, false, true, i_space);
+			uint16_t current_PC    = c->getPC();
+			uint32_t full_addr     = b->calculate_physical_address(run_mode, current_PC, false, false, true, i_space);
 
-		uint16_t current_instr = b->readWord(current_PC);
+			uint16_t current_instr = b->readWord(current_PC);
 
-		uint32_t led_color     = run_mode_led_color[run_mode];
+			uint32_t led_color     = run_mode_led_color[run_mode];
 
-		for(uint8_t b=0; b<22; b++)
-			pixels.setPixelColor(b, full_addr & (1 << b) ? led_color : 0);
+			for(uint8_t b=0; b<22; b++)
+				pixels.setPixelColor(b, full_addr & (1 << b) ? led_color : 0);
 
-		for(uint8_t b=0; b<16; b++)
-			pixels.setPixelColor(b + 22, current_PSW & (1l << b) ? magenta : 0);
+			for(uint8_t b=0; b<16; b++)
+				pixels.setPixelColor(b + 22, current_PSW & (1l << b) ? magenta : 0);
 
-		for(uint8_t b=0; b<16; b++)
-			pixels.setPixelColor(b + 38, current_instr & (1l << b) ? red : 0);
+			for(uint8_t b=0; b<16; b++)
+				pixels.setPixelColor(b + 38, current_instr & (1l << b) ? red : 0);
 
-		pixels.setPixelColor(54, running_flag             ? white : 0);
+			pixels.setPixelColor(54, running_flag             ? white : 0);
 
-		pixels.setPixelColor(55, disk_read_activity_flag  ? blue  : 0);
-		pixels.setPixelColor(56, disk_write_activity_flag ? blue  : 0);
+			pixels.setPixelColor(55, disk_read_activity_flag  ? blue  : 0);
+			pixels.setPixelColor(56, disk_write_activity_flag ? blue  : 0);
 
-		pixels.show();
+			pixels.show();
+		}
+		catch(std::exception & e) {
+			put_string_lf(format("Exception in panel thread: %s", e.what()));
+		}
+		catch(...) {
+			put_string_lf("Unknown exception in panel thread");
+		}
 	}
 }
