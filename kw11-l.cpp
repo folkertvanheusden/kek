@@ -25,7 +25,7 @@ void thread_wrapper_kw11(void *p)
 kw11_l::kw11_l(bus *const b, console *const cnsl) : b(b), cnsl(cnsl)
 {
 #if defined(ESP32)
-	xTaskCreatePinnedToCore(&thread_wrapper_kw11, "kw11-l", 2048, this, 1, nullptr, 0);
+	xTaskCreate(&thread_wrapper_kw11, "kw11-l", 2048, this, 1, nullptr);
 #else
 	th = new std::thread(std::ref(*this));
 #endif

@@ -21,7 +21,7 @@
 {
 	int e = errno;
 
-#if !defined(_WIN32)
+#if !defined(_WIN32) && !defined(ESP32)
 	(void)endwin();
 #endif
 

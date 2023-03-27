@@ -517,14 +517,10 @@ void setup()
 	Serial.println(F("Connect TTY to bus"));
 	b->add_tty(tty_);
 
-	Serial.print(F("Starting panel (on CPU 0, main emulator runs on CPU "));
-	Serial.print(xPortGetCoreID());
-	Serial.println(F(")"));
-	xTaskCreatePinnedToCore(&console_thread_wrapper_panel, "panel", 2048, cnsl, 1, nullptr, 0);
+	Serial.println(F("Starting panel"));
+	xTaskCreate(&console_thread_wrapper_panel, "panel", 2048, cnsl, 1, nullptr);
 
-	xTaskCreatePinnedToCore(&console_thread_wrapper_io,    "c-io",  2048, cnsl, 1, nullptr, 0);
-
-	// setup_wifi_stations();
+	xTaskCreate(&console_thread_wrapper_io,    "c-io",  2048, cnsl, 1, nullptr);
 
 	Serial.print(F("Free RAM after init: "));
 	Serial.println(ESP.getFreeHeap());
