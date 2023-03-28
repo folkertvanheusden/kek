@@ -2,6 +2,7 @@
 // Released under MIT license
 
 #include <chrono>
+#include <optional>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -70,7 +71,7 @@ int console::get_char()
 	return c;
 }
 
-int console::wait_char(const int timeout_ms)
+std::optional<char> console::wait_char(const int timeout_ms)
 {
 	std::unique_lock<std::mutex> lck(input_lock);
 
@@ -111,34 +112,34 @@ std::string console::read_line(const std::string & prompt)
 	std::string str;
 
 	for(;;) {
-		char c = wait_char(500);
+		auto c = wait_char(250);
 
 		if (*stop_event == EVENT_TERMINATE)
 			return "";
 
-		if (c == -1 || c == 255 /* ESP32 has unsigned char? */)
+		if (c.has_value() == false)
 			continue;
 
-		if (c == 13 || c == 10)
+		if (c.value() == 13 || c.value() == 10)
 			break;
 
-		if (c == 8 || c == 127) {  // backspace
+		if (c.value() == 8 || c.value() == 127) {  // backspace
 			if (!str.empty()) {
 				str = str.substr(0, str.size() - 1);
 
 				emit_backspace();
 			}
 		}
-		else if (c == 21) {  // ^u
+		else if (c.value() == 21) {  // ^u
 			for(size_t i=0; i<str.size(); i++)
 				emit_backspace();
 
 			str.clear();
 		}
-		else if (c >= 32) {
-			str += c;
+		else if (c.value() >= 32) {
+			str += c.value();
 
-			put_char(c);
+			put_char(c.value());
 		}
 	}
 

@@ -5,6 +5,7 @@
 
 #include <atomic>
 #include <condition_variable>
+#include <optional>
 #include <thread>
 #include <vector>
 
@@ -55,7 +56,7 @@ public:
 
 	bool         poll_char();
 	int          get_char();
-	int          wait_char(const int timeout_ms);
+	std::optional<char> wait_char(const int timeout_ms);
 	std::string  read_line(const std::string & prompt);
 	void         flush_input();
 
