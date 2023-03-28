@@ -6,7 +6,7 @@ To build for e.g. linux:
     mkdir build
     cd build
     cmake ..
-    make kek
+    make
 
     Required:
     * libncursesw5-dev
@@ -16,7 +16,7 @@ To build for e.g. windows:
     mkdir build-win32
     cd build-win32
     cmake -DCMAKE_TOOLCHAIN_FILE=../mingw64.cmake ..
-    make kek-win32
+    make
 
 
 To run a disk image:
