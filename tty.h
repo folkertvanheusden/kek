@@ -35,6 +35,8 @@ private:
 	std::thread *th       { nullptr };
 	std::atomic_bool stop_flag { false };
 
+	void notify_rx();
+
 public:
 	tty(console *const c, bus *const b);
 	virtual ~tty();

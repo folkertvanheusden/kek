@@ -45,6 +45,14 @@ uint8_t tty::readByte(const uint16_t addr)
 	return v;
 }
 
+void tty::notify_rx()
+{
+	registers[(PDP11TTY_TKS - PDP11TTY_BASE) / 2] |= 128;
+
+	if (registers[(PDP11TTY_TKS - PDP11TTY_BASE) / 2] & 64)
+		b->getCpu()->queue_interrupt(4, 060);
+}
+
 uint16_t tty::readWord(const uint16_t addr)
 {
 	const int reg = (addr - PDP11TTY_BASE) / 2;
@@ -69,12 +77,8 @@ uint16_t tty::readWord(const uint16_t addr)
 
 			vtemp = ch | (parity(ch) << 7);
 
-			if (chars.empty() == false) {
-				registers[(PDP11TTY_TKS - PDP11TTY_BASE) / 2] |= 128;
-
-				if (registers[(PDP11TTY_TKS - PDP11TTY_BASE) / 2] & 64)
-					b->getCpu()->queue_interrupt(4, 060);
-			}
+			if (chars.empty() == false)
+				notify_rx();
 		}
 	}
 	else if (addr == PDP11TTY_TPS) {
@@ -96,10 +100,7 @@ void tty::operator()()
 
 			chars.push_back(c->get_char());
 
-			registers[(PDP11TTY_TKS - PDP11TTY_BASE) / 2] |= 128;
-
-			if (registers[(PDP11TTY_TKS - PDP11TTY_BASE) / 2] & 64)
-				b->getCpu()->queue_interrupt(4, 060);
+			notify_rx();
 		}
 		else {
 			myusleep(100000);
