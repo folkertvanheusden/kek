@@ -43,15 +43,18 @@ console_shabadge::~console_shabadge()
 
 void console_shabadge::put_char_ll(const char c)
 {
-	screen_updated = true;
+	screen_updated_ts = millis();
+	screen_updated    = true;
 }
 
 void console_shabadge::panel_update_thread()
 {
 	for(;;) {
-		vTaskDelay(1000 / portTICK_RATE_MS);
+		vTaskDelay(100 / portTICK_RATE_MS);
 
-		if (screen_updated.exchange(false)) {
+		if (screen_updated && millis() - screen_updated_ts >= 1000) {
+			screen_updated = false;
+
 			paint->Clear(UNCOLORED);
 
 			for(int y=0; y<t_height; y++) {

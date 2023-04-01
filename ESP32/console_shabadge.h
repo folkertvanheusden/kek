@@ -12,11 +12,12 @@
 class console_shabadge : public console_esp32
 {
 private:
-	unsigned char image[4736];
-	Paint        *paint { nullptr };
-	Epd           epd;
+	unsigned char   image[4736];
+	Paint          *paint { nullptr };
+	Epd             epd;
 
-	std::atomic_bool screen_updated { false };
+	std::atomic_int  screen_updated_ts { 0     };
+	std::atomic_bool screen_updated    { false };
 
 	void put_char_ll(const char c) override;
 

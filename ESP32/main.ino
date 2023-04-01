@@ -286,8 +286,13 @@ std::optional<std::pair<std::vector<disk_backend *>, std::vector<disk_backend *>
 
 	c->put_string_lf("Files on SD-card:");
 
+#if defined(SHA2017)
+	if (!sd.begin(21, SD_SCK_MHZ(10)))
+		sd.initErrorHalt();
+#else
 	if (!sd.begin(SS, SD_SCK_MHZ(15)))
 		sd.initErrorHalt();
+#endif
 
 	for(;;) {
 		sd.ls("/", LS_DATE | LS_SIZE | LS_R);
@@ -352,7 +357,7 @@ void set_disk_configuration(std::pair<std::vector<disk_backend *>, std::vector<d
 void configure_disk(console *const c)
 {
 	for(;;) {
-		Serial.println(F("Load disk"));
+		c->put_string_lf("Load disk");
 
 		auto backend = select_disk_backend(cnsl);
 
@@ -548,6 +553,8 @@ void setup()
 	Serial.flush();
 
 	cnsl->start_thread();
+
+	cnsl->put_string_lf("PDP-11/70 emulator, (C) Folkert van Heusden");
 }
 
 void loop()
