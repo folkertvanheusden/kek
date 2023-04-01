@@ -43,6 +43,8 @@ console_shabadge::~console_shabadge()
 
 void console_shabadge::put_char_ll(const char c)
 {
+	console_esp32::put_char_ll(c);
+
 	screen_updated_ts = millis();
 	screen_updated    = true;
 }
