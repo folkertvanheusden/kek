@@ -15,11 +15,14 @@
 #include "utils.h"
 
 
-console::console(std::atomic_uint32_t *const stop_event, bus *const b) :
+console::console(std::atomic_uint32_t *const stop_event, bus *const b, const int t_width, const int t_height) :
 	stop_event(stop_event),
-	b(b)
+	b(b),
+	t_width(t_width),
+	t_height(t_height)
 {
-	memset(screen_buffer, ' ', sizeof screen_buffer);
+
+	screen_buffer = new char[t_width * t_height]();
 }
 
 console::~console()
@@ -27,6 +30,8 @@ console::~console()
 	// done as well in subclasses but also here to
 	// stop lgtm.com complaining about it
 	stop_thread();
+
+	delete [] screen_buffer;
 }
 
 void console::start_thread()
@@ -187,7 +192,7 @@ void console::put_char(const char c)
 			tx--;
 	}
 	else {
-		screen_buffer[ty][tx++] = c;
+		screen_buffer[ty * t_width + tx++] = c;
 
 		if (tx == t_width) {
 			tx = 0;
@@ -200,11 +205,11 @@ void console::put_char(const char c)
 	}
 
 	if (ty == t_height) {
-		memmove(&screen_buffer[0], &screen_buffer[1], sizeof(char) * t_width * (t_height - 1));
+		memmove(&screen_buffer[0 * t_width], &screen_buffer[1 * t_width], sizeof(char) * t_width * (t_height - 1));
 
 		ty--;
 
-		memset(screen_buffer[t_height - 1], ' ', t_width);
+		memset(&screen_buffer[(t_height - 1) * t_width], ' ', t_width);
 	}
 }
 

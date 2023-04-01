@@ -16,9 +16,6 @@
 #endif
 
 
-constexpr const int t_width  { 80 };
-constexpr const int t_height { 25 };
-
 class console
 {
 private:
@@ -37,7 +34,9 @@ protected:
 
 	bool                    stop_thread_flag { false };
 
-	char                    screen_buffer[t_height][t_width];
+	const int               t_width          { 0 };
+	const int               t_height         { 0 };
+	char                   *screen_buffer    { nullptr };
 	uint8_t                 tx               { 0 };
 	uint8_t                 ty               { 0 };
 
@@ -48,7 +47,7 @@ protected:
 	virtual void put_char_ll(const char c) = 0;
 
 public:
-	console(std::atomic_uint32_t *const stop_event, bus *const b);
+	console(std::atomic_uint32_t *const stop_event, bus *const b, const int t_width = 80, const int t_height = 25);
 	virtual ~console();
 
 	void         start_thread();

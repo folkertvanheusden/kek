@@ -14,7 +14,11 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
+#if defined(SHA2017)
+#include "console_shabadge.h"
+#else
 #include "console_esp32.h"
+#endif
 #include "cpu.h"
 #include "debugger.h"
 #include "disk_backend.h"
@@ -513,7 +517,11 @@ void setup()
 	Serial_RS232.println(F("\014Console enabled on TTY"));
 
 	std::vector<Stream *> serial_ports { &Serial_RS232, &Serial };
-	cnsl = new console_esp32(&stop_event, b, serial_ports);
+#if defined(SHA2017)
+	cnsl = new console_shabadge(&stop_event, b, serial_ports);
+#else
+	cnsl = new console_esp32(&stop_event, b, serial_ports, 80, 25);
+#endif
 
 	Serial.println(F("Start line-frequency interrupt"));
 	kw11_l *lf = new kw11_l(b, cnsl);
