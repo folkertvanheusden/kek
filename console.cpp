@@ -87,7 +87,7 @@ std::optional<char> console::wait_char(const int timeout_ms)
 		}
 	}
 
-	return -1;
+	return { };
 }
 
 void console::flush_input()

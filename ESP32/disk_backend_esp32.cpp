@@ -37,7 +37,7 @@ bool disk_backend_esp32::read(const off_t offset, const size_t n, uint8_t *const
 {
 	DOLOG(debug, false, "disk_backend_esp32::read: read %zu bytes from offset %zu", n, offset);
 
-#if defined(ESP32)
+#if defined(ESP32) && !defined(SHA2017)
 	digitalWrite(LED_BUILTIN, LOW);
 #endif
 
@@ -49,7 +49,7 @@ bool disk_backend_esp32::read(const off_t offset, const size_t n, uint8_t *const
 	if (fh->read(target, n) != size_t(n)) {
        		DOLOG(debug, true, "fread error: %s", strerror(errno));
 
-#if defined(ESP32)
+#if defined(ESP32) && !defined(SHA2017)
 		digitalWrite(LED_BUILTIN, HIGH);
 #endif
 		return false;
@@ -57,7 +57,7 @@ bool disk_backend_esp32::read(const off_t offset, const size_t n, uint8_t *const
 
 	yield();
 
-#if defined(ESP32)
+#if defined(ESP32) && !defined(SHA2017)
 	digitalWrite(LED_BUILTIN, HIGH);
 #endif
 
@@ -68,7 +68,7 @@ bool disk_backend_esp32::write(const off_t offset, const size_t n, const uint8_t
 {
 	DOLOG(debug, false, "disk_backend_esp32::write: write %zu bytes to offset %zu", n, offset);
 
-#if defined(ESP32)
+#if defined(ESP32) && !defined(SHA2017)
 	digitalWrite(LED_BUILTIN, LOW);
 #endif
 
@@ -80,7 +80,7 @@ bool disk_backend_esp32::write(const off_t offset, const size_t n, const uint8_t
 	if (fh->write(from, n) != n) {
 		DOLOG(ll_error, true, "RK05 fwrite error %s", strerror(errno));
 
-#if defined(ESP32)
+#if defined(ESP32) && !defined(SHA2017)
 		digitalWrite(LED_BUILTIN, HIGH);
 #endif
 		return false;
@@ -88,8 +88,8 @@ bool disk_backend_esp32::write(const off_t offset, const size_t n, const uint8_t
 
 	yield();
 
-#if defined(ESP32)
-		digitalWrite(LED_BUILTIN, HIGH);
+#if defined(ESP32) && !defined(SHA2017)
+	digitalWrite(LED_BUILTIN, HIGH);
 #endif
 
 	return true;

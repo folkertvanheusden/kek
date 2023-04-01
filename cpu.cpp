@@ -1571,13 +1571,13 @@ bool cpu::misc_operations(const uint16_t instr)
 		// PUSH link
 		pushStack(getRegister(link_reg));
 
+		b->addToMMR1(-2, 6);
+
 		// MOVE PC,link
 		setRegister(link_reg, getPC());
 
 		// JMP dst
 		setPC(dst_value);
-
-		b->addToMMR1(-2, 6);
 
 		return true;
 	}
@@ -1628,9 +1628,11 @@ void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 			}
 			else {
 				before_psw = getPSW();
+
 				b->addToMMR1(-2, 6);
 
 				before_pc  = getPC();
+
 				b->addToMMR1(-2, 6);
 
 				// TODO set MMR2?
@@ -2163,8 +2165,10 @@ void cpu::step_a()
 	if ((b->getMMR0() & 0160000) == 0)
 		b->clearMMR1();
 
-	if (any_queued_interrupts && check_queued_interrupts())
-	       return; // documentation
+	if (any_queued_interrupts && check_queued_interrupts()) {
+		if ((b->getMMR0() & 0160000) == 0)
+			b->clearMMR1();
+	}
 }
 
 void cpu::step_b()

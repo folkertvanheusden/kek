@@ -188,8 +188,12 @@ std::optional<disk_backend_t> select_disk_backend(console *const c)
 	c->put_string("1. network (NBD), 2. local SD card, 9. abort");
 
 	int ch = -1;
-	while(ch == -1 && ch != '1' && ch != '2' && ch != '9')
-		ch = c->wait_char(500);
+	while(ch == -1 && ch != '1' && ch != '2' && ch != '9') {
+		auto temp = c->wait_char(500);
+
+		if (temp.has_value())
+			ch = temp.value();
+	}
 
 	c->put_string_lf(format("%c", ch));
 
@@ -208,8 +212,12 @@ std::optional<disk_type_t> select_disk_type(console *const c)
 	c->put_string("1. RK05, 2. RL02, 9. abort");
 
 	int ch = -1;
-	while(ch == -1 && ch != '1' && ch != '2' && ch != '9')
-		ch = c->wait_char(500);
+	while(ch == -1 && ch != '1' && ch != '2' && ch != '9') {
+		auto temp = c->wait_char(500);
+
+		if (temp.has_value())
+			ch = temp.value();
+	}
 
 	c->put_string_lf(format("%c", ch));
 
@@ -525,7 +533,9 @@ void setup()
 	Serial.print(F("Free RAM after init: "));
 	Serial.println(ESP.getFreeHeap());
 
+#if !defined(SHA2017)
 	pinMode(LED_BUILTIN, OUTPUT);
+#endif
 
 	Serial.flush();
 

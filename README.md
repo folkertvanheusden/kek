@@ -50,6 +50,9 @@ Wiring of the MAX232 connection:
 * RX  : 16
 
 
+See SHA2017-badge.md if you want to flash your SHA20127 badge with this software.
+
+
 Released under MIT license.
 
 Folkert van Heusden
