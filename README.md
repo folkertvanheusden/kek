@@ -53,6 +53,14 @@ Wiring of the MAX232 connection:
 See SHA2017-badge.md if you want to flash your SHA20127 badge with this software.
 
 
+Some pictures:
+
+![(running on a regular ESP32 connected to a VT510 terminal)](images/KEK-ESP32-VT510.jpg)
+
+![(running on a SHA2017-badge)](images/KEK-sha2017badge.jpg)
+
+
+
 Released under MIT license.
 
 Folkert van Heusden
