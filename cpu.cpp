@@ -254,7 +254,11 @@ void cpu::setPSW_flags_nzv(const uint16_t value, const word_mode_t word_mode)
 
 bool cpu::check_queued_interrupts()
 {
+#if defined(BUILD_FOR_RP2040)
+	xSemaphoreTake(qi_lock, portMAX_DELAY);
+#else
 	std::unique_lock<std::mutex> lck(qi_lock);
+#endif
 
 	uint8_t current_level = getPSW_spl();
 
@@ -275,24 +279,43 @@ bool cpu::check_queued_interrupts()
 
 			trap(v, i, true);
 
+#if defined(BUILD_FOR_RP2040)
+			xSemaphoreGive(qi_lock);
+#endif
+
 			return true;
 		}
 	}
 
 	any_queued_interrupts = false;
 
+#if defined(BUILD_FOR_RP2040)
+	xSemaphoreGive(qi_lock);
+#endif
+
 	return false;
 }
 
 void cpu::queue_interrupt(const uint8_t level, const uint8_t vector)
 {
+#if defined(BUILD_FOR_RP2040)
+	xSemaphoreTake(qi_lock, portMAX_DELAY);
+#else
 	std::unique_lock<std::mutex> lck(qi_lock);
+#endif
 
 	auto it = queued_interrupts.find(level);
 
 	it->second.insert(vector);
 
+#if defined(BUILD_FOR_RP2040)
+	qi_cv = true;
+
+	xSemaphoreGive(qi_lock);
+#else
+
 	qi_cv.notify_all();
+#endif
 
 	any_queued_interrupts = true;
 
@@ -1496,9 +1519,16 @@ bool cpu::misc_operations(const uint16_t instr)
 
 		case 0b0000000000000001: // WAIT
 			{
+#if defined(BUILD_FOR_RP2040)
+				while(!qi_cv)
+					vTaskDelay(10);
+
+				qi_cv = false;  // FIXME
+#else
 				std::unique_lock<std::mutex> lck(qi_lock);
 
 				qi_cv.wait(lck);
+#endif
 			}
 
 			DOLOG(debug, false, "WAIT returned");
@@ -2201,7 +2231,7 @@ void cpu::step_b()
 
 		trap(010);  // floating point nog niet geimplementeerd
 	}
-	catch(const int exception) {
-		DOLOG(debug, true, "bus-trap during execution of command (%d)", exception);
+	catch(const int exception_nr) {
+		DOLOG(debug, true, "bus-trap during execution of command (%d)", exception_nr);
 	}
 }

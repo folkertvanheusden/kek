@@ -14,6 +14,11 @@
 #include "rk05.h"
 #include "rl02.h"
 
+#if defined(BUILD_FOR_RP2040)
+#include "rp2040.h"
+#endif
+
+
 #define ADDR_MMR0 0177572
 #define ADDR_MMR1 0177574
 #define ADDR_MMR2 0177576
@@ -93,7 +98,11 @@ private:
 
 	uint16_t MMR0 { 0 }, MMR1 { 0 }, MMR2 { 0 }, MMR3 { 0 }, CPUERR { 0 }, PIR { 0 }, CSR { 0 };
 
+#if defined(BUILD_FOR_RP2040)
+	SemaphoreHandle_t lf_csr_lock { xSemaphoreCreateBinary() };
+#else
 	std::mutex lf_csr_lock;
+#endif
 	uint16_t   lf_csr { 0 };
 
 	uint16_t microprogram_break_register { 0 };

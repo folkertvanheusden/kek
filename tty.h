@@ -29,10 +29,19 @@ class tty
 private:
 	console *const c      { nullptr };
 	bus     *const b      { nullptr };
-	std::mutex chars_lock;
+
+#if defined(BUILD_FOR_RP2040)
+	SemaphoreHandle_t chars_lock { xSemaphoreCreateBinary() };
+#else
+	std::mutex        chars_lock;
+#endif
 	std::vector<char> chars;
+
 	uint16_t registers[4] { 0 };
-	std::thread *th       { nullptr };
+
+#if !defined(BUILD_FOR_RP2040)
+	std::thread     *th        { nullptr };
+#endif
 	std::atomic_bool stop_flag { false };
 
 	void notify_rx();

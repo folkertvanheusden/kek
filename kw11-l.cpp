@@ -10,10 +10,12 @@
 
 #if defined(ESP32)
 #include "esp32.h"
+#elif defined(BUILD_FOR_RP2040)
+#include "rp2040.h"
 #endif
 
 
-#if defined(ESP32)
+#if defined(ESP32) || defined(BUILD_FOR_RP2040)
 void thread_wrapper_kw11(void *p)
 {
 	kw11_l *const kw11l = reinterpret_cast<kw11_l *>(p);
@@ -24,7 +26,7 @@ void thread_wrapper_kw11(void *p)
 
 kw11_l::kw11_l(bus *const b, console *const cnsl) : b(b), cnsl(cnsl)
 {
-#if defined(ESP32)
+#if defined(ESP32) || defined(BUILD_FOR_RP2040)
 	xTaskCreate(&thread_wrapper_kw11, "kw11-l", 2048, this, 1, nullptr);
 #else
 	th = new std::thread(std::ref(*this));
@@ -35,11 +37,11 @@ kw11_l::~kw11_l()
 {
 	stop_flag = true;
 
-#if !defined(ESP32)
+#if !defined(ESP32) && !defined(BUILD_FOR_RP2040)
 	th->join();
-#endif
 
 	delete th;
+#endif
 }
 
 void kw11_l::operator()()

@@ -1,11 +1,8 @@
 #pragma once
 
-#if defined(RP2040)
+#if defined(BUILD_FOR_RP2040)
 #include <Arduino.h>
-
-#include <SPI.h>
-
-#define USE_SDFAT
-#define SD_FAT_TYPE 1
-#include <SdFat.h>
+#include <FreeRTOS.h>
+#include <semphr.h>
+#include <task.h>
 #endif

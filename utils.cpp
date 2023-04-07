@@ -1,7 +1,7 @@
 // (C) 2018-2023 by Folkert van Heusden
 // Released under MIT license
 
-#if defined(ESP32)
+#if defined(ESP32) || defined(BUILD_FOR_RP2040)
 #include <Arduino.h>
 #endif
 
@@ -16,6 +16,7 @@
 #include <vector>
 #include <sys/time.h>
 
+#include "rp2040.h"
 #include "win32.h"
 
 
@@ -31,6 +32,16 @@ void setBit(uint16_t & v, const int bit, const bool vb)
 
 std::string format(const char *const fmt, ...)
 {
+#if defined(BUILD_FOR_RP2040)
+	char buffer[128];
+        va_list ap;
+
+        va_start(ap, fmt);
+	vsnprintf(buffer, sizeof buffer, fmt, ap);
+	va_end(ap);
+
+	return buffer;
+#else
 	char *buffer = nullptr;
         va_list ap;
 
@@ -42,11 +53,12 @@ std::string format(const char *const fmt, ...)
 	free(buffer);
 
 	return result;
+#endif
 }
 
 unsigned long get_ms()
 {
-#if defined(ESP32)
+#if defined(ESP32) || defined(BUILD_FOR_RP2040)
 	return millis();
 #else
 	timeval tv;
@@ -60,7 +72,7 @@ unsigned long get_ms()
 
 uint64_t get_us()
 {
-#if defined(ESP32)
+#if defined(ESP32) || defined(BUILD_FOR_RP2040)
 	return micros();
 #else
 	timeval tv;
@@ -79,7 +91,7 @@ int parity(int v)
 
 void myusleep(uint64_t us)
 {
-#if defined(ESP32)
+#if defined(ESP32) || defined(BUILD_FOR_RP2040)
 	for(;;) {
 		uint64_t n_ms = us / 1000;
 
@@ -143,7 +155,7 @@ std::vector<std::string> split(std::string in, std::string splitter)
 
 void set_thread_name(std::string name)
 {
-#if !defined(ESP32)
+#if !defined(ESP32) && !defined(BUILD_FOR_RP2040)
 	if (name.length() > 15)
 		name = name.substr(0, 15);
 

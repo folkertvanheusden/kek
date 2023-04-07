@@ -20,19 +20,33 @@ const char * const regnames[] = {
 	"puncher buffer"
 	};
 
+#if defined(BUILD_FOR_RP2040)
+void thread_wrapper_tty(void *p)
+{
+	tty *const t = reinterpret_cast<tty *>(p);
+
+	t->operator()();
+}
+#endif
+
 tty::tty(console *const c, bus *const b) :
 	c(c),
 	b(b)
 {
+#if defined(BUILD_FOR_RP2040)
+	xTaskCreate(&thread_wrapper_tty, "tty-l", 2048, this, 1, nullptr);
+#else
 	th = new std::thread(std::ref(*this));
+#endif
 }
 
 tty::~tty()
 {
 	stop_flag = true;
-
+#if !defined(BUILD_FOR_RP2040)
 	th->join();
 	delete th;
+#endif
 }
 
 uint8_t tty::readByte(const uint16_t addr)
@@ -58,17 +72,19 @@ uint16_t tty::readWord(const uint16_t addr)
 	const int reg = (addr - PDP11TTY_BASE) / 2;
 	uint16_t vtemp = registers[reg];
 
-	if (addr == PDP11TTY_TKS) {
-		std::unique_lock<std::mutex> lck(chars_lock);
+#if defined(BUILD_FOR_RP2040)
+	xSemaphoreTake(chars_lock, portMAX_DELAY);
+#else
+	std::unique_lock<std::mutex> lck(chars_lock);
+#endif
 
+	if (addr == PDP11TTY_TKS) {
 		bool have_char = chars.empty() == false;
 
 		vtemp &= ~128;
 		vtemp |= have_char ? 128 : 0;
 	}
 	else if (addr == PDP11TTY_TKB) {
-		std::unique_lock<std::mutex> lck(chars_lock);
-
 		if (chars.empty())
 			vtemp = 0;
 		else {
@@ -85,6 +101,10 @@ uint16_t tty::readWord(const uint16_t addr)
 		vtemp |= 128;
 	}
 
+#if defined(BUILD_FOR_RP2040)
+	xSemaphoreGive(chars_lock);
+#endif
+
 	DOLOG(debug, true, "PDP11TTY read addr %o (%s): %d, 7bit: %d", addr, regnames[reg], vtemp, vtemp & 127);
 
 	registers[reg] = vtemp;
@@ -96,11 +116,19 @@ void tty::operator()()
 {
 	while(!stop_flag) {
 		if (c->poll_char()) {
+#if defined(BUILD_FOR_RP2040)
+			xSemaphoreTake(chars_lock, portMAX_DELAY);
+#else
 			std::unique_lock<std::mutex> lck(chars_lock);
+#endif
 
 			chars.push_back(c->get_char());
 
 			notify_rx();
+
+#if defined(BUILD_FOR_RP2040)
+			xSemaphoreGive(chars_lock);
+#endif
 		}
 		else {
 			myusleep(100000);

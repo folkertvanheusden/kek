@@ -6,26 +6,35 @@
 #include <atomic>
 #include <HardwareSerial.h>
 #include <LittleFS.h>
+#if defined(BUILD_FOR_RP2040)
+#include <SD.h>
+#endif
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#if !defined(BUILD_FOR_RP2040)
 #include <WiFi.h>
 #include <sys/poll.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#endif
 
 #if defined(SHA2017)
 #include "console_shabadge.h"
-#else
+#elif !defined(BUILD_FOR_RP2040)
 #include "console_esp32.h"
 #endif
 #include "cpu.h"
 #include "debugger.h"
 #include "disk_backend.h"
+#if !defined(BUILD_FOR_RP2040)
 #include "disk_backend_esp32.h"
 #include "disk_backend_nbd.h"
+#endif
 #include "error.h"
+#if !defined(BUILD_FOR_RP2040)
 #include "esp32.h"
+#endif
 #include "gen.h"
 #include "kw11-l.h"
 #include "loaders.h"
@@ -41,6 +50,11 @@ constexpr const char SERIAL_CFG_FILE[] = "/serial.json";
 #define MAX_CFG_SIZE 1024
 StaticJsonDocument<MAX_CFG_SIZE> json_doc;
 
+#if defined(BUILD_FOR_RP2040)
+#define Serial_RS232 Serial2
+#else
+HardwareSerial       Serial_RS232(1);
+#endif
 
 bus     *b    = nullptr;
 cpu     *c    = nullptr;
@@ -57,9 +71,7 @@ std::atomic_bool    *running         { nullptr };
 
 bool                 trace_output    { false };
 
-HardwareSerial       Serial_RS232(2);
-
-// std::atomic_bool on_wifi   { false };
+typedef enum { DT_RK05, DT_RL02 } disk_type_t;
 
 void console_thread_wrapper_panel(void *const c)
 {
@@ -109,8 +121,7 @@ bool save_serial_speed_configuration(const uint32_t bps)
 	return true;
 }
 
-typedef enum { DT_RK05, DT_RL02 } disk_type_t;
-
+#if !defined(BUILD_FOR_RP2040)
 std::optional<std::pair<std::vector<disk_backend *>, std::vector<disk_backend *> > > load_disk_configuration(console *const c)
 {
 	File dataFile = LittleFS.open(NET_DISK_CFG_FILE, "r");
@@ -185,10 +196,15 @@ bool save_disk_configuration(const std::string & nbd_host, const int nbd_port, c
 
 	return true;
 }
+#endif
 
 typedef enum { BE_NETWORK, BE_SD } disk_backend_t;
+
 std::optional<disk_backend_t> select_disk_backend(console *const c)
 {
+#if defined(BUILD_FOR_RP2040)
+return BE_SD;
+#endif
 	c->put_string("1. network (NBD), 2. local SD card, 9. abort");
 
 	int ch = -1;
@@ -235,6 +251,7 @@ std::optional<disk_type_t> select_disk_type(console *const c)
 		return DT_RL02;
 }
 
+#if !defined(BUILD_FOR_RP2040)
 std::optional<std::pair<std::vector<disk_backend *>, std::vector<disk_backend *> > > select_nbd_server(console *const c)
 {
 	c->flush_input();
@@ -275,6 +292,7 @@ std::optional<std::pair<std::vector<disk_backend *>, std::vector<disk_backend *>
 
 	return { };
 }
+#endif
 
 // RK05, RL02 files
 std::optional<std::pair<std::vector<disk_backend *>, std::vector<disk_backend *> > > select_disk_files(console *const c)
@@ -289,6 +307,8 @@ std::optional<std::pair<std::vector<disk_backend *>, std::vector<disk_backend *>
 #if defined(SHA2017)
 	if (!sd.begin(21, SD_SCK_MHZ(10)))
 		sd.initErrorHalt();
+#elif defined(BUILD_FOR_RP2040)
+//	SD.begin(cspin, SPI1);  FIXME
 #else
 	if (!sd.begin(SS, SD_SCK_MHZ(15)))
 		sd.initErrorHalt();
@@ -317,6 +337,7 @@ std::optional<std::pair<std::vector<disk_backend *>, std::vector<disk_backend *>
 		if (fh.open(selected_file.c_str(), O_RDWR)) {
 			fh.close();
 
+#if !defined(BUILD_FOR_RP2040)  // FIXME
 			disk_backend *temp = new disk_backend_esp32(selected_file);
 
 			if (!temp->begin()) {
@@ -333,6 +354,7 @@ std::optional<std::pair<std::vector<disk_backend *>, std::vector<disk_backend *>
 
 			if (disk_type.value() == DT_RL02)
 				return { { { }, { temp } } };
+#endif
 		}
 
 		c->put_string_lf("open failed");
@@ -366,9 +388,11 @@ void configure_disk(console *const c)
 
 		std::optional<std::pair<std::vector<disk_backend *>, std::vector<disk_backend *> > > files;
 
+#if !defined(BUILD_FOR_RP2040)
 		if (backend == BE_NETWORK)
 			files = select_nbd_server(cnsl);
 		else // if (backend == BE_SD)
+#endif
 			files = select_disk_files(cnsl);
 
 		if (files.has_value() == false)
@@ -380,6 +404,7 @@ void configure_disk(console *const c)
 	}
 }
 
+#if !defined(BUILD_FOR_RP2040)
 void set_hostname()
 {
 	WiFi.setHostname("PDP-11");
@@ -459,14 +484,6 @@ void start_network(console *const c)
 	c->put_string_lf(format("Local IP address: %s", WiFi.localIP().toString().c_str()));
 }
 
-void set_tty_serial_speed(console *const c, const uint32_t bps)
-{
-	Serial_RS232.begin(bps);
-
-	if (save_serial_speed_configuration(bps) == false)
-		c->put_string_lf("Failed to store configuration file with serial settings");
-}
-
 void recall_configuration(console *const c)
 {
 	c->put_string_lf("Starting network...");
@@ -478,6 +495,15 @@ void recall_configuration(console *const c)
 		c->put_string_lf("Starting disk...");
 		set_disk_configuration(disk_configuration.value());
 	}
+}
+#endif
+
+void set_tty_serial_speed(console *const c, const uint32_t bps)
+{
+	Serial_RS232.begin(bps);
+
+	if (save_serial_speed_configuration(bps) == false)
+		c->put_string_lf("Failed to store configuration file with serial settings");
 }
 
 void setup()
@@ -491,14 +517,25 @@ void setup()
 	Serial.print(F("Size of int: "));
 	Serial.println(sizeof(int));
 
+#if !defined(BUILD_FOR_RP2040)
 	Serial.print(F("CPU clock frequency (MHz): "));
 	Serial.println(getCpuFrequencyMhz());
+#endif
 
+#if defined(BUILD_FOR_RP2040)
+	LittleFSConfig cfg;
+	cfg.setAutoFormat(false);
+
+	LittleFS.setConfig(cfg);
+#else
 	if (!LittleFS.begin(true))
 		Serial.println(F("LittleFS.begin() failed"));
+#endif
 
+#if !defined(BUILD_FOR_RP2040)
 	Serial.print(F("Free RAM before init (decimal bytes): "));
 	Serial.println(ESP.getFreeHeap());
+#endif
 
 	Serial.println(F("Init bus"));
 	b = new bus();
@@ -516,16 +553,20 @@ void setup()
 	Serial.print(bitrate);
 	Serial.println(F("bps"));
 
+#if !defined(BUILD_FOR_RP2040)
 	Serial_RS232.begin(bitrate, hwSerialConfig, 16, 17);
 	Serial_RS232.setHwFlowCtrlMode(0);
+#endif
 
 	Serial_RS232.println(F("\014Console enabled on TTY"));
 
 	std::vector<Stream *> serial_ports { &Serial_RS232, &Serial };
 #if defined(SHA2017)
 	cnsl = new console_shabadge(&stop_event, b, serial_ports);
-#else
+#elif defined(ESP32)
 	cnsl = new console_esp32(&stop_event, b, serial_ports, 80, 25);
+#elif defined(BUILD_FOR_RP2040)
+	// FIXME
 #endif
 
 	Serial.println(F("Start line-frequency interrupt"));
@@ -543,8 +584,10 @@ void setup()
 
 	xTaskCreate(&console_thread_wrapper_io,    "c-io",  2048, cnsl, 1, nullptr);
 
+#if !defined(BUILD_FOR_RP2040)
 	Serial.print(F("Free RAM after init: "));
 	Serial.println(ESP.getFreeHeap());
+#endif
 
 #if !defined(SHA2017)
 	pinMode(LED_BUILTIN, OUTPUT);

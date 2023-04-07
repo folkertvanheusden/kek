@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <signal.h>
-#if defined(ESP32)
+#if defined(ESP32) || defined(BUILD_FOR_RP2040)
 #include <Arduino.h>
 #elif defined(_WIN32)
 #else
@@ -21,11 +21,11 @@
 {
 	int e = errno;
 
-#if !defined(_WIN32) && !defined(ESP32)
+#if !defined(_WIN32) && !defined(ESP32) && !defined(BUILD_FOR_RP2040)
 	(void)endwin();
 #endif
 
-#if defined(ESP32)
+#if defined(ESP32) || defined(BUILD_FOR_RP2040)
 	Serial.println(format);
 #else
 	va_list ap;

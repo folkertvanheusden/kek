@@ -13,7 +13,9 @@ private:
 	bus         *const b         { nullptr };
 	console     *const cnsl      { nullptr };
 
+#if !defined(BUILD_FOR_RP2040)
 	std::thread *      th        { nullptr };
+#endif
 	std::atomic_bool   stop_flag { false };
 
 public:

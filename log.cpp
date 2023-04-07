@@ -61,6 +61,7 @@ void closelog()
 
 void dolog(const log_level_t ll, const char *fmt, ...)
 {
+#if !defined(BUILD_FOR_RP2040)
 	if (!lfh && logfile != nullptr) {
 #if !defined(ESP32)
 		lfh = fopen(logfile, "a+");
@@ -113,6 +114,7 @@ void dolog(const log_level_t ll, const char *fmt, ...)
 
 	free(str);
 	free(ts_str);
+#endif
 }
 
 log_level_t parse_ll(const std::string & str)

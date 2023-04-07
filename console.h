@@ -20,14 +20,21 @@ class console
 {
 private:
 	std::vector<char>       input_buffer;
+#if defined(BUILD_FOR_RP2040)
+	volatile bool           have_data { false };
+	SemaphoreHandle_t       input_lock { xSemaphoreCreateBinary() };
+#else
 	std::condition_variable have_data;
 	std::mutex              input_lock;
+#endif
 
 protected:
 	std::atomic_uint32_t *const stop_event    { nullptr };
 
 	bus              *const b                { nullptr };
+#if !defined(BUILD_FOR_RP2040)
 	std::thread            *th               { nullptr };
+#endif
 	std::atomic_bool        disk_read_activity_flag  { false };
 	std::atomic_bool        disk_write_activity_flag { false };
 	std::atomic_bool        running_flag     { false };

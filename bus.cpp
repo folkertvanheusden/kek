@@ -13,8 +13,10 @@
 #include "tm-11.h"
 #include "tty.h"
 
+#if defined(ESP32) || defined(BUILD_FOR_RP2040)
 #if defined(ESP32)
 #include <esp_debug_helpers.h>
+#endif
 
 // ESP32 goes in a crash-loop when allocating 128kB
 // see also https://github.com/espressif/esp-idf/issues/1934
@@ -214,10 +216,19 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 		}
 
 		if (a == ADDR_LFC) { // line frequency clock and status register
+#if defined(BUILD_FOR_RP2040)
+			xSemaphoreTake(lf_csr_lock, portMAX_DELAY);
+#else
 			std::unique_lock<std::mutex> lck(lf_csr_lock);
+#endif
 
 			uint16_t temp = lf_csr;
 			if (!peek_only) DOLOG(debug, false, "READ-I/O line frequency clock: %o", temp);
+
+#if defined(BUILD_FOR_RP2040)
+			xSemaphoreGive(lf_csr_lock);
+#endif
+
 			return temp;
 		}
 
@@ -875,10 +886,17 @@ void bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 		}
 
 		if (a == ADDR_LFC) { // line frequency clock and status register
+#if defined(BUILD_FOR_RP2040)
+			xSemaphoreTake(lf_csr_lock, portMAX_DELAY);
+#else
 			std::unique_lock<std::mutex> lck(lf_csr_lock);
+#endif
 
 			DOLOG(debug, true, "WRITE-I/O set line frequency clock/status register: %06o", value);
 			lf_csr = value;
+#if defined(BUILD_FOR_RP2040)
+			xSemaphoreGive(lf_csr_lock);
+#endif
 			return;
 		}
 
@@ -1047,14 +1065,32 @@ void bus::writeUnibusByte(const uint16_t a, const uint8_t v)
 
 void bus::set_lf_crs_b7()
 {
+#if defined(BUILD_FOR_RP2040)
+	xSemaphoreTake(lf_csr_lock, portMAX_DELAY);
+#else
 	std::unique_lock<std::mutex> lck(lf_csr_lock);
+#endif
 
 	lf_csr |= 128;
+
+#if defined(BUILD_FOR_RP2040)
+	xSemaphoreGive(lf_csr_lock);
+#endif
 }
 
 uint8_t bus::get_lf_crs()
 {
+#if defined(BUILD_FOR_RP2040)
+	xSemaphoreTake(lf_csr_lock, portMAX_DELAY);
+#else
 	std::unique_lock<std::mutex> lck(lf_csr_lock);
+#endif
 
-	return lf_csr;
+	uint8_t rc = lf_csr;
+
+#if defined(BUILD_FOR_RP2040)
+	xSemaphoreGive(lf_csr_lock);
+#endif
+
+	return rc;
 }

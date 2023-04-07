@@ -42,8 +42,13 @@ private:
 
 	// level, vector
 	std::map<uint8_t, std::set<uint8_t> > queued_interrupts;
+#if defined(BUILD_FOR_RP2040)
+	SemaphoreHandle_t       qi_lock { xSemaphoreCreateBinary() };
+	volatile bool           qi_cv   { false };
+#else
 	std::mutex              qi_lock;
 	std::condition_variable qi_cv;
+#endif
 	std::atomic_bool        any_queued_interrupts { false };
 
 	std::set<uint16_t> breakpoints;
