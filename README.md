@@ -59,6 +59,8 @@ Some pictures:
 
 ![(running on a SHA2017-badge)](images/KEK-sha2017badge.jpg)
 
+Click on the following picture to see it running (opens a youtube link):
+
 [![running on a Linux laptop](images/KEK-linux-frame.jpg)](https://youtu.be/MPaGmVli8NA)
 
 Released under MIT license.
