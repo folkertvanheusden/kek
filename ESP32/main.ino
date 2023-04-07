@@ -4,7 +4,9 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <atomic>
+#if !defined(BUILD_FOR_RP2040)
 #include <HardwareSerial.h>
+#endif
 #include <LittleFS.h>
 #if defined(BUILD_FOR_RP2040)
 #include <SD.h>
@@ -12,7 +14,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#if !defined(BUILD_FOR_RP2040)
+#if defined(BUILD_FOR_RP2040)
+//#include <pico/stdio_uart.h>
+#else
 #include <WiFi.h>
 #include <sys/poll.h>
 #include <sys/socket.h>
@@ -21,7 +25,7 @@
 
 #if defined(SHA2017)
 #include "console_shabadge.h"
-#elif !defined(BUILD_FOR_RP2040)
+#else
 #include "console_esp32.h"
 #endif
 #include "cpu.h"
@@ -51,7 +55,7 @@ constexpr const char SERIAL_CFG_FILE[] = "/serial.json";
 StaticJsonDocument<MAX_CFG_SIZE> json_doc;
 
 #if defined(BUILD_FOR_RP2040)
-#define Serial_RS232 Serial2
+#define Serial_RS232 Serial1
 #else
 HardwareSerial       Serial_RS232(1);
 #endif
@@ -506,9 +510,13 @@ void set_tty_serial_speed(console *const c, const uint32_t bps)
 		c->put_string_lf("Failed to store configuration file with serial settings");
 }
 
-void setup()
-{
+void setup() {
 	Serial.begin(115200);
+
+	while(!Serial)
+		delay(100);
+
+	Serial.println("...");
 
 	Serial.println(F("This PDP-11 emulator is called \"kek\" (reason for that is forgotten) and was written by Folkert van Heusden."));
 
@@ -563,10 +571,8 @@ void setup()
 	std::vector<Stream *> serial_ports { &Serial_RS232, &Serial };
 #if defined(SHA2017)
 	cnsl = new console_shabadge(&stop_event, b, serial_ports);
-#elif defined(ESP32)
+#elif defined(ESP32) || defined(BUILD_FOR_RP2040)
 	cnsl = new console_esp32(&stop_event, b, serial_ports, 80, 25);
-#elif defined(BUILD_FOR_RP2040)
-	// FIXME
 #endif
 
 	Serial.println(F("Start line-frequency interrupt"));
@@ -579,9 +585,12 @@ void setup()
 	Serial.println(F("Connect TTY to bus"));
 	b->add_tty(tty_);
 
+#if !defined(BUILD_FOR_RP2040)  // FIXME: led ring
 	Serial.println(F("Starting panel"));
 	xTaskCreate(&console_thread_wrapper_panel, "panel", 2048, cnsl, 1, nullptr);
+#endif
 
+	Serial.println(F("Starting I/O"));
 	xTaskCreate(&console_thread_wrapper_io,    "c-io",  2048, cnsl, 1, nullptr);
 
 #if !defined(BUILD_FOR_RP2040)

@@ -3,7 +3,6 @@
 
 #include <Adafruit_NeoPixel.h>
 #include <stdio.h>
-#include <termios.h>
 #include <unistd.h>
 
 #include "console_esp32.h"
@@ -62,6 +61,7 @@ void console_esp32::refresh_virtual_terminal()
 
 void console_esp32::panel_update_thread()
 {
+#if !defined(BUILD_FOR_RP2040)
 	Serial.println(F("panel task started"));
 
 	cpu *const c = b->getCpu();
@@ -140,4 +140,5 @@ void console_esp32::panel_update_thread()
 			put_string_lf("Unknown exception in panel thread");
 		}
 	}
+#endif
 }
