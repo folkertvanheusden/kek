@@ -59,7 +59,7 @@ Some pictures:
 
 ![(running on a SHA2017-badge)](images/KEK-sha2017badge.jpg)
 
-
+[![running on a Linux laptop](images/KEK-linux-frame.jpg](images/KEK-linux.mp4)
 
 Released under MIT license.
 
