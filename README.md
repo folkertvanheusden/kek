@@ -6,7 +6,7 @@ To build for e.g. linux:
     mkdir build
     cd build
     cmake ..
-    make kek
+    make
 
     Required:
     * libncursesw5-dev
@@ -16,7 +16,7 @@ To build for e.g. windows:
     mkdir build-win32
     cd build-win32
     cmake -DCMAKE_TOOLCHAIN_FILE=../mingw64.cmake ..
-    make kek-win32
+    make
 
 
 To run a disk image:
@@ -49,6 +49,19 @@ Wiring of the MAX232 connection:
 * TX  : 17
 * RX  : 16
 
+
+See SHA2017-badge.md if you want to flash your SHA20127 badge with this software.
+
+
+Some pictures:
+
+![(running on a regular ESP32 connected to a VT510 terminal)](images/KEK-ESP32-VT510.jpg)
+
+![(running on a SHA2017-badge)](images/KEK-sha2017badge.jpg)
+
+Click on the following picture to see it running (opens a youtube link):
+
+[![running on a Linux laptop](images/KEK-linux-frame.jpg)](https://youtu.be/MPaGmVli8NA)
 
 Released under MIT license.
 

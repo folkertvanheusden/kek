@@ -14,7 +14,11 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
+#if defined(SHA2017)
+#include "console_shabadge.h"
+#else
 #include "console_esp32.h"
+#endif
 #include "cpu.h"
 #include "debugger.h"
 #include "disk_backend.h"
@@ -188,8 +192,12 @@ std::optional<disk_backend_t> select_disk_backend(console *const c)
 	c->put_string("1. network (NBD), 2. local SD card, 9. abort");
 
 	int ch = -1;
-	while(ch == -1 && ch != '1' && ch != '2' && ch != '9')
-		ch = c->wait_char(500);
+	while(ch == -1 && ch != '1' && ch != '2' && ch != '9') {
+		auto temp = c->wait_char(500);
+
+		if (temp.has_value())
+			ch = temp.value();
+	}
 
 	c->put_string_lf(format("%c", ch));
 
@@ -208,8 +216,12 @@ std::optional<disk_type_t> select_disk_type(console *const c)
 	c->put_string("1. RK05, 2. RL02, 9. abort");
 
 	int ch = -1;
-	while(ch == -1 && ch != '1' && ch != '2' && ch != '9')
-		ch = c->wait_char(500);
+	while(ch == -1 && ch != '1' && ch != '2' && ch != '9') {
+		auto temp = c->wait_char(500);
+
+		if (temp.has_value())
+			ch = temp.value();
+	}
 
 	c->put_string_lf(format("%c", ch));
 
@@ -274,8 +286,13 @@ std::optional<std::pair<std::vector<disk_backend *>, std::vector<disk_backend *>
 
 	c->put_string_lf("Files on SD-card:");
 
+#if defined(SHA2017)
+	if (!sd.begin(21, SD_SCK_MHZ(10)))
+		sd.initErrorHalt();
+#else
 	if (!sd.begin(SS, SD_SCK_MHZ(15)))
 		sd.initErrorHalt();
+#endif
 
 	for(;;) {
 		sd.ls("/", LS_DATE | LS_SIZE | LS_R);
@@ -340,7 +357,7 @@ void set_disk_configuration(std::pair<std::vector<disk_backend *>, std::vector<d
 void configure_disk(console *const c)
 {
 	for(;;) {
-		Serial.println(F("Load disk"));
+		c->put_string_lf("Load disk");
 
 		auto backend = select_disk_backend(cnsl);
 
@@ -505,7 +522,11 @@ void setup()
 	Serial_RS232.println(F("\014Console enabled on TTY"));
 
 	std::vector<Stream *> serial_ports { &Serial_RS232, &Serial };
-	cnsl = new console_esp32(&stop_event, b, serial_ports);
+#if defined(SHA2017)
+	cnsl = new console_shabadge(&stop_event, b, serial_ports);
+#else
+	cnsl = new console_esp32(&stop_event, b, serial_ports, 80, 25);
+#endif
 
 	Serial.println(F("Start line-frequency interrupt"));
 	kw11_l *lf = new kw11_l(b, cnsl);
@@ -525,11 +546,15 @@ void setup()
 	Serial.print(F("Free RAM after init: "));
 	Serial.println(ESP.getFreeHeap());
 
+#if !defined(SHA2017)
 	pinMode(LED_BUILTIN, OUTPUT);
+#endif
 
 	Serial.flush();
 
 	cnsl->start_thread();
+
+	cnsl->put_string_lf("PDP-11/70 emulator, (C) Folkert van Heusden");
 }
 
 void loop()

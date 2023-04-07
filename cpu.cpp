@@ -71,7 +71,7 @@ std::tuple<double, double, uint64_t> cpu::get_mips_rel_speed()
 {
 	uint64_t instr_count = get_instructions_executed_count();
 
-        uint32_t t_diff = get_ms() - running_since;
+        uint32_t t_diff = get_ms() - running_since;  // TODO fix this because we now implement WAIT where it sits idle
 
         double mips = instr_count / (1000.0 * t_diff);
 
@@ -259,7 +259,7 @@ bool cpu::check_queued_interrupts()
 	uint8_t current_level = getPSW_spl();
 
 	// uint8_t start_level = current_level <= 3 ? 0 : current_level + 1;
-	uint8_t start_level = current_level + 1;
+	uint8_t start_level   = current_level + 1;
 
 	for(uint8_t i=start_level; i < 8; i++) {
 		auto interrupts = queued_interrupts.find(i);
@@ -301,9 +301,6 @@ void cpu::queue_interrupt(const uint8_t level, const uint8_t vector)
 
 void cpu::addToMMR1(const uint8_t mode, const uint8_t reg, const word_mode_t word_mode)
 {
-	if (b->getMMR0() & 0160000 /* bits frozen? */)
-		return;
-
 	bool neg = mode == 4 || mode == 5;
 
 	if (word_mode == wm_word || reg >= 6 || mode == 6 || mode == 7)
@@ -406,12 +403,12 @@ gam_rc_t cpu::getGAMAddress(const uint8_t mode, const int reg, const word_mode_t
 
 bool cpu::double_operand_instructions(const uint16_t instr)
 {
-	const word_mode_t word_mode = instr & 0x8000 ? wm_byte : wm_word;
-
 	const uint8_t     operation = (instr >> 12) & 7;
 
 	if (operation == 0b000)
 		return single_operand_instructions(instr);
+
+	const word_mode_t word_mode = instr & 0x8000 ? wm_byte : wm_word;
 
 	if (operation == 0b111) {
 		if (word_mode == wm_byte)
@@ -424,11 +421,6 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 	const uint8_t src_mode   = (src >> 3) & 7;
 	const uint8_t src_reg    = src & 7;
 
-	gam_rc_t g_src { wm_word, rm_cur, i_space, { }, { }, { } };
-
-	if (operation != 0b110)
-		g_src = getGAM(src_mode, src_reg, word_mode, rm_cur);
-
 	const uint8_t dst        = instr & 63;
 	const uint8_t dst_mode   = (dst >> 3) & 7;
 	const uint8_t dst_reg    = dst & 7;
@@ -437,6 +429,8 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 
 	switch(operation) {
 		case 0b001: { // MOV/MOVB Move Word/Byte
+				    gam_rc_t g_src = getGAM(src_mode, src_reg, word_mode, rm_cur);
+
 				    if (word_mode == wm_byte && dst_mode == 0)
 					    setRegister(dst_reg, int8_t(g_src.value.value()));  // int8_t: sign extension
 				    else {
@@ -452,6 +446,8 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 			    }
 
 		case 0b010: { // CMP/CMPB Compare Word/Byte
+				    gam_rc_t g_src = getGAM(src_mode, src_reg, word_mode, rm_cur);
+
 				    auto     g_dst = getGAM(dst_mode, dst_reg, word_mode, rm_cur);
 
 				    uint16_t temp  = (g_src.value.value() - g_dst.value.value()) & (word_mode == wm_byte ? 0xff : 0xffff);
@@ -465,7 +461,10 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 			    }
 
 		case 0b011: { // BIT/BITB Bit Test Word/Byte
+				    gam_rc_t g_src  = getGAM(src_mode, src_reg, word_mode, rm_cur);
+
 				    auto g_dst      = getGAM(dst_mode, dst_reg, word_mode, rm_cur);
+
 				    uint16_t result = (g_dst.value.value() & g_src.value.value()) & (word_mode == wm_byte ? 0xff : 0xffff);
 
 				    setPSW_flags_nzv(result, word_mode);
@@ -474,6 +473,8 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 			    }
 
 		case 0b100: { // BIC/BICB Bit Clear Word/Byte
+				    gam_rc_t g_src  = getGAM(src_mode, src_reg, word_mode, rm_cur);
+
 				    auto     g_dst  = getGAM(dst_mode, dst_reg, word_mode, rm_cur);
 
 				    uint16_t result = g_dst.value.value() & ~g_src.value.value();
@@ -485,6 +486,8 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 			    }
 
 		case 0b101: { // BIS/BISB Bit Set Word/Byte
+				    gam_rc_t g_src  = getGAM(src_mode, src_reg, word_mode, rm_cur);
+
 				    auto     g_dst  = getGAM(dst_mode, dst_reg, word_mode, rm_cur);
 
 				    uint16_t result = g_dst.value.value() | g_src.value.value();
@@ -1549,8 +1552,7 @@ bool cpu::misc_operations(const uint16_t instr)
 
 		int dst_reg = instr & 7;
 
-		word_mode_t word_mode = wm_word;
-		setPC(getGAMAddress(dst_mode, dst_reg, word_mode).addr.value());
+		setPC(getGAMAddress(dst_mode, dst_reg, wm_word).addr.value());
 
 		return true;
 	}
@@ -1569,13 +1571,13 @@ bool cpu::misc_operations(const uint16_t instr)
 		// PUSH link
 		pushStack(getRegister(link_reg));
 
+		b->addToMMR1(-2, 6);
+
 		// MOVE PC,link
 		setRegister(link_reg, getPC());
 
 		// JMP dst
 		setPC(dst_value);
-
-		b->addToMMR1(-2, 6);
 
 		return true;
 	}
@@ -1625,15 +1627,15 @@ void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 				}
 			}
 			else {
-				bool mmr1_locked = b->getMMR0() & 0160000;
-
 				before_psw = getPSW();
-				if (!mmr1_locked)
-					b->addToMMR1(-2, 6);
+
+				b->addToMMR1(-2, 6);
 
 				before_pc  = getPC();
-				if (!mmr1_locked)
-					b->addToMMR1(-2, 6);
+
+				b->addToMMR1(-2, 6);
+
+				// TODO set MMR2?
 			}
 
 			// make sure the trap vector is retrieved from kernel space
@@ -2163,8 +2165,10 @@ void cpu::step_a()
 	if ((b->getMMR0() & 0160000) == 0)
 		b->clearMMR1();
 
-	if (any_queued_interrupts && check_queued_interrupts())
-	       return; // documentation
+	if (any_queued_interrupts && check_queued_interrupts()) {
+		if ((b->getMMR0() & 0160000) == 0)
+			b->clearMMR1();
+	}
 }
 
 void cpu::step_b()

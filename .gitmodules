@@ -1,0 +1,3 @@
+[submodule "ESP32/SHAdisplay"]
+	path = ESP32/SHAdisplay
+	url = https://github.com/krzychb/esp-epaper-29-dke

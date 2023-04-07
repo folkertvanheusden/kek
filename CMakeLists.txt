@@ -9,6 +9,8 @@ add_compile_options(-Wall -pedantic -Wextra)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+if (NOT WIN32)
+
 add_executable(
   kek
   bus.cpp
@@ -34,6 +36,10 @@ add_executable(
   utils.cpp
 )
 
+endif (NOT WIN32)
+
+if (WIN32)
+
 add_executable(
   kek-win32
   bus.cpp
@@ -58,6 +64,8 @@ add_executable(
   win32.cpp
 )
 
+endif (WIN32)
+
 include(CheckIPOSupported)
 check_ipo_supported(RESULT supported)
 
@@ -68,10 +76,13 @@ set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 set(THREADS_PREFER_PTHREAD_FLAG TRUE)
 find_package(Threads)
+if (NOT WIN32)
 target_link_libraries(kek Threads::Threads)
+else ()
 target_link_libraries(kek-win32 Threads::Threads)
 
 target_link_libraries(kek-win32 ws2_32)
+endif ()
 
 include(FindPkgConfig)
 
