@@ -9,13 +9,14 @@
 #include <string>
 #include <string.h>
 
-#include "rp2040.h"
 #include "console.h"
 #include "gen.h"
 #include "log.h"
 #include "utils.h"
 
 #if defined(BUILD_FOR_RP2040)
+#include "rp2040.h"
+
 void thread_wrapper_console(void *p)
 {
 	console *const consolel = reinterpret_cast<console *>(p);
@@ -31,6 +32,10 @@ console::console(std::atomic_uint32_t *const stop_event, bus *const b, const int
 	t_height(t_height)
 {
 	screen_buffer = new char[t_width * t_height]();
+
+#if defined(BUILD_FOR_RP2040)
+	xSemaphoreGive(input_lock);  // initialize
+#endif
 }
 
 console::~console()
@@ -47,7 +52,7 @@ void console::start_thread()
 	stop_thread_flag = false;
 
 #if defined(BUILD_FOR_RP2040)
-	xTaskCreate(&thread_wrapper_console, "console-l", 2048, this, 1, nullptr);
+	xTaskCreate(&thread_wrapper_console, "console", 2048, this, 1, nullptr);
 #elif !defined(ESP32)
 	th = new std::thread(std::ref(*this));
 #endif
@@ -109,38 +114,23 @@ int console::get_char()
 std::optional<char> console::wait_char(const int timeout_ms)
 {
 #if defined(BUILD_FOR_RP2040)
+	uint8_t rc = 0;
+	if (xQueueReceive(have_data, &rc, timeout_ms / portTICK_PERIOD_MS) == pdFALSE || rc == 0)
+		return { };
+
+	std::optional<char> c { };
+
 	xSemaphoreTake(input_lock, portMAX_DELAY);
 
-	bool triggered = input_buffer.empty() == false;
-
-	if (!triggered) {
-		uint32_t start = millis();
-
-		while(!have_data && millis() - start < timeout_ms) {
-		}
-
-		have_data = false;  // FIXME
-
-		triggered = input_buffer.empty() == false;
-	}
-
-	if (triggered) {
-		int c = input_buffer.at(0);
+	if (input_buffer.empty() == false) {
+		c = input_buffer.at(0);
 
 		input_buffer.erase(input_buffer.begin() + 0);
-
-#if defined(BUILD_FOR_RP2040)
-		xSemaphoreGive(input_lock);
-#endif
-
-		return c;
 	}
 
-#if defined(BUILD_FOR_RP2040)
 	xSemaphoreGive(input_lock);
-#endif
 
-	return { };
+	return c;
 #else
 	std::unique_lock<std::mutex> lck(input_lock);
 
@@ -333,9 +323,11 @@ void console::operator()()
 			input_buffer.push_back(c);
 
 #if defined(BUILD_FOR_RP2040)
-			have_data = true;
-
 			xSemaphoreGive(input_lock);
+
+			uint8_t value = 1;
+			if (xQueueSend(have_data, &value, portMAX_DELAY) == pdFALSE)
+				Serial.println("xQueueSend failed");
 #else
 			have_data.notify_all();
 #endif

@@ -18,6 +18,10 @@
 cpu::cpu(bus *const b, std::atomic_uint32_t *const event) : b(b), event(event)
 {
 	reset();
+
+#if defined(BUILD_FOR_RP2040)
+	xSemaphoreGive(qi_lock);  // initialize
+#endif
 }
 
 cpu::~cpu()
@@ -309,9 +313,10 @@ void cpu::queue_interrupt(const uint8_t level, const uint8_t vector)
 	it->second.insert(vector);
 
 #if defined(BUILD_FOR_RP2040)
-	qi_cv = true;
-
 	xSemaphoreGive(qi_lock);
+
+	uint8_t value = 1;
+	xQueueSend(qi_q, &value, portMAX_DELAY);
 #else
 
 	qi_cv.notify_all();
@@ -1520,10 +1525,8 @@ bool cpu::misc_operations(const uint16_t instr)
 		case 0b0000000000000001: // WAIT
 			{
 #if defined(BUILD_FOR_RP2040)
-				while(!qi_cv)
-					vTaskDelay(10);
-
-				qi_cv = false;  // FIXME
+				uint8_t rc = 0;
+				xQueueReceive(qi_q, &rc, 0);
 #else
 				std::unique_lock<std::mutex> lck(qi_lock);
 

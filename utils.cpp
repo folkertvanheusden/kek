@@ -3,6 +3,7 @@
 
 #if defined(ESP32) || defined(BUILD_FOR_RP2040)
 #include <Arduino.h>
+#include "rp2040.h"
 #endif
 
 #include <errno.h>
@@ -16,7 +17,6 @@
 #include <vector>
 #include <sys/time.h>
 
-#include "rp2040.h"
 #include "win32.h"
 
 

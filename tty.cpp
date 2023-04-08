@@ -34,7 +34,11 @@ tty::tty(console *const c, bus *const b) :
 	b(b)
 {
 #if defined(BUILD_FOR_RP2040)
-	xTaskCreate(&thread_wrapper_tty, "tty-l", 2048, this, 1, nullptr);
+	xSemaphoreGive(chars_lock);  // initialize
+#endif
+
+#if defined(BUILD_FOR_RP2040)
+	xTaskCreate(&thread_wrapper_tty, "tty", 2048, this, 1, nullptr);
 #else
 	th = new std::thread(std::ref(*this));
 #endif
@@ -43,6 +47,7 @@ tty::tty(console *const c, bus *const b) :
 tty::~tty()
 {
 	stop_flag = true;
+
 #if !defined(BUILD_FOR_RP2040)
 	th->join();
 	delete th;
@@ -69,8 +74,9 @@ void tty::notify_rx()
 
 uint16_t tty::readWord(const uint16_t addr)
 {
-	const int reg = (addr - PDP11TTY_BASE) / 2;
-	uint16_t vtemp = registers[reg];
+	const int reg    = (addr - PDP11TTY_BASE) / 2;
+	uint16_t  vtemp  = registers[reg];
+	bool      notify = false;
 
 #if defined(BUILD_FOR_RP2040)
 	xSemaphoreTake(chars_lock, portMAX_DELAY);
@@ -94,7 +100,7 @@ uint16_t tty::readWord(const uint16_t addr)
 			vtemp = ch | (parity(ch) << 7);
 
 			if (chars.empty() == false)
-				notify_rx();
+				notify = true;
 		}
 	}
 	else if (addr == PDP11TTY_TPS) {
@@ -109,6 +115,9 @@ uint16_t tty::readWord(const uint16_t addr)
 
 	registers[reg] = vtemp;
 
+	if (notify)
+		notify_rx();
+
 	return vtemp;
 }
 
@@ -117,6 +126,7 @@ void tty::operator()()
 	while(!stop_flag) {
 		if (c->poll_char()) {
 #if defined(BUILD_FOR_RP2040)
+			digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
 			xSemaphoreTake(chars_lock, portMAX_DELAY);
 #else
 			std::unique_lock<std::mutex> lck(chars_lock);
@@ -124,11 +134,11 @@ void tty::operator()()
 
 			chars.push_back(c->get_char());
 
-			notify_rx();
-
 #if defined(BUILD_FOR_RP2040)
 			xSemaphoreGive(chars_lock);
 #endif
+
+			notify_rx();
 		}
 		else {
 			myusleep(100000);

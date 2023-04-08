@@ -21,7 +21,7 @@ class console
 private:
 	std::vector<char>       input_buffer;
 #if defined(BUILD_FOR_RP2040)
-	volatile bool           have_data { false };
+	QueueHandle_t           have_data  { xQueueCreate(16, 1)      };
 	SemaphoreHandle_t       input_lock { xSemaphoreCreateBinary() };
 #else
 	std::condition_variable have_data;

@@ -34,6 +34,10 @@ bus::bus()
 	memset(pages, 0x00, sizeof pages);
 
 	CPUERR = MMR0 = MMR1 = MMR2 = MMR3 = PIR = CSR = 0;
+
+#if defined(BUILD_FOR_RP2040)
+	xSemaphoreGive(lf_csr_lock);  // initialize
+#endif
 }
 
 bus::~bus()

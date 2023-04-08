@@ -44,7 +44,7 @@ private:
 	std::map<uint8_t, std::set<uint8_t> > queued_interrupts;
 #if defined(BUILD_FOR_RP2040)
 	SemaphoreHandle_t       qi_lock { xSemaphoreCreateBinary() };
-	volatile bool           qi_cv   { false };
+	QueueHandle_t           qi_q    { xQueueCreate(16, 1)      };
 #else
 	std::mutex              qi_lock;
 	std::condition_variable qi_cv;
