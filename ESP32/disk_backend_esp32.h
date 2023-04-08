@@ -4,7 +4,11 @@
 #include <string>
 
 #include "disk_backend.h"
+#if defined(BUILD_FOR_RP2040)
+#include "rp2040.h"
+#else
 #include "esp32.h"
+#endif
 
 
 class disk_backend_esp32 : public disk_backend

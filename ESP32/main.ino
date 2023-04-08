@@ -8,14 +8,10 @@
 #include <HardwareSerial.h>
 #endif
 #include <LittleFS.h>
-#if defined(BUILD_FOR_RP2040)
-#include <SD.h>
-#endif
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 #if defined(BUILD_FOR_RP2040)
-//#include <pico/stdio_uart.h>
 #else
 #include <WiFi.h>
 #include <sys/poll.h>
@@ -31,12 +27,14 @@
 #include "cpu.h"
 #include "debugger.h"
 #include "disk_backend.h"
-#if !defined(BUILD_FOR_RP2040)
 #include "disk_backend_esp32.h"
+#if !defined(BUILD_FOR_RP2040)
 #include "disk_backend_nbd.h"
 #endif
 #include "error.h"
-#if !defined(BUILD_FOR_RP2040)
+#if defined(BUILD_FOR_RP2040)
+#include "rp2040.h"
+#else
 #include "esp32.h"
 #endif
 #include "gen.h"
@@ -67,7 +65,9 @@ console *cnsl = nullptr;
 
 uint16_t exec_addr = 0;
 
-SdFat32  sd;
+#if !defined(BUILD_FOR_RP2040)
+SdFat32  SD;
+#endif
 
 std::atomic_uint32_t stop_event      { EVENT_NONE };
 
@@ -200,8 +200,8 @@ typedef enum { BE_NETWORK, BE_SD } disk_backend_t;
 std::optional<disk_backend_t> select_disk_backend(console *const c)
 {
 #if defined(BUILD_FOR_RP2040)
-return BE_SD;
-#endif
+	return BE_SD;
+#else
 	c->put_string("1. network (NBD), 2. local SD card, 9. abort");
 
 	int ch = -1;
@@ -222,6 +222,7 @@ return BE_SD;
 
 //	if (ch == '2')
 		return BE_SD;
+#endif
 }
 
 std::optional<disk_type_t> select_disk_type(console *const c)
@@ -302,17 +303,33 @@ std::optional<std::pair<std::vector<disk_backend *>, std::vector<disk_backend *>
 	c->put_string_lf("Files on SD-card:");
 
 #if defined(SHA2017)
-	if (!sd.begin(21, SD_SCK_MHZ(10)))
-		sd.initErrorHalt();
-#elif defined(BUILD_FOR_RP2040)
-//	SD.begin(cspin, SPI1);  FIXME
-#else
-	if (!sd.begin(SS, SD_SCK_MHZ(15)))
-		sd.initErrorHalt();
+	if (!SD.begin(21, SD_SCK_MHZ(10)))
+		SD.initErrorHalt();
+#elif !defined(BUILD_FOR_RP2040)
+	if (!SD.begin(SS, SD_SCK_MHZ(15)))
+		SD.initErrorHalt();
 #endif
 
 	for(;;) {
-		sd.ls("/", LS_DATE | LS_SIZE | LS_R);
+#if defined(BUILD_FOR_RP2040)
+		File root = SD.open("/");
+
+		for(;;) {
+			auto entry = root.openNextFile();
+			if (!entry)
+				break;
+
+			if (!entry.isDirectory()) {
+				c->put_string(entry.name());
+				c->put_string("\t\t");
+				c->put_string_lf(format("%ld", entry.size()));
+			}
+
+			entry.close();
+		}
+#else
+		SD.ls("/", LS_DATE | LS_SIZE | LS_R);
+#endif
 
 		c->flush_input();
 
@@ -334,7 +351,6 @@ std::optional<std::pair<std::vector<disk_backend *>, std::vector<disk_backend *>
 		if (fh.open(selected_file.c_str(), O_RDWR)) {
 			fh.close();
 
-#if !defined(BUILD_FOR_RP2040)  // FIXME
 			disk_backend *temp = new disk_backend_esp32(selected_file);
 
 			if (!temp->begin()) {
@@ -351,7 +367,6 @@ std::optional<std::pair<std::vector<disk_backend *>, std::vector<disk_backend *>
 
 			if (disk_type.value() == DT_RL02)
 				return { { { }, { temp } } };
-#endif
 		}
 
 		c->put_string_lf("open failed");
@@ -519,6 +534,21 @@ void setup() {
 #if !defined(BUILD_FOR_RP2040)
 	Serial.print(F("CPU clock frequency (MHz): "));
 	Serial.println(getCpuFrequencyMhz());
+#endif
+
+#if 1
+#if defined(BUILD_FOR_RP2040)
+	SPI.setRX(MISO);
+	SPI.setTX(MOSI);
+	SPI.setSCK(SCK);
+
+	for(int i=0; i<3; i++) {
+		if (SD.begin(false, SD_SCK_MHZ(10), SPI))
+			break;
+
+		Serial.println(F("Cannot initialize SD card"));
+	}
+#endif
 #endif
 
 #if defined(BUILD_FOR_RP2040)

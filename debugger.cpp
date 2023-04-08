@@ -371,12 +371,14 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 #endif
 				continue;
 			}
-#if defined(ESP32)
+#if defined(ESP32) || defined(BUILD_FOR_RP2040)
 			else if (cmd == "cfgdisk") {
 				configure_disk(cnsl);
 
 				continue;
 			}
+#endif
+#if defined(ESP32)
 			else if (cmd == "cfgnet") {
 				configure_network(cnsl);
 
@@ -453,9 +455,11 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 				cnsl->put_string_lf("cfgnet        - configure network (e.g. WiFi)");
 				cnsl->put_string_lf("startnet      - start network");
 				cnsl->put_string_lf("chknet        - check network status");
-				cnsl->put_string_lf("cfgdisk       - configure disk");
 				cnsl->put_string_lf("serspd        - set serial speed in bps (8N1 are default)");
 				cnsl->put_string_lf("init          - reload (disk-)configuration from flash");
+#endif
+#if defined(ESP32) || defined(BUILD_FOR_RP2040)
+				cnsl->put_string_lf("cfgdisk       - configure disk");
 #endif
 
 				continue;
