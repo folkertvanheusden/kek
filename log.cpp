@@ -15,7 +15,7 @@
 #include "win32.h"
 
 
-static const char *logfile          = strdup("/tmp/myip.log");
+static const char *logfile          = strdup("/tmp/kek.log");
 log_level_t        log_level_file   = warning;
 log_level_t        log_level_screen = warning;
 FILE       *lfh              = nullptr;

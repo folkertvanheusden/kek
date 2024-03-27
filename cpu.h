@@ -35,6 +35,7 @@ private:
 	uint16_t psw   { 0 };
 	uint16_t fpsr  { 0 };
 	uint16_t stackLimitRegister { 0377 };
+	int      processing_trap_depth { 0 };
 	uint64_t instruction_count { 0 };
 	uint64_t running_since     { 0 };
 

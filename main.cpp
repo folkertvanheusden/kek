@@ -1,7 +1,8 @@
-// (C) 2018-2023 by Folkert van Heusden
+// (C) 2018-2024 by Folkert van Heusden
 // Released under MIT license
 
 #include <atomic>
+#include <jansson.h>
 #include <signal.h>
 #include <stdlib.h>
 #include <string>
@@ -49,6 +50,91 @@ void sw_handler(int s)
 }
 #endif
 
+int run_cpu_validation(const std::string & filename)
+{
+	json_error_t error;
+	json_t *json = json_load_file(filename.c_str(), 0, &error);
+	if (!json)
+		error_exit(false, "%s", error.text);
+
+	size_t n_ok = 0;
+	size_t array_size = json_array_size(json);
+	for(size_t i=0; i<array_size; i++) {
+		json_t *test = json_array_get(json, i);
+
+		// create environment
+		event = 0;
+		bus *b = new bus();
+		cpu *c = new cpu(b, &event);
+		b->add_cpu(c);
+
+		// {"memory-before": {"512": 51435, "514": 45610, "516": 15091, "518": 43544}, "registers-before": {"0": 64423, "1": 1, "2": 41733, "3": 14269, "4": 48972, "5": 42770, "6": 57736, "7": 512}, "registers-after": {"0": 64423, "1": 1, "2": 41733, "3": 14269, "4": 48972, "5": 42770, "6": 57736, "7": 512}, "memory-after": {"512": 51435, "514": 45610, "516": 15091, "518": 43544}}
+
+		// initialize
+		json_t *memory_before = json_object_get(test, "memory-before");
+		const char *key   = nullptr;
+		json_t     *value = nullptr;
+		json_object_foreach(memory_before, key, value) {
+			b->writePhysical(atoi(key), json_integer_value(value));
+		}
+
+		json_t *registers_before = json_object_get(test, "registers-before");
+		json_object_foreach(registers_before, key, value) {
+			if (strcmp(key, "psw") == 0)
+				c->setPSW(uint16_t(json_integer_value(value)), false);  // TODO: without the AND
+			else
+				c->setRegister(atoi(key), json_integer_value(value), rm_cur);
+		}
+
+		c->step_a();
+		disassemble(c, nullptr, c->getPC(), false);
+		c->step_b();
+
+		// validate
+		bool err = false;
+		json_t *memory_after = json_object_get(test, "memory-after");
+		json_object_foreach(memory_before, key, value) {
+			uint16_t mem_contains = b->readPhysical(atoi(key));
+			uint16_t should_be    = json_integer_value(value);
+
+			if (mem_contains != should_be) {
+				DOLOG(warning, true, "memory address %s mismatch (is: %06o, should be: %06o)", key, mem_contains, should_be);
+				err = true;
+			}
+		}
+
+		json_t *registers_after = json_object_get(test, "registers-after");
+		json_object_foreach(registers_before, key, value) {
+			uint16_t register_is = 0;
+
+			if (strcmp(key, "psw") == 0)
+				register_is = c->getPSW();
+			else
+				register_is = c->getRegister(atoi(key), rm_cur);
+			uint16_t should_be   = json_integer_value(value);
+
+			if (register_is != should_be) {
+				DOLOG(warning, true, "register %s mismatch (is: %06o, should be: %06o)", key, register_is, should_be);
+				err = true;
+			}
+		}
+
+		if (err)
+			DOLOG(warning, true, "%s", json_dumps(test, 0));
+		else
+			n_ok++;
+
+		// clean-up
+		delete b;
+	}
+
+	json_decref(json);
+
+	printf("# ok: %zu out of %zu\n", n_ok, array_size);
+
+	return 0;
+}
+
 void help()
 {
 	printf("-h       this help\n");
@@ -65,6 +151,7 @@ void help()
 	printf("-t       enable tracing (disassemble to stderr, requires -d as well)\n");
 	printf("-l x     log to file x\n");
 	printf("-L x,y   set log level for screen (x) and file (y)\n");
+	printf("-J x     run validation suite x against the CPU emulation\n");
 }
 
 int main(int argc, char *argv[])
@@ -95,13 +182,19 @@ int main(int argc, char *argv[])
 
 	disk_backend *temp_d = nullptr;
 
+	std::string  validate_json;
+
 	int  opt          = -1;
-	while((opt = getopt(argc, argv, "hm:T:Br:R:p:ndtL:b:l:s:Q:N:")) != -1)
+	while((opt = getopt(argc, argv, "hm:T:Br:R:p:ndtL:b:l:s:Q:N:J:")) != -1)
 	{
 		switch(opt) {
 			case 'h':
 				help();
 				return 1;
+
+			case 'J':
+				validate_json = optarg;
+				break;
 
 			case 'Q':
 				test = optarg;
@@ -209,6 +302,9 @@ int main(int argc, char *argv[])
 	console *cnsl = nullptr;
 
 	setlog(logfile, ll_file, ll_screen);
+
+	if (validate_json.empty() == false)
+		return run_cpu_validation(validate_json);
 
 	bus *b = new bus();
 

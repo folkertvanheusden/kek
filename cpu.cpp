@@ -1637,7 +1637,6 @@ void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 {
 	DOLOG(debug, true, "*** CPU::TRAP %o, new-ipl: %d, is-interrupt: %d ***", vector, new_ipl, is_interrupt);
 
-	int      processing_trap_depth = 0;
 	uint16_t before_psw            = 0;
 	uint16_t before_pc             = 0;
 
@@ -1650,14 +1649,15 @@ void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 			if (processing_trap_depth >= 2) {
 				DOLOG(debug, true, "Trap depth %d", processing_trap_depth);
 
+				if (processing_trap_depth >= 3) {
+					*event = EVENT_HALT;
+					break;
+				}
+
 				if (kernel_mode)
 					vector = 4;
 
 				setRegister(6, 04);
-
-				if (processing_trap_depth >= 3) {
-					// TODO: halt?
-				}
 			}
 			else {
 				before_psw = getPSW();
@@ -1688,6 +1688,8 @@ void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 
 			pushStack(before_psw);
 			pushStack(before_pc);
+
+			processing_trap_depth = 0;
 
 			// if we reach this point then the trap was processed without causing
 			// another trap
