@@ -132,7 +132,6 @@ int run_cpu_validation(const std::string & filename)
 			uint16_t psw = c->getPSW();
 
 			json_t *const registers_after = json_object_get(test, "registers-after");
-
 			{
 				int set_nr = (psw >> 11) & 1;
 				char set[] = { char('0' + set_nr), 0x00 };

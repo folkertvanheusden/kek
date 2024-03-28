@@ -63,7 +63,7 @@ class test_generator:
                 target[tag][set_][reg_] = p.registerfiles[set_][reg_]
 
         target[tag]['sp'] = p.stackpointers
-        target[tag]['pc'] = p.PC
+        target[tag]['pc'] = p.r[p.PC]
 
     def create_test(self):
         out = { }
@@ -74,10 +74,10 @@ class test_generator:
 
         # TODO what is the maximum size of an instruction?
         mem_kv = []
-        mem_kv.append((addr + 0, random.randint(0, 65536)))
-        mem_kv.append((addr + 2, random.randint(0, 65536)))
-        mem_kv.append((addr + 4, random.randint(0, 65536)))
-        mem_kv.append((addr + 6, random.randint(0, 65536)))
+        mem_kv.append((addr + 0, random.randint(0, 65536 - 8)))
+        mem_kv.append((addr + 2, random.randint(0, 65536 - 8)))
+        mem_kv.append((addr + 4, random.randint(0, 65536 - 8)))
+        mem_kv.append((addr + 6, random.randint(0, 65536 - 8)))
         out['memory-before'] = dict()
         for a, v in mem_kv:
             p.put(a, v)
@@ -104,6 +104,7 @@ class test_generator:
                 p.registerfiles[1 - set_][r] = (~v) & 65535  # make sure it triggers errors
                 assert p.registerfiles[set_][r] == p.r[r]
             p.r[6] = p.registerfiles[set_][6]
+            p.r[p.PC] = addr
             p._syncregs()
 
             self.put_registers(p, out, 'registers-before')
@@ -133,7 +134,7 @@ class test_generator:
 
         except Exception as e:
             # handle PDP11 traps; store them
-            print('test failed', e)
+            print(f'test failed {e}, line number: {e.__traceback__.tb_lineno}')
             return None
 
 fh = open(sys.argv[1], 'w')
