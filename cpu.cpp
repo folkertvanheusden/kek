@@ -867,15 +867,27 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 				  }
 
 		case 0b000101001: { // COM/COMB
-					  auto     a = getGAM(dst_mode, dst_reg, word_mode, rm_cur);
-					  uint16_t v = a.value.value();
+					  bool     set_flags = false;
+					  uint16_t v         = 0;
 
-					  if (word_mode == wm_byte)
-						  v ^= 0xff;
-					  else
-						  v ^= 0xffff;
+					  if (word_mode == wm_byte && dst_mode == 0) {
+						  v = getRegister(dst_reg) ^ 0xff;
 
-					  set_flags = putGAM(a, v);
+						  setRegister(dst_reg, v);
+
+						  set_flags = true;
+					  }
+					  else {
+						  auto a = getGAM(dst_mode, dst_reg, word_mode, rm_cur);
+						  v = a.value.value();
+
+						  if (word_mode == wm_byte)
+							  v ^= 0xff;
+						  else
+							  v ^= 0xffff;
+
+						  set_flags = putGAM(a, v);
+					  }
 
 					  if (set_flags) {
 						  setPSW_flags_nzv(v, word_mode);
