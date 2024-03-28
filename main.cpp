@@ -106,12 +106,22 @@ int run_cpu_validation(const std::string & filename)
 			start_pc = json_integer_value(b_pc);
 			c->setPC(start_pc);
 		}
-
-		// TODO SP[]
+		{
+			json_t *b_sp = json_object_get(registers_before, "sp");
+			size_t array_size = json_array_size(b_sp);
+			assert(array_size == 4);
+			for(size_t i=0; i<array_size; i++) {
+				json_t *temp = json_array_get(b_sp, i);
+				c->lowlevel_register_sp_set(i, json_integer_value(temp));
+			}
+		}
 
 		c->step_a();
-		disassemble(c, nullptr, c->getPC(), false);
+		disassemble(c, nullptr, start_pc, false);
+		auto disas_data = c->disassemble(start_pc);
 		c->step_b();
+
+		uint16_t new_pc = c->getPC();
 
 		// validate
 		{
@@ -157,8 +167,8 @@ int run_cpu_validation(const std::string & filename)
 				json_t *a_pc = json_object_get(registers_after, "pc");
 				assert(a_pc);
 				uint16_t should_be_pc = json_integer_value(a_pc);
-				if (c->getPC() != should_be_pc) {
-					DOLOG(warning, true, "PC register mismatch (is: %06o (%d), should be: %06o (%d))", c->getPC(), c->getPC(), should_be_pc, should_be_pc);
+				if (new_pc != should_be_pc) {
+					DOLOG(warning, true, "PC register mismatch (is: %06o (%d), should be: %06o (%d))", new_pc, new_pc, should_be_pc, should_be_pc);
 					err = true;
 				}
 			}
@@ -179,8 +189,7 @@ int run_cpu_validation(const std::string & filename)
 				if (c->is_it_a_trap())
 					DOLOG(warning, true, "Error by TRAP");
 				else {
-					auto data = c->disassemble(start_pc);
-					DOLOG(warning, true, "Error by instruction %s", data["instruction-text"].at(0).c_str());
+					DOLOG(warning, true, "Error by instruction %s", disas_data["instruction-text"].at(0).c_str());
 				}
 
 				char *js = json_dumps(test, 0);
@@ -188,6 +197,7 @@ int run_cpu_validation(const std::string & filename)
 				free(js);
 			}
 			else {
+				DOLOG(info, true, "\n");  // \n!
 				n_ok++;
 			}
 		}

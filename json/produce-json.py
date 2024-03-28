@@ -2,14 +2,27 @@
 
 import json
 from machine import PDP1170
+from mmio import MMIO
 from pdptraps import PDPTrap, PDPTraps
 import random
 import sys
 
 
+class MMIO_wrapper(MMIO):
+    def register(self, iofunc, offsetaddr, nwords, *, byte_writes=False, reset=False):
+        pass
+
+    def register_simpleattr(self, obj, attrname, addr, reset=False):
+        pass
+
+    def devicereset_register(self, func):
+        pass
+
 class PDP1170_wrapper(PDP1170):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        self.logger.info('')
 
         self.reset_mem_transactions_dict()
 
@@ -29,21 +42,25 @@ class PDP1170_wrapper(PDP1170):
 
     def physRW(self, physaddr, value=None):
         if value == None:  # read
+            self.logger.info(f'Read from {physaddr:08o} (phys)')
             if not physaddr in self.mem_transactions and not physaddr in self.before:
                 self.before[physaddr] = random.randint(0, 65536)
             return super().physRW(physaddr, self.before[physaddr])
 
+        self.logger.info(f'Write to {physaddr:08o}: {value:06o} (phys)')
         self.mem_transactions[physaddr] = value
         return super().physRW(physaddr, value)
 
     def physRW_N(self, physaddr, nwords, words=None):
         temp_addr = physaddr
         if words == None:
+            self.logger.info(f'Read {nwords} words from {physaddr:08o} (phys)')
             for i in range(nwords):
                 self.physRW(temp_addr, random.randint(0, 65536))
                 temp_addr += 2
             return super().physRW_N(physaddr, nwords)
 
+        self.logger.info(f'Write {nwords} ({len(words)}) words to {physaddr:08o} (phys)')
         for w in words:
             self.mem_transactions[temp_addr] = w
             temp_addr += 2
@@ -69,15 +86,17 @@ class test_generator:
         out = { }
 
         p = PDP1170_wrapper(loglevel='DEBUG')
-
-        addr = random.randint(0, 65536) & ~3
+        p.ub.mmio = MMIO_wrapper(p)
 
         # TODO what is the maximum size of an instruction?
+        # non-mmu thus shall be below device range
+        addr = random.randint(0, 0o160000 - 8) & ~3
         mem_kv = []
         while True:
             instr = random.randint(0, 65536 - 8)
             if instr != 1:  # TODO ignore 'WAIT' instruction
                 break
+        p.logger.info(f'emulating {instr:06o}')
         mem_kv.append((addr + 0, instr))
         mem_kv.append((addr + 2, random.randint(0, 65536 - 8)))
         mem_kv.append((addr + 4, random.randint(0, 65536 - 8)))
@@ -129,8 +148,6 @@ class test_generator:
                 out['memory-after'][a] = mem_transactions[a]
             # TODO originele geheugeninhouden checken
 
-            # TODO check if mem_transactions affects I/O, then return None
-
             return out
 
         except PDPTraps.ReservedInstruction as pri:
@@ -146,11 +163,15 @@ fh = open(sys.argv[1], 'w')
 t = test_generator()
 
 tests = []
-for i in range(0, 131072):
-    print(f'{i}\r', end='')
-    test = t.create_test()
-    if test != None:
-        tests.append(test)
+try:
+    for i in range(0, 10072):
+        print(f'{i}\r', end='')
+        test = t.create_test()
+        if test != None:
+            tests.append(test)
+
+except KeyboardInterrupt as ki:
+    pass
 
 fh.write(json.dumps(tests, indent=4))
 fh.close()

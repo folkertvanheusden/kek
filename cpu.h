@@ -146,6 +146,7 @@ public:
 	void setRegisterLowByte(const int nr, const word_mode_t word_mode, const uint16_t value);
 	// used by 'main' for json-validation
 	void lowlevel_register_set(const uint8_t set, const uint8_t reg, const uint16_t value);
+	void lowlevel_register_sp_set(const uint8_t set, const uint16_t value);
 	uint16_t lowlevel_register_get(const uint8_t set, const uint8_t reg);
 	void lowlevel_psw_set(const uint16_t value) { psw = value; }
 

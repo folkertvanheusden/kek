@@ -428,7 +428,7 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 	else
 		temp = m->readWord(m_offset);
 
-	if (!peek_only) DOLOG(debug, false, "READ from %06o/%07o %c %c: %o", addr_in, m_offset, space == d_space ? 'D' : 'I', word_mode ? 'B' : 'W', temp);
+	if (!peek_only) DOLOG(debug, false, "READ from %06o/%07o %c %c: %o (%s)", addr_in, m_offset, space == d_space ? 'D' : 'I', word_mode ? 'B' : 'W', temp, mode_selection == rm_prev ? "prev" : "cur");
 
 	return temp;
 }
@@ -643,6 +643,9 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 		}
 
 		DOLOG(debug, !peek_only, "virtual address %06o maps to physical address %08o (run_mode: %d, apf: %d, par: %08o, poff: %o, AC: %d, %s)", a, m_offset, run_mode, apf, pages[run_mode][d][apf].par * 64, p_offset, pages[run_mode][d][apf].pdr & 7, d ? "D" : "I");
+	}
+	else {
+		// DOLOG(debug, false, "no MMU (read physical address %08o)", m_offset);
 	}
 
 	return m_offset;
