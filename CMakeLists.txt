@@ -6,6 +6,9 @@ cmake_minimum_required(VERSION 3.9)
 
 add_compile_options(-Wall -pedantic -Wextra)
 
+add_compile_options(-fsanitize=address)
+add_link_options(-fsanitize=address)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
@@ -69,9 +72,9 @@ endif (WIN32)
 include(CheckIPOSupported)
 check_ipo_supported(RESULT supported)
 
-set(CMAKE_BUILD_TYPE RelWithDebInfo)
-set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
-#set(CMAKE_BUILD_TYPE Debug)
+#set(CMAKE_BUILD_TYPE RelWithDebInfo)
+#set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
+set(CMAKE_BUILD_TYPE Debug)
 
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 set(THREADS_PREFER_PTHREAD_FLAG TRUE)

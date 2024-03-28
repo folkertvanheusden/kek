@@ -1,4 +1,4 @@
-// (C) 2018-2023 by Folkert van Heusden
+// (C) 2018-2024 by Folkert van Heusden
 // Released under MIT license
 
 #include <assert.h>
@@ -177,6 +177,27 @@ uint16_t cpu::addRegister(const int nr, const rm_selection_t mode_selection, con
 	}
 
 	return pc += value;
+}
+
+void cpu::lowlevel_register_set(const uint8_t set, const uint8_t reg, const uint16_t value)
+{
+	if (reg < 6)
+		regs0_5[set][reg] = value;
+	else if (reg == 6)
+		sp[set == 0 ? 0 : 3] = value;
+	else
+		pc = value;
+}
+
+uint16_t cpu::lowlevel_register_get(const uint8_t set, const uint8_t reg)
+{
+	if (reg < 6)
+		return regs0_5[set][reg];
+
+	if (reg == 6)
+		return sp[set == 0 ? 0 : 3];
+
+	return pc;
 }
 
 bool cpu::getBitPSW(const int bit) const

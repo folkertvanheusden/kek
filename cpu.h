@@ -1,4 +1,4 @@
-// (C) 2018-2023 by Folkert van Heusden
+// (C) 2018-2024 by Folkert van Heusden
 // Released under MIT license
 
 #pragma once
@@ -63,7 +63,6 @@ private:
 	uint16_t addRegister(const int nr, const rm_selection_t mode_selection, const uint16_t value);
 
 	void     addToMMR1(const uint8_t mode, const uint8_t reg, const word_mode_t word_mode);
-
 
 	gam_rc_t getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t word_mode, const rm_selection_t mode_selection, const bool read_value = true);
 	gam_rc_t getGAMAddress(const uint8_t mode, const int reg, const word_mode_t word_mode);
@@ -143,8 +142,11 @@ public:
 	uint16_t getPC() const { return pc; }
 
 	void setRegister(const int nr, const uint16_t value, const rm_selection_t mode_selection = rm_cur);
-
 	void setRegisterLowByte(const int nr, const word_mode_t word_mode, const uint16_t value);
+	// used by 'main' for json-validation
+	void lowlevel_register_set(const uint8_t set, const uint8_t reg, const uint16_t value);
+	uint16_t lowlevel_register_get(const uint8_t set, const uint8_t reg);
+	void lowlevel_psw_set(const uint16_t value) { psw = value; }
 
 	void setStackPointer(const int which, const uint16_t value) { assert(which >= 0 && which < 4); sp[which] = value; }
 	void setPC(const uint16_t value) { pc = value; }

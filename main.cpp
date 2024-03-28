@@ -1,6 +1,7 @@
 // (C) 2018-2024 by Folkert van Heusden
 // Released under MIT license
 
+#include <assert.h>
 #include <atomic>
 #include <jansson.h>
 #include <signal.h>
@@ -70,20 +71,40 @@ int run_cpu_validation(const std::string & filename)
 
 		// {"memory-before": {"512": 51435, "514": 45610, "516": 15091, "518": 43544}, "registers-before": {"0": 64423, "1": 1, "2": 41733, "3": 14269, "4": 48972, "5": 42770, "6": 57736, "7": 512}, "registers-after": {"0": 64423, "1": 1, "2": 41733, "3": 14269, "4": 48972, "5": 42770, "6": 57736, "7": 512}, "memory-after": {"512": 51435, "514": 45610, "516": 15091, "518": 43544}}
 
-		// initialize
-		json_t *memory_before = json_object_get(test, "memory-before");
-		const char *key   = nullptr;
-		json_t     *value = nullptr;
-		json_object_foreach(memory_before, key, value) {
-			b->writePhysical(atoi(key), json_integer_value(value));
+		{
+			// initialize
+			json_t *memory_before = json_object_get(test, "memory-before");
+			const char *key   = nullptr;
+			json_t     *value = nullptr;
+			json_object_foreach(memory_before, key, value) {
+				b->writePhysical(atoi(key), json_integer_value(value));
+			}
 		}
 
-		json_t *registers_before = json_object_get(test, "registers-before");
-		json_object_foreach(registers_before, key, value) {
-			if (strcmp(key, "psw") == 0)
-				c->setPSW(uint16_t(json_integer_value(value)), false);  // TODO: without the AND
-			else
-				c->setRegister(atoi(key), json_integer_value(value), rm_cur);
+		json_t *const registers_before = json_object_get(test, "registers-before");
+
+		{
+			const char *key   = nullptr;
+			json_t     *value = nullptr;
+			json_t *set0 = json_object_get(registers_before, "0");
+			json_object_foreach(set0, key, value) {
+				c->lowlevel_register_set(0, atoi(key), json_integer_value(value));
+			}
+			json_t *set1 = json_object_get(registers_before, "1");
+			json_object_foreach(set1, key, value) {
+				c->lowlevel_register_set(1, atoi(key), json_integer_value(value));
+			}
+		}
+		{
+			json_t *psw_reg = json_object_get(registers_before, "psw");
+			assert(psw_reg);
+			c->lowlevel_psw_set(json_integer_value(psw_reg));
+		}
+		{
+			json_t *b_pc = json_object_get(registers_before, "pc");
+			assert(b_pc);
+			c->setPC(json_integer_value(b_pc));
+			// TODO PS
 		}
 
 		c->step_a();
@@ -91,38 +112,73 @@ int run_cpu_validation(const std::string & filename)
 		c->step_b();
 
 		// validate
-		bool err = false;
-		json_t *memory_after = json_object_get(test, "memory-after");
-		json_object_foreach(memory_before, key, value) {
-			uint16_t mem_contains = b->readPhysical(atoi(key));
-			uint16_t should_be    = json_integer_value(value);
+		{
+			bool err = false;
+			{
+				json_t *memory_after = json_object_get(test, "memory-after");
+				const char *key   = nullptr;
+				json_t     *value = nullptr;
+				json_object_foreach(memory_after, key, value) {
+					int      key_v        = atoi(key);
+					uint16_t mem_contains = b->readPhysical(key_v);
+					uint16_t should_be    = json_integer_value(value);
 
-			if (mem_contains != should_be) {
-				DOLOG(warning, true, "memory address %s mismatch (is: %06o, should be: %06o)", key, mem_contains, should_be);
-				err = true;
+					if (mem_contains != should_be) {
+						DOLOG(warning, true, "memory address %06o (%d) mismatch (is: %06o (%d), should be: %06o (%d))", key_v, key_v, mem_contains, mem_contains, should_be, should_be);
+						err = true;
+					}
+				}
 			}
-		}
 
-		json_t *registers_after = json_object_get(test, "registers-after");
-		json_object_foreach(registers_before, key, value) {
-			uint16_t register_is = 0;
+			uint16_t psw = c->getPSW();
 
-			if (strcmp(key, "psw") == 0)
-				register_is = c->getPSW();
+			json_t *const registers_after = json_object_get(test, "registers-after");
+
+			{
+				int set_nr = (psw >> 11) & 1;
+				char set[] = { char('0' + set_nr), 0x00 };
+
+				json_t *a_set = json_object_get(registers_after, set);
+				const char *key   = nullptr;
+				json_t     *value = nullptr;
+				json_object_foreach(a_set, key, value) {
+					uint16_t register_is = c->lowlevel_register_get(set_nr, atoi(key));
+					uint16_t should_be   = json_integer_value(value);
+
+					if (register_is != should_be) {
+						DOLOG(warning, true, "set %d register %s mismatch (is: %06o, should be: %06o)", set_nr, key, register_is, should_be);
+						err = true;
+					}
+				}
+			}
+
+			{
+				json_t *a_pc = json_object_get(registers_after, "pc");
+				assert(a_pc);
+				uint16_t should_be_pc = json_integer_value(a_pc);
+				if (c->getPC() != should_be_pc) {
+					DOLOG(warning, true, "PC register mismatch (is: %06o, should be: %06o)", c->getPC(), should_be_pc);
+					err = true;
+				}
+			}
+
+			// TODO check PS
+
+			{
+				json_t *a_psw = json_object_get(registers_after, "psw");
+				assert(a_psw);
+				uint16_t should_be_psw = json_integer_value(a_psw);
+				if (should_be_psw != psw) {
+					DOLOG(warning, true, "PSW register mismatch (is: %06o, should be: %06o)", psw, should_be_psw);
+					err = true;
+				}
+			}
+
+			if (err)
+				DOLOG(warning, true, "%s\n", json_dumps(test, 0));  // also emit empty line(!)
 			else
-				register_is = c->getRegister(atoi(key), rm_cur);
-			uint16_t should_be   = json_integer_value(value);
-
-			if (register_is != should_be) {
-				DOLOG(warning, true, "register %s mismatch (is: %06o, should be: %06o)", key, register_is, should_be);
-				err = true;
-			}
+				n_ok++;
 		}
-
-		if (err)
-			DOLOG(warning, true, "%s", json_dumps(test, 0));
-		else
-			n_ok++;
 
 		// clean-up
 		delete b;
