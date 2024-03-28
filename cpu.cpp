@@ -886,10 +886,8 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 				  }
 
 		case 0b000101010: { // INC/INCB
-				    	  auto     a = getGAM(dst_mode, dst_reg, word_mode, rm_cur);
-
 					  if (dst_mode == 0) {
-						  uint16_t v = a.value.value();
+						  uint16_t v   = getRegister(dst_reg);
 						  uint16_t add = word_mode == wm_byte ? v & 0xff00 : 0;
 
 						  v = (v + 1) & (word_mode == wm_byte ? 0xff : 0xffff);
@@ -902,8 +900,8 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						  setRegister(dst_reg, v);
 					  }
 					  else {
+						  auto    a         = getGAM(dst_mode, dst_reg, word_mode, rm_cur);
 						  int32_t vl        = (a.value.value() + 1) & (word_mode == wm_byte ? 0xff : 0xffff);
-
 						  bool    set_flags = a.addr.value() != ADDR_PSW;
 
 						  if (set_flags) {
@@ -935,8 +933,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					  }
 					  else {
 						  auto     a  = getGAM(dst_mode, dst_reg, word_mode, rm_cur);
-						  uint16_t v  = a.value.value();
-						  int32_t  vl = (v - 1) & (word_mode == wm_byte ? 0xff : 0xffff);
+						  int32_t  vl = (a.value.value() - 1) & (word_mode == wm_byte ? 0xff : 0xffff);
 
 						  bool set_flags = a.addr.value() != ADDR_PSW;
 
