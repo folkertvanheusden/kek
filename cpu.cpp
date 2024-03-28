@@ -1396,9 +1396,9 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 #endif
 				 }
 				 else {  // SXT
-					 auto g_dst = getGAM(dst_mode, dst_reg, word_mode, rm_cur);
+					 auto     g_dst = getGAM(dst_mode, dst_reg, word_mode, rm_cur);
 
-					 int32_t  vl = -getPSW_n();
+					 uint16_t vl    = -getPSW_n();
 
 					 if (put_result(g_dst, vl)) {
 						 setPSW_z(getPSW_n() == false);
