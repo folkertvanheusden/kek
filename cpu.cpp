@@ -181,6 +181,9 @@ uint16_t cpu::addRegister(const int nr, const rm_selection_t mode_selection, con
 
 void cpu::lowlevel_register_set(const uint8_t set, const uint8_t reg, const uint16_t value)
 {
+	assert(set < 2);
+	assert(reg < 8);
+
 	if (reg < 6)
 		regs0_5[set][reg] = value;
 	else if (reg == 6)
@@ -191,6 +194,9 @@ void cpu::lowlevel_register_set(const uint8_t set, const uint8_t reg, const uint
 
 uint16_t cpu::lowlevel_register_get(const uint8_t set, const uint8_t reg)
 {
+	assert(set < 2);
+	assert(reg < 8);
+
 	if (reg < 6)
 		return regs0_5[set][reg];
 

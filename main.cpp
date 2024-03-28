@@ -54,7 +54,7 @@ void sw_handler(int s)
 int run_cpu_validation(const std::string & filename)
 {
 	json_error_t error;
-	json_t *json = json_load_file(filename.c_str(), 0, &error);
+	json_t *json = json_load_file(filename.c_str(), JSON_REJECT_DUPLICATES, &error);
 	if (!json)
 		error_exit(false, "%s", error.text);
 
@@ -68,8 +68,6 @@ int run_cpu_validation(const std::string & filename)
 		bus *b = new bus();
 		cpu *c = new cpu(b, &event);
 		b->add_cpu(c);
-
-		// {"memory-before": {"512": 51435, "514": 45610, "516": 15091, "518": 43544}, "registers-before": {"0": 64423, "1": 1, "2": 41733, "3": 14269, "4": 48972, "5": 42770, "6": 57736, "7": 512}, "registers-after": {"0": 64423, "1": 1, "2": 41733, "3": 14269, "4": 48972, "5": 42770, "6": 57736, "7": 512}, "memory-after": {"512": 51435, "514": 45610, "516": 15091, "518": 43544}}
 
 		{
 			// initialize
@@ -104,8 +102,9 @@ int run_cpu_validation(const std::string & filename)
 			json_t *b_pc = json_object_get(registers_before, "pc");
 			assert(b_pc);
 			c->setPC(json_integer_value(b_pc));
-			// TODO PS
 		}
+
+		// TODO SP[]
 
 		c->step_a();
 		disassemble(c, nullptr, c->getPC(), false);
@@ -146,7 +145,7 @@ int run_cpu_validation(const std::string & filename)
 					uint16_t should_be   = json_integer_value(value);
 
 					if (register_is != should_be) {
-						DOLOG(warning, true, "set %d register %s mismatch (is: %06o, should be: %06o)", set_nr, key, register_is, should_be);
+						DOLOG(warning, true, "set %d register %s mismatch (is: %06o (%d), should be: %06o (%d))", set_nr, key, register_is, register_is, should_be, should_be);
 						err = true;
 					}
 				}
@@ -157,27 +156,31 @@ int run_cpu_validation(const std::string & filename)
 				assert(a_pc);
 				uint16_t should_be_pc = json_integer_value(a_pc);
 				if (c->getPC() != should_be_pc) {
-					DOLOG(warning, true, "PC register mismatch (is: %06o, should be: %06o)", c->getPC(), should_be_pc);
+					DOLOG(warning, true, "PC register mismatch (is: %06o (%d), should be: %06o (%d))", c->getPC(), c->getPC(), should_be_pc, should_be_pc);
 					err = true;
 				}
 			}
 
-			// TODO check PS
+			// TODO check SP[]
 
 			{
 				json_t *a_psw = json_object_get(registers_after, "psw");
 				assert(a_psw);
 				uint16_t should_be_psw = json_integer_value(a_psw);
 				if (should_be_psw != psw) {
-					DOLOG(warning, true, "PSW register mismatch (is: %06o, should be: %06o)", psw, should_be_psw);
+					DOLOG(warning, true, "PSW register mismatch (is: %06o (%d), should be: %06o (%d))", psw, psw, should_be_psw, should_be_psw);
 					err = true;
 				}
 			}
 
-			if (err)
-				DOLOG(warning, true, "%s\n", json_dumps(test, 0));  // also emit empty line(!)
-			else
+			if (err) {
+				char *js = json_dumps(test, 0);
+				DOLOG(warning, true, "%s\n", js);  // also emit empty line(!)
+				free(js);
+			}
+			else {
 				n_ok++;
+			}
 		}
 
 		// clean-up
