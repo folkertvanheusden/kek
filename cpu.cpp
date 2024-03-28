@@ -828,7 +828,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 					 uint16_t v = g_dst.value.value();
 
-					 v = ((v & 0xff) << 8) | (v >> 8);
+					 v = (v << 8) | (v >> 8);
 
 					 set_flags = putGAM(g_dst, v);
 
@@ -1081,14 +1081,10 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						  bool     new_carry = v & 1;
 
 						  uint16_t temp = 0;
-						  if (word_mode == wm_byte) {
-							  uint16_t add = v & 0xff00;
-
-							  temp = (v >> 1) | (getPSW_c() <<  7) | add;
-						  }
-						  else {
+						  if (word_mode == wm_byte)
+							  temp = (((v & 0xff) >> 1) | (getPSW_c() << 7)) | (v & 0xff00);
+						  else
 							  temp = (v >> 1) | (getPSW_c() << 15);
-						  }
 
 						  setRegister(dst_reg, temp);
 
