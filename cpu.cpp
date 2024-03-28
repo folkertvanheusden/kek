@@ -844,11 +844,11 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					  bool set_flags = false;
 
 					  if (word_mode == wm_byte && dst_mode == 0) {
-						  auto g_dst = getGAM(dst_mode, dst_reg, wm_byte, rm_cur);
+						  uint16_t v = getRegister(dst_reg) & 0xff00;
 
-						  uint16_t r = g_dst.value.value() & 0xff00;
+						  setRegister(dst_reg, v);
 
-						  set_flags = putGAM(g_dst, r);
+						  set_flags = true;
 					  }
 					  else {
 						  auto g_dst = getGAM(dst_mode, dst_reg, word_mode, rm_cur, false);
