@@ -74,7 +74,11 @@ class test_generator:
 
         # TODO what is the maximum size of an instruction?
         mem_kv = []
-        mem_kv.append((addr + 0, random.randint(0, 65536 - 8)))
+        while True:
+            instr = random.randint(0, 65536 - 8)
+            if instr != 1:  # TODO ignore 'WAIT' instruction
+                break
+        mem_kv.append((addr + 0, instr))
         mem_kv.append((addr + 2, random.randint(0, 65536 - 8)))
         mem_kv.append((addr + 4, random.randint(0, 65536 - 8)))
         mem_kv.append((addr + 6, random.randint(0, 65536 - 8)))
@@ -142,7 +146,8 @@ fh = open(sys.argv[1], 'w')
 t = test_generator()
 
 tests = []
-for i in range(0, 4096):
+for i in range(0, 131072):
+    print(f'{i}\r', end='')
     test = t.create_test()
     if test != None:
         tests.append(test)

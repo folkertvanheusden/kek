@@ -69,6 +69,8 @@ int run_cpu_validation(const std::string & filename)
 		cpu *c = new cpu(b, &event);
 		b->add_cpu(c);
 
+		uint16_t start_pc = 0;
+
 		{
 			// initialize
 			json_t *memory_before = json_object_get(test, "memory-before");
@@ -101,7 +103,8 @@ int run_cpu_validation(const std::string & filename)
 		{
 			json_t *b_pc = json_object_get(registers_before, "pc");
 			assert(b_pc);
-			c->setPC(json_integer_value(b_pc));
+			start_pc = json_integer_value(b_pc);
+			c->setPC(start_pc);
 		}
 
 		// TODO SP[]
@@ -173,6 +176,13 @@ int run_cpu_validation(const std::string & filename)
 			}
 
 			if (err) {
+				if (c->is_it_a_trap())
+					DOLOG(warning, true, "Error by TRAP");
+				else {
+					auto data = c->disassemble(start_pc);
+					DOLOG(warning, true, "Error by instruction %s", data["instruction-text"].at(0).c_str());
+				}
+
 				char *js = json_dumps(test, 0);
 				DOLOG(warning, true, "%s\n", js);  // also emit empty line(!)
 				free(js);

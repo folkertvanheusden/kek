@@ -36,10 +36,10 @@ private:
 	uint16_t fpsr  { 0 };
 	uint16_t stackLimitRegister { 0377 };
 	int      processing_trap_depth { 0 };
-	uint64_t instruction_count { 0 };
-	uint64_t running_since     { 0 };
-
-	uint64_t mtpi_count { 0 };
+	uint64_t instruction_count { 0     };
+	uint64_t running_since     { 0     };
+	bool     it_is_a_trap      { false };
+	uint64_t mtpi_count        { 0     };
 
 	// level, vector
 	std::map<uint8_t, std::set<uint8_t> > queued_interrupts;
@@ -114,6 +114,7 @@ public:
 	void queue_interrupt(const uint8_t level, const uint8_t vector);
 
 	void trap(uint16_t vector, const int new_ipl = -1, const bool is_interrupt = false);
+	bool is_it_a_trap() const { return it_is_a_trap; }
 
 	bool getPSW_c() const;
 	bool getPSW_v() const;

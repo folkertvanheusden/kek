@@ -1664,8 +1664,10 @@ void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 {
 	DOLOG(debug, true, "*** CPU::TRAP %o, new-ipl: %d, is-interrupt: %d ***", vector, new_ipl, is_interrupt);
 
-	uint16_t before_psw            = 0;
-	uint16_t before_pc             = 0;
+	uint16_t before_psw = 0;
+	uint16_t before_pc  = 0;
+
+	it_is_a_trap = true;
 
 	for(;;) {
 		try {
@@ -1688,11 +1690,9 @@ void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 			}
 			else {
 				before_psw = getPSW();
-
 				b->addToMMR1(-2, 6);
 
 				before_pc  = getPC();
-
 				b->addToMMR1(-2, 6);
 
 				// TODO set MMR2?
@@ -2224,6 +2224,8 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 
 void cpu::step_a()
 {
+	it_is_a_trap = false;
+
 	if ((b->getMMR0() & 0160000) == 0)
 		b->clearMMR1();
 
