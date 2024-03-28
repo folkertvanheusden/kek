@@ -833,7 +833,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					 set_flags = putGAM(g_dst, v);
 
 					 if (set_flags) {
-						 setPSW_flags_nzv(v, wm_byte);
+						 setPSW_flags_nzv(v, wm_word);
 						 setPSW_c(false);
 					 }
 
