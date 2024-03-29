@@ -503,6 +503,9 @@ memory_addresses_t bus::calculate_physical_address(const int run_mode, const uin
 		physical_data        &= 0x3ffff;
 	}
 
+	if (get_use_data_space(run_mode) == false)
+		physical_data = physical_instruction;
+
 	return { a, apf, physical_instruction, physical_data };
 }
 
