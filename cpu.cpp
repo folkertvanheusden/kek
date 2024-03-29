@@ -72,7 +72,7 @@ uint64_t cpu::get_instructions_executed_count()
 	return instruction_count;
 }
 
-std::tuple<double, double, uint64_t> cpu::get_mips_rel_speed()
+std::tuple<double, double, uint64_t, uint32_t, double> cpu::get_mips_rel_speed()
 {
 	uint64_t instr_count = get_instructions_executed_count();
 
@@ -86,7 +86,7 @@ std::tuple<double, double, uint64_t> cpu::get_mips_rel_speed()
         constexpr double pdp11_avg_cycles_per_instruction = (1 + 5) / 2.0;
         constexpr double pdp11_estimated_mips = pdp11_mhz / pdp11_avg_cycles_per_instruction;
 
-	return { mips, mips * 100 / pdp11_estimated_mips, instr_count };
+	return { mips, mips * 100 / pdp11_estimated_mips, instr_count, t_diff, wait_time / 1000. };
 }
 
 void cpu::reset()

@@ -157,6 +157,14 @@ void mmu_dump(console *const cnsl, bus *const b)
 	dump_par_pdr(cnsl, b, ADDR_PDR_U_START + 020, ADDR_PAR_U_START + 020, "user d-space", 1 + (!!(mmr3 & 1)));
 }
 
+void show_run_statistics(console *const cnsl, cpu *const c)
+{
+	auto stats = c->get_mips_rel_speed();
+
+	cnsl->put_string_lf(format("Executed %zu instructions in %u ms of which %.2f ms idle", size_t(std::get<2>(stats)), std::get<3>(stats), std::get<4>(stats)));
+	cnsl->put_string_lf(format("MIPS: %.2f, relative speed: %.2f%%", std::get<0>(stats), std::get<1>(stats)));
+}
+
 void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const stop_event, const bool tracing_in)
 {
 	int32_t trace_start_addr = -1;
@@ -412,6 +420,11 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 				continue;
 			}
+			else if (cmd == "stats") {
+				show_run_statistics(cnsl, c);
+
+				continue;
+			}
 #endif
 			else if (cmd == "cls") {
 				const char cls[] = { 27, '[', '2', 'J', 12, 0 };
@@ -451,6 +464,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 				cnsl->put_string_lf("setmem        - set memory (a=) to value (v=), both in octal, one byte");
 				cnsl->put_string_lf("toggle        - set switch (s=, 0...15 (decimal)) of the front panel to state (t=, 0 or 1)");
 				cnsl->put_string_lf("cls           - clear screen");
+				cnsl->put_string_lf("stats         - show run statistics");
 #if defined(ESP32)
 				cnsl->put_string_lf("cfgnet        - configure network (e.g. WiFi)");
 				cnsl->put_string_lf("startnet      - start network");

@@ -101,7 +101,7 @@ public:
 
 	void emulation_start();
 	uint64_t get_instructions_executed_count();
-	std::tuple<double, double, uint64_t> get_mips_rel_speed();
+	std::tuple<double, double, uint64_t, uint32_t, double> get_mips_rel_speed();
 
 	void reset();
 
