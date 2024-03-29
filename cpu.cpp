@@ -1185,21 +1185,15 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					  if (dst_mode == 0) {
 						  uint16_t v  = getRegister(dst_reg);
 
-						  bool     hb = word_mode == wm_byte ? v & 128 : v & 32768;
+						  uint16_t hb = word_mode == wm_byte ? v & 128 : v & 32768;
 
 						  setPSW_c(v & 1);
 
-						  if (word_mode == wm_byte) {
-							  uint16_t add = v & 0xff00;
-
+						  if (word_mode == wm_byte)
 							  v = (v & 255) >> 1;
-							  v |= hb << 7;
-							  v |= add;
-						  }
-						  else {
+						  else
 							  v >>= 1;
-							  v |= hb << 15;
-						  }
+						  v |= hb;
 
 						  setRegister(dst_reg, v);
 
@@ -1210,21 +1204,16 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					  else {
 						  auto     a   = getGAM(dst_mode, dst_reg, word_mode, rm_cur);
 						  uint16_t v   = a.value.value();
-						  uint16_t add = word_mode == wm_byte ? v & 0xff00 : 0;  // TODO is this right?
 
-						  bool     hb  = word_mode == wm_byte ? v & 128 : v & 32768;
+						  uint16_t hb  = word_mode == wm_byte ? v & 128 : v & 32768;
 
 						  setPSW_c(v & 1);
 
-						  if (word_mode == wm_byte) {
+						  if (word_mode == wm_byte)
 							  v = (v & 255) >> 1;
-							  v |= hb << 7;
-							  v |= add;
-						  }
-						  else {
+						  else
 							  v >>= 1;
-							  v |= hb << 15;
-						  }
+						  v |= hb;
 
 						  b->write(a.addr.value(), a.word_mode, v, a.mode_selection, a.space);
 
