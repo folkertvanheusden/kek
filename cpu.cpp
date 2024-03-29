@@ -280,7 +280,7 @@ void cpu::setPSW(const uint16_t v, const bool limited)
 	if (limited)
 		psw = (v & 0174037) | (psw & 0174340);
 	else
-		psw = v & 0174377;
+		psw = v & 0174377;  // mask off 'unused' bits (8-10)
 }
 
 void cpu::setPSW_flags_nzv(const uint16_t value, const word_mode_t word_mode)
@@ -1327,9 +1327,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 							mtpi_count++;
 
 							uint32_t a = word_mode == wm_byte ? phys.physical_data : phys.physical_instruction;
-
 							b->check_odd_addressing(a, run_mode, word_mode == wm_byte ? d_space : i_space, true);
-
 							b->writePhysical(a, v);
 						}
 					 }
@@ -1569,7 +1567,7 @@ bool cpu::misc_operations(const uint16_t instr)
 
 		case 0b0000000000000010: // RTI
 			setPC(popStack());
-			setPSW(popStack(), !!getPSW_prev_runmode());
+			setPSW(popStack(), !!getPSW_runmode());
 			return true;
 
 		case 0b0000000000000011: // BPT
@@ -1582,7 +1580,7 @@ bool cpu::misc_operations(const uint16_t instr)
 
 		case 0b0000000000000110: // RTT
 			setPC(popStack());
-			setPSW(popStack(), !!getPSW_prev_runmode());
+			setPSW(popStack(), !!getPSW_runmode());
 			return true;
 
 		case 0b0000000000000111: // MFPT
@@ -1701,7 +1699,7 @@ void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 			}
 
 			// make sure the trap vector is retrieved from kernel space
-			psw &= 037777;  // mask off 14/15 TODO: still required? readWord gets a d_space parameter
+			psw &= 037777;  // mask off 14/15 to make it into kernel-space
 
 			setPC(b->readWord(vector + 0, d_space));
 
