@@ -122,7 +122,6 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 
 			if (func == 0) { // controller reset
 				DOLOG(debug, true, "RK05 invoke %d (controller reset)", func);
-
 			}
 			else if (func == 1) { // write
 				*disk_write_acitivity = true;

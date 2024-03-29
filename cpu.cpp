@@ -1280,12 +1280,11 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 							 v = b->read(a.addr.value(), wm_word, rm_prev);
 						 }
 						 else {
-							int  run_mode = getPSW_prev_runmode();
-							auto phys     = b->calculate_physical_address(run_mode, a.addr.value());
+							int      run_mode = getPSW_prev_runmode();
+							auto     phys     = b->calculate_physical_address(run_mode, a.addr.value());
+							uint32_t a        = word_mode == wm_byte ? phys.physical_data : phys.physical_instruction;
 
-							uint32_t a = word_mode == wm_byte ? phys.physical_data : phys.physical_instruction;
-
-							b->check_odd_addressing(a, run_mode, word_mode ? d_space : i_space, false);
+							b->check_odd_addressing(a, run_mode, word_mode ? d_space : i_space, false);  // TODO d/i space must depend on the check done in calculate_physical_address
 
 							v = b->readPhysical(word_mode == wm_byte ? phys.physical_data : phys.physical_instruction);
 						 }
@@ -1327,7 +1326,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 							mtpi_count++;
 
 							uint32_t a = word_mode == wm_byte ? phys.physical_data : phys.physical_instruction;
-							b->check_odd_addressing(a, run_mode, word_mode == wm_byte ? d_space : i_space, true);
+							b->check_odd_addressing(a, run_mode, word_mode == wm_byte ? d_space : i_space, true); // TODO d/i space must depend on the check done in calculate_physical_address
 							b->writePhysical(a, v);
 						}
 					 }
