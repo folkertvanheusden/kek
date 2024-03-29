@@ -53,7 +53,7 @@ void console::start_thread()
 
 #if defined(BUILD_FOR_RP2040)
 	xTaskCreate(&thread_wrapper_console, "console", 2048, this, 1, nullptr);
-#elif !defined(ESP32)
+#else
 	th = new std::thread(std::ref(*this));
 #endif
 }
