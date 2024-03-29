@@ -164,8 +164,9 @@ t = test_generator()
 
 tests = []
 try:
-    for i in range(0, 10072):
-        print(f'{i}\r', end='')
+    for i in range(32768):
+        if (i & 63) == 0:
+            print(f'{i}\r', end='')
         test = t.create_test()
         if test != None:
             tests.append(test)
