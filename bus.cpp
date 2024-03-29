@@ -665,8 +665,8 @@ void bus::addToMMR1(const int8_t delta, const uint8_t reg)
 		return;
 
 #if defined(ESP32)
-	if (MMR1 > 255)
-		esp_backtrace_print(32);
+//	if (MMR1 > 255)
+//		esp_backtrace_print(32);
 #else
 	if (MMR1 > 255) {
 		extern FILE *lfh;
