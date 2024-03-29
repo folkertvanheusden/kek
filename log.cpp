@@ -21,6 +21,7 @@ log_level_t        log_level_screen = warning;
 FILE       *lfh              = nullptr;
 static int         lf_uid           = -1;
 static int         lf_gid           = -1;
+static bool        l_timestamp      = true;
 
 #if defined(ESP32)
 int gettid()
@@ -29,7 +30,7 @@ int gettid()
 }
 #endif
 
-void setlog(const char *lf, const log_level_t ll_file, const log_level_t ll_screen)
+void setlog(const char *lf, const log_level_t ll_file, const log_level_t ll_screen, const bool timestamp)
 {
 	if (lfh)
 		fclose(lfh);
@@ -40,6 +41,8 @@ void setlog(const char *lf, const log_level_t ll_file, const log_level_t ll_scre
 
 	log_level_file = ll_file;
 	log_level_screen = ll_screen;
+
+	l_timestamp = timestamp;
 
 	atexit(closelog);
 }
@@ -78,25 +81,6 @@ void dolog(const log_level_t ll, const char *fmt, ...)
 #endif
 	}
 
-	uint64_t now = get_us();
-	time_t t_now = now / 1000000;
-
-	tm tm { 0 };
-#if defined(_WIN32)
-	tm = *localtime(&t_now);
-#else
-	if (!localtime_r(&t_now, &tm))
-		error_exit(true, "localtime_r failed");
-#endif
-
-	char *ts_str = nullptr;
-
-	const char *const ll_names[] = { "debug  ", "info   ", "warning", "error  " };
-
-	asprintf(&ts_str, "%04d-%02d-%02d %02d:%02d:%02d.%06d] %s ",
-			tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, int(now % 1000000),
-			ll_names[ll]);
-
 	char *str = nullptr;
 
 	va_list ap;
@@ -104,16 +88,46 @@ void dolog(const log_level_t ll, const char *fmt, ...)
 	(void)vasprintf(&str, fmt, ap);
 	va_end(ap);
 
+	if (l_timestamp) {
+		uint64_t now = get_us();
+		time_t t_now = now / 1000000;
+
+		tm tm { 0 };
+#if defined(_WIN32)
+		tm = *localtime(&t_now);
+#else
+		if (!localtime_r(&t_now, &tm))
+			error_exit(true, "localtime_r failed");
+#endif
+		char *ts_str = nullptr;
+
+		const char *const ll_names[] = { "debug  ", "info   ", "warning", "error  " };
+
+		asprintf(&ts_str, "%04d-%02d-%02d %02d:%02d:%02d.%06d] %s ",
+				tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, int(now % 1000000),
+				ll_names[ll]);
+
 #if !defined(ESP32)
-	if (ll >= log_level_file && lfh != nullptr)
-		fprintf(lfh, "%s%s\n", ts_str, str);
+		if (ll >= log_level_file && lfh != nullptr)
+			fprintf(lfh, "%s%s\n", ts_str, str);
 #endif
 
-	if (ll >= log_level_screen)
-		printf("%s%s\r\n", ts_str, str);
+		if (ll >= log_level_screen)
+			printf("%s%s\r\n", ts_str, str);
+
+		free(ts_str);
+	}
+	else {
+#if !defined(ESP32)
+		if (ll >= log_level_file && lfh != nullptr)
+			fprintf(lfh, "%s\n", str);
+#endif
+
+		if (ll >= log_level_screen)
+			printf("%s\r\n", str);
+	}
 
 	free(str);
-	free(ts_str);
 #endif
 }
 

@@ -229,6 +229,7 @@ void help()
 	printf("-t       enable tracing (disassemble to stderr, requires -d as well)\n");
 	printf("-l x     log to file x\n");
 	printf("-L x,y   set log level for screen (x) and file (y)\n");
+	printf("-X       do not include timestamp in logging\n");
 	printf("-J x     run validation suite x against the CPU emulation\n");
 }
 
@@ -247,6 +248,7 @@ int main(int argc, char *argv[])
 	const char  *logfile   = nullptr;
 	log_level_t  ll_screen = none;
 	log_level_t  ll_file   = none;
+	bool         timestamp = true;
 
 	uint16_t     start_addr= 01000;
 	bool         sa_set    = false;
@@ -263,12 +265,16 @@ int main(int argc, char *argv[])
 	std::string  validate_json;
 
 	int  opt          = -1;
-	while((opt = getopt(argc, argv, "hm:T:Br:R:p:ndtL:b:l:s:Q:N:J:")) != -1)
+	while((opt = getopt(argc, argv, "hm:T:Br:R:p:ndtL:b:l:s:Q:N:J:X")) != -1)
 	{
 		switch(opt) {
 			case 'h':
 				help();
 				return 1;
+
+			case 'X':
+				timestamp = false;
+				break;
 
 			case 'J':
 				validate_json = optarg;
@@ -379,7 +385,7 @@ int main(int argc, char *argv[])
 
 	console *cnsl = nullptr;
 
-	setlog(logfile, ll_file, ll_screen);
+	setlog(logfile, ll_file, ll_screen, timestamp);
 
 	if (validate_json.empty() == false)
 		return run_cpu_validation(validate_json);
