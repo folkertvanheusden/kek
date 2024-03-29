@@ -397,27 +397,28 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t wo
 			if (read_value)
 				g.value = b->read(g.addr.value(), word_mode, mode_selection, false, isR7_space);
 			addRegister(reg, mode_selection, word_mode == wm_word || reg == 7 || reg == 6 ? 2 : 1);
-			addToMMR1(mode, reg, word_mode);
+			addToMMR1(mode, reg, word_mode == wm_word || reg == 7 || reg == 6 ? wm_word : wm_byte);
 			break;
 		case 3:  // @(Rn)+  /  @#a
 			g.addr  = b->read(getRegister(reg, mode_selection), wm_word, mode_selection, false, isR7_space);
 			// might be wrong: the adds should happen when the read is really performed, because of traps
-			addRegister(reg, mode_selection, word_mode == wm_word || reg == 7 || reg == 6 ? 2 : 1);
-			addToMMR1(mode, reg, word_mode);
+			addRegister(reg, mode_selection, 2);
+			addToMMR1(mode, reg, wm_word);
 			g.space = d_space;
 			if (read_value)
 				g.value = b->read(g.addr.value(), word_mode, mode_selection, false, g.space);
 			break;
 		case 4:  // -(Rn)
 			addRegister(reg, mode_selection, word_mode == wm_word || reg == 7 || reg == 6 ? -2 : -1);
-			addToMMR1(mode, reg, word_mode);
+			addToMMR1(mode, reg, word_mode == wm_word || reg == 7 || reg == 6 ? wm_word : wm_byte);
+			g.space = d_space;
 			g.addr  = getRegister(reg, mode_selection);
 			if (read_value)
 				g.value = b->read(g.addr.value(), word_mode, mode_selection, false, isR7_space);
 			break;
 		case 5:  // @-(Rn)
-			addRegister(reg, mode_selection, word_mode == wm_word || reg == 7 || reg == 6 ? -2 : -1);
-			addToMMR1(mode, reg, word_mode);
+			addRegister(reg, mode_selection, -2);
+			addToMMR1(mode, reg, wm_word);
 			g.addr  = b->read(getRegister(reg, mode_selection), wm_word, mode_selection, false, isR7_space);
 			g.space = d_space;
 			if (read_value)
