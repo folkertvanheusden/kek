@@ -324,14 +324,11 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 				if (parts.size() < 3)
 					cnsl->put_string_lf("parameter missing");
 				else {
-					uint16_t addr   = std::stoi(parts[2], nullptr, 8);
-					int  val        = -1;
+					uint32_t addr = std::stoi(parts[1], nullptr, 8);
+					int      n    = parts.size() == 4 ? atoi(parts[3].c_str()) : 1;
 
-					int  n          = parts.size() == 4 ? atoi(parts[3].c_str()) : 1;
-					bool word       = parts[1] == "w";
-
-					if (parts[1] != "w" && parts[1] != "b") {
-						cnsl->put_string_lf("expected b or w");
+					if (parts[2] != "p" && parts[2] != "v") {
+						cnsl->put_string_lf("expected p (physical address) or v (virtual address)");
 
 						continue;
 					}
@@ -339,10 +336,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 					std::string out;
 
 					for(int i=0; i<n; i++) {
-						if (!word)
-							val = b->read(addr + i, wm_byte, rm_cur, true);
-						else if (word)
-							val = b->read(addr + i, wm_word, rm_cur, true);
+						int val = parts[2] == "v" ? b->read(addr + i, wm_word, rm_cur, true) : b->readPhysical(addr + i);
 
 						if (val == -1) {
 							cnsl->put_string_lf(format("Can't read from %06o\n", addr + i));
@@ -356,10 +350,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 							if (i > 0)
 								out += " ";
 
-							if (word)
-								out += format("%06o", val);
-							else
-								out += format("%03o", val);
+							out += format("%06o", val);
 						}
 					}
 
@@ -452,7 +443,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 #if !defined(ESP32)
 				cnsl->put_string_lf("quit/q        - stop emulator");
 #endif
-				cnsl->put_string_lf("examine/e     - show memory address (<b|w> <octal address> [<n>])");
+				cnsl->put_string_lf("examine/e     - show memory address (<octal address> <p|v> [<n>])");
 				cnsl->put_string_lf("reset/r       - reset cpu/bus/etc");
 				cnsl->put_string_lf("single/s      - run 1 instruction (implicit 'disassemble' command)");
 				cnsl->put_string_lf("sbp/cbp/lbp   - set/clear/list breakpoint(s)");
