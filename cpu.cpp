@@ -549,6 +549,7 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 			    }
 
 		case 0b101: { // BIS/BISB Bit Set Word/Byte
+				    // TODO: retain MSB for register operations?
 				    gam_rc_t g_src  = getGAM(src_mode, src_reg, word_mode, rm_cur);
 
 				    auto     g_dst  = getGAM(dst_mode, dst_reg, word_mode, rm_cur);
