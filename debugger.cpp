@@ -157,6 +157,30 @@ void mmu_dump(console *const cnsl, bus *const b)
 	dump_par_pdr(cnsl, b, ADDR_PDR_U_START + 020, ADDR_PAR_U_START + 020, "user d-space", 1 + (!!(mmr3 & 1)));
 }
 
+void reg_dump(console *const cnsl, cpu *const c)
+{
+	constexpr const char *const run_mode_name[] = { "kernel", "superv", "     -", "  user" };
+
+	for(uint8_t set=0; set<4; set++) {
+		cnsl->put_string_lf(format("%s, R0: %06o, R1: %06o, R2: %06o, R3: %06o, R4: %06o, R5: %06o",
+						run_mode_name[set],
+						c->lowlevel_register_get(set, 0),
+						c->lowlevel_register_get(set, 1),
+						c->lowlevel_register_get(set, 2),
+						c->lowlevel_register_get(set, 3),
+						c->lowlevel_register_get(set, 4),
+						c->lowlevel_register_get(set, 5)));
+	}
+
+	cnsl->put_string_lf(format("PSW: %06o, PC: %06o", c->getPSW(), c->lowlevel_register_get(0, 7)));
+
+	cnsl->put_string_lf(format("STACK: k:%06o, sv:%06o, -:%06o, usr: %06o",
+				c->lowlevel_register_sp_get(0),
+				c->lowlevel_register_sp_get(1),
+				c->lowlevel_register_sp_get(2),
+				c->lowlevel_register_sp_get(3)));
+}
+
 void show_run_statistics(console *const cnsl, cpu *const c)
 {
 	auto stats = c->get_mips_rel_speed();
@@ -306,6 +330,11 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 				continue;
 			}
+			else if (parts[0] == "regdump") {
+				reg_dump(cnsl, c);
+
+				continue;
+			}
 			else if (parts[0] == "strace") {
 				if (parts.size() != 2) {
 					trace_start_addr = -1;
@@ -411,12 +440,12 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 				continue;
 			}
+#endif
 			else if (cmd == "stats") {
 				show_run_statistics(cnsl, c);
 
 				continue;
 			}
-#endif
 			else if (cmd == "cls") {
 				const char cls[] = { 27, '[', '2', 'J', 12, 0 };
 
@@ -450,6 +479,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 				cnsl->put_string_lf("trace/t       - toggle tracing");
 				cnsl->put_string_lf("turbo         - toggle turbo mode (cannot be interrupted)");
 				cnsl->put_string_lf("strace        - start tracing from address - invoke without address to disable");
+				cnsl->put_string_lf("regdump       - dump register contents");
 				cnsl->put_string_lf("mmudump       - dump MMU settings (PARs/PDRs)");
 				cnsl->put_string_lf("setpc         - set PC to value");
 				cnsl->put_string_lf("setmem        - set memory (a=) to value (v=), both in octal, one byte");
@@ -478,6 +508,8 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 			*cnsl->get_running_flag() = true;
 
+			bool reset_cpu = true;
+
 			if (turbo) {
 				while(*stop_event == EVENT_NONE) {
 					c->step_a();
@@ -499,19 +531,23 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 					if (c->check_breakpoint() && !single_step) {
 						cnsl->put_string_lf("Breakpoint");
+						reset_cpu = false;
 						break;
 					}
 
 					c->step_b();
 
-					if (single_step && --n_single_step == 0)
+					if (single_step && --n_single_step == 0) {
+						reset_cpu = false;
 						break;
+					}
 				}
 			}
 
 			*cnsl->get_running_flag() = false;
 
-			c->reset();
+			if (reset_cpu)
+				c->reset();
 		}
 		catch(const std::exception & e) {
 			cnsl->put_string_lf(format("Exception caught: %s", e.what()));
