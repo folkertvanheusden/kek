@@ -150,6 +150,7 @@ public:
 	void lowlevel_register_sp_set(const uint8_t set, const uint16_t value);
 	uint16_t lowlevel_register_get(const uint8_t set, const uint8_t reg);
 	void lowlevel_psw_set(const uint16_t value) { psw = value; }
+	uint16_t lowlevel_register_sp_get(const uint8_t nr) const { return sp[nr]; }
 
 	void setStackPointer(const int which, const uint16_t value) { assert(which >= 0 && which < 4); sp[which] = value; }
 	void setPC(const uint16_t value) { pc = value; }

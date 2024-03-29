@@ -1671,7 +1671,7 @@ void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 
 	it_is_a_trap = true;
 
-	for(;;) {
+	do {
 		try {
 			processing_trap_depth++;
 
@@ -1722,7 +1722,6 @@ void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 
 			// if we reach this point then the trap was processed without causing
 			// another trap
-			break;
 		}
 		catch(const int exception) {
 			DOLOG(debug, true, "trap during execution of trap (%d)", exception);
@@ -1730,6 +1729,7 @@ void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 			setPSW(before_psw, false);
 		}
 	}
+	while(0);
 }
 
 cpu::operand_parameters cpu::addressing_to_string(const uint8_t mode_register, const uint16_t pc, const word_mode_t word_mode) const
