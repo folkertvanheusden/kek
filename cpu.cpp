@@ -1190,7 +1190,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						  setPSW_c(v & 1);
 
 						  if (word_mode == wm_byte)
-							  v = (v & 255) >> 1;
+							  v = ((v & 255) >> 1) | (v & 0xff00);
 						  else
 							  v >>= 1;
 						  v |= hb;
@@ -1210,7 +1210,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						  setPSW_c(v & 1);
 
 						  if (word_mode == wm_byte)
-							  v = (v & 255) >> 1;
+							  v = ((v & 255) >> 1) | (v & 0xff00);
 						  else
 							  v >>= 1;
 						  v |= hb;
