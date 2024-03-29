@@ -557,7 +557,7 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 
 				    if (put_result(g_dst, result)) {
 					    setPSW_n(SIGN(result, word_mode));
-					    setPSW_z(result == 0);
+					    setPSW_z(IS_0(result, word_mode));
 					    setPSW_v(false);
 				    }
 
