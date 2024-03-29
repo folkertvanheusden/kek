@@ -681,10 +681,6 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 
 				bool     sign  = SIGN(R, wm_word);
 
-				// extend sign-bit
-				if (sign)
-					R |= 0xffff0000;
-				
 				if (shift == 0) {
 					setPSW_c(false);
 					setPSW_v(false);
@@ -706,14 +702,16 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 					setPSW_v(SIGN(R, wm_word) != SIGN(oldR, wm_word));
 				}
 				else {
-					int shift_n = (64 - shift) - 1;
+					int      shift_n     = 64 - shift;
+					uint32_t sign_extend = sign ? 0x8000 : 0;
 
-					R >>= shift_n;
+					for(int i=0; i<shift_n; i++) {
+						setPSW_c(R & 1);
+						R >>= 1;
+						R |= sign_extend;
+					}
 
-					setPSW_c(R & 1);
 					setPSW_v(SIGN(R, wm_word) != SIGN(oldR, wm_word));
-
-					R >>= 1;
 				}
 
 				R &= 0xffff;
