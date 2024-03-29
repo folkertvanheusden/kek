@@ -1231,10 +1231,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 		case 0b00110011: { // ASL/ASLB
 					 if (dst_mode == 0) {
 						 uint16_t vl  = getRegister(dst_reg);
-						 uint16_t add = word_mode == wm_byte ? vl & 0xff00 : 0;
-
 						 uint16_t v   = (vl << 1) & (word_mode == wm_byte ? 0xff : 0xffff);
-						 v |= add;
 
 						 setPSW_n(SIGN(v, word_mode));
 						 setPSW_z(IS_0(v, wm_word));
