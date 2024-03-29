@@ -87,19 +87,21 @@ void console_thread_wrapper_panel(void *const c)
 uint32_t load_serial_speed_configuration()
 {
 	File dataFile = LittleFS.open(SERIAL_CFG_FILE, "r");
-
 	if (!dataFile)
 		return 115200;
 
 	size_t size = dataFile.size();
 
 	uint8_t buffer[4] { 0 };
-
 	dataFile.read(buffer, 4);
 
 	dataFile.close();
 
-	return (buffer[0] << 24) | (buffer[1] << 16) | (buffer[2] << 8) | buffer[3];
+	uint32_t speed = (buffer[0] << 24) | (buffer[1] << 16) | (buffer[2] << 8) | buffer[3];
+	// sanity check
+	if (speed < 300)
+		speed = 115200;
+	return speed;
 }
 
 bool save_serial_speed_configuration(const uint32_t bps)
@@ -110,7 +112,6 @@ bool save_serial_speed_configuration(const uint32_t bps)
 		return false;
 
 	const uint8_t buffer[] = { uint8_t(bps >> 24), uint8_t(bps >> 16), uint8_t(bps >> 8), uint8_t(bps) };
-
 	dataFile.write(buffer, 4);
 
 	dataFile.close();
@@ -306,8 +307,15 @@ std::optional<std::pair<std::vector<disk_backend *>, std::vector<disk_backend *>
 	if (!SD.begin(21, SD_SCK_MHZ(10)))
 		SD.initErrorHalt();
 #elif !defined(BUILD_FOR_RP2040)
-	if (!SD.begin(SS, SD_SCK_MHZ(15)))
-		SD.initErrorHalt();
+	if (!SD.begin(SS, SD_SCK_MHZ(15))) {
+		auto err = SD.sdErrorCode();
+		if (err)
+			c->debug("SDerror: 0x%x, data: 0x%x", err, SD.sdErrorData());
+		else
+			c->debug("Failed to initialize SD card");
+
+		return { };
+	}
 #endif
 
 	for(;;) {
@@ -425,17 +433,14 @@ void set_hostname()
 void configure_network(console *const c)
 {
 	WiFi.persistent(true);
-
 	WiFi.setAutoReconnect(true);
 
 	WiFi.mode(WIFI_STA);
 
 	c->put_string_lf("Scanning for wireless networks...");
-
 	int n_ssids = WiFi.scanNetworks();
 
 	c->put_string_lf("Wireless networks:");
-
 	for(int i=0; i<n_ssids; i++)
 		c->put_string_lf(format("\t%s", WiFi.SSID(i).c_str()));
 
@@ -444,7 +449,6 @@ void configure_network(console *const c)
 	std::string wifi_ap = c->read_line("Enter SSID[|PSK]: ");
 
 	auto parts = split(wifi_ap, "|");
-
 	if (parts.size() > 2) {
 		c->put_string_lf("Invalid SSID/PSK: should not contain '|'");
 		return;
