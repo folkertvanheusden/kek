@@ -1198,7 +1198,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						  setRegister(dst_reg, v);
 
 						  setPSW_n(SIGN(v, word_mode));
-						  setPSW_z(IS_0(v, word_mode));
+						  setPSW_z(IS_0(v, wm_word));
 						  setPSW_v(getPSW_n() ^ getPSW_c());
 					  }
 					  else {
@@ -1221,7 +1221,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 						  if (set_flags) {
 							  setPSW_n(SIGN(v, word_mode));
-							  setPSW_z(IS_0(v, word_mode));
+							  setPSW_z(IS_0(v, wm_word));
 							  setPSW_v(getPSW_n() ^ getPSW_c());
 						  }
 					  }
