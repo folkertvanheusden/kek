@@ -66,7 +66,7 @@ console *cnsl = nullptr;
 uint16_t exec_addr = 0;
 
 #if !defined(BUILD_FOR_RP2040)
-SdFat32  SD;
+SdFs     SD;
 #endif
 
 std::atomic_uint32_t stop_event      { EVENT_NONE };
