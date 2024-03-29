@@ -31,14 +31,15 @@ class cpu
 private:
 	uint16_t regs0_5[2][6]; // R0...5, selected by bit 11 in PSW, 
 	uint16_t sp[3 + 1]; // stackpointers, MF../MT.. select via 12/13 from PSW, others via 14/15
-	uint16_t pc    { 0 };
-	uint16_t psw   { 0 };
-	uint16_t fpsr  { 0 };
+	uint16_t pc                 { 0    };
+	uint16_t psw                { 0    };
+	uint16_t fpsr               { 0    };
 	uint16_t stackLimitRegister { 0377 };
-	uint64_t instruction_count { 0 };
-	uint64_t running_since     { 0 };
+	uint64_t instruction_count  { 0    };
+	uint64_t running_since      { 0    };
+	uint64_t wait_time          { 0    };
 
-	uint64_t mtpi_count { 0 };
+	uint64_t mtpi_count         { 0    };
 
 	// level, vector
 	std::map<uint8_t, std::set<uint8_t> > queued_interrupts;

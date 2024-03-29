@@ -41,6 +41,7 @@ void cpu::emulation_start()
 	instruction_count = 0;
 
 	running_since = get_ms();
+	wait_time     = 0;
 }
 
 bool cpu::check_breakpoint()
@@ -75,7 +76,7 @@ std::tuple<double, double, uint64_t> cpu::get_mips_rel_speed()
 {
 	uint64_t instr_count = get_instructions_executed_count();
 
-        uint32_t t_diff = get_ms() - running_since;  // TODO fix this because we now implement WAIT where it sits idle
+        uint32_t t_diff = get_ms() - running_since - (wait_time / 1000);
 
         double mips = instr_count / (1000.0 * t_diff);
 
@@ -1524,6 +1525,7 @@ bool cpu::misc_operations(const uint16_t instr)
 
 		case 0b0000000000000001: // WAIT
 			{
+				uint64_t start = get_us();
 #if defined(BUILD_FOR_RP2040)
 				uint8_t rc = 0;
 				xQueueReceive(qi_q, &rc, 0);
@@ -1532,6 +1534,9 @@ bool cpu::misc_operations(const uint16_t instr)
 
 				qi_cv.wait(lck);
 #endif
+				uint64_t end = get_us();
+
+				wait_time += end - start;  // used for MIPS calculation
 			}
 
 			DOLOG(debug, false, "WAIT returned");
