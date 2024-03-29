@@ -697,7 +697,7 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 				else if (shift < 32) {
 					setPSW_c((R << (shift - 16)) & 1);
 					R = 0;
-					setPSW_v(!!oldR);
+					setPSW_v(SIGN(oldR, wm_word) != SIGN(R, wm_word));
 				}
 				else if (shift == 32) {
 					R = -sign;
