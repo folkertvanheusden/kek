@@ -95,8 +95,8 @@ void myusleep(uint64_t us)
 	for(;;) {
 		uint64_t n_ms = us / 1000;
 
-		if (n_ms >= portTICK_RATE_MS) {
-			vTaskDelay(n_ms / portTICK_RATE_MS);
+		if (n_ms >= portTICK_PERIOD_MS) {
+			vTaskDelay(n_ms / portTICK_PERIOD_MS);
 
 			us -= n_ms * 1000;
 		}
