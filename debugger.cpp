@@ -1,6 +1,8 @@
 // (C) 2018-2023 by Folkert van Heusden
 // Released under MIT license
 
+#include <optional>
+
 #include "bus.h"
 #include "console.h"
 #include "cpu.h"
@@ -195,6 +197,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 	bool    tracing          = tracing_in;
 	int     n_single_step    = 1;
 	bool    turbo            = false;
+	std::optional<int> t_rl;  // trace runlevel
 
 	cpu *const c = b->getCpu();
 
@@ -446,6 +449,14 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 				continue;
 			}
+			else if (parts[0] == "trl") {
+				if (parts.size() == 1)
+					t_rl.reset();
+				else
+					t_rl = std::stoi(parts.at(1));
+
+				continue;
+			}
 			else if (cmd == "cls") {
 				const char cls[] = { 27, '[', '2', 'J', 12, 0 };
 
@@ -479,6 +490,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 				cnsl->put_string_lf("trace/t       - toggle tracing");
 				cnsl->put_string_lf("turbo         - toggle turbo mode (cannot be interrupted)");
 				cnsl->put_string_lf("strace        - start tracing from address - invoke without address to disable");
+				cnsl->put_string_lf("trl           - set trace run-level, empty for all");
 				cnsl->put_string_lf("regdump       - dump register contents");
 				cnsl->put_string_lf("mmudump       - dump MMU settings (PARs/PDRs)");
 				cnsl->put_string_lf("setpc         - set PC to value");
@@ -517,6 +529,8 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 				}
 			}
 			else {
+				reset_cpu = false;
+
 				while(*stop_event == EVENT_NONE) {
 					if (!single_step)
 						DOLOG(debug, false, "---");
@@ -526,21 +540,18 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 					if (trace_start_addr != -1 && c->getPC() == trace_start_addr)
 						tracing = true;
 
-					if (tracing || single_step)
+					if ((tracing || single_step) && (t_rl.has_value() == false || t_rl.value() == c->getPSW_runmode()))
 						disassemble(c, single_step ? cnsl : nullptr, c->getPC(), false);
 
 					if (c->check_breakpoint() && !single_step) {
 						cnsl->put_string_lf("Breakpoint");
-						reset_cpu = false;
 						break;
 					}
 
 					c->step_b();
 
-					if (single_step && --n_single_step == 0) {
-						reset_cpu = false;
+					if (single_step && --n_single_step == 0)
 						break;
-					}
 				}
 			}
 
