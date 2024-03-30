@@ -32,7 +32,8 @@ int console_esp32::wait_for_char_ll(const short timeout)
 				return port->read();
 		}
 
-		delay(10);
+//		delay(10);
+		vTaskDelay(10 / portTICK_PERIOD_MS);
 	}
 
 	return -1;
@@ -103,7 +104,7 @@ void console_esp32::panel_update_thread()
 	pixels.show();
 
 	for(;;) {
-		vTaskDelay(20 / portTICK_RATE_MS);
+		vTaskDelay(20 / portTICK_PERIOD_MS);
 
 		try {
 			// note that these are approximately as there's no mutex on the emulation
