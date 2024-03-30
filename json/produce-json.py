@@ -8,6 +8,8 @@ import random
 import sys
 
 
+ignore_traps = True
+
 class MMIO_wrapper(MMIO):
     def register(self, iofunc, offsetaddr, nwords, *, byte_writes=False, reset=False):
         pass
@@ -133,7 +135,11 @@ class test_generator:
             self.put_registers(p, out, 'registers-before')
             out['registers-before']['psw'] = p.psw
 
+            # run instruction
             p.run_steps(pc=addr, steps=1)
+
+            if p.straps and ignore_traps:
+                return None
 
             self.put_registers(p, out, 'registers-after')
             out['registers-after']['psw'] = p.psw
