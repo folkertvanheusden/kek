@@ -1185,7 +1185,6 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 		case 0b000110010: { // ASR/ASRB
 					  if (dst_mode == 0) {
 						  uint16_t v  = getRegister(dst_reg);
-
 						  uint16_t hb = word_mode == wm_byte ? v & 128 : v & 32768;
 
 						  setPSW_c(v & 1);
@@ -1232,7 +1231,10 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 		case 0b00110011: { // ASL/ASLB
 					 if (dst_mode == 0) {
 						 uint16_t vl  = getRegister(dst_reg);
-						 uint16_t v   = (vl << 1) & (word_mode == wm_byte ? 0xff : 0xffff);
+						 uint16_t v   = ((vl << 1) & (word_mode == wm_byte ? 0xff : 0xffff));
+
+						 if (word_mode == wm_byte)
+							 v |= vl & 0xff00;
 
 						 setPSW_n(SIGN(v, word_mode));
 						 setPSW_z(IS_0(v, wm_word));
@@ -1240,7 +1242,6 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						 setPSW_v(getPSW_n() ^ getPSW_c());
 
 						 setRegister(dst_reg, v);
-
 					 }
 					 else {
 						 auto     a   = getGAM(dst_mode, dst_reg, word_mode, rm_cur);
