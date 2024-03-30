@@ -1606,7 +1606,6 @@ bool cpu::misc_operations(const uint16_t instr)
 
 	if ((instr & ~0b111111) == 0b0000000001000000) { // JMP
 		int dst_mode = (instr >> 3) & 7;
-
 		if (dst_mode == 0)  // cannot jump to a register
 			return false;
 
@@ -1622,7 +1621,7 @@ bool cpu::misc_operations(const uint16_t instr)
 		if (dst_mode == 0)  // cannot jump to a register
 			return false;
 
-		int dst_reg  = instr & 7;
+		int  dst_reg   = instr & 7;
 
 		auto dst_value = getGAMAddress(dst_mode, dst_reg, wm_word).addr.value();
 
