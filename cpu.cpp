@@ -1689,6 +1689,8 @@ void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 				setRegister(6, 04);
 			}
 			else {
+				b->clearMMR1();
+
 				before_psw = getPSW();
 				b->addToMMR1(-2, 6);
 
