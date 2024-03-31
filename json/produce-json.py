@@ -1,5 +1,7 @@
 #! /usr/bin/python3
 
+# place in the same folder as https://github.com/outofmbufs/python-pdp11-emulator
+
 import json
 from machine import PDP1170
 from mmio import MMIO
