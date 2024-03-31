@@ -1,5 +1,7 @@
 #! /usr/bin/python3
 
+# place in the same folder as https://github.com/outofmbufs/python-pdp11-emulator
+
 import json
 from machine import PDP1170
 from mmio import MMIO
@@ -111,7 +113,7 @@ class test_generator:
             # generate & set PSW
             while True:
                 try:
-                    p.psw = random.randint(0, 65536)
+                    p.psw = random.randint(0, 65536) & 0o174377
                     break
                 except PDPTraps.ReservedInstruction as ri:
                     pass

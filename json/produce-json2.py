@@ -1,5 +1,7 @@
 #! /usr/bin/python3
 
+# place in the same folder as https://github.com/outofmbufs/python-pdp11-emulator
+
 import copy
 import json
 from machine import PDP1170
@@ -162,7 +164,7 @@ class test_generator:
 
 stop = False
 while True:
-    psw = random.randint(0, 65536)
+    psw = random.randint(0, 65536) & 0o174377
     name = f'/mnt/temp/bla-{psw:06o}.json'
     if os.path.isfile(name):
         print(f'skipping {name}')

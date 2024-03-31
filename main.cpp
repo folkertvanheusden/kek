@@ -98,7 +98,7 @@ int run_cpu_validation(const std::string & filename)
 		{
 			json_t *psw_reg = json_object_get(registers_before, "psw");
 			assert(psw_reg);
-			c->lowlevel_psw_set(json_integer_value(psw_reg));
+			c->lowlevel_psw_set(json_integer_value(psw_reg) & 0174377);
 		}
 		{
 			json_t *b_pc = json_object_get(registers_before, "pc");
@@ -190,7 +190,7 @@ int run_cpu_validation(const std::string & filename)
 			{
 				json_t *a_psw = json_object_get(registers_after, "psw");
 				assert(a_psw);
-				uint16_t should_be_psw = json_integer_value(a_psw);
+				uint16_t should_be_psw = json_integer_value(a_psw) & 0174377;
 				if (should_be_psw != psw) {
 					DOLOG(warning, true, "PSW register mismatch (is: %06o (%d), should be: %06o (%d))", psw, psw, should_be_psw, should_be_psw);
 					err = true;
