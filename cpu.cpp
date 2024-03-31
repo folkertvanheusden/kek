@@ -796,9 +796,7 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 			}
 
 		case 7: { // SOB
-				addRegister(reg, rm_cur, -1);
-
-				if (getRegister(reg)) {
+				if (addRegister(reg, rm_cur, -1)) {
 					uint16_t newPC = getPC() - dst * 2;
 
 					setPC(newPC);
@@ -1643,13 +1641,17 @@ bool cpu::misc_operations(const uint16_t instr)
 	if ((instr & 0b1111111111111000) == 0b0000000010000000) { // RTS
 		const int link_reg = instr & 7;
 
-		uint16_t  v        = popStack();
-
 		// MOVE link, PC
 		setPC(getRegister(link_reg));
 
 		// POP link
-		setRegister(link_reg, v);
+		uint16_t word_on_stack = b->readWord(getRegister(6), d_space);
+
+		setRegister(link_reg, word_on_stack);
+
+		// do not overwrite SP when it was just set
+		if (link_reg != 6)
+			addRegister(6, rm_cur, 2);
 
 		return true;
 	}
