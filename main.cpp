@@ -38,6 +38,8 @@ std::atomic_bool *running      { nullptr };
 
 std::atomic_bool  sigw_event   { false };
 
+constexpr const uint16_t validation_psw_mask = 0174037;  // ignore unused bits & priority(!)
+
 #if !defined(_WIN32)
 void sw_handler(int s)
 {
@@ -98,7 +100,7 @@ int run_cpu_validation(const std::string & filename)
 		{
 			json_t *psw_reg = json_object_get(registers_before, "psw");
 			assert(psw_reg);
-			c->lowlevel_psw_set(json_integer_value(psw_reg) & 0174377);
+			c->lowlevel_psw_set(json_integer_value(psw_reg));
 		}
 		{
 			json_t *b_pc = json_object_get(registers_before, "pc");
@@ -173,7 +175,6 @@ int run_cpu_validation(const std::string & filename)
 				}
 			}
 
-			// TODO check SP[]
 			{
 				json_t *a_sp = json_object_get(registers_after, "sp");
 				size_t array_size = json_array_size(a_sp);
@@ -191,9 +192,9 @@ int run_cpu_validation(const std::string & filename)
 			{
 				json_t *a_psw = json_object_get(registers_after, "psw");
 				assert(a_psw);
-				uint16_t should_be_psw = json_integer_value(a_psw) & 0174377;
-				if (should_be_psw != psw) {
-					DOLOG(warning, true, "PSW register mismatch (is: %06o (%d), should be: %06o (%d))", psw, psw, should_be_psw, should_be_psw);
+				uint16_t should_be_psw = json_integer_value(a_psw);
+				if ((should_be_psw & validation_psw_mask) != (psw & validation_psw_mask)) {
+					DOLOG(warning, true, "PSW register mismatch (is: %06o (%d), w/m %06o, should be: %06o (%d), w/m %06o)", psw, psw, psw & validation_psw_mask, should_be_psw, should_be_psw, should_be_psw & validation_psw_mask);
 					err = true;
 				}
 			}
