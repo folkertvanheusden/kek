@@ -404,7 +404,7 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 		}
 
 		if (!peek_only) {
-			DOLOG(debug, true, "READ-I/O UNHANDLED read %06o (%c)", a, word_mode ? 'B' : ' ');
+			DOLOG(debug, true, "READ-I/O UNHANDLED read %08o (%c), (base: %o)", m_offset, word_mode ? 'B' : ' ', get_io_base());
 
 			c->trap(004);  // no such i/o
 
@@ -990,10 +990,10 @@ void bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 
 		///////////
 
-		DOLOG(debug, true, "WRITE-I/O UNHANDLED %06o(%c): %06o", a, word_mode ? 'B' : 'W', value);
+		DOLOG(debug, true, "WRITE-I/O UNHANDLED %08o(%c): %06o (base: %o)", m_offset, word_mode ? 'B' : 'W', value, get_io_base());
 
 		if (word_mode == wm_word && (a & 1)) {
-			DOLOG(debug, true, "WRITE-I/O to %06o (value: %06o) - odd address!", a, value);
+			DOLOG(debug, true, "WRITE-I/O to %08o (value: %06o) - odd address!", m_offset, value);
 
 			trap_odd(a);
 			throw 8;
