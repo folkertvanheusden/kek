@@ -173,7 +173,6 @@ int run_cpu_validation(const std::string & filename)
 				}
 			}
 
-			// TODO check SP[]
 			{
 				json_t *a_sp = json_object_get(registers_after, "sp");
 				size_t array_size = json_array_size(a_sp);
