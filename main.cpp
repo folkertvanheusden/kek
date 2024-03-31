@@ -182,7 +182,7 @@ int run_cpu_validation(const std::string & filename)
 					json_t *temp = json_array_get(a_sp, i);
 					uint16_t sp = c->lowlevel_register_sp_get(i);
 					if (json_integer_value(temp) != sp) {
-						DOLOG(warning, true, "SP[%d] register mismatch (is: %06o (%d), should be: %06o (%d))", i, sp, sp, json_integer_value(temp), json_integer_value(temp));
+						DOLOG(warning, true, "SP[%d] register mismatch (is: %06o (%d), should be: %06o (%d)) for %06o", i, sp, sp, json_integer_value(temp), json_integer_value(temp), b->readPhysical(start_pc));
 						err = true;
 					}
 				}
