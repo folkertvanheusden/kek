@@ -1272,23 +1272,23 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						 v = getRegister(dst_reg, rm_prev);
 					 else {
 						 // calculate address in current address space
-						 auto a = getGAMAddress(dst_mode, dst_reg, wm_word);
+						auto a = getGAMAddress(dst_mode, dst_reg, wm_word);
 
-						 set_flags = a.addr.value() != ADDR_PSW;
+						set_flags = a.addr.value() != ADDR_PSW;
 
-						 if (a.addr.value() >= 0160000) {
-							 // read from previous space
-							 v = b->read(a.addr.value(), wm_word, rm_prev);
-						 }
-						 else {
-							int      run_mode = getPSW_prev_runmode();
-							auto     phys     = b->calculate_physical_address(run_mode, a.addr.value());
-							uint32_t a        = word_mode == wm_byte ? phys.physical_data : phys.physical_instruction;
+						int      prev_run_mode = getPSW_prev_runmode();
+						auto     phys          = b->calculate_physical_address(prev_run_mode, a.addr.value());
+						uint32_t phys_a        = word_mode == wm_byte ? phys.physical_data : phys.physical_instruction;
 
-							b->check_odd_addressing(a, run_mode, word_mode ? d_space : i_space, false);  // TODO d/i space must depend on the check done in calculate_physical_address
+						if (phys_a >= b->get_io_base()) {
+							// read from previous space
+							v = b->read(a.addr.value(), wm_word, rm_prev);
+						}
+						else {
+							b->check_odd_addressing(phys_a, prev_run_mode, word_mode ? d_space : i_space, false);  // TODO d/i space must depend on the check done in calculate_physical_address
 
 							v = b->readPhysical(word_mode == wm_byte ? phys.physical_data : phys.physical_instruction);
-						 }
+						}
 					 }
 
 					 if (set_flags)
@@ -1317,18 +1317,17 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 						set_flags = a.addr.value() != ADDR_PSW;
 
-						if (a.addr.value() >= 0160000)
+						int      prev_run_mode = getPSW_prev_runmode();
+						auto     phys          = b->calculate_physical_address(prev_run_mode, a.addr.value());
+						uint32_t phys_a        = word_mode == wm_byte ? phys.physical_data : phys.physical_instruction;
+
+						if (phys_a >= b->get_io_base())
 							b->write(a.addr.value(), wm_word, v, rm_prev);  // put in '13/12' address space
 						else {
-							int run_mode = getPSW_prev_runmode();
-							auto phys = b->calculate_physical_address(run_mode, a.addr.value());
-
-							DOLOG(debug, true, "%lu %06o MTP%c %06o: %06o", mtpi_count, pc-2, word_mode == wm_byte ? 'D' : 'I', a.addr.value(), v);
 							mtpi_count++;
-
-							uint32_t a = word_mode == wm_byte ? phys.physical_data : phys.physical_instruction;
-							b->check_odd_addressing(a, run_mode, word_mode == wm_byte ? d_space : i_space, true); // TODO d/i space must depend on the check done in calculate_physical_address
-							b->writePhysical(a, v);
+							DOLOG(debug, true, "%lu %06o MTP%c %06o: %06o (physical: %o)", mtpi_count, pc-2, word_mode == wm_byte ? 'D' : 'I', a.addr.value(), v, phys_a);
+							b->check_odd_addressing(phys_a, prev_run_mode, word_mode == wm_byte ? d_space : i_space, true); // TODO d/i space must depend on the check done in calculate_physical_address
+							b->writePhysical(phys_a, v);
 						}
 					 }
 
@@ -1661,7 +1660,7 @@ bool cpu::misc_operations(const uint16_t instr)
 // 'is_interrupt' is not correct naming; it is true for mmu faults and interrupts
 void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 {
-	DOLOG(debug, true, "*** CPU::TRAP %o, new-ipl: %d, is-interrupt: %d ***", vector, new_ipl, is_interrupt);
+	DOLOG(debug, true, "*** CPU::TRAP %o, new-ipl: %d, is-interrupt: %d, run mode: %d ***", vector, new_ipl, is_interrupt, getPSW_runmode());
 
 	uint16_t before_psw = 0;
 	uint16_t before_pc  = 0;

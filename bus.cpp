@@ -129,7 +129,7 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 
 	uint32_t m_offset = calculate_physical_address(run_mode, addr_in, !peek_only, false, peek_only, space);
 
-	uint32_t io_base  = MMR0 & 1 ? (MMR3 & 16 ? 017760000 : 0760000) : 0160000;
+	uint32_t io_base  = get_io_base();
 	bool     is_io    = m_offset >= io_base;
 
 	if (is_io) {
@@ -532,7 +532,7 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 		if ((MMR3 & 16) == 0)  // off is 18bit
 			m_offset &= 0x3ffff;
 
-		uint32_t io_base  = MMR3 & 16 ? 017760000 : 0760000;
+		uint32_t io_base  = get_io_base();
 		bool     is_io    = m_offset >= io_base;
 
 		if (trap_on_failure) {
@@ -745,7 +745,7 @@ void bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 
 	uint32_t m_offset = calculate_physical_address(run_mode, addr_in, true, true, false, space);
 
-	uint32_t io_base  = MMR0 & 1 ? (MMR3 & 16 ? 017760000 : 0760000) : 0160000;
+	uint32_t io_base  = get_io_base();
 	bool     is_io    = m_offset >= io_base;
 
 	if (is_io) {
