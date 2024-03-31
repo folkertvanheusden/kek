@@ -796,18 +796,13 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 			}
 
 		case 7: { // SOB
-				uint16_t v = getRegister(reg);
+				addRegister(reg, rm_cur, -1);
 
-				if (v == 1)
-					v = 0;
-				else {
-					v--;
-
+				if (getRegister(reg)) {
 					uint16_t newPC = getPC() - dst * 2;
+
 					setPC(newPC);
 				}
-
-				setRegister(reg, v);
 
 				return true;
 			}
