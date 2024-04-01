@@ -5,10 +5,8 @@ import sys
 filter_pc_sp = True
 counts = dict()
 
-fh = open(sys.argv[1], 'r')
-
 while True:
-    l = fh.readline()
+    l = sys.stdin.readline()
     if not l:
         break
     if not 'instr:' in l and not 'Error by instruction' in l:
