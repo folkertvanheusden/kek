@@ -1,11 +1,10 @@
 #! /usr/bin/python3
 
-# place in the same folder as https://github.com/outofmbufs/python-pdp11-emulator
-
 import copy
 import json
 from machine import PDP1170
 from mmio import MMIO
+from op4 import op4_dispatch_table
 import os
 from pdptraps import PDPTrap, PDPTraps
 import random
@@ -50,7 +49,7 @@ class PDP1170_wrapper(PDP1170):
         if value == None:  # read
             self.logger.info(f'Read from {physaddr:08o} (phys)')
             if not physaddr in self.mem_transactions and not physaddr in self.before:
-                self.before[physaddr] = random.randint(0, 65536)
+                self.before[physaddr] = random.randint(0, 65535)
             return super().physRW(physaddr, self.before[physaddr])
 
         self.logger.info(f'Write to {physaddr:08o}: {value:06o} (phys)')
@@ -62,7 +61,7 @@ class PDP1170_wrapper(PDP1170):
         if words == None:
             self.logger.info(f'Read {nwords} words from {physaddr:08o} (phys)')
             for i in range(nwords):
-                self.physRW(temp_addr, random.randint(0, 65536))
+                self.physRW(temp_addr, random.randint(0, 65535))
                 temp_addr += 2
             return super().physRW_N(physaddr, nwords)
 
@@ -72,6 +71,19 @@ class PDP1170_wrapper(PDP1170):
             temp_addr += 2
 
         return super().physRW_N(physaddr, nwords, words=words)
+
+    def simple_run_1(self, pc):
+        thisPC = pc
+        self.r[self.PC] = (thisPC + 2) & 0o177777  # "could" wrap
+
+        try:
+            inst = self.mmu.wordRW(thisPC)
+            op4_dispatch_table[inst >> 12](self, inst)
+
+            return True
+
+        except PDPTrap as trap:
+            return False
 
 class test_generator:
     def _invoke_bp(self, a, i):
@@ -89,33 +101,33 @@ class test_generator:
         target[tag]['pc'] = p.r[p.PC]
 
     def create_test(self, instr, psw):
-        out = { }
-
-        p = PDP1170_wrapper(loglevel='ERROR')
-        p.ub.mmio = MMIO_wrapper(p)
-
-        # TODO what is the maximum size of an instruction?
-        # non-mmu thus shall be below device range
-        addr = random.randint(0, 0o160000 - 8) & ~1
-        mem_kv = []
-        if instr == 1:  # TODO ignore 'WAIT' instruction
-            return None
-        p.logger.info(f'emulating {instr:06o}')
-        mem_kv.append((addr + 0, instr))
-        mem_kv.append((addr + 2, random.randint(0, 65536 - 8) & ~1))
-        mem_kv.append((addr + 4, random.randint(0, 65536 - 8) & ~1))
-        mem_kv.append((addr + 6, random.randint(0, 65536 - 8) & ~1))
-        out['memory-before'] = dict()
-        for a, v in mem_kv:
-            p.put(a, v)
-
         try:
+            out = { }
+
+            p = PDP1170_wrapper(loglevel='ERROR')
+            p.ub.mmio = MMIO_wrapper(p)
+
+            # TODO what is the maximum size of an instruction?
+            # non-mmu thus shall be below device range
+            addr = random.randint(0, 0o160000 - 8) & ~1
+            mem_kv = []
+            if instr == 1:  # TODO ignore 'WAIT' instruction
+                return None
+            p.logger.info(f'emulating {instr:06o}')
+            mem_kv.append((addr + 0, instr))
+            mem_kv.append((addr + 2, random.randint(0, 65535 - 8) & ~1))
+            mem_kv.append((addr + 4, random.randint(0, 65535 - 8) & ~1))
+            mem_kv.append((addr + 6, random.randint(0, 65535 - 8) & ~1))
+            out['memory-before'] = dict()
+            for a, v in mem_kv:
+                p.put(a, v)
+
             p.psw = psw
 
             # generate other registers
             reg_kv = []
             for i in range(7):
-                reg_kv.append((i, random.randint(0, 65536) & ~1))
+                reg_kv.append((i, random.randint(0, 65535) & ~1))
             reg_kv.append((7, addr))
 
             # set registers 
@@ -133,8 +145,10 @@ class test_generator:
 
             # run instruction
             p.run_steps(pc=addr, steps=1)
+            #if p.simple_run_1(addr) == False:
+            #    return None
 
-            if p.straps and ignore_traps:
+            if (p.straps or p.issues) and ignore_traps:
                 return None
 
             p._syncregs()
@@ -164,8 +178,8 @@ class test_generator:
 
 stop = False
 while True:
-    psw = random.randint(0, 65536) & 0o174377
-    name = f'/mnt/temp/bla-{psw:06o}.json'
+    psw = random.randint(0, 65535) & 0o174377
+    name = f'/mnt/temp/0006-{psw:06o}.json'
     if os.path.isfile(name):
         print(f'skipping {name}')
         continue
@@ -177,9 +191,9 @@ while True:
 
     tests = []
     try:
-        for lb in range(65536):
+        for lb in range(65535):
             if (lb & 63) == 0:
-                print(f'{lb}\r', end='')
+                print(f'{lb} {len(tests)}\r', end='')
             test = t.create_test(lb, psw)
             if test != None:
                 tests.append(test)

@@ -1,7 +1,6 @@
 #! /usr/bin/python3
 
-# place in the same folder as https://github.com/outofmbufs/python-pdp11-emulator
-
+import copy
 import json
 from machine import PDP1170
 from mmio import MMIO
@@ -83,7 +82,7 @@ class test_generator:
             for reg_ in range(0, 6):
                 target[tag][set_][reg_] = p.registerfiles[set_][reg_]
 
-        target[tag]['sp'] = p.stackpointers
+        target[tag]['sp'] = copy.deepcopy(p.stackpointers)
         target[tag]['pc'] = p.r[p.PC]
 
     def create_test(self):
@@ -94,7 +93,7 @@ class test_generator:
 
         # TODO what is the maximum size of an instruction?
         # non-mmu thus shall be below device range
-        addr = random.randint(0, 0o160000 - 8) & ~3
+        addr = random.randint(0, 0o160000 - 8) & ~1
         mem_kv = []
         while True:
             instr = random.randint(0, 65536 - 8)
@@ -113,7 +112,7 @@ class test_generator:
             # generate & set PSW
             while True:
                 try:
-                    p.psw = random.randint(0, 65536) & 0o174377
+                    p.psw = random.randint(0, 65536)
                     break
                 except PDPTraps.ReservedInstruction as ri:
                     pass
