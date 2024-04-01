@@ -75,7 +75,9 @@ typedef struct {
 	uint16_t virtual_address;
 	uint8_t  apf;  // active page field
 	uint32_t physical_instruction;
+	bool     physical_instruction_is_psw;
 	uint32_t physical_data;
+	bool     physical_data_is_psw;
 } memory_addresses_t;
 
 typedef struct {
