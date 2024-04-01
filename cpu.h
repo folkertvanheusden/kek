@@ -41,6 +41,7 @@ private:
 	uint64_t wait_time          { 0     };
 	bool     it_is_a_trap       { false };
 	uint64_t mtpi_count         { 0     };
+	bool     instruction_aborted{ false };
 
 	// level, vector
 	std::map<uint8_t, std::set<uint8_t> > queued_interrupts;

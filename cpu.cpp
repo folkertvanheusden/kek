@@ -682,6 +682,8 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 
 				bool     sign  = SIGN(R, wm_word);
 
+				DOLOG(debug, true, "ASH shift %d, value %08o", shift, oldR);
+
 				if (shift == 0) {
 					setPSW_c(false);
 					setPSW_v(false);
@@ -732,6 +734,8 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 				uint16_t shift = g_dst.value.value() & 077;
 
 				bool     sign  = R0R1 & 0x80000000;
+
+				DOLOG(debug, true, "ASH shift %d, value %08o", shift, R0R1);
 
 				setPSW_v(false);
 
@@ -1290,13 +1294,15 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						}
 					 }
 
-					 if (set_flags)
-						 setPSW_flags_nzv(v, wm_word);
+					 if (!instruction_aborted) {
+						 if (set_flags)
+							 setPSW_flags_nzv(v, wm_word);
 
-					 // put on current stack
-					 pushStack(v);
+						 // put on current stack
+						 pushStack(v);
 
-					 b->addToMMR1(-2, 6);
+						 b->addToMMR1(-2, 6);
+					 }
 
 					 break;
 				 }
@@ -1319,23 +1325,27 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						uint32_t phys_a        = word_mode == wm_byte ? phys.physical_data : phys.physical_instruction;
 						bool     phys_psw      = word_mode == wm_byte ? phys.physical_data_is_psw : phys.physical_instruction_is_psw;
 
+						mtpi_count++;
+
 						if (phys_a >= b->get_io_base()) {
 							b->write(a.addr.value(), wm_word, v, rm_prev);  // put in '13/12' address space
 
 							set_flags = phys_psw;
 						}
 						else {
-							mtpi_count++;
-							DOLOG(debug, true, "%lu %06o MTP%c %06o: %06o (physical: %o)", mtpi_count, pc-2, word_mode == wm_byte ? 'D' : 'I', a.addr.value(), v, phys_a);
 							b->check_odd_addressing(phys_a, prev_run_mode, word_mode == wm_byte ? d_space : i_space, true); // TODO d/i space must depend on the check done in calculate_physical_address
 							b->writePhysical(phys_a, v);
 						}
+
+						DOLOG(debug, true, "%lu %06o MTP%c %06o: %06o (physical: %o)", mtpi_count, pc-2, word_mode == wm_byte ? 'D' : 'I', a.addr.value(), v, phys_a);
 					 }
 
-					 if (set_flags)
-						 setPSW_flags_nzv(v, wm_word);
+					 if (!instruction_aborted) {
+						 if (set_flags)
+							 setPSW_flags_nzv(v, wm_word);
 
-					 b->addToMMR1(2, 6);
+						 b->addToMMR1(2, 6);
+					 }
 
 					 break;
 				 }
@@ -1671,6 +1681,7 @@ void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 	uint16_t before_pc  = 0;
 
 	it_is_a_trap = true;
+	instruction_aborted = true;
 
 	do {
 		try {
@@ -2230,6 +2241,7 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 void cpu::step_a()
 {
 	it_is_a_trap = false;
+	instruction_aborted = false;
 
 	if ((b->getMMR0() & 0160000) == 0)
 		b->clearMMR1();
