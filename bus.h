@@ -147,14 +147,12 @@ public:
 	uint16_t readByte(const uint16_t a) { return read(a, wm_byte, rm_cur); }
 	uint16_t readWord(const uint16_t a, const d_i_space_t s = i_space);
 	uint16_t peekWord(const uint16_t a);
-	uint16_t read_io(const uint16_t addr_in, const word_mode_t word_mode, const bool peek_only);
 
 	uint16_t readUnibusByte(const uint16_t a);
 
 	void write(const uint16_t a, const word_mode_t word_mode, uint16_t value, const rm_selection_t mode_selection, const d_i_space_t s = i_space);
 	void writeByte(const uint16_t a, const uint8_t value) { return write(a, wm_byte, value, rm_cur); }
 	void writeWord(const uint16_t a, const uint16_t value, const d_i_space_t s = i_space);
-	void write_io(const uint16_t addr_in, const word_mode_t word_mode, const uint16_t value);
 
 	uint16_t readPhysical(const uint32_t a);
 	void writePhysical(const uint32_t a, const uint16_t value);
