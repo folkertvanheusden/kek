@@ -428,8 +428,12 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 		return 0;
 	}
 
-	uint16_t temp   = 0;
+	if (m_offset >= n_pages * 8192) {
+		c->trap(004);  // no such RAM
+		throw 1;
+	}
 
+	uint16_t temp   = 0;
 	if (word_mode == wm_byte)
 		temp = m->readByte(m_offset);
 	else
@@ -1025,6 +1029,11 @@ void bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 	}
 
 	DOLOG(debug, true, "WRITE to %06o/%07o %c %c: %06o", addr_in, m_offset, space == d_space ? 'D' : 'I', word_mode ? 'B' : 'W', value);
+
+	if (m_offset >= n_pages * 8192) {
+		c->trap(004);  // no such RAM
+		throw 1;
+	}
 
 	if (word_mode == wm_byte)
 		m->writeByte(m_offset, value);
