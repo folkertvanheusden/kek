@@ -22,7 +22,7 @@ while True:
         l = l[0:i]
 
         if not l in counts:
-            counts[l] = [0, 0 ]
+            counts[l] = [0, 0]
 
         counts[l][0] += 1
 
@@ -36,7 +36,7 @@ while True:
         l = l[0:i]
 
         if not l in counts:
-            counts[l] = [0, 0 ]
+            counts[l] = [1, 0]
 
         counts[l][1] += 1
 
