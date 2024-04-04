@@ -279,10 +279,10 @@ void cpu::setPSW(const uint16_t v, const bool limited)
 {
 	if (limited) {
 		// cannot replace the run-mode bits nor the set of registers
-		psw = (psw & 0177400) | (v & 0377);
+		psw = (psw & 0177400) | (v & 037777);
 	}
 	else {
-		psw = v & 0174377;  // mask off 'unused' bits (8-10)
+		psw = v;
 	}
 }
 
@@ -1199,7 +1199,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						  setRegister(dst_reg, v);
 
 						  setPSW_n(SIGN(v, word_mode));
-						  setPSW_z(IS_0(v, wm_word));
+						  setPSW_z(IS_0(v, word_mode));
 						  setPSW_v(getPSW_n() ^ getPSW_c());
 					  }
 					  else {
@@ -1222,7 +1222,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 						  if (set_flags) {
 							  setPSW_n(SIGN(v, word_mode));
-							  setPSW_z(IS_0(v, wm_word));
+							  setPSW_z(IS_0(v, word_mode));
 							  setPSW_v(getPSW_n() ^ getPSW_c());
 						  }
 					  }
