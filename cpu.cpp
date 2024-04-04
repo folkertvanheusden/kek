@@ -2212,6 +2212,7 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 	std::string psw_str = format("%d%d|%d|%d|%c%c%c%c%c", psw >> 14, (psw >> 12) & 3, (psw >> 11) & 1, (psw >> 5) & 7,
                         psw & 16?'t':'-', psw & 8?'n':'-', psw & 4?'z':'-', psw & 2 ? 'v':'-', psw & 1 ? 'c':'-');
 	out.insert({ "psw", { psw_str } });
+	out.insert({ "psw-value", { format("%06o", psw) } });
 
 	// values worked with
 	std::vector<std::string> work_values_str;
