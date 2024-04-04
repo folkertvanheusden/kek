@@ -643,6 +643,8 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 				auto    R2g     = getGAM(dst_mode, dst_reg, wm_word, rm_cur);
 				int16_t divider = R2g.value.value();
 
+				int32_t R0R1    = (uint32_t(getRegister(reg)) << 16) | getRegister(reg | 1);
+
 				if (divider == 0) {  // divide by zero
 					setPSW_n(false);
 					setPSW_z(true);
@@ -651,8 +653,14 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 
 					return true;
 				}
+				else if (divider == 0177777 && R0R1 == 0x80000000) {  // maximum negative value; too big
+					setPSW_n(false);
+					setPSW_z(false);
+					setPSW_v(true);
+					setPSW_c(false);
 
-				int32_t R0R1    = (uint32_t(getRegister(reg)) << 16) | getRegister(reg | 1);
+					return true;
+				}
 
 				int32_t  quot   = R0R1 / divider;
 				uint16_t rem    = R0R1 % divider;
