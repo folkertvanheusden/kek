@@ -201,7 +201,7 @@ int run_cpu_validation(const std::string & filename)
 
 			if (err) {
 				if (c->is_it_a_trap())
-					DOLOG(warning, true, "Error by TRAP");
+					DOLOG(warning, true, "Error by TRAP %s", disas_data["instruction-text"].at(0).c_str());
 				else {
 					DOLOG(warning, true, "Error by instruction %s", disas_data["instruction-text"].at(0).c_str());
 				}
