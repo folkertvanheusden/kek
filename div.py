@@ -2,7 +2,7 @@
 
 import sys
 
-filter_pc_sp = True
+filter_pc_sp = False
 counts = dict()
 
 while True:
@@ -19,7 +19,7 @@ while True:
         i = l.find(':')
         l = l[i+2:]
         i = l.find(' ')
-        l = l[0:i]
+        l = l[0:i].strip()
 
         if not l in counts:
             counts[l] = [0, 0]
@@ -33,7 +33,7 @@ while True:
             continue
 
         i = l.find(' ')
-        l = l[0:i]
+        l = l[0:i].strip()
 
         if not l in counts:
             counts[l] = [1, 0]
