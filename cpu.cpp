@@ -279,7 +279,7 @@ void cpu::setPSW(const uint16_t v, const bool limited)
 {
 	if (limited) {
 		// cannot replace the run-mode bits nor the set of registers
-		psw = (psw & 177400) | (v & 0377);
+		psw = (psw & 0177400) | (v & 0377);
 	}
 	else {
 		psw = v & 0174377;  // mask off 'unused' bits (8-10)
