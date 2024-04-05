@@ -523,6 +523,15 @@ memory_addresses_t bus::calculate_physical_address(const int run_mode, const uin
 	return { a, apf, physical_instruction, physical_instruction_is_psw, physical_data, physical_data_is_psw };
 }
 
+void bus::mmudebug(const uint16_t a)
+{
+	for(int rm=0; rm<4; rm++) {
+		auto ma = calculate_physical_address(rm, a);
+
+		DOLOG(debug, true, "RM %d, a: %06o, apf: %d, PI: %08o (PSW: %d), PD: %08o (PSW: %d)", rm, ma.virtual_address, ma.apf, ma.physical_instruction, ma.physical_instruction_is_psw, ma.physical_data, ma.physical_data_is_psw);
+	}
+}
+
 bool bus::get_use_data_space(const int run_mode)
 {
 	return !!(MMR3 & di_ena_mask[run_mode]);

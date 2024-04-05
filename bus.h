@@ -126,6 +126,8 @@ public:
 	uint16_t get_console_switches() { return console_switches; }
 	void set_debug_mode() { console_switches |= 128; }
 
+	void mmudebug(const uint16_t a);
+
 	uint16_t get_console_leds() { return console_leds; }
 
 	void add_cpu (cpu *const c);

@@ -279,6 +279,7 @@ void cpu::setPSW(const uint16_t v, const bool limited)
 {
 	if (limited) {
 		// cannot replace the run-mode bits nor the set of registers
+		// psw = (psw & ~0340) | (v & 0174340);
 		psw = (psw & 0177400) | (v & 037777);
 	}
 	else {
@@ -653,7 +654,7 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 
 					return true;
 				}
-				else if (divider == 0177777 && R0R1 == 0x80000000) {  // maximum negative value; too big
+				else if (divider == -1 && uint32_t(R0R1) == 0x80000000) {  // maximum negative value; too big
 					setPSW_n(false);
 					setPSW_z(false);
 					setPSW_v(true);
@@ -662,10 +663,8 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 					return true;
 				}
 
-				int32_t  quot   = R0R1 / divider;
-				uint16_t rem    = R0R1 % divider;
-
-				// TODO: handle results out of range
+				int32_t quot = R0R1 / divider;
+				int16_t rem  = R0R1 % divider;
 
 				setPSW_n(quot < 0);
 				setPSW_z(quot == 0);
@@ -1276,9 +1275,10 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						auto a = getGAMAddress(dst_mode, dst_reg, wm_word);
 
 						int      prev_run_mode = getPSW_prev_runmode();
+						bool     is_d          = word_mode == wm_byte;
 						auto     phys          = b->calculate_physical_address(prev_run_mode, a.addr.value());
-						uint32_t phys_a        = word_mode == wm_byte ? phys.physical_data : phys.physical_instruction;
-						bool     phys_psw      = word_mode == wm_byte ? phys.physical_data_is_psw : phys.physical_instruction_is_psw;
+						uint32_t phys_a        = is_d ? phys.physical_data : phys.physical_instruction;
+						bool     phys_psw      = is_d ? phys.physical_data_is_psw : phys.physical_instruction_is_psw;
 
 						if (phys_a >= b->get_io_base()) {
 							// read from previous space
@@ -1289,7 +1289,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						else {
 							b->check_odd_addressing(phys_a, prev_run_mode, word_mode ? d_space : i_space, false);  // TODO d/i space must depend on the check done in calculate_physical_address
 
-							v = b->readPhysical(word_mode == wm_byte ? phys.physical_data : phys.physical_instruction);
+							v = b->readPhysical(is_d ? phys.physical_data : phys.physical_instruction);
 						}
 					 }
 
@@ -1308,29 +1308,32 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					 // always words: word_mode-bit is to select between MTPI and MTPD
 
 					 // retrieve word from '15/14'-stack
-					 uint16_t v = popStack();
+					 uint16_t v             = popStack();
 
-					 bool set_flags = true;
-
+					 bool     set_flags     = true;
+					 mtpi_count++;
 					 if (dst_mode == 0)
 						setRegister(dst_reg, v, rm_prev);
 					 else {
-						auto a = getGAMAddress(dst_mode, dst_reg, wm_word);
+						int  prev_run_mode = getPSW_prev_runmode();
+						auto a             = getGAMAddress(dst_mode, dst_reg, wm_word);
 
-						int      prev_run_mode = getPSW_prev_runmode();
+						b->mmudebug(a.addr.value());
+
+						bool     is_d          = word_mode == wm_byte;
 						auto     phys          = b->calculate_physical_address(prev_run_mode, a.addr.value());
-						uint32_t phys_a        = word_mode == wm_byte ? phys.physical_data : phys.physical_instruction;
-						bool     phys_psw      = word_mode == wm_byte ? phys.physical_data_is_psw : phys.physical_instruction_is_psw;
+						uint32_t phys_a        = is_d ? phys.physical_data : phys.physical_instruction;
+						bool     phys_psw      = is_d ? phys.physical_data_is_psw : phys.physical_instruction_is_psw;
 
 						if (phys_a >= b->get_io_base()) {
+							DOLOG(debug, true, "%lu %06o MTP%c %06o: %06o (I/O: %o/%d)", mtpi_count, pc-2, is_d ? 'D' : 'I', a.addr.value(), v, phys_a, prev_run_mode);
 							b->write(a.addr.value(), wm_word, v, rm_prev);  // put in '13/12' address space
 
 							set_flags = phys_psw;
 						}
 						else {
-							mtpi_count++;
-							DOLOG(debug, true, "%lu %06o MTP%c %06o: %06o (physical: %o)", mtpi_count, pc-2, word_mode == wm_byte ? 'D' : 'I', a.addr.value(), v, phys_a);
-							b->check_odd_addressing(phys_a, prev_run_mode, word_mode == wm_byte ? d_space : i_space, true); // TODO d/i space must depend on the check done in calculate_physical_address
+							DOLOG(debug, true, "%lu %06o MTP%c %06o: %06o (physical: %o/%d)", mtpi_count, pc-2, is_d ? 'D' : 'I', a.addr.value(), v, phys_a, prev_run_mode);
+							b->check_odd_addressing(phys_a, prev_run_mode, is_d ? d_space : i_space, true); // TODO d/i space must depend on the check done in calculate_physical_address
 							b->writePhysical(phys_a, v);
 						}
 					 }
@@ -1571,6 +1574,7 @@ bool cpu::misc_operations(const uint16_t instr)
 		case 0b0000000000000010: // RTI
 			setPC(popStack());
 			setPSW(popStack(), !!getPSW_runmode());
+			psw &= ~020;  // disable TRAP flag
 			return true;
 
 		case 0b0000000000000011: // BPT
