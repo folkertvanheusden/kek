@@ -136,17 +136,30 @@ void dump_par_pdr(console *const cnsl, bus *const b, const uint16_t pdrs, const 
 	}
 }
 
-void mmu_dump(console *const cnsl, bus *const b)
+void dump_memory_contents(console *const cnsl, bus *const b, const uint16_t read_addr)
+{
+	cnsl->put_string_lf(format("\tMOV #%06o,R0", read_addr));
+	cnsl->put_string_lf(format("\tMOV #%06o,(R0)", b->read(read_addr, wm_word, rm_cur, true)));
+}
+
+void dump_range_as_instructions(console *const cnsl, bus *const b, const uint16_t base)
+{
+	for(int i=0; i<8; i++)
+		dump_memory_contents(cnsl, b, base + i * 2);
+}
+
+void mmu_dump(console *const cnsl, bus *const b, const bool verbose)
 {
 	uint16_t mmr0 = b->getMMR0();
+	uint16_t mmr1 = b->getMMR1();
+	uint16_t mmr2 = b->getMMR2();
+	uint16_t mmr3 = b->getMMR3();
 
 	cnsl->put_string_lf(mmr0 & 1 ? "MMU enabled" : "MMU NOT enabled");
 
-	uint16_t mmr3 = b->getMMR3();
-
 	cnsl->put_string_lf(format("MMR0: %06o", mmr0));
-	cnsl->put_string_lf(format("MMR1: %06o", b->getMMR1()));
-	cnsl->put_string_lf(format("MMR2: %06o", b->getMMR2()));
+	cnsl->put_string_lf(format("MMR1: %06o", mmr1));
+	cnsl->put_string_lf(format("MMR2: %06o", mmr2));
 	cnsl->put_string_lf(format("MMR3: %06o", mmr3));
 
 	dump_par_pdr(cnsl, b, ADDR_PDR_SV_START,       ADDR_PAR_SV_START,       "supervisor i-space", 0);
@@ -157,15 +170,27 @@ void mmu_dump(console *const cnsl, bus *const b)
 
 	dump_par_pdr(cnsl, b, ADDR_PDR_U_START,       ADDR_PAR_U_START,       "user i-space", 0);
 	dump_par_pdr(cnsl, b, ADDR_PDR_U_START + 020, ADDR_PAR_U_START + 020, "user d-space", 1 + (!!(mmr3 & 1)));
+
+	if (verbose) {
+		dump_range_as_instructions(cnsl, b, ADDR_PDR_SV_START);  // sv i
+		dump_range_as_instructions(cnsl, b, ADDR_PDR_SV_START + 020);  // sv d
+		dump_range_as_instructions(cnsl, b, ADDR_PDR_K_START);  // k i
+		dump_range_as_instructions(cnsl, b, ADDR_PDR_K_START + 020);  // k d
+		dump_range_as_instructions(cnsl, b, ADDR_PDR_U_START);  // u i
+		dump_range_as_instructions(cnsl, b, ADDR_PDR_U_START + 020);  // u d
+
+		dump_memory_contents(cnsl, b, ADDR_MMR0);
+		dump_memory_contents(cnsl, b, ADDR_MMR1);
+		dump_memory_contents(cnsl, b, ADDR_MMR2);
+		dump_memory_contents(cnsl, b, ADDR_MMR3);
+	}
 }
 
 void reg_dump(console *const cnsl, cpu *const c)
 {
-	constexpr const char *const run_mode_name[] = { "kernel", "superv", "     -", "  user" };
-
-	for(uint8_t set=0; set<4; set++) {
-		cnsl->put_string_lf(format("%s, R0: %06o, R1: %06o, R2: %06o, R3: %06o, R4: %06o, R5: %06o",
-						run_mode_name[set],
+	for(uint8_t set=0; set<2; set++) {
+		cnsl->put_string_lf(format("Set %d, R0: %06o, R1: %06o, R2: %06o, R3: %06o, R4: %06o, R5: %06o",
+						set,
 						c->lowlevel_register_get(set, 0),
 						c->lowlevel_register_get(set, 1),
 						c->lowlevel_register_get(set, 2),
@@ -329,7 +354,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 				continue;
 			}
 			else if (parts[0] == "mmudump") {
-				mmu_dump(cnsl, b);
+				mmu_dump(cnsl, b, parts.size() == 2 && parts[1] == "-v");
 
 				continue;
 			}
