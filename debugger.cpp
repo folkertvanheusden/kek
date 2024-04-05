@@ -563,6 +563,9 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 		catch(const std::exception & e) {
 			cnsl->put_string_lf(format("Exception caught: %s", e.what()));
 		}
+		catch(const int ei) {
+			cnsl->put_string_lf(format("Problem: %d", ei));
+		}
 		catch(...) {
 			cnsl->put_string_lf("Unspecified exception caught");
 		}

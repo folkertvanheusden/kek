@@ -407,7 +407,6 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 			DOLOG(debug, true, "READ-I/O UNHANDLED read %08o (%c), (base: %o)", m_offset, word_mode ? 'B' : ' ', get_io_base());
 
 			c->trap(004);  // no such i/o
-
 			throw 1;
 		}
 
@@ -422,6 +421,11 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 	}
 
 	if (m_offset >= n_pages * 8192) {
+		if (peek_only) {
+			DOLOG(debug, true, "READ from %06o - out of range!", addr_in);
+			return 0;
+		}
+
 		c->trap(004);  // no such RAM
 		throw 1;
 	}
