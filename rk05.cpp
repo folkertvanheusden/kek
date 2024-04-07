@@ -73,7 +73,7 @@ uint16_t rk05::readWord(const uint16_t addr)
 	if (addr == RK05_CS)
 		setBit(registers[reg], 0, false); // clear go
 
-	DOLOG(debug, true, "RK05 read %s/%o: %06o", reg[regnames], addr, vtemp);
+	DOLOG(debug, false, "RK05 read %s/%o: %06o", reg[regnames], addr, vtemp);
 
 	return vtemp;
 }
@@ -121,12 +121,12 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 			registers[(RK05_CS - RK05_BASE) / 2] &= ~(1 << 13); // reset search complete
 
 			if (func == 0) { // controller reset
-				DOLOG(debug, true, "RK05 invoke %d (controller reset)", func);
+				DOLOG(debug, false, "RK05 invoke %d (controller reset)", func);
 			}
 			else if (func == 1) { // write
 				*disk_write_acitivity = true;
 
-				DOLOG(debug, true, "RK05 drive %d position sec %d surf %d cyl %d, reclen %zo, WRITE to %o, mem: %o", device, sector, surface, cylinder, reclen, diskoffb, memoff);
+				DOLOG(debug, false, "RK05 drive %d position sec %d surf %d cyl %d, reclen %zo, WRITE to %o, mem: %o", device, sector, surface, cylinder, reclen, diskoffb, memoff);
 
 				uint8_t *xfer_buffer = new uint8_t[reclen];
 
@@ -138,7 +138,7 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 					DOLOG(ll_error, true, "RK05(%d) write error %s", device, strerror(errno));
 
 				if (v & 2048)
-					DOLOG(debug, true, "RK05 inhibit BA increase");
+					DOLOG(debug, false, "RK05 inhibit BA increase");
 				else
 					registers[(RK05_BA - RK05_BASE) / 2] += p;
 
@@ -159,7 +159,7 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 			else if (func == 2) { // read
 				*disk_read_acitivity = true;
 
-				DOLOG(debug, true, "RK05 drive %d position sec %d surf %d cyl %d, reclen %zo, READ from %o, mem: %o", device, sector, surface, cylinder, reclen, diskoffb, memoff);
+				DOLOG(debug, false, "RK05 drive %d position sec %d surf %d cyl %d, reclen %zo, READ from %o, mem: %o", device, sector, surface, cylinder, reclen, diskoffb, memoff);
 
 				uint8_t xfer_buffer[512];
 
@@ -188,7 +188,7 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 				}
 
 				if (v & 2048)
-					DOLOG(debug, true, "RK05 inhibit BA increase");
+					DOLOG(debug, false, "RK05 inhibit BA increase");
 				else
 					registers[(RK05_BA - RK05_BASE) / 2] += p;
 
@@ -205,15 +205,15 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 				*disk_read_acitivity = false;
 			}
 			else if (func == 4) {
-				DOLOG(debug, true, "RK05 invoke %d (seek) to %o", func, diskoffb);
+				DOLOG(debug, false, "RK05 invoke %d (seek) to %o", func, diskoffb);
 
 				registers[(RK05_CS - RK05_BASE) / 2] |= 1 << 13; // search complete
 			}
 			else if (func == 7) {
-				DOLOG(debug, true, "RK05 invoke %d (write lock)", func);
+				DOLOG(debug, false, "RK05 invoke %d (write lock)", func);
 			}
 			else {
-				DOLOG(debug, true, "RK05 command %d UNHANDLED", func);
+				DOLOG(debug, false, "RK05 command %d UNHANDLED", func);
 			}
 
 			registers[(RK05_WC - RK05_BASE) / 2] = 0;

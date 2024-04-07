@@ -90,13 +90,13 @@ int disassemble(cpu *const c, console *const cnsl, const uint16_t pc, const bool
 	if (cnsl)
 		cnsl->debug(result);
 	else
-		DOLOG(debug, true, "%s", result.c_str());
+		DOLOG(debug, false, "%s", result.c_str());
 
 	std::string sp;
 	for(auto sp_val : data["sp"])
 		sp += (sp.empty() ? "" : ",") + sp_val;
 
-	DOLOG(debug, true, "SP: %s", sp.c_str());
+	DOLOG(debug, false, "SP: %s", sp.c_str());
 
 	return data["instruction-values"].size() * 2;
 }

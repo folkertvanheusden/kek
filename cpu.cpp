@@ -317,7 +317,7 @@ bool cpu::check_queued_interrupts()
 
 			interrupts->second.erase(vector);
 
-			DOLOG(debug, true, "Invoking interrupt vector %o (IPL %d, current: %d)", v, i, current_level);
+			DOLOG(debug, false, "Invoking interrupt vector %o (IPL %d, current: %d)", v, i, current_level);
 
 			trap(v, i, true);
 
@@ -362,7 +362,7 @@ void cpu::queue_interrupt(const uint8_t level, const uint8_t vector)
 
 	any_queued_interrupts = true;
 
-	DOLOG(debug, true, "Queueing interrupt vector %o (IPL %d, current: %d), n: %zu", vector, level, getPSW_spl(), it->second.size());
+	DOLOG(debug, false, "Queueing interrupt vector %o (IPL %d, current: %d), n: %zu", vector, level, getPSW_spl(), it->second.size());
 }
 
 void cpu::addToMMR1(const uint8_t mode, const uint8_t reg, const word_mode_t word_mode)
@@ -1511,7 +1511,7 @@ bool cpu::condition_code_operations(const uint16_t instr)
 void cpu::pushStack(const uint16_t v)
 {
 	if (getRegister(6) == stackLimitRegister) {
-		DOLOG(debug, true, "stackLimitRegister reached %06o while pushing %06o", stackLimitRegister, v);
+		DOLOG(debug, false, "stackLimitRegister reached %06o while pushing %06o", stackLimitRegister, v);
 
 		trap(04, 7);
 	}
@@ -1660,7 +1660,7 @@ bool cpu::misc_operations(const uint16_t instr)
 // 'is_interrupt' is not correct naming; it is true for mmu faults and interrupts
 void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 {
-	DOLOG(debug, true, "*** CPU::TRAP %o, new-ipl: %d, is-interrupt: %d, run mode: %d ***", vector, new_ipl, is_interrupt, getPSW_runmode());
+	DOLOG(debug, false, "*** CPU::TRAP %o, new-ipl: %d, is-interrupt: %d, run mode: %d ***", vector, new_ipl, is_interrupt, getPSW_runmode());
 
 	uint16_t before_psw = 0;
 	uint16_t before_pc  = 0;
@@ -1674,7 +1674,7 @@ void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 			bool kernel_mode = !(psw >> 14);
 
 			if (processing_trap_depth >= 2) {
-				DOLOG(debug, true, "Trap depth %d", processing_trap_depth);
+				DOLOG(debug, false, "Trap depth %d", processing_trap_depth);
 
 				if (processing_trap_depth >= 3) {
 					*event = EVENT_HALT;
@@ -1722,7 +1722,7 @@ void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 			// another trap
 		}
 		catch(const int exception) {
-			DOLOG(debug, true, "trap during execution of trap (%d)", exception);
+			DOLOG(debug, false, "trap during execution of trap (%d)", exception);
 
 			setPSW(before_psw, false);
 		}
@@ -2267,6 +2267,6 @@ void cpu::step_b()
 		trap(010);  // floating point nog niet geimplementeerd
 	}
 	catch(const int exception_nr) {
-		DOLOG(debug, true, "bus-trap during execution of command (%d)", exception_nr);
+		DOLOG(debug, false, "bus-trap during execution of command (%d)", exception_nr);
 	}
 }

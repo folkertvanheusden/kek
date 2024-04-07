@@ -173,7 +173,7 @@ std::optional<uint16_t> loadTape(bus *const b, const std::string & file)
 			}
 		}
 
-		DOLOG(debug, true, "%ld] reading %d (dec) bytes to %o (oct)", ftell(fh), count - 6, p);
+		DOLOG(debug, false, "%ld] reading %d (dec) bytes to %o (oct)", ftell(fh), count - 6, p);
 
 		for(int i=0; i<count - 6; i++) {
 			if (feof(fh)) {
