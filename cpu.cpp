@@ -452,11 +452,6 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t wo
 
 bool cpu::putGAM(const gam_rc_t & g, const uint16_t value)
 {
-	if (g.reg == 7) {
-		trap(0250);
-		throw 100;
-	}
-
 	if (g.addr.has_value()) {
 		b->write(g.addr.value(), g.word_mode, value, g.mode_selection, g.space);
 
