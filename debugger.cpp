@@ -7,6 +7,7 @@
 #include "console.h"
 #include "cpu.h"
 #include "gen.h"
+#include "loaders.h"
 #include "log.h"
 #include "tty.h"
 #include "utils.h"
@@ -474,6 +475,19 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 				continue;
 			}
+			else if (parts.at(0) == "tape") {
+				if (parts.size() == 2) {
+					auto addr = loadTape(b, parts.at(1));
+
+					if (addr.has_value())
+						c->setPC(addr.value());
+				}
+				else {
+					cnsl->put_string_lf("filename parameter missing");
+				}
+
+				continue;
+			}
 			else if (parts[0] == "trl") {
 				if (parts.size() == 1)
 					t_rl.reset();
@@ -523,6 +537,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 				cnsl->put_string_lf("toggle        - set switch (s=, 0...15 (decimal)) of the front panel to state (t=, 0 or 1)");
 				cnsl->put_string_lf("cls           - clear screen");
 				cnsl->put_string_lf("stats         - show run statistics");
+				cnsl->put_string_lf("tape          - load a tape/BIC file, parameter is filename");
 #if defined(ESP32)
 				cnsl->put_string_lf("cfgnet        - configure network (e.g. WiFi)");
 				cnsl->put_string_lf("startnet      - start network");
