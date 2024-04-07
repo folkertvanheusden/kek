@@ -378,7 +378,7 @@ void cpu::addToMMR1(const uint8_t mode, const uint8_t reg, const word_mode_t wor
 // GAM = general addressing modes
 gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t word_mode, const rm_selection_t mode_selection, const bool read_value)
 {
-	gam_rc_t g { word_mode, mode_selection, i_space, { }, { }, { } };
+	gam_rc_t g { word_mode, mode_selection, i_space, mode, { }, { }, { } };
 
 	d_i_space_t isR7_space = reg == 7 ? i_space : (b->get_use_data_space(getPSW_runmode()) ? d_space : i_space);
 	//                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ always d_space here? TODO
@@ -452,6 +452,11 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t wo
 
 bool cpu::putGAM(const gam_rc_t & g, const uint16_t value)
 {
+	if (g.reg == 7) {
+		trap(0250);
+		throw 100;
+	}
+
 	if (g.addr.has_value()) {
 		b->write(g.addr.value(), g.word_mode, value, g.mode_selection, g.space);
 
@@ -1311,7 +1316,9 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					 uint16_t v             = popStack();
 
 					 bool     set_flags     = true;
+
 					 mtpi_count++;
+
 					 if (dst_mode == 0)
 						setRegister(dst_reg, v, rm_prev);
 					 else {
@@ -1320,22 +1327,8 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 						b->mmudebug(a.addr.value());
 
-						bool     is_d          = word_mode == wm_byte;
-						auto     phys          = b->calculate_physical_address(prev_run_mode, a.addr.value());
-						uint32_t phys_a        = is_d ? phys.physical_data : phys.physical_instruction;
-						bool     phys_psw      = is_d ? phys.physical_data_is_psw : phys.physical_instruction_is_psw;
-
-						if (phys_a >= b->get_io_base()) {
-							DOLOG(debug, true, "%lu %06o MTP%c %06o: %06o (I/O: %o/%d)", mtpi_count, pc-2, is_d ? 'D' : 'I', a.addr.value(), v, phys_a, prev_run_mode);
-							b->write(a.addr.value(), wm_word, v, rm_prev);  // put in '13/12' address space
-
-							set_flags = phys_psw;
-						}
-						else {
-							DOLOG(debug, true, "%lu %06o MTP%c %06o: %06o (physical: %o/%d)", mtpi_count, pc-2, is_d ? 'D' : 'I', a.addr.value(), v, phys_a, prev_run_mode);
-							b->check_odd_addressing(phys_a, prev_run_mode, is_d ? d_space : i_space, true); // TODO d/i space must depend on the check done in calculate_physical_address
-							b->writePhysical(phys_a, v);
-						}
+						a.mode_selection = rm_prev;
+						set_flags = putGAM(a, v);
 					 }
 
 					 if (set_flags)

@@ -19,6 +19,7 @@ typedef struct {
 	word_mode_t word_mode;
 	rm_selection_t mode_selection;
 	d_i_space_t space;
+	int access_mode;
 
 	std::optional<uint16_t> addr;
 	std::optional<int> reg;
