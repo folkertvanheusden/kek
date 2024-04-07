@@ -72,11 +72,11 @@ uint64_t cpu::get_instructions_executed_count()
 	return instruction_count;
 }
 
-std::tuple<double, double, uint64_t, uint32_t, double> cpu::get_mips_rel_speed()
+std::tuple<double, double, uint64_t, uint32_t, double> cpu::get_mips_rel_speed(const std::optional<uint64_t> instruction_count, const bool t_diff_1s)
 {
-	uint64_t instr_count = get_instructions_executed_count();
+	uint64_t instr_count = instruction_count.has_value() ? instruction_count.value() : get_instructions_executed_count();
 
-        uint32_t t_diff = get_ms() - running_since - (wait_time / 1000);
+        uint32_t t_diff = t_diff_1s ? 1000 : (get_ms() - running_since - (wait_time / 1000));
 
         double mips = instr_count / (1000.0 * t_diff);
 

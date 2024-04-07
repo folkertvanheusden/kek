@@ -3,6 +3,7 @@
 
 #include <assert.h>
 #include <atomic>
+#include <cinttypes>
 #include <jansson.h>
 #include <signal.h>
 #include <stdlib.h>
@@ -227,6 +228,31 @@ int run_cpu_validation(const std::string & filename)
 	return 0;
 }
 
+void get_metrics(cpu *const c)
+{
+	uint64_t previous_instruction_count = c->get_instructions_executed_count();
+
+	while(event != EVENT_TERMINATE) {
+		sleep(1);
+
+		uint64_t ts = get_us();
+		uint64_t current_instruction_count = c->get_instructions_executed_count();
+
+		auto stats = c->get_mips_rel_speed(current_instruction_count - previous_instruction_count, true);
+
+		FILE *fh = fopen("kek-metrics.csv", "a+");
+		if (fh) {
+			fseek(fh, 0, SEEK_END);
+			if (ftell(fh) == 0)
+				fprintf(fh, "timestamp,MIPS,relative speed in %%,instructions executed count\n");
+			fprintf(fh, "%.06f, %.2f, %.2f%%, %" PRIu64 "\n", ts / 1000., std::get<0>(stats), std::get<1>(stats), std::get<2>(stats));
+			fclose(fh);
+		}
+
+		previous_instruction_count = current_instruction_count;
+	}
+}
+
 void help()
 {
 	printf("-h       this help\n");
@@ -278,13 +304,19 @@ int main(int argc, char *argv[])
 
 	std::string  validate_json;
 
+	bool         metrics = false;
+
 	int  opt          = -1;
-	while((opt = getopt(argc, argv, "hm:T:Br:R:p:ndtL:b:l:s:Q:N:J:X")) != -1)
+	while((opt = getopt(argc, argv, "hMT:Br:R:p:ndtL:b:l:s:Q:N:J:X")) != -1)
 	{
 		switch(opt) {
 			case 'h':
 				help();
 				return 1;
+
+			case 'M':
+				metrics = true;
+				break;
 
 			case 'X':
 				timestamp = false;
@@ -483,6 +515,10 @@ int main(int argc, char *argv[])
 
 	kw11_l *lf = new kw11_l(b, cnsl);
 
+	std::thread *metrics_thread = nullptr;
+	if (metrics)
+		metrics_thread = new std::thread(get_metrics, c);
+
 	cnsl->start_thread();
 
 	if (is_bic)
@@ -508,12 +544,16 @@ int main(int argc, char *argv[])
 				break;
 		}
 
-		auto stats = c->get_mips_rel_speed();
-
+		auto stats = c->get_mips_rel_speed({ }, false);
 		cnsl->put_string_lf(format("MIPS: %.2f, relative speed: %.2f%%, instructions executed: %lu", std::get<0>(stats), std::get<1>(stats), std::get<2>(stats)));
 	}
 
 	event = EVENT_TERMINATE;
+
+	if (metrics_thread) {
+		metrics_thread->join();
+		delete metrics_thread;
+	}
 
 	delete cnsl;
 
