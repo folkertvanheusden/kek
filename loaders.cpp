@@ -1,6 +1,10 @@
 // (C) 2018-2024 by Folkert van Heusden
 // Released under MIT license
 
+#if defined(ESP32)
+#include <Arduino.h>
+#include "esp32.h"
+#endif
 #include <stdint.h>
 #include <stdio.h>
 #include <string>
@@ -142,19 +146,32 @@ void setBootLoader(bus *const b, const bootloader_t which)
 
 std::optional<uint16_t> loadTape(bus *const b, const std::string & file)
 {
+#if defined(ESP32)
+	File32 fh;
+	if (!fh.open(file.c_str(), O_RDONLY)) {
+		DOLOG(ll_error, true, "Cannot open %s", file.c_str());
+		return { };
+	}
+#else
 	FILE *fh = fopen(file.c_str(), "rb");
 	if (!fh) {
 		DOLOG(ll_error, true, "Cannot open %s", file.c_str());
 		return { };
 	}
+#endif
 
 	std::optional<uint16_t> start;
 
-	for(;!feof(fh);) {
+	for(;;) {
 		uint8_t buffer[6];
 
+#if defined(ESP32)
+		if (fh.read(buffer, 6) != 6)
+			break;
+#else
 		if (fread(buffer, 1, 6, fh) != 6)
 			break;
+#endif
 
 		int count = (buffer[3] << 8) | buffer[2];
 		int p     = (buffer[5] << 8) | buffer[4];
@@ -173,27 +190,46 @@ std::optional<uint16_t> loadTape(bus *const b, const std::string & file)
 			}
 		}
 
+#if !defined(ESP32)
 		DOLOG(debug, false, "%ld] reading %d (dec) bytes to %o (oct)", ftell(fh), count - 6, p);
+#endif
 
 		for(int i=0; i<count - 6; i++) {
+#if defined(ESP32)
+			uint8_t c = 0;
+			if (fh.read(&c, 1) != 1) {
+				DOLOG(warning, true, "short read");
+				break;
+			}
+#else
 			if (feof(fh)) {
 				DOLOG(warning, true, "short read");
 				break;
 			}
+
 			uint8_t c = fgetc(fh);
+#endif
 
 			csum += c;
 			b -> writeByte(p++, c);
 		}
 
-		int fcs = fgetc(fh);
+#if defined(ESP32)
+		uint8_t fcs = 0;
+		fh.read(&fcs, 1);
 		csum += fcs;
-
+#else
+		csum += fgetc(fh);
+#endif
 		if (csum != 255)
 			DOLOG(warning, true, "checksum error %d", csum);
 	}
 
+#if defined(ESP32)
+	fh.close();
+#else
 	fclose(fh);
+#endif
 
 	if (start.has_value() == false)
 		start = 0200;  // assume BIC file

@@ -1,4 +1,4 @@
-// (C) 2018-2023 by Folkert van Heusden
+// (C) 2018-2024 by Folkert van Heusden
 // Released under MIT license
 
 #include <Arduino.h>
@@ -75,7 +75,7 @@ std::atomic_bool    *running         { nullptr };
 
 bool                 trace_output    { false };
 
-typedef enum { DT_RK05, DT_RL02 } disk_type_t;
+typedef enum { DT_RK05, DT_RL02, DT_TAPE } disk_type_t;
 
 void console_thread_wrapper_panel(void *const c)
 {
@@ -120,7 +120,7 @@ bool save_serial_speed_configuration(const uint32_t bps)
 }
 
 #if !defined(BUILD_FOR_RP2040)
-std::optional<std::pair<std::vector<disk_backend *>, std::vector<disk_backend *> > > load_disk_configuration(console *const c)
+std::optional<std::tuple<std::vector<disk_backend *>, std::vector<disk_backend *>, std::string> > load_disk_configuration(console *const c)
 {
 	File dataFile = LittleFS.open(NET_DISK_CFG_FILE, "r");
 
@@ -152,10 +152,14 @@ std::optional<std::pair<std::vector<disk_backend *>, std::vector<disk_backend *>
 
 	String disk_type_temp = json_doc["disk-type"];
 
+	String tape_file = json_doc["tape-file"];
+
 	disk_type_t disk_type = DT_RK05;
 
 	if (disk_type_temp == "rl02")
 		disk_type = DT_RL02;
+	else if (disk_type_temp == "tape")
+		disk_type = DT_TAPE;
 
 	disk_backend *d = new disk_backend_nbd(nbd_host.c_str(), nbd_port);
 
@@ -168,10 +172,13 @@ std::optional<std::pair<std::vector<disk_backend *>, std::vector<disk_backend *>
 	c->put_string_lf(format("Connection to NBD server at %s:%d success", nbd_host.c_str(), nbd_port));
 
 	if (disk_type == DT_RK05)
-		return { { { d }, { } } };
+		return { { { d }, { }, "" } };
 
 	if (disk_type == DT_RL02)
-		return { { { }, { d } } };
+		return { { { }, { d }, "" } };
+
+	if (disk_type == DT_TAPE)
+		return { { { }, { }, tape_file.c_str() } };
 
 	return { };
 }
@@ -228,10 +235,10 @@ std::optional<disk_backend_t> select_disk_backend(console *const c)
 
 std::optional<disk_type_t> select_disk_type(console *const c)
 {
-	c->put_string("1. RK05, 2. RL02, 9. abort");
+	c->put_string("1. RK05, 2. RL02, 3. tape/BIC, 9. abort");
 
 	int ch = -1;
-	while(ch == -1 && ch != '1' && ch != '2' && ch != '9') {
+	while(ch == -1 && ch != '1' && ch != '2' && ch != '3' && ch != '9') {
 		auto temp = c->wait_char(500);
 
 		if (temp.has_value())
@@ -240,18 +247,20 @@ std::optional<disk_type_t> select_disk_type(console *const c)
 
 	c->put_string_lf(format("%c", ch));
 
-	if (ch == '9')
-		return { };
-
 	if (ch == '1')
 		return DT_RK05;
 
-//	if (ch == '2')
+	if (ch == '2')
 		return DT_RL02;
+
+	if (ch == '3')
+		return DT_TAPE;
+
+	return { };
 }
 
 #if !defined(BUILD_FOR_RP2040)
-std::optional<std::pair<std::vector<disk_backend *>, std::vector<disk_backend *> > > select_nbd_server(console *const c)
+std::optional<std::tuple<std::vector<disk_backend *>, std::vector<disk_backend *>, std::string> > select_nbd_server(console *const c)
 {
 	c->flush_input();
 
@@ -284,17 +293,17 @@ std::optional<std::pair<std::vector<disk_backend *>, std::vector<disk_backend *>
 		c->put_string_lf("NBD disk configuration NOT saved");
 
 	if (disk_type.value() == DT_RK05)
-		return { { { d }, { } } };
+		return { { { d }, { }, "" } };
 
 	if (disk_type.value() == DT_RL02)
-		return { { { }, { d } } };
+		return { { { }, { d }, "" } };
 
 	return { };
 }
 #endif
 
 // RK05, RL02 files
-std::optional<std::pair<std::vector<disk_backend *>, std::vector<disk_backend *> > > select_disk_files(console *const c)
+std::optional<std::tuple<std::vector<disk_backend *>, std::vector<disk_backend *>, std::string> > select_disk_files(console *const c)
 {
 	c->debug("MISO: %d", int(MISO));
 	c->debug("MOSI: %d", int(MOSI));
@@ -359,6 +368,9 @@ std::optional<std::pair<std::vector<disk_backend *>, std::vector<disk_backend *>
 		if (fh.open(selected_file.c_str(), O_RDWR)) {
 			fh.close();
 
+			if (disk_type.value() == DT_TAPE)
+				return { { { }, { }, selected_file } };
+
 			disk_backend *temp = new disk_backend_esp32(selected_file);
 
 			if (!temp->begin()) {
@@ -371,28 +383,34 @@ std::optional<std::pair<std::vector<disk_backend *>, std::vector<disk_backend *>
 			}
 
 			if (disk_type.value() == DT_RK05)
-				return { { { temp }, { } } };
+				return { { { temp }, { }, "" } };
 
 			if (disk_type.value() == DT_RL02)
-				return { { { }, { temp } } };
+				return { { { }, { temp }, "" } };
 		}
 
 		c->put_string_lf("open failed");
 	}
 }
 
-void set_disk_configuration(std::pair<std::vector<disk_backend *>, std::vector<disk_backend *> > & disk_files)
+void set_disk_configuration(std::tuple<std::vector<disk_backend *>, std::vector<disk_backend *>, std::string> & disk_files)
 {
-	if (disk_files.first.empty() == false)
-		b->add_rk05(new rk05(disk_files.first, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
+	if (std::get<0>(disk_files).empty() == false)
+		b->add_rk05(new rk05(std::get<0>(disk_files), b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
 
-	if (disk_files.second.empty() == false)
-		b->add_rl02(new rl02(disk_files.second, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
+	if (std::get<1>(disk_files).empty() == false)
+		b->add_rl02(new rl02(std::get<1>(disk_files), b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
 
-	// TODO: allow bootloader to be selected
-	if (disk_files.first.empty() == false)
+	if (std::get<2>(disk_files).empty() == false) {
+		auto addr = loadTape(b, std::get<2>(disk_files));
+
+		if (addr.has_value())
+			c->setPC(addr.value());
+	}
+
+	if (std::get<0>(disk_files).empty() == false)
 		setBootLoader(b, BL_RK05);
-	else
+	else if (std::get<1>(disk_files).empty() == false)
 		setBootLoader(b, BL_RL02);
 }
 
@@ -406,7 +424,7 @@ void configure_disk(console *const c)
 		if (backend.has_value() == false)
 			break;
 
-		std::optional<std::pair<std::vector<disk_backend *>, std::vector<disk_backend *> > > files;
+		std::optional<std::tuple<std::vector<disk_backend *>, std::vector<disk_backend *>, std::string> > files;
 
 #if !defined(BUILD_FOR_RP2040)
 		if (backend == BE_NETWORK)
