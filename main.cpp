@@ -487,7 +487,7 @@ int main(int argc, char *argv[])
 
 	if (is_bic)
 		run_bic(cnsl, b, &event, tracing, bic_start.value());
-	else if (run_debugger || (bootloader == BL_NONE && test.empty()))
+	else if (run_debugger || (bootloader == BL_NONE && test.empty() && tape.empty()))
 		debugger(cnsl, b, &event, tracing);
 	else {
 		c->emulation_start();  // for statistics
