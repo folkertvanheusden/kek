@@ -40,7 +40,7 @@ void cpu::emulation_start()
 {
 	instruction_count = 0;
 
-	running_since = get_ms();
+	running_since = get_us();
 	wait_time     = 0;
 }
 
@@ -64,7 +64,7 @@ std::set<uint16_t> cpu::list_breakpoints()
 	return breakpoints;
 }
 
-uint64_t cpu::get_instructions_executed_count()
+uint64_t cpu::get_instructions_executed_count() const
 {
 	// this may wreck havoc as it is not protected by a mutex
 	// but a mutex would slow things down too much (as would
@@ -72,21 +72,21 @@ uint64_t cpu::get_instructions_executed_count()
 	return instruction_count;
 }
 
-std::tuple<double, double, uint64_t, uint32_t, double> cpu::get_mips_rel_speed(const std::optional<uint64_t> instruction_count, const bool t_diff_1s)
+std::tuple<double, double, uint64_t, uint32_t, double> cpu::get_mips_rel_speed(const std::optional<uint64_t> & instruction_count, const std::optional<uint64_t> & t_diff_in) const
 {
 	uint64_t instr_count = instruction_count.has_value() ? instruction_count.value() : get_instructions_executed_count();
 
-        uint32_t t_diff = t_diff_1s ? 1000 : (get_ms() - running_since - (wait_time / 1000));
+        uint64_t t_diff = t_diff_in.has_value() ? t_diff_in.value() : (get_us() - running_since - wait_time);
 
-        double mips = instr_count / (1000.0 * t_diff);
+        double mips = instr_count / double(t_diff);
 
         // see https://retrocomputing.stackexchange.com/questions/6960/what-was-the-clock-speed-and-ips-for-the-original-pdp-11
         constexpr double pdp11_clock_cycle = 150;  // ns, for the 11/70
-        constexpr double pdp11_mhz = 1000.0 / pdp11_clock_cycle;
+        constexpr double pdp11_MHz = 1000.0 / pdp11_clock_cycle;
         constexpr double pdp11_avg_cycles_per_instruction = (1 + 5) / 2.0;
-        constexpr double pdp11_estimated_mips = pdp11_mhz / pdp11_avg_cycles_per_instruction;
+        constexpr double pdp11_estimated_mips = pdp11_MHz / pdp11_avg_cycles_per_instruction;
 
-	return { mips, mips * 100 / pdp11_estimated_mips, instr_count, t_diff, wait_time / 1000. };
+	return { mips, mips * 100 / pdp11_estimated_mips, instr_count, t_diff, wait_time };
 }
 
 void cpu::reset()
@@ -1317,8 +1317,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					 if (dst_mode == 0)
 						setRegister(dst_reg, v, rm_prev);
 					 else {
-						int  prev_run_mode = getPSW_prev_runmode();
-						auto a             = getGAMAddress(dst_mode, dst_reg, wm_word);
+						auto a = getGAMAddress(dst_mode, dst_reg, wm_word);
 
 						b->mmudebug(a.addr.value());
 

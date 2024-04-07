@@ -231,25 +231,32 @@ int run_cpu_validation(const std::string & filename)
 void get_metrics(cpu *const c)
 {
 	uint64_t previous_instruction_count = c->get_instructions_executed_count();
+	uint64_t previous_ts                = get_us();
+	uint64_t previous_idle_time         = c->get_wait_time();
 
 	while(event != EVENT_TERMINATE) {
 		sleep(1);
 
-		uint64_t ts = get_us();
+		uint64_t ts        = get_us();
+		uint64_t idle_time = c->get_wait_time();
 		uint64_t current_instruction_count = c->get_instructions_executed_count();
 
-		auto stats = c->get_mips_rel_speed(current_instruction_count - previous_instruction_count, true);
+		uint64_t current_idle_duration = idle_time - previous_idle_time;
+
+		auto stats = c->get_mips_rel_speed(current_instruction_count - previous_instruction_count, ts - previous_ts - current_idle_duration);
 
 		FILE *fh = fopen("kek-metrics.csv", "a+");
 		if (fh) {
 			fseek(fh, 0, SEEK_END);
 			if (ftell(fh) == 0)
-				fprintf(fh, "timestamp,MIPS,relative speed in %%,instructions executed count\n");
-			fprintf(fh, "%.06f, %.2f, %.2f%%, %" PRIu64 "\n", ts / 1000., std::get<0>(stats), std::get<1>(stats), std::get<2>(stats));
+				fprintf(fh, "timestamp,MIPS,relative speed in %%,instructions executed count,idle time\n");
+			fprintf(fh, "%.06f, %.2f, %.2f%%, %" PRIu64 ", %.3f\n", ts / 1000., std::get<0>(stats), std::get<1>(stats), std::get<2>(stats), current_idle_duration / 1000000.);
 			fclose(fh);
 		}
 
+		previous_idle_time         = idle_time;
 		previous_instruction_count = current_instruction_count;
+		previous_ts                = ts;
 	}
 }
 
@@ -545,7 +552,7 @@ int main(int argc, char *argv[])
 		}
 
 		auto stats = c->get_mips_rel_speed({ }, false);
-		cnsl->put_string_lf(format("MIPS: %.2f, relative speed: %.2f%%, instructions executed: %lu", std::get<0>(stats), std::get<1>(stats), std::get<2>(stats)));
+		cnsl->put_string_lf(format("MIPS: %.2f, relative speed: %.2f%%, instructions executed: %" PRIu64 " in %.2f seconds", std::get<0>(stats), std::get<1>(stats), std::get<2>(stats), std::get<3>(stats) / 1000000.));
 	}
 
 	event = EVENT_TERMINATE;

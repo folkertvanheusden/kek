@@ -101,8 +101,9 @@ public:
 	bus *getBus() { return b; }
 
 	void emulation_start();
-	uint64_t get_instructions_executed_count();
-	std::tuple<double, double, uint64_t, uint32_t, double> get_mips_rel_speed(const std::optional<uint64_t> instruction_count, const bool t_diff_1s);
+	uint64_t get_instructions_executed_count() const;
+	uint64_t get_wait_time() const { return wait_time; }
+	std::tuple<double, double, uint64_t, uint32_t, double> get_mips_rel_speed(const std::optional<uint64_t> & instruction_count, const std::optional<uint64_t> & t_diff_1s) const;
 
 	void reset();
 
