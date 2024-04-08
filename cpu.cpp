@@ -619,7 +619,7 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 	const uint8_t dst_mode = (dst >> 3) & 7;
 	const uint8_t dst_reg = dst & 7;
 
-	int operation = (instr >> 9) & 7;
+	const int operation = (instr >> 9) & 7;
 
 	switch(operation) {
 		case 0: { // MUL
