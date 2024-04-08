@@ -523,6 +523,19 @@ memory_addresses_t bus::calculate_physical_address(const int run_mode, const uin
 	return { a, apf, physical_instruction, physical_instruction_is_psw, physical_data, physical_data_is_psw };
 }
 
+bool bus::is_psw(const uint16_t addr, const int run_mode, const d_i_space_t space)
+{
+	auto meta = calculate_physical_address(run_mode, addr);
+
+	if (space == d_space && meta.physical_data_is_psw)
+		return true;
+
+	if (space == i_space && meta.physical_instruction_is_psw)
+		return true;
+
+	return false;
+}
+
 void bus::mmudebug(const uint16_t a)
 {
 	for(int rm=0; rm<4; rm++) {

@@ -176,6 +176,7 @@ public:
 	void     trap_odd(const uint16_t a);
 
 	uint32_t get_io_base() { return MMR0 & 1 ? (MMR3 & 16 ? 017760000 : 0760000) : 0160000; }
+	bool     is_psw(const uint16_t addr, const int run_mode, const d_i_space_t space);
 
 	uint32_t calculate_physical_address(const int run_mode, const uint16_t a, const bool trap_on_failure, const bool is_write, const bool peek_only, const d_i_space_t space);
 
