@@ -78,7 +78,7 @@ std::tuple<double, double, uint64_t, uint32_t, double> cpu::get_mips_rel_speed(c
 
         uint64_t t_diff = t_diff_in.has_value() ? t_diff_in.value() : (get_us() - running_since - wait_time);
 
-        double mips = instr_count / double(t_diff);
+        double mips = t_diff ? instr_count / double(t_diff) : 0;
 
         // see https://retrocomputing.stackexchange.com/questions/6960/what-was-the-clock-speed-and-ips-for-the-original-pdp-11
         constexpr double pdp11_clock_cycle = 150;  // ns, for the 11/70

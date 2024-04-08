@@ -551,7 +551,7 @@ int main(int argc, char *argv[])
 				break;
 		}
 
-		auto stats = c->get_mips_rel_speed({ }, false);
+		auto stats = c->get_mips_rel_speed({ }, { });
 		cnsl->put_string_lf(format("MIPS: %.2f, relative speed: %.2f%%, instructions executed: %" PRIu64 " in %.2f seconds", std::get<0>(stats), std::get<1>(stats), std::get<2>(stats), std::get<3>(stats) / 1000000.));
 	}
 
