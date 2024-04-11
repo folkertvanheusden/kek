@@ -278,6 +278,7 @@ void help()
 	printf("-L x,y   set log level for screen (x) and file (y)\n");
 	printf("-X       do not include timestamp in logging\n");
 	printf("-J x     run validation suite x against the CPU emulation\n");
+	printf("-M       log metrics\n");
 }
 
 int main(int argc, char *argv[])
