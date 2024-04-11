@@ -28,15 +28,20 @@ rk05::rk05(const std::vector<disk_backend *> & files, bus *const b, std::atomic_
 	disk_read_acitivity(disk_read_acitivity),
 	disk_write_acitivity(disk_write_acitivity)
 {
-	memset(registers, 0x00, sizeof registers);
-
 	fhs = files;
+
+	reset();
 }
 
 rk05::~rk05()
 {
 	for(auto fh : fhs)
 		delete fh;
+}
+
+void rk05::reset()
+{
+	memset(registers, 0x00, sizeof registers);
 }
 
 uint8_t rk05::readByte(const uint16_t addr)

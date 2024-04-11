@@ -31,9 +31,7 @@ bus::bus()
 {
 	m = new memory(n_pages * 8192l);
 
-	memset(pages, 0x00, sizeof pages);
-
-	CPUERR = MMR0 = MMR1 = MMR2 = MMR3 = PIR = CSR = 0;
+	reset();
 
 #if defined(BUILD_FOR_RP2040)
 	xSemaphoreGive(lf_csr_lock);  // initialize
@@ -48,6 +46,26 @@ bus::~bus()
 	delete rl02_;
 	delete tty_;
 	delete m;
+}
+
+void bus::reset()
+{
+	m->reset();
+
+	memset(pages, 0x00, sizeof pages);
+
+	CPUERR = MMR0 = MMR1 = MMR2 = MMR3 = PIR = CSR = 0;
+
+	if (c)
+		c->reset();
+	if (tm11)
+		tm11->reset();
+	if (rk05_)
+		rk05_->reset();
+	if (rl02_)
+		rl02_->reset();
+	if (tty_)
+		tty_->reset();
 }
 
 void bus::add_cpu(cpu *const c)
@@ -78,11 +96,6 @@ void bus::add_tty(tty *const tty_)
 {
 	delete this->tty_;
 	this->tty_  = tty_;
-}
-
-void bus::clearmem()
-{
-	m->reset();
 }
 
 void bus::init()

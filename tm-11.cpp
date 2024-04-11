@@ -13,11 +13,20 @@
 tm_11::tm_11(const std::string & file, memory *const m) : m(m)
 {
 	fh = fopen(file.c_str(), "rb");
+
+	reset();
 }
 
 tm_11::~tm_11()
 {
 	fclose(fh);
+}
+
+void tm_11::reset()
+{
+	memset(registers,   0x00, sizeof registers  );
+	memset(xfer_buffer, 0x00, sizeof xfer_buffer);
+	offset = 0;
 }
 
 uint8_t tm_11::readByte(const uint16_t addr)

@@ -28,7 +28,7 @@ class rk05
 {
 private:
 	bus      *const b { nullptr };
-	uint16_t        registers  [  7];
+	uint16_t        registers  [7];
 	std::vector<disk_backend *> fhs;
 
 	std::atomic_bool *const disk_read_acitivity  { nullptr };
@@ -37,6 +37,8 @@ private:
 public:
 	rk05(const std::vector<disk_backend *> & files, bus *const b, std::atomic_bool *const disk_read_acitivity, std::atomic_bool *const disk_write_acitivity);
 	virtual ~rk05();
+
+	void reset();
 
 	uint8_t readByte(const uint16_t addr);
 	uint16_t readWord(const uint16_t addr);

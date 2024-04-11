@@ -419,13 +419,8 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 				continue;
 			}
 			else if (cmd == "reset" || cmd == "r") {
-#if defined(ESP32)
-				ESP.restart();
-#else
 				*stop_event = EVENT_NONE;
-
-				c->reset();
-#endif
+				b->reset();
 				continue;
 			}
 #if defined(ESP32) || defined(BUILD_FOR_RP2040)

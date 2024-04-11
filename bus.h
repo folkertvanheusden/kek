@@ -123,7 +123,7 @@ public:
 	bus();
 	~bus();
 
-	void clearmem();
+	void reset();
 
 	void set_console_switches(const uint16_t new_state) { console_switches = new_state; }
 	void set_console_switch(const int bit, const bool state) { console_switches &= ~(1 << bit); console_switches |= state << bit; }

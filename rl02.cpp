@@ -28,16 +28,21 @@ rl02::rl02(const std::vector<disk_backend *> & files, bus *const b, std::atomic_
 	disk_read_acitivity(disk_read_acitivity),
 	disk_write_acitivity(disk_write_acitivity)
 {
-	memset(registers, 0x00, sizeof registers);
-	memset(xfer_buffer, 0x00, sizeof xfer_buffer);
-
 	fhs = files;
+
+	reset();
 }
 
 rl02::~rl02()
 {
 	for(auto fh : fhs)
 		delete fh;
+}
+
+void rl02::reset()
+{
+	memset(registers, 0x00, sizeof registers);
+	memset(xfer_buffer, 0x00, sizeof xfer_buffer);
 }
 
 uint8_t rl02::readByte(const uint16_t addr)
@@ -118,13 +123,13 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 		else if (command == 6 || command == 7) {  // read data / read data without header check
 			*disk_read_acitivity = true;
 
-			bool proceed = true;
+			bool     proceed          = true;
 
 			uint32_t temp_disk_offset = disk_offset;
 
-			uint32_t memory_address = registers[(RL02_BAR - RL02_BASE) / 2];
+			uint32_t memory_address   = registers[(RL02_BAR - RL02_BASE) / 2];
 
-			uint32_t count          = (65536l - registers[(RL02_MPR - RL02_BASE) / 2]) * 2;
+			uint32_t count            = (65536l - registers[(RL02_MPR - RL02_BASE) / 2]) * 2;
 
 			DOLOG(debug, false, "RL02 read %d bytes (dec) from %d (dec) to %06o (oct)", count, disk_offset, memory_address);
 
