@@ -46,12 +46,7 @@
 #include "version.h"
 
 
-constexpr const char NET_DISK_CFG_FILE[] = "/net-disk.json";
-
 constexpr const char SERIAL_CFG_FILE[] = "/serial.json";
-
-#define MAX_CFG_SIZE 1024
-StaticJsonDocument<MAX_CFG_SIZE> json_doc;
 
 #if defined(BUILD_FOR_RP2040)
 #define Serial_RS232 Serial1
@@ -75,8 +70,6 @@ std::atomic_uint32_t stop_event      { EVENT_NONE };
 std::atomic_bool    *running         { nullptr };
 
 bool                 trace_output    { false };
-
-typedef enum { DT_RK05, DT_RL02, DT_TAPE } disk_type_t;
 
 void console_thread_wrapper_panel(void *const c)
 {
@@ -118,329 +111,6 @@ bool save_serial_speed_configuration(const uint32_t bps)
 	dataFile.close();
 
 	return true;
-}
-
-#if !defined(BUILD_FOR_RP2040)
-std::optional<std::tuple<std::vector<disk_backend *>, std::vector<disk_backend *>, std::string> > load_disk_configuration(console *const c)
-{
-	File dataFile = LittleFS.open(NET_DISK_CFG_FILE, "r");
-
-	if (!dataFile)
-		return { };
-
-	size_t size = dataFile.size();
-
-	char buffer[MAX_CFG_SIZE];
-
-	if (size > sizeof buffer) {  // this should not happen
-		dataFile.close();
-
-		return { };
-	}
-
-	dataFile.read(reinterpret_cast<uint8_t *>(buffer), size);
-	buffer[(sizeof buffer) - 1] = 0x00;
-
-	dataFile.close();
-
-	auto error = deserializeJson(json_doc, buffer);
-
-	if (error)  // this should not happen
-		return { };
-
-	String nbd_host = json_doc["NBD-host"];
-	int    nbd_port = json_doc["NBD-port"];
-
-	String disk_type_temp = json_doc["disk-type"];
-
-	String tape_file = json_doc["tape-file"];
-
-	disk_type_t disk_type = DT_RK05;
-
-	if (disk_type_temp == "rl02")
-		disk_type = DT_RL02;
-	else if (disk_type_temp == "tape")
-		disk_type = DT_TAPE;
-
-	disk_backend *d = new disk_backend_nbd(nbd_host.c_str(), nbd_port);
-
-	if (d->begin() == false) {
-		c->put_string_lf("Cannot initialize NBD client from configuration file");
-		delete d;
-		return { };
-	}
-
-	c->put_string_lf(format("Connection to NBD server at %s:%d success", nbd_host.c_str(), nbd_port));
-
-	if (disk_type == DT_RK05)
-		return { { { d }, { }, "" } };
-
-	if (disk_type == DT_RL02)
-		return { { { }, { d }, "" } };
-
-	if (disk_type == DT_TAPE)
-		return { { { }, { }, tape_file.c_str() } };
-
-	return { };
-}
-
-bool save_disk_configuration(const std::string & nbd_host, const int nbd_port, const disk_type_t dt)
-{
-	json_doc["NBD-host"] = nbd_host;
-	json_doc["NBD-port"] = nbd_port;
-
-	json_doc["disk-type"] = dt == DT_RK05 ? "rk05" : "rl02";
-
-	File dataFile = LittleFS.open(NET_DISK_CFG_FILE, "w");
-
-	if (!dataFile)
-		return false;
-
-	serializeJson(json_doc, dataFile);
-
-	dataFile.close();
-
-	return true;
-}
-#endif
-
-typedef enum { BE_NETWORK, BE_SD } disk_backend_t;
-
-std::optional<disk_backend_t> select_disk_backend(console *const c)
-{
-#if defined(BUILD_FOR_RP2040)
-	return BE_SD;
-#else
-	c->put_string("1. network (NBD), 2. local SD card, 9. abort");
-
-	int ch = -1;
-	while(ch == -1 && ch != '1' && ch != '2' && ch != '9') {
-		auto temp = c->wait_char(500);
-
-		if (temp.has_value())
-			ch = temp.value();
-	}
-
-	c->put_string_lf(format("%c", ch));
-
-	if (ch == '9')
-		return { };
-
-	if (ch == '1')
-		return BE_NETWORK;
-
-//	if (ch == '2')
-		return BE_SD;
-#endif
-}
-
-std::optional<disk_type_t> select_disk_type(console *const c)
-{
-	c->put_string("1. RK05, 2. RL02, 3. tape/BIC, 9. abort");
-
-	int ch = -1;
-	while(ch == -1 && ch != '1' && ch != '2' && ch != '3' && ch != '9') {
-		auto temp = c->wait_char(500);
-
-		if (temp.has_value())
-			ch = temp.value();
-	}
-
-	c->put_string_lf(format("%c", ch));
-
-	if (ch == '1')
-		return DT_RK05;
-
-	if (ch == '2')
-		return DT_RL02;
-
-	if (ch == '3')
-		return DT_TAPE;
-
-	return { };
-}
-
-#if !defined(BUILD_FOR_RP2040)
-std::optional<std::tuple<std::vector<disk_backend *>, std::vector<disk_backend *>, std::string> > select_nbd_server(console *const c)
-{
-	c->flush_input();
-
-	std::string hostname = c->read_line("Enter hostname (or empty to abort): ");
-
-	if (hostname.empty())
-		return { };
-
-	std::string port_str = c->read_line("Enter port number (or empty to abort): ");
-
-	if (port_str.empty())
-		return { };
-
-	auto disk_type = select_disk_type(c);
-
-	if (disk_type.has_value() == false)
-		return { };
-
-	disk_backend *d = new disk_backend_nbd(hostname, atoi(port_str.c_str()));
-
-	if (d->begin() == false) {
-		c->put_string_lf("Cannot initialize NBD client");
-		delete d;
-		return { };
-	}
-
-	if (save_disk_configuration(hostname, atoi(port_str.c_str()), disk_type.value()))
-		c->put_string_lf("NBD disk configuration saved");
-	else
-		c->put_string_lf("NBD disk configuration NOT saved");
-
-	if (disk_type.value() == DT_RK05)
-		return { { { d }, { }, "" } };
-
-	if (disk_type.value() == DT_RL02)
-		return { { { }, { d }, "" } };
-
-	return { };
-}
-#endif
-
-// RK05, RL02 files
-std::optional<std::tuple<std::vector<disk_backend *>, std::vector<disk_backend *>, std::string> > select_disk_files(console *const c)
-{
-	c->debug("MISO: %d", int(MISO));
-	c->debug("MOSI: %d", int(MOSI));
-	c->debug("SCK : %d", int(SCK ));
-	c->debug("SS  : %d", int(SS  ));
-
-	c->put_string_lf("Files on SD-card:");
-
-#if defined(SHA2017)
-	if (!SD.begin(21, SD_SCK_MHZ(10)))
-		SD.initErrorHalt();
-#elif !defined(BUILD_FOR_RP2040)
-	if (!SD.begin(SS, SD_SCK_MHZ(15))) {
-		auto err = SD.sdErrorCode();
-		if (err)
-			c->debug("SDerror: 0x%x, data: 0x%x", err, SD.sdErrorData());
-		else
-			c->debug("Failed to initialize SD card");
-
-		return { };
-	}
-#endif
-
-	for(;;) {
-#if defined(BUILD_FOR_RP2040)
-		File root = SD.open("/");
-
-		for(;;) {
-			auto entry = root.openNextFile();
-			if (!entry)
-				break;
-
-			if (!entry.isDirectory()) {
-				c->put_string(entry.name());
-				c->put_string("\t\t");
-				c->put_string_lf(format("%ld", entry.size()));
-			}
-
-			entry.close();
-		}
-#else
-		SD.ls("/", LS_DATE | LS_SIZE | LS_R);
-#endif
-
-		c->flush_input();
-
-		std::string selected_file = c->read_line("Enter filename (or empty to abort): ");
-
-		if (selected_file.empty())
-			return { };
-
-		auto disk_type = select_disk_type(c);
-
-		if (disk_type.has_value() == false)
-			return { };
-
-		c->put_string("Opening file: ");
-		c->put_string_lf(selected_file.c_str());
-
-		File32 fh;
-
-		if (fh.open(selected_file.c_str(), O_RDWR)) {
-			fh.close();
-
-			if (disk_type.value() == DT_TAPE)
-				return { { { }, { }, selected_file } };
-
-			disk_backend *temp = new disk_backend_esp32(selected_file);
-
-			if (!temp->begin()) {
-				c->put_string("Cannot use: ");
-				c->put_string_lf(selected_file.c_str());
-
-				delete temp;
-
-				continue;
-			}
-
-			if (disk_type.value() == DT_RK05)
-				return { { { temp }, { }, "" } };
-
-			if (disk_type.value() == DT_RL02)
-				return { { { }, { temp }, "" } };
-		}
-
-		c->put_string_lf("open failed");
-	}
-}
-
-void set_disk_configuration(std::tuple<std::vector<disk_backend *>, std::vector<disk_backend *>, std::string> & disk_files)
-{
-	if (std::get<0>(disk_files).empty() == false)
-		b->add_rk05(new rk05(std::get<0>(disk_files), b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
-
-	if (std::get<1>(disk_files).empty() == false)
-		b->add_rl02(new rl02(std::get<1>(disk_files), b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
-
-	if (std::get<2>(disk_files).empty() == false) {
-		auto addr = loadTape(b, std::get<2>(disk_files));
-
-		if (addr.has_value())
-			c->setPC(addr.value());
-	}
-
-	if (std::get<0>(disk_files).empty() == false)
-		setBootLoader(b, BL_RK05);
-	else if (std::get<1>(disk_files).empty() == false)
-		setBootLoader(b, BL_RL02);
-}
-
-void configure_disk(console *const c)
-{
-	for(;;) {
-		c->put_string_lf("Load disk");
-
-		auto backend = select_disk_backend(cnsl);
-
-		if (backend.has_value() == false)
-			break;
-
-		std::optional<std::tuple<std::vector<disk_backend *>, std::vector<disk_backend *>, std::string> > files;
-
-#if !defined(BUILD_FOR_RP2040)
-		if (backend == BE_NETWORK)
-			files = select_nbd_server(cnsl);
-		else // if (backend == BE_SD)
-#endif
-			files = select_disk_files(cnsl);
-
-		if (files.has_value() == false)
-			break;
-
-		set_disk_configuration(files.value());
-
-		break;
-	}
 }
 
 #if !defined(BUILD_FOR_RP2040)
@@ -519,16 +189,16 @@ void start_network(console *const c)
 	c->put_string_lf(format("Local IP address: %s", WiFi.localIP().toString().c_str()));
 }
 
-void recall_configuration(console *const c)
+void recall_configuration(console *const cnsl)
 {
-	c->put_string_lf("Starting network...");
+	cnsl->put_string_lf("Starting network...");
 	start_network(cnsl);
 
-	auto disk_configuration = load_disk_configuration(c);
+	auto disk_configuration = load_disk_configuration(cnsl);
 
 	if (disk_configuration.has_value()) {
-		c->put_string_lf("Starting disk...");
-		set_disk_configuration(disk_configuration.value());
+		cnsl->put_string_lf("Starting disk...");
+		set_disk_configuration(b, cnsl, disk_configuration.value());
 	}
 }
 #endif

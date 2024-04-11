@@ -209,6 +209,7 @@ std::string console::read_line(const std::string & prompt)
 			for(size_t i=0; i<edit_lines_hist.at(line_nr).size(); i++)
 				emit_backspace();
 
+			// TODO: handle with number-prefix
 			if (c == 'A') {  // up
 				if (line_nr > 0)
 					line_nr--;
@@ -218,7 +219,6 @@ std::string console::read_line(const std::string & prompt)
 					line_nr++;
 			}
 			else {
-				printf("[%c]\n", c);
 				continue;
 			}
 
