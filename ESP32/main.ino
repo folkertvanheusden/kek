@@ -43,6 +43,7 @@
 #include "memory.h"
 #include "tty.h"
 #include "utils.h"
+#include "version.h"
 
 
 constexpr const char NET_DISK_CFG_FILE[] = "/net-disk.json";
@@ -547,7 +548,8 @@ void setup() {
 		delay(100);
 
 	Serial.println(F("This PDP-11 emulator is called \"kek\" (reason for that is forgotten) and was written by Folkert van Heusden."));
-
+	Serial.print(F("GIT hash: "));
+	Serial.println(version_str);
 	Serial.println(F("Build on: " __DATE__ " " __TIME__));
 
 	Serial.print(F("Size of int: "));
