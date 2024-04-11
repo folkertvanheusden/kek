@@ -212,16 +212,13 @@ std::string console::read_line(const std::string & prompt)
 			if (c == 'A') {  // up
 				if (line_nr > 0)
 					line_nr--;
-				else
-					line_nr = edit_lines_hist.size() - 1;
 			}
 			else if (c == 'B') {  // down
 				if (line_nr < edit_lines_hist.size() - 1)
 					line_nr++;
-				else
-					line_nr = 0;
 			}
 			else {
+				printf("[%c]\n", c);
 				continue;
 			}
 
@@ -344,7 +341,6 @@ void console::operator()()
 
 	while(*stop_event != EVENT_TERMINATE && !stop_thread_flag) {
 		int c = wait_for_char_ll(500);
-
 		if (c == -1)
 			continue;
 

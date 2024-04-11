@@ -28,6 +28,8 @@ console_posix::console_posix(std::atomic_uint32_t *const stop_event, bus *const 
 
 	if (tcsetattr(STDIN_FILENO, TCSANOW, &tty_opts_raw) == -1)
 		error_exit(true, "console_posix: tcsetattr failed");
+
+	setvbuf(stdin, nullptr, _IONBF, 0);
 #endif
 }
 
@@ -53,7 +55,7 @@ int console_posix::wait_for_char_ll(const short timeout)
 	if (select(STDIN_FILENO + 1, &rfds, nullptr, nullptr, &to) == 1 && FD_ISSET(STDIN_FILENO, &rfds))
 		return _getch();
 #else
-	struct pollfd fds[] = { { STDIN_FILENO, POLLIN, timeout } };
+	struct pollfd fds[] = { { STDIN_FILENO, POLLIN, 0 } };
 
 	if (poll(fds, 1, timeout) == 1 && fds[0].revents)
 		return getchar();
