@@ -244,6 +244,15 @@ std::string console::read_line(const std::string & prompt)
 
 			edit_lines_hist.at(line_nr).clear();
 		}
+		else if (c.value() == 23) {  // ^w
+			while(edit_lines_hist.at(line_nr).empty() == false) {
+				edit_lines_hist.at(line_nr) = edit_lines_hist.at(line_nr).substr(0, edit_lines_hist.at(line_nr).size() - 1);
+				emit_backspace();
+
+				if (edit_lines_hist.at(line_nr).empty() == false && edit_lines_hist.at(line_nr).at(edit_lines_hist.at(line_nr).size() - 1) == ' ')
+					break;
+			}
+		}
 		else if (c.value() >= 32) {
 			edit_lines_hist.at(line_nr) += c.value();
 
