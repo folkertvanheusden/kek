@@ -177,7 +177,14 @@ std::string console::read_line(const std::string & prompt)
 	put_string(prompt);
 	put_string(">");
 
-	std::string str;
+	if (edit_lines_hist.empty() == false)
+		edit_lines_hist.erase(edit_lines_hist.begin());
+
+	while(edit_lines_hist.size() < n_edit_lines_hist)
+		edit_lines_hist.push_back("");
+
+	size_t line_nr = edit_lines_hist.size() - 1;
+	bool   escape  = false;
 
 	for(;;) {
 		auto c = wait_char(250);
@@ -188,24 +195,60 @@ std::string console::read_line(const std::string & prompt)
 		if (c.has_value() == false)
 			continue;
 
+		if (c == 27) {
+			escape = true;
+			continue;
+		}
+
+		if (escape) {
+			if (c == '[')
+				continue;
+
+			escape = false;
+
+			for(size_t i=0; i<edit_lines_hist.at(line_nr).size(); i++)
+				emit_backspace();
+
+			if (c == 'A') {  // up
+				if (line_nr > 0)
+					line_nr--;
+				else
+					line_nr = edit_lines_hist.size() - 1;
+			}
+			else if (c == 'B') {  // down
+				if (line_nr < edit_lines_hist.size() - 1)
+					line_nr++;
+				else
+					line_nr = 0;
+			}
+			else {
+				continue;
+			}
+
+			for(size_t i=0; i<edit_lines_hist.at(line_nr).size(); i++)
+				put_char(edit_lines_hist.at(line_nr).at(i));
+
+			continue;
+		}
+
 		if (c.value() == 13 || c.value() == 10)
 			break;
 
 		if (c.value() == 8 || c.value() == 127) {  // backspace
-			if (!str.empty()) {
-				str = str.substr(0, str.size() - 1);
+			if (!edit_lines_hist.at(line_nr).empty()) {
+				edit_lines_hist.at(line_nr) = edit_lines_hist.at(line_nr).substr(0, edit_lines_hist.at(line_nr).size() - 1);
 
 				emit_backspace();
 			}
 		}
 		else if (c.value() == 21) {  // ^u
-			for(size_t i=0; i<str.size(); i++)
+			for(size_t i=0; i<edit_lines_hist.at(line_nr).size(); i++)
 				emit_backspace();
 
-			str.clear();
+			edit_lines_hist.at(line_nr).clear();
 		}
 		else if (c.value() >= 32) {
-			str += c.value();
+			edit_lines_hist.at(line_nr) += c.value();
 
 			put_char(c.value());
 		}
@@ -213,7 +256,7 @@ std::string console::read_line(const std::string & prompt)
 
 	put_string_lf("");
 
-	return str;
+	return edit_lines_hist.at(line_nr);
 }
 
 void console::debug(const std::string fmt, ...)

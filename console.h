@@ -47,6 +47,9 @@ protected:
 	uint8_t                 tx               { 0 };
 	uint8_t                 ty               { 0 };
 
+	const size_t            n_edit_lines_hist { 8 };  // maximum number of previous edit-lines
+	std::vector<std::string> edit_lines_hist;
+
 	std::string             debug_buffer;
 
 	virtual int  wait_for_char_ll(const short timeout) = 0;
