@@ -494,12 +494,17 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 
 	switch(operation) {
 		case 0b001: { // MOV/MOVB Move Word/Byte
-				    gam_rc_t g_src = getGAM(src_mode, src_reg, word_mode, rm_cur);
+				    gam_rc_t g_src;
 
-				    if (word_mode == wm_byte && dst_mode == 0)
+				    if (word_mode == wm_byte && dst_mode == 0) {
+					    g_src = getGAM(src_mode, src_reg, word_mode, rm_cur);
+
 					    setRegister(dst_reg, int8_t(g_src.value.value()));  // int8_t: sign extension
+				    }
 				    else {
 					    auto g_dst = getGAM(dst_mode, dst_reg, word_mode, rm_cur, false);
+
+					    g_src = getGAM(src_mode, src_reg, word_mode, rm_cur);
 
 					    set_flags = putGAM(g_dst, g_src.value.value());
 				    }
@@ -1293,6 +1298,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 					 // retrieve word from '15/14'-stack
 					 uint16_t v             = popStack();
+					 b->addToMMR1(2, 6);
 
 					 bool     set_flags     = true;
 
@@ -1311,8 +1317,6 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 					 if (set_flags)
 						 setPSW_flags_nzv(v, wm_word);
-
-					 b->addToMMR1(2, 6);
 
 					 break;
 				 }
@@ -1607,7 +1611,6 @@ bool cpu::misc_operations(const uint16_t instr)
 
 		// PUSH link
 		pushStack(getRegister(link_reg));
-
 		b->addToMMR1(-2, 6);
 
 		// MOVE PC,link
