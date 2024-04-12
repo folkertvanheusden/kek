@@ -269,7 +269,7 @@ void help()
 	printf("-r d.rl  load file as a RL02 disk device\n");
 	printf("-N host:port:type  use NBD-server as disk device, type being either \"rk05\" or \"rl02\"\n");
 	printf("-p 123   set CPU start pointer to decimal(!) value\n");
-	printf("-b x     enable bootloader (build-in), parameter must be \"rk05\" or \"rl02\"\n");
+	printf("-b       enable bootloader (builtin)\n");
 	printf("-n       ncurses UI\n");
 	printf("-d       enable debugger\n");
 	printf("-s x,y   set console switche state: set bit x (0...15) to y (0/1)\n");
@@ -291,7 +291,8 @@ int main(int argc, char *argv[])
 	bool run_debugger = false;
 	bool tracing      = false;
 
-	bootloader_t  bootloader = BL_NONE;
+	bool          enable_bootloader = false;
+	bootloader_t  bootloader        = BL_NONE;
 
 	const char  *logfile   = nullptr;
 	log_level_t  ll_screen = none;
@@ -315,7 +316,7 @@ int main(int argc, char *argv[])
 	bool         metrics = false;
 
 	int  opt          = -1;
-	while((opt = getopt(argc, argv, "hMT:Br:R:p:ndtL:b:l:s:Q:N:J:X")) != -1)
+	while((opt = getopt(argc, argv, "hMT:Br:R:p:ndtL:bl:s:Q:N:J:X")) != -1)
 	{
 		switch(opt) {
 			case 'h':
@@ -352,13 +353,7 @@ int main(int argc, char *argv[])
 				  }
 
 			case 'b':
-				if (strcasecmp(optarg, "rk05") == 0)
-					bootloader = BL_RK05;
-				else if (strcasecmp(optarg, "rl02") == 0)
-					bootloader = BL_RL02;
-				else
-					error_exit(false, "Bootload \"%s\" not recognized", optarg);
-
+				enable_bootloader = true;
 				break;
 
 			case 'd':
@@ -481,20 +476,24 @@ int main(int argc, char *argv[])
 	}
 
 	if (rk05_files.empty() == false) {
-		if (bootloader != BL_RK05)
-			DOLOG(warning, true, "Note: loading RK05 with no RK05 bootloader selected");
+		if (enable_bootloader == false)
+			DOLOG(warning, true, "Note: loading RK05 with no (RK05-) bootloader selected");
+		else
+			bootloader = BL_RK05;
 
 		b->add_rk05(new rk05(rk05_files, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
 	}
 
 	if (rl02_files.empty() == false) {
-		if (bootloader != BL_RL02)
-			DOLOG(warning, true, "Note: loading RL02 with no RL02 bootloader selected");
+		if (enable_bootloader == false)
+			DOLOG(warning, true, "Note: loading RL02 with no (RL02-) bootloader selected");
+		else
+			bootloader = BL_RL02;
 
 		b->add_rl02(new rl02(rl02_files, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
 	}
 
-	if (bootloader != BL_NONE)
+	if (enable_bootloader)
 		setBootLoader(b, bootloader);
 
 	running = cnsl->get_running_flag();
