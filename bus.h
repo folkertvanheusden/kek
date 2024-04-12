@@ -165,12 +165,12 @@ public:
 
 	void writeUnibusByte(const uint16_t a, const uint8_t value);
 
-	uint16_t getMMR0() { return MMR0; }
-	uint16_t getMMR1() { return MMR1; }
-	uint16_t getMMR2() { return MMR2; }
-	uint16_t getMMR3() { return MMR3; }
-	uint16_t getMMR(int nr) { uint16_t *mmrs[] { &MMR0, &MMR1, &MMR2, &MMR3 }; return *mmrs[nr]; }
-	bool     isMMR1Locked() { return !!(getMMR0() & 0160000); }
+	uint16_t getMMR0() const { return MMR0; }
+	uint16_t getMMR1() const { return MMR1; }
+	uint16_t getMMR2() const { return MMR2; }
+	uint16_t getMMR3() const { return MMR3; }
+	uint16_t getMMR(int nr) const { const uint16_t *const mmrs[] { &MMR0, &MMR1, &MMR2, &MMR3 }; return *mmrs[nr]; }
+	bool     isMMR1Locked() const { return !!(getMMR0() & 0160000); }
 	void     clearMMR1();
 	void     addToMMR1(const int8_t delta, const uint8_t reg);
 	void     setMMR0(const uint16_t value);
@@ -181,12 +181,12 @@ public:
 	void     check_odd_addressing(const uint16_t a, const int run_mode, const d_i_space_t space, const bool is_write);
 	void     trap_odd(const uint16_t a);
 
-	uint32_t get_io_base() { return MMR0 & 1 ? (MMR3 & 16 ? 017760000 : 0760000) : 0160000; }
-	bool     is_psw(const uint16_t addr, const int run_mode, const d_i_space_t space);
+	uint32_t get_io_base() const { return MMR0 & 1 ? (MMR3 & 16 ? 017760000 : 0760000) : 0160000; }
+	bool     is_psw(const uint16_t addr, const int run_mode, const d_i_space_t space) const;
 
 	uint32_t calculate_physical_address(const int run_mode, const uint16_t a, const bool trap_on_failure, const bool is_write, const bool peek_only, const d_i_space_t space);
 
-	bool get_use_data_space(const int run_mode);
-	memory_addresses_t calculate_physical_address(const int run_mode, const uint16_t a);
+	bool get_use_data_space(const int run_mode) const;
+	memory_addresses_t calculate_physical_address(const int run_mode, const uint16_t a) const;
 	void check_address(const bool trap_on_failure, const bool is_write, const memory_addresses_t & addr, const word_mode_t word_mode, const bool is_data, const int run_mode);
 };

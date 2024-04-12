@@ -504,7 +504,7 @@ void bus::check_odd_addressing(const uint16_t a, const int run_mode, const d_i_s
 	}
 }
 
-memory_addresses_t bus::calculate_physical_address(const int run_mode, const uint16_t a)
+memory_addresses_t bus::calculate_physical_address(const int run_mode, const uint16_t a) const
 {
 	const uint8_t apf = a >> 13; // active page field
 
@@ -536,7 +536,7 @@ memory_addresses_t bus::calculate_physical_address(const int run_mode, const uin
 	return { a, apf, physical_instruction, physical_instruction_is_psw, physical_data, physical_data_is_psw };
 }
 
-bool bus::is_psw(const uint16_t addr, const int run_mode, const d_i_space_t space)
+bool bus::is_psw(const uint16_t addr, const int run_mode, const d_i_space_t space) const
 {
 	auto meta = calculate_physical_address(run_mode, addr);
 
@@ -558,7 +558,7 @@ void bus::mmudebug(const uint16_t a)
 	}
 }
 
-bool bus::get_use_data_space(const int run_mode)
+bool bus::get_use_data_space(const int run_mode) const
 {
 	return !!(MMR3 & di_ena_mask[run_mode]);
 }
