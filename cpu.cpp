@@ -511,9 +511,9 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 			    }
 
 		case 0b010: { // CMP/CMPB Compare Word/Byte
-				    gam_rc_t g_src = getGAM(src_mode, src_reg, word_mode, rm_cur);
-
 				    auto     g_dst = getGAM(dst_mode, dst_reg, word_mode, rm_cur);
+
+				    gam_rc_t g_src = getGAM(src_mode, src_reg, word_mode, rm_cur);
 
 				    uint16_t temp  = (g_src.value.value() - g_dst.value.value()) & (word_mode == wm_byte ? 0xff : 0xffff);
 
@@ -526,9 +526,9 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 			    }
 
 		case 0b011: { // BIT/BITB Bit Test Word/Byte
-				    gam_rc_t g_src  = getGAM(src_mode, src_reg, word_mode, rm_cur);
+				    auto     g_dst  = getGAM(dst_mode, dst_reg, word_mode, rm_cur);
 
-				    auto g_dst      = getGAM(dst_mode, dst_reg, word_mode, rm_cur);
+				    gam_rc_t g_src  = getGAM(src_mode, src_reg, word_mode, rm_cur);
 
 				    uint16_t result = (g_dst.value.value() & g_src.value.value()) & (word_mode == wm_byte ? 0xff : 0xffff);
 
@@ -538,9 +538,9 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 			    }
 
 		case 0b100: { // BIC/BICB Bit Clear Word/Byte
-				    gam_rc_t g_src  = getGAM(src_mode, src_reg, word_mode, rm_cur);
-
 				    auto     g_dst  = getGAM(dst_mode, dst_reg, word_mode, rm_cur);
+
+				    gam_rc_t g_src  = getGAM(src_mode, src_reg, word_mode, rm_cur);
 
 				    uint16_t result = g_dst.value.value() & ~g_src.value.value();
 
@@ -552,9 +552,9 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 
 		case 0b101: { // BIS/BISB Bit Set Word/Byte
 				    // TODO: retain MSB for register operations?
-				    gam_rc_t g_src  = getGAM(src_mode, src_reg, word_mode, rm_cur);
-
 				    auto     g_dst  = getGAM(dst_mode, dst_reg, word_mode, rm_cur);
+
+				    gam_rc_t g_src  = getGAM(src_mode, src_reg, word_mode, rm_cur);
 
 				    uint16_t result = g_dst.value.value() | g_src.value.value();
 
@@ -568,9 +568,9 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 			    }
 
 		case 0b110: { // ADD/SUB Add/Subtract Word
-				    auto     g_ssrc = getGAM(src_mode, src_reg, wm_word, rm_cur);
-
 				    auto     g_dst  = getGAM(dst_mode, dst_reg, wm_word, rm_cur);
+
+				    auto     g_ssrc = getGAM(src_mode, src_reg, wm_word, rm_cur);
 
 				    int16_t  result = 0;
 

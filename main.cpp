@@ -206,7 +206,24 @@ int run_cpu_validation(const std::string & filename)
 				uint16_t should_be_mmr = json_integer_value(a_mmr);
 				uint16_t is_mmr = b->getMMR(r);
 				if (should_be_mmr != is_mmr) {
-					DOLOG(warning, true, "MMR%d register mismatch (is: %06o (%d), should be: %06o (%d))", r, is_mmr, is_mmr, should_be_mmr, should_be_mmr);
+					int is_d1 = is_mmr >> 11;
+					if (is_d1 & 16)
+						is_d1 = -(32 - is_d1);
+					int is_r1 = (is_mmr >> 8) & 7;
+					int is_d2 = (is_mmr >> 3) & 31;
+					if (is_d2 & 16)
+						is_d2 = -(32 - is_d2);
+					int is_r2 = is_mmr & 7;
+
+					int sb_d1 = should_be_mmr >> 11;
+					if (sb_d1 & 16)
+						sb_d1 = -(32 - sb_d1);
+					int sb_r1 = (should_be_mmr >> 8) & 7;
+					int sb_d2 = (should_be_mmr >> 3) & 31;
+					if (sb_d2 & 16)
+						sb_d2 = -(32 - sb_d2);
+					int sb_r2 = should_be_mmr & 7;
+					DOLOG(warning, true, "MMR%d register mismatch (is: %06o (%d / %02d,%02d - %02d,%02d), should be: %06o (%d / %02d,%02d - %02d,%02d))%s", r, is_mmr, is_mmr, is_d1, is_r1, is_d2, is_r2, should_be_mmr, should_be_mmr, sb_d1, sb_r1, sb_d2, sb_r2, c->is_it_a_trap() ? " TRAP": "");
 					err = true;
 				}
 			}
