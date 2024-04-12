@@ -1311,9 +1311,6 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 					 // put on current stack
 					 pushStack(v);
-
-					 b->addToMMR1(-2, 6);
-
 					 break;
 				 }
 
@@ -1322,7 +1319,6 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 					 // retrieve word from '15/14'-stack
 					 uint16_t v             = popStack();
-					 b->addToMMR1(2, 6);
 
 					 bool     set_flags     = true;
 
