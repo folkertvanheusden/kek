@@ -223,7 +223,7 @@ int run_cpu_validation(const std::string & filename)
 					if (sb_d2 & 16)
 						sb_d2 = -(32 - sb_d2);
 					int sb_r2 = should_be_mmr & 7;
-					DOLOG(warning, true, "MMR%d register mismatch (is: %06o (%d / %02d,%02d - %02d,%02d), should be: %06o (%d / %02d,%02d - %02d,%02d))%s", r, is_mmr, is_mmr, is_d1, is_r1, is_d2, is_r2, should_be_mmr, should_be_mmr, sb_d1, sb_r1, sb_d2, sb_r2, c->is_it_a_trap() ? " TRAP": "");
+					DOLOG(warning, true, "MMR%d register mismatch (is: %06o (%d / %02d,%02d - %02d,%02d), should be: %06o (%d / %02d,%02d - %02d,%02d))%s %s", r, is_mmr, is_mmr, is_d1, is_r1, is_d2, is_r2, should_be_mmr, should_be_mmr, sb_d1, sb_r1, sb_d2, sb_r2, c->is_it_a_trap() ? " TRAP": "", disas_data["instruction-text"].at(0).c_str());
 					err = true;
 				}
 			}
