@@ -365,8 +365,11 @@ void cpu::queue_interrupt(const uint8_t level, const uint8_t vector)
 
 void cpu::addToMMR1(const gam_rc_t & g)
 {
-	if (g.mmr1_update.has_value())
+	if (g.mmr1_update.has_value()) {
+		assert(g.mmr1_update.value().delta);
+
 		b->addToMMR1(g.mmr1_update.value().delta, g.mmr1_update.value().reg);
+	}
 }
 
 // GAM = general addressing modes
