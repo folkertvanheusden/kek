@@ -170,6 +170,7 @@ public:
 	uint16_t getMMR2() { return MMR2; }
 	uint16_t getMMR3() { return MMR3; }
 	uint16_t getMMR(int nr) { uint16_t *mmrs[] { &MMR0, &MMR1, &MMR2, &MMR3 }; return *mmrs[nr]; }
+	bool     isMMR1Locked() { return !!(getMMR0() & 0160000); }
 	void     clearMMR1();
 	void     addToMMR1(const int8_t delta, const uint8_t reg);
 	void     setMMR0(const uint16_t value);

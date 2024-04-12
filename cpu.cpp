@@ -365,7 +365,7 @@ void cpu::queue_interrupt(const uint8_t level, const uint8_t vector)
 
 void cpu::addToMMR1(const gam_rc_t & g)
 {
-	if (g.mmr1_update.has_value()) {
+	if (!b->isMMR1Locked() && g.mmr1_update.has_value()) {
 		assert(g.mmr1_update.value().delta);
 
 		b->addToMMR1(g.mmr1_update.value().delta, g.mmr1_update.value().reg);
@@ -1644,9 +1644,11 @@ bool cpu::misc_operations(const uint16_t instr)
 
 		// PUSH link
 		pushStack(getRegister(link_reg));
-		b->addToMMR1(-2, 6);
+		if (!b->isMMR1Locked()) {
+			b->addToMMR1(-2, 6);
 
-		addToMMR1(a);
+			addToMMR1(a);
+		}
 
 		// MOVE PC,link
 		setRegister(link_reg, getPC());
@@ -2253,11 +2255,11 @@ void cpu::step_a()
 {
 	it_is_a_trap = false;
 
-	if ((b->getMMR0() & 0160000) == 0)
+	if (!b->isMMR1Locked())
 		b->clearMMR1();
 
 	if (any_queued_interrupts && check_queued_interrupts()) {
-		if ((b->getMMR0() & 0160000) == 0)
+		if (!b->isMMR1Locked())
 			b->clearMMR1();
 	}
 }
@@ -2269,7 +2271,7 @@ void cpu::step_b()
 	try {
 		uint16_t temp_pc = getPC();
 
-		if ((b->getMMR0() & 0160000) == 0)
+		if (!b->isMMR1Locked())
 			b->setMMR2(temp_pc);
 
 		uint16_t instr = b->readWord(temp_pc);
