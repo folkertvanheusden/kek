@@ -1703,10 +1703,8 @@ void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 				b->clearMMR1();
 
 				before_psw = getPSW();
-				b->addToMMR1(-2, 6);
 
 				before_pc  = getPC();
-				b->addToMMR1(-2, 6);
 
 				// TODO set MMR2?
 			}
