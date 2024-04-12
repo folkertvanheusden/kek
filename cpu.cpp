@@ -1724,8 +1724,15 @@ void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 			if (processing_trap_depth >= 2 && kernel_mode)
 				setRegister(6, 04);
 
-			pushStack(before_psw);
-			pushStack(before_pc);
+			uint16_t prev_sp = getRegister(6);
+			try {
+				pushStack(before_psw);
+				pushStack(before_pc);
+			}
+			catch(const int exception) {
+				// recover stack
+				setRegister(6, prev_sp);
+			}
 
 			processing_trap_depth = 0;
 
