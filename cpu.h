@@ -16,10 +16,18 @@
 
 
 typedef struct {
+	int      delta;
+	unsigned reg;
+} mmr1_delta_t;
+
+typedef struct {
 	word_mode_t word_mode;
 	rm_selection_t mode_selection;
 	d_i_space_t space;
 	int access_mode;
+
+	// for MMR1 register
+	std::optional<mmr1_delta_t> mmr1_update;
 
 	std::optional<uint16_t> addr;
 	std::optional<int> reg;
@@ -64,7 +72,7 @@ private:
 
 	uint16_t addRegister(const int nr, const rm_selection_t mode_selection, const uint16_t value);
 
-	void     addToMMR1(const uint8_t mode, const uint8_t reg, const word_mode_t word_mode);
+	void     addToMMR1(const gam_rc_t & g);
 
 	gam_rc_t getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t word_mode, const rm_selection_t mode_selection, const bool read_value = true);
 	gam_rc_t getGAMAddress(const uint8_t mode, const int reg, const word_mode_t word_mode);
