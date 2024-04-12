@@ -148,7 +148,8 @@ class test_generator:
             #if p.simple_run_1(addr) == False:
             #    return None
 
-            if (p.straps or p.issues) and ignore_traps:
+            #if (p.straps or p.issues) and ignore_traps:
+            if p.straps and ignore_traps:
                 return None
 
             p._syncregs()
@@ -162,9 +163,18 @@ class test_generator:
 
             out['memory-after'] = dict()
             mem_transactions = p.get_mem_transactions_dict()
+            # verify original values
+            for a, v in mem_kv:
+                if not a in mem_transactions:
+                    mem_transactions[a] = v
             for a in mem_transactions:
                 out['memory-after'][a] = mem_transactions[a]
-            # TODO originele geheugeninhouden checken
+
+            out['mmr0-after'] = p.mmu.MMR0
+            p.mmu._MMR1commit()
+            out['mmr1-after'] = p.mmu.MMR1
+            out['mmr2-after'] = p.mmu.MMR2
+            out['mmr3-after'] = p.mmu.MMR3
 
             return out
 
@@ -179,7 +189,7 @@ class test_generator:
 stop = False
 while True:
     psw = random.randint(0, 65535) & 0o174377
-    name = f'/mnt/temp/0006-{psw:06o}.json'
+    name = f'/data/data/temp2/0008-{psw:06o}.json'
     if os.path.isfile(name):
         print(f'skipping {name}')
         continue

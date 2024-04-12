@@ -200,6 +200,17 @@ int run_cpu_validation(const std::string & filename)
 				}
 			}
 
+			for(int r=0; r<4; r++) {
+				json_t *a_mmr = json_object_get(test, format("mmr%d-after", r).c_str());
+				assert(a_mmr);
+				uint16_t should_be_mmr = json_integer_value(a_mmr);
+				uint16_t is_mmr = b->getMMR(r);
+				if (should_be_mmr != is_mmr) {
+					DOLOG(warning, true, "MMR%d register mismatch (is: %06o (%d), should be: %06o (%d))", r, is_mmr, is_mmr, should_be_mmr, should_be_mmr);
+					err = true;
+				}
+			}
+
 			if (err) {
 				if (c->is_it_a_trap())
 					DOLOG(warning, true, "Error by TRAP %s", disas_data["instruction-text"].at(0).c_str());
