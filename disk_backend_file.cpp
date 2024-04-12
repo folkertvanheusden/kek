@@ -42,7 +42,13 @@ bool disk_backend_file::read(const off_t offset, const size_t n, uint8_t *const 
 
 	return ::read(fd, target, n) == ssize_t(n);
 #else
-	return pread(fd, target, n, offset) == ssize_t(n);
+	ssize_t rc = pread(fd, target, n, offset);
+	if (rc != ssize_t(n)) {
+		DOLOG(debug, false, "disk_backend_file::read: read failure. expected %zu bytes, got %zd", n, rc);
+		return false;
+	}
+
+	return true;
 #endif
 }
 
