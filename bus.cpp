@@ -618,7 +618,7 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 						pages[run_mode][d][apf].pdr |= 1 << 7;
 
 					if ((MMR0 & 0160000) == 0) {
-						MMR0 &= ~((1l << 15) | (1 << 14) | (1 << 13) | (1 << 12) | (3 << 5) | (7 << 1));
+						MMR0 &= ~((1l << 15) | (1 << 14) | (1 << 13) | (1 << 12) | (3 << 5) | (7 << 1) | (1 << 4));
 
 						if (is_write && access_control != 6)
 							MMR0 |= 1 << 13;  // read-only
@@ -685,7 +685,7 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 			// DOLOG(debug, false, "p_offset %06o pdr_len %06o direction %d, run_mode %d, apf %d, pdr: %06o", p_offset, pdr_len, direction, run_mode, apf, pages[run_mode][d][apf].pdr);
 
 			if ((pdr_cmp > pdr_len && direction == false) || (pdr_cmp < pdr_len && direction == true)) {
-				DOLOG(debug, !peek_only, "bus::calculate_physical_address::p_offset %o versus %o direction %d", pdr_cmp, pdr_len, direction);
+				DOLOG(debug, false, "bus::calculate_physical_address::p_offset %o versus %o direction %d", pdr_cmp, pdr_len, direction);
 				DOLOG(debug, false, "TRAP(0250) (throw 7) on address %06o", a);
 				c->trap(0250);  // invalid access
 
