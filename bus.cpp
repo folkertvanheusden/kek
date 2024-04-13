@@ -588,26 +588,32 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 			{
 				const int access_control = pages[run_mode][d][apf].pdr & 7;
 
-				bool do_trap = false;
+				enum { T_PROCEED, T_ABORT_4, T_TRAP_250 } trap_action { T_PROCEED };
 
-				if (is_write && access_control != 6)  // write
-					do_trap = true;
-				else if (!is_write && (access_control == 0 || access_control == 1 || access_control == 3 || access_control == 4 || access_control == 7)) {  // read
-					do_trap = true;
+				if (access_control == 0)
+					trap_action = T_ABORT_4;
+				else if (access_control == 1)
+					trap_action = is_write ? T_ABORT_4 : T_TRAP_250;
+				else if (access_control == 2) {
+					if (is_write)
+						trap_action = T_ABORT_4;
+				}
+				else if (access_control == 3)
+					trap_action = T_ABORT_4;
+				else if (access_control == 4)
+					trap_action = T_TRAP_250;
+				else if (access_control == 5) {
+					if (is_write)
+						trap_action = T_TRAP_250;
+				}
+				else if (access_control == 6) {
+					// proceed
+				}
+				else if (access_control == 7) {
+					trap_action = T_ABORT_4;
 				}
 
-				if (do_trap) {
-					bool do_trap_250 = false;
-
-					if ((MMR0 & 0xf000) == 0) {
-						DOLOG(debug, false, "TRAP(0250) (throw 5) for access_control %d on address %06o, run mode %d", access_control, a, run_mode);
-
-						do_trap_250 = true;
-					}
-					else {
-						DOLOG(debug, false, "A.C.F. triggger for %d on address %06o, run mode %d", access_control, a, run_mode);
-					}
-
+				if (trap_action != T_PROCEED) {
 					if (is_write)
 						pages[run_mode][d][apf].pdr |= 1 << 7;
 
@@ -631,8 +637,17 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 
 					DOLOG(debug, false, "MMR0: %06o", MMR0);
 
-					if (do_trap_250) {
-						c->trap(0250);  // invalid address
+					if (trap_action == T_TRAP_250) {
+						DOLOG(debug, false, "Page access %d: trap 0250", access_control);
+
+						c->trap(0250);  // trap
+
+						throw 5;
+					}
+					else {  // T_ABORT_4
+						DOLOG(debug, false, "Page access %d: trap 004", access_control);
+
+						c->trap(004);  // abort
 
 						throw 5;
 					}
@@ -684,6 +699,7 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 					MMR0 &= ~(3 << 5);
 					MMR0 |= run_mode << 5;
 
+					MMR0 &= ~(1 << 4);
 					MMR0 |= d << 4;
 				}
 
