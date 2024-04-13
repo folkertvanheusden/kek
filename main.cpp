@@ -125,10 +125,9 @@ int run_cpu_validation(const std::string & filename)
 			b->setMMR0(json_integer_value(a_mmr0));
 		}
 
-		c->step_a();
 		disassemble(c, nullptr, start_pc, false);
 		auto disas_data = c->disassemble(start_pc);
-		c->step_b();
+		c->step();
 
 		uint16_t new_pc = c->getPC();
 
@@ -572,10 +571,8 @@ int main(int argc, char *argv[])
 		for(;;) {
 			*running = true;
 
-			while(event == EVENT_NONE) {
-				c->step_a();
-				c->step_b();
-			}
+			while(event == EVENT_NONE)
+				c->step();
 
 			*running = false;
 
