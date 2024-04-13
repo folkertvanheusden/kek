@@ -557,7 +557,7 @@ void dump_par_pdr(console *const cnsl, bus *const b, const uint16_t pdrs, const 
 	else
 		cnsl->put_string_lf(format("%s DISABLED", name.c_str()));
 
-	cnsl->put_string_lf("   PAR             PDR");
+	cnsl->put_string_lf("   PAR             PDR LEN");
 
 	for(int i=0; i<8; i++) {
 		if (selection.has_value() && i != selection.value())
@@ -628,7 +628,8 @@ void mmu_resolve(console *const cnsl, bus *const b, const uint16_t va)
 
 	auto data     = b->calculate_physical_address(run_mode, va);
 
-	cnsl->put_string_lf(format("Active page field: %d", data.apf));
+	uint16_t page_offset = va & 8191;
+	cnsl->put_string_lf(format("Active page field: %d, page offset: %o (%d)", data.apf, page_offset, page_offset));
 	cnsl->put_string_lf(format("Phys. addr. instruction: %08o (psw: %d)", data.physical_instruction, data.physical_instruction_is_psw));
 	cnsl->put_string_lf(format("Phys. addr. data: %08o (psw: %d)", data.physical_data, data.physical_data_is_psw));
 
