@@ -91,10 +91,9 @@ void rl02::writeByte(const uint16_t addr, const uint8_t v)
 
 uint32_t rl02::calcOffset(const uint16_t da)
 {
-	int           sector            = da & 63;
-	int           track             = (da >> 6) & 1023;
-
-	uint32_t      offset            = (sectors_per_track * track + sector) * bytes_per_sector;
+	int       sector = da & 63;
+	int       track  = (da >> 6) & 1023;
+	uint32_t  offset = (sectors_per_track * track + sector) * bytes_per_sector;
 
 	return offset;
 }
@@ -123,8 +122,6 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 		else if (command == 6 || command == 7) {  // read data / read data without header check
 			*disk_read_acitivity = true;
 
-			bool     proceed          = true;
-
 			uint32_t temp_disk_offset = disk_offset;
 
 			uint32_t memory_address   = registers[(RL02_BAR - RL02_BASE) / 2];
@@ -133,8 +130,8 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 
 			DOLOG(debug, false, "RL02 read %d bytes (dec) from %d (dec) to %06o (oct)", count, disk_offset, memory_address);
 
-			uint32_t p    = memory_address;
-			while(proceed && count > 0) {
+			uint32_t p = memory_address;
+			while(count > 0) {
 				uint32_t cur = std::min(uint32_t(sizeof xfer_buffer), count);
 
 				if (!fhs.at(device)->read(temp_disk_offset, cur, xfer_buffer)) {
