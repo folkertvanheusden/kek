@@ -41,7 +41,7 @@ rl02::~rl02()
 
 void rl02::reset()
 {
-	memset(registers, 0x00, sizeof registers);
+	memset(registers,   0x00, sizeof registers);
 	memset(xfer_buffer, 0x00, sizeof xfer_buffer);
 }
 
