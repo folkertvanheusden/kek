@@ -115,8 +115,7 @@ public:
 
 	void reset();
 
-	void step_a();
-	void step_b();
+	void step();
 
 	void pushStack(const uint16_t v);
 	uint16_t popStack();

@@ -1030,10 +1030,8 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 			bool reset_cpu = true;
 
 			if (turbo) {
-				while(*stop_event == EVENT_NONE) {
-					c->step_a();
-					c->step_b();
-				}
+				while(*stop_event == EVENT_NONE)
+					c->step();
 			}
 			else {
 				reset_cpu = false;
@@ -1041,8 +1039,6 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 				while(*stop_event == EVENT_NONE) {
 					if (!single_step)
 						DOLOG(debug, false, "---");
-
-					c->step_a();
 
 					if (trace_start_addr != -1 && c->getPC() == trace_start_addr)
 						tracing = true;
@@ -1055,7 +1051,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 						break;
 					}
 
-					c->step_b();
+					c->step();
 
 					if (single_step && --n_single_step == 0)
 						break;
@@ -1088,12 +1084,10 @@ void run_bic(console *const cnsl, bus *const b, std::atomic_uint32_t *const stop
 	*cnsl->get_running_flag() = true;
 
 	while(*stop_event == EVENT_NONE) {
-		c->step_a();
-
 		if (tracing)
 			disassemble(c, nullptr, c->getPC(), false);
 
-		c->step_b();
+		c->step();
 	}
 
 	*cnsl->get_running_flag() = false;

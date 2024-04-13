@@ -2251,7 +2251,7 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 	return out;
 }
 
-void cpu::step_a()
+void cpu::step()
 {
 	it_is_a_trap = false;
 
@@ -2262,10 +2262,7 @@ void cpu::step_a()
 		if (!b->isMMR1Locked())
 			b->clearMMR1();
 	}
-}
 
-void cpu::step_b()
-{
 	instruction_count++;
 
 	try {
