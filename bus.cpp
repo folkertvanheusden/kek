@@ -574,7 +574,7 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 
 		uint16_t p_offset = a & 8191;  // page offset
 
-		m_offset  = pages[run_mode][d][apf].par * 64;  // memory offset  TODO: handle 16b int-s
+		m_offset  = pages[run_mode][d][apf].par * 64;  // memory offset
 
 		m_offset += p_offset;
 

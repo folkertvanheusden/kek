@@ -550,7 +550,7 @@ std::map<std::string, std::string> split(const std::vector<std::string> & kv_arr
 	return out;
 }
 
-void dump_par_pdr(console *const cnsl, bus *const b, const uint16_t pdrs, const uint16_t pars, const std::string & name, const int state)
+void dump_par_pdr(console *const cnsl, bus *const b, const uint16_t pdrs, const uint16_t pars, const std::string & name, const int state, const std::optional<int> & selection)
 {
 	if (state == 0 || state == 2)
 		cnsl->put_string_lf(name);
@@ -560,6 +560,8 @@ void dump_par_pdr(console *const cnsl, bus *const b, const uint16_t pdrs, const 
 	cnsl->put_string_lf("   PAR             PDR");
 
 	for(int i=0; i<8; i++) {
+		if (selection.has_value() && i != selection.value())
+			continue;
 		uint16_t par_value = b->read(pars + i * 2, wm_word, rm_cur, true);
 		uint16_t pdr_value = b->read(pdrs + i * 2, wm_word, rm_cur, true);
 
@@ -595,14 +597,14 @@ void mmu_dump(console *const cnsl, bus *const b, const bool verbose)
 	cnsl->put_string_lf(format("MMR2: %06o", mmr2));
 	cnsl->put_string_lf(format("MMR3: %06o", mmr3));
 
-	dump_par_pdr(cnsl, b, ADDR_PDR_SV_START,       ADDR_PAR_SV_START,       "supervisor i-space", 0);
-	dump_par_pdr(cnsl, b, ADDR_PDR_SV_START + 020, ADDR_PAR_SV_START + 020, "supervisor d-space", 1 + (!!(mmr3 & 2)));
+	dump_par_pdr(cnsl, b, ADDR_PDR_SV_START,       ADDR_PAR_SV_START,       "supervisor i-space", 0, { });
+	dump_par_pdr(cnsl, b, ADDR_PDR_SV_START + 020, ADDR_PAR_SV_START + 020, "supervisor d-space", 1 + (!!(mmr3 & 2)), { });
 
-	dump_par_pdr(cnsl, b, ADDR_PDR_K_START,       ADDR_PAR_K_START,       "kernel i-space", 0);
-	dump_par_pdr(cnsl, b, ADDR_PDR_K_START + 020, ADDR_PAR_K_START + 020, "kernel d-space", 1 + (!!(mmr3 & 4)));
+	dump_par_pdr(cnsl, b, ADDR_PDR_K_START,       ADDR_PAR_K_START,       "kernel i-space", 0, { });
+	dump_par_pdr(cnsl, b, ADDR_PDR_K_START + 020, ADDR_PAR_K_START + 020, "kernel d-space", 1 + (!!(mmr3 & 4)), { });
 
-	dump_par_pdr(cnsl, b, ADDR_PDR_U_START,       ADDR_PAR_U_START,       "user i-space", 0);
-	dump_par_pdr(cnsl, b, ADDR_PDR_U_START + 020, ADDR_PAR_U_START + 020, "user d-space", 1 + (!!(mmr3 & 1)));
+	dump_par_pdr(cnsl, b, ADDR_PDR_U_START,       ADDR_PAR_U_START,       "user i-space", 0, { });
+	dump_par_pdr(cnsl, b, ADDR_PDR_U_START + 020, ADDR_PAR_U_START + 020, "user d-space", 1 + (!!(mmr3 & 1)), { });
 
 	if (verbose) {
 		dump_range_as_instructions(cnsl, b, ADDR_PDR_SV_START);  // sv i
@@ -616,6 +618,33 @@ void mmu_dump(console *const cnsl, bus *const b, const bool verbose)
 		dump_memory_contents(cnsl, b, ADDR_MMR1);
 		dump_memory_contents(cnsl, b, ADDR_MMR2);
 		dump_memory_contents(cnsl, b, ADDR_MMR3);
+	}
+}
+
+void mmu_resolve(console *const cnsl, bus *const b, const uint16_t va)
+{
+	int  run_mode = b->getCpu()->getPSW_runmode();
+	cnsl->put_string_lf(format("Run mode: %d, use data space: %d", run_mode, b->get_use_data_space(run_mode)));
+
+	auto data     = b->calculate_physical_address(run_mode, va);
+
+	cnsl->put_string_lf(format("Active page field: %d", data.apf));
+	cnsl->put_string_lf(format("Phys. addr. instruction: %08o (psw: %d)", data.physical_instruction, data.physical_instruction_is_psw));
+	cnsl->put_string_lf(format("Phys. addr. data: %08o (psw: %d)", data.physical_data, data.physical_data_is_psw));
+
+	uint16_t mmr3 = b->getMMR3();
+
+	if (run_mode == 0) {
+		dump_par_pdr(cnsl, b, ADDR_PDR_K_START,       ADDR_PAR_K_START,       "kernel i-space", 0, data.apf);
+		dump_par_pdr(cnsl, b, ADDR_PDR_K_START + 020, ADDR_PAR_K_START + 020, "kernel d-space", 1 + (!!(mmr3 & 4)), data.apf);
+	}
+	else if (run_mode == 1) {
+		dump_par_pdr(cnsl, b, ADDR_PDR_SV_START,       ADDR_PAR_SV_START,       "supervisor i-space", 0, data.apf);
+		dump_par_pdr(cnsl, b, ADDR_PDR_SV_START + 020, ADDR_PAR_SV_START + 020, "supervisor d-space", 1 + (!!(mmr3 & 4)), data.apf);
+	}
+	else if (run_mode == 3) {
+		dump_par_pdr(cnsl, b, ADDR_PDR_U_START,       ADDR_PAR_U_START,       "user i-space", 0, data.apf);
+		dump_par_pdr(cnsl, b, ADDR_PDR_U_START + 020, ADDR_PAR_U_START + 020, "user d-space", 1 + (!!(mmr3 & 4)), data.apf);
 	}
 }
 
@@ -791,6 +820,14 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 				continue;
 			}
+			else if (parts[0] == "mmures") {
+				if (parts.size() == 2)
+					mmu_resolve(cnsl, b, std::stoi(parts[1], nullptr, 8));
+				else
+					cnsl->put_string_lf("Parameter missing");
+
+				continue;
+			}
 			else if (parts[0] == "regdump") {
 				reg_dump(cnsl, c);
 
@@ -944,6 +981,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 				cnsl->put_string_lf("trl           - set trace run-level, empty for all");
 				cnsl->put_string_lf("regdump       - dump register contents");
 				cnsl->put_string_lf("mmudump       - dump MMU settings (PARs/PDRs)");
+				cnsl->put_string_lf("mmures        - resolve a virtual address");
 				cnsl->put_string_lf("setpc         - set PC to value");
 				cnsl->put_string_lf("setmem        - set memory (a=) to value (v=), both in octal, one byte");
 				cnsl->put_string_lf("toggle        - set switch (s=, 0...15 (decimal)) of the front panel to state (t=, 0 or 1)");
