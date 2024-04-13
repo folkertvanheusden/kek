@@ -621,6 +621,18 @@ void mmu_dump(console *const cnsl, bus *const b, const bool verbose)
 	}
 }
 
+const char *trap_action_to_str(const trap_action_t ta)
+{
+	if (ta == T_PROCEED)
+		return "proceed";
+	if (ta == T_ABORT_4)
+		return "abort (trap 4)";
+	if (ta == T_TRAP_250)
+		return "trap 250";
+
+	return "?";
+}
+
 void mmu_resolve(console *const cnsl, bus *const b, const uint16_t va)
 {
 	int  run_mode = b->getCpu()->getPSW_runmode();
@@ -646,6 +658,14 @@ void mmu_resolve(console *const cnsl, bus *const b, const uint16_t va)
 	else if (run_mode == 3) {
 		dump_par_pdr(cnsl, b, ADDR_PDR_U_START,       ADDR_PAR_U_START,       "user i-space", 0, data.apf);
 		dump_par_pdr(cnsl, b, ADDR_PDR_U_START + 020, ADDR_PAR_U_START + 020, "user d-space", 1 + (!!(mmr3 & 4)), data.apf);
+	}
+
+	for(int i=0; i<2; i++) {
+		auto ta_i = b->get_trap_action(run_mode, false, data.apf, i);
+		auto ta_d = b->get_trap_action(run_mode, true,  data.apf, i);
+
+		cnsl->put_string_lf(format("Instruction action: %s (%s)", trap_action_to_str(ta_i.first), i ? "write" : "read"));
+		cnsl->put_string_lf(format("Data action       : %s (%s)", trap_action_to_str(ta_d.first), i ? "write" : "read"));
 	}
 }
 

@@ -563,6 +563,38 @@ bool bus::get_use_data_space(const int run_mode) const
 	return !!(MMR3 & di_ena_mask[run_mode]);
 }
 
+std::pair<trap_action_t, int> bus::get_trap_action(const int run_mode, const bool d, const int apf, const bool is_write)
+{
+	const int access_control = pages[run_mode][d][apf].pdr & 7;
+
+	trap_action_t trap_action = T_PROCEED;
+
+	if (access_control == 0)
+		trap_action = T_ABORT_4;
+	else if (access_control == 1)
+		trap_action = is_write ? T_ABORT_4 : T_TRAP_250;
+	else if (access_control == 2) {
+		if (is_write)
+			trap_action = T_ABORT_4;
+	}
+	else if (access_control == 3)
+		trap_action = T_ABORT_4;
+	else if (access_control == 4)
+		trap_action = T_TRAP_250;
+	else if (access_control == 5) {
+		if (is_write)
+			trap_action = T_TRAP_250;
+	}
+	else if (access_control == 6) {
+		// proceed
+	}
+	else if (access_control == 7) {
+		trap_action = T_ABORT_4;
+	}
+
+	return { trap_action, access_control };
+}
+
 uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, const bool trap_on_failure, const bool is_write, const bool peek_only, const d_i_space_t space)
 {
 	uint32_t m_offset = a;
@@ -586,32 +618,9 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 
 		if (trap_on_failure) {
 			{
-				const int access_control = pages[run_mode][d][apf].pdr & 7;
-
-				enum { T_PROCEED, T_ABORT_4, T_TRAP_250 } trap_action { T_PROCEED };
-
-				if (access_control == 0)
-					trap_action = T_ABORT_4;
-				else if (access_control == 1)
-					trap_action = is_write ? T_ABORT_4 : T_TRAP_250;
-				else if (access_control == 2) {
-					if (is_write)
-						trap_action = T_ABORT_4;
-				}
-				else if (access_control == 3)
-					trap_action = T_ABORT_4;
-				else if (access_control == 4)
-					trap_action = T_TRAP_250;
-				else if (access_control == 5) {
-					if (is_write)
-						trap_action = T_TRAP_250;
-				}
-				else if (access_control == 6) {
-					// proceed
-				}
-				else if (access_control == 7) {
-					trap_action = T_ABORT_4;
-				}
+				auto rc = get_trap_action(run_mode, d, apf, is_write);
+				auto trap_action    = rc.first;
+				int  access_control = rc.second;
 
 				if (trap_action != T_PROCEED) {
 					if (is_write)

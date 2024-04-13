@@ -69,6 +69,8 @@ typedef enum { wm_word = 0, wm_byte = 1 } word_mode_t;
 
 typedef enum { rm_prev, rm_cur } rm_selection_t;
 
+typedef enum { T_PROCEED, T_ABORT_4, T_TRAP_250 } trap_action_t;
+
 typedef struct {
 	uint16_t virtual_address;
 	uint8_t  apf;  // active page field
@@ -184,6 +186,7 @@ public:
 	uint32_t get_io_base() const { return MMR0 & 1 ? (MMR3 & 16 ? 017760000 : 0760000) : 0160000; }
 	bool     is_psw(const uint16_t addr, const int run_mode, const d_i_space_t space) const;
 
+	std::pair<trap_action_t, int> get_trap_action(const int run_mode, const bool d, const int apf, const bool is_write);
 	uint32_t calculate_physical_address(const int run_mode, const uint16_t a, const bool trap_on_failure, const bool is_write, const bool peek_only, const d_i_space_t space);
 
 	bool get_use_data_space(const int run_mode) const;
