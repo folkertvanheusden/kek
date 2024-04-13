@@ -119,6 +119,12 @@ int run_cpu_validation(const std::string & filename)
 			}
 		}
 
+		{
+			json_t *a_mmr0 = json_object_get(test, "mmr0-before");
+			assert(a_mmr0);
+			b->setMMR0(json_integer_value(a_mmr0));
+		}
+
 		c->step_a();
 		disassemble(c, nullptr, start_pc, false);
 		auto disas_data = c->disassemble(start_pc);
