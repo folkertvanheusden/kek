@@ -44,22 +44,42 @@ void cpu::emulation_start()
 	wait_time     = 0;
 }
 
-bool cpu::check_breakpoint()
+std::optional<std::string> cpu::check_breakpoint()
 {
-	return breakpoints.find(getPC()) != breakpoints.end();
+	for(auto & bp: breakpoints) {
+		auto rc = bp.second->is_triggered();
+		if (rc.has_value())
+			return rc;
+	}
+
+	return { };
 }
 
-void cpu::set_breakpoint(const uint16_t addr)
+int cpu::set_breakpoint(breakpoint *const bp)
 {
-	breakpoints.insert(addr);
+	int id = 0;
+
+	do {
+		id = rand();
+	} while(breakpoints.find(id) != breakpoints.end());
+
+	breakpoints.insert({ id, bp });
+
+	return id;
 }
 
-void cpu::remove_breakpoint(const uint16_t addr)
+bool cpu::remove_breakpoint(const int bp_id)
 {
-	breakpoints.erase(addr);
+	auto it = breakpoints.find(bp_id);
+	if (it == breakpoints.end())
+		return false;
+
+	delete it->second;
+
+	return breakpoints.erase(bp_id) == 1;
 }
 
-std::set<uint16_t> cpu::list_breakpoints()
+std::map<int, breakpoint *> cpu::list_breakpoints()
 {
 	return breakpoints;
 }

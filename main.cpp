@@ -314,8 +314,27 @@ void help()
 	printf("-M       log metrics\n");
 }
 
+#include "breakpoint_parser.h"
 int main(int argc, char *argv[])
 {
+#if 0
+	{
+	bus *b = new bus();
+	cpu *c = new cpu(b, &event);
+	b->add_cpu(c);
+
+	std::pair<breakpoint *, std::optional<std::string> > rc = parse_breakpoint(b, "(pc=0123 and (r0=01456 or r2=1))");
+	printf("%p\n", rc.first);
+
+	if (rc.second.has_value())
+		printf("%s\n", rc.second.value().c_str());
+	delete rc.first;
+	delete b;
+	}
+
+	return 0;
+#endif
+
 	//setlocale(LC_ALL, "");
 
 	std::vector<disk_backend *> rk05_files;

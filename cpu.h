@@ -12,6 +12,7 @@
 #include <stdint.h>
 #include <vector>
 
+#include "breakpoint.h"
 #include "bus.h"
 
 
@@ -62,7 +63,7 @@ private:
 #endif
 	std::atomic_bool        any_queued_interrupts { false };
 
-	std::set<uint16_t> breakpoints;
+	std::map<int, breakpoint *> breakpoints;
 
 	bus *const b { nullptr };
 
@@ -98,10 +99,10 @@ public:
 	explicit cpu(bus *const b, std::atomic_uint32_t *const event);
 	~cpu();
 
-	bool check_breakpoint();
-	void set_breakpoint(const uint16_t addr);
-	void remove_breakpoint(const uint16_t addr);
-	std::set<uint16_t> list_breakpoints();
+	std::optional<std::string> check_breakpoint();
+	int set_breakpoint(breakpoint *const bp);
+	bool remove_breakpoint(const int bp_id);
+	std::map<int, breakpoint *> list_breakpoints();
 
 	void disassemble(void) const;
 	std::map<std::string, std::vector<std::string> > disassemble(const uint16_t addr) const;

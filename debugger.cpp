@@ -13,6 +13,7 @@
 #include <LittleFS.h>
 #endif
 
+#include "breakpoint_parser.h"
 #include "bus.h"
 #include "console.h"
 #include "cpu.h"
@@ -531,6 +532,22 @@ int disassemble(cpu *const c, console *const cnsl, const uint16_t pc, const bool
 
 	DOLOG(debug, false, "SP: %s", sp.c_str());
 
+#if 0
+	if (c->getPSW_runmode() == 3) {
+		/*
+		FILE *fh = fopen("/home/folkert/temp/ramdisk/log-kek.dat", "a+");
+		fprintf(fh, "%06o", pc);
+		for(auto & v: data["instruction-values"])
+			fprintf(fh, " %s", v.c_str());
+		fprintf(fh, "\n");
+		fclose(fh);
+		*/
+		FILE *fh = fopen("/home/folkert/temp/ramdisk/da-kek.txt", "a+");
+		fprintf(fh, "R0 %s R1 %s R2 %s R3 %s R4 %s R5 %s R6 %s R7 %06o %s\n", registers[0].c_str(), registers[1].c_str(), registers[2].c_str(), registers[3].c_str(), registers[4].c_str(), registers[5].c_str(), registers[6].c_str(), pc, instruction.c_str());
+		fclose(fh);
+	}
+#endif
+
 	return data["instruction-values"].size() * 2;
 }
 
@@ -737,18 +754,29 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 				*stop_event = EVENT_NONE;
 			}
-			else if ((parts[0] == "sbp" || parts[0] == "cbp") && parts.size() == 2){
-				uint16_t pc = std::stoi(parts[1].c_str(), nullptr, 8);
-
+			else if ((parts[0] == "sbp" || parts[0] == "cbp") && parts.size() >= 2){
 				if (parts[0] == "sbp") {
-					c->set_breakpoint(pc);
+					std::size_t space = cmd.find(" ");
 
-					cnsl->put_string_lf(format("Set breakpoint at %06o", pc));
+					std::pair<breakpoint *, std::optional<std::string> > rc = parse_breakpoint(b, cmd.substr(space + 1));
+
+					if (rc.first == nullptr) {
+						if (rc.second.has_value())
+							cnsl->put_string_lf(rc.second.value());
+						else
+							cnsl->put_string_lf("not set");
+					}
+					else {
+						int id = c->set_breakpoint(rc.first);
+
+						cnsl->put_string_lf(format("Breakpoint has id: %d", id));
+					}
 				}
 				else {
-					c->remove_breakpoint(pc);
-
-					cnsl->put_string_lf(format("Clear breakpoint at %06o", pc));
+					if (c->remove_breakpoint(std::stoi(parts[1])))
+						cnsl->put_string_lf("Breakpoint cleared");
+					else
+						cnsl->put_string_lf("Breakpoint not found");
 				}
 
 				continue;
@@ -758,11 +786,11 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 				cnsl->put_string_lf("Breakpoints:");
 
-				for(auto a : bps) {
-					cnsl->put_string(format("   %06o> ", a));
+				for(auto a : bps)
+					cnsl->put_string_lf(format("%d: %s", a.first, a.second->emit().c_str()));
 
-					disassemble(c, cnsl, a, true);
-				}
+				if (bps.empty())
+					cnsl->put_string_lf("(none)");
 
 				continue;
 			}
@@ -1046,8 +1074,9 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 					if ((tracing || single_step) && (t_rl.has_value() == false || t_rl.value() == c->getPSW_runmode()))
 						disassemble(c, single_step ? cnsl : nullptr, c->getPC(), false);
 
-					if (c->check_breakpoint() && !single_step) {
-						cnsl->put_string_lf("Breakpoint");
+					auto bp_result = c->check_breakpoint();
+					if (bp_result.has_value() && !single_step) {
+						cnsl->put_string_lf("Breakpoint: " + bp_result.value());
 						break;
 					}
 
