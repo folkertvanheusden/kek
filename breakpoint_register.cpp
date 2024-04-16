@@ -57,7 +57,7 @@ std::pair<breakpoint_register *, std::optional<std::string> > breakpoint_registe
 		return { new breakpoint_register(b, 7, values), { } };
 	}
 
-	return { nullptr, "register: invalid specification" };
+	return { nullptr, { } };
 }
 
 std::string breakpoint_register::emit() const

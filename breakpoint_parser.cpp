@@ -3,6 +3,7 @@
 
 #include "breakpoint.h"
 #include "breakpoint_and.h"
+#include "breakpoint_memory.h"
 #include "breakpoint_or.h"
 #include "breakpoint_register.h"
 #include "bus.h"
@@ -82,12 +83,22 @@ std::pair<breakpoint *, std::optional<std::string> > parse_breakpoint(bus *const
 					combine = combine_single;
 
 				auto rc_reg = breakpoint_register::parse(b, parts[i]);
-				if (rc_reg.first == nullptr) {
+				if (rc_reg.first == nullptr && rc_reg.second.has_value()) {
 					delete_parsed(parsed);
-					return { nullptr, "not understood" };
+					return { nullptr, "not understood: " + rc_reg.second.value() };
 				}
 
-				parsed.push_back(rc_reg.first);
+				if (rc_reg.first)
+					parsed.push_back(rc_reg.first);
+
+				auto rc_mem = breakpoint_memory::parse(b, parts[i]);
+				if (rc_mem.first == nullptr && rc_mem.second.has_value()) {
+					delete_parsed(parsed);
+					return { nullptr, "not understood: " + rc_mem.second.value() };
+				}
+
+				if (rc_mem.first)
+					parsed.push_back(rc_mem.first);
 			}
 		}
 	}

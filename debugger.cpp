@@ -1024,7 +1024,9 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 				cnsl->put_string_lf("reset/r       - reset cpu/bus/etc");
 				cnsl->put_string_lf("single/s      - run 1 instruction (implicit 'disassemble' command)");
 				cnsl->put_string_lf("sbp/cbp/lbp   - set/clear/list breakpoint(s)");
-				cnsl->put_string_lf("                e.g.: (pc=0123 and r0=123 and (r4=07 or r4=0456))");
+				cnsl->put_string_lf("                e.g.: (pc=0123 and memwv[04000]=0200,0300 and (r4=07,05 or r5=0456))");
+				cnsl->put_string_lf("                values seperated by ',', char after mem is w/b (word/byte), then
+				cnsl->put_string_lf("                follows v/p (virtual/physical)");
 				cnsl->put_string_lf("trace/t       - toggle tracing");
 				cnsl->put_string_lf("turbo         - toggle turbo mode (cannot be interrupted)");
 				cnsl->put_string_lf("strace        - start tracing from address - invoke without address to disable");

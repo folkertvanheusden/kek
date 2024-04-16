@@ -18,6 +18,7 @@ add_executable(
   kek
   breakpoint.cpp
   breakpoint_and.cpp
+  breakpoint_memory.cpp
   breakpoint_or.cpp
   breakpoint_parser.cpp
   breakpoint_register.cpp

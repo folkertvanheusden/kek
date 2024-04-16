@@ -323,7 +323,7 @@ int main(int argc, char *argv[])
 	cpu *c = new cpu(b, &event);
 	b->add_cpu(c);
 
-	std::pair<breakpoint *, std::optional<std::string> > rc = parse_breakpoint(b, "(pc=0123 and (r0=01456 or r2=1))");
+	std::pair<breakpoint *, std::optional<std::string> > rc = parse_breakpoint(b, "(pc=0123 and (r0=01456 or r2=1) and memWV[0444]=0222)");
 	printf("%p\n", rc.first);
 
 	if (rc.second.has_value())
