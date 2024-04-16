@@ -16,6 +16,8 @@
 #include "bus.h"
 
 
+constexpr const int max_stacktrace_depth = 16;
+
 typedef struct {
 	int      delta;
 	unsigned reg;
@@ -42,6 +44,7 @@ private:
 	uint16_t regs0_5[2][6]; // R0...5, selected by bit 11 in PSW, 
 	uint16_t sp[3 + 1]; // stackpointers, MF../MT.. select via 12/13 from PSW, others via 14/15
 	uint16_t pc                 { 0     };
+	uint16_t instruction_start  { 0     };
 	uint16_t psw                { 0     };
 	uint16_t fpsr               { 0     };
 	uint16_t stackLimitRegister { 0377  };
@@ -51,6 +54,9 @@ private:
 	uint64_t wait_time          { 0     };
 	bool     it_is_a_trap       { false };
 	uint64_t mtpi_count         { 0     };
+
+	bool     debug_mode         { false };
+	std::vector<std::pair<uint16_t, std::string> > stacktrace;
 
 	// level, vector
 	std::map<uint8_t, std::set<uint8_t> > queued_interrupts;
@@ -96,6 +102,9 @@ private:
 
 	operand_parameters addressing_to_string(const uint8_t mode_register, const uint16_t pc, const word_mode_t word_mode) const;
 
+	void add_to_stack_trace(const uint16_t p);
+	void pop_from_stack_trace();
+
 public:
 	explicit cpu(bus *const b, std::atomic_uint32_t *const event);
 	~cpu();
@@ -114,6 +123,10 @@ public:
 	uint64_t get_instructions_executed_count() const;
 	uint64_t get_wait_time() const { return wait_time; }
 	std::tuple<double, double, uint64_t, uint32_t, double> get_mips_rel_speed(const std::optional<uint64_t> & instruction_count, const std::optional<uint64_t> & t_diff_1s) const;
+
+	bool get_debug() const { return debug_mode; }
+	void set_debug(const bool d) { debug_mode = d; stacktrace.clear(); }
+	std::vector<std::pair<uint16_t, std::string> > get_stack_trace() const;
 
 	void reset();
 

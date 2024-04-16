@@ -103,6 +103,27 @@ std::tuple<double, double, uint64_t, uint32_t, double> cpu::get_mips_rel_speed(c
 	return { mips, mips * 100 / pdp11_estimated_mips, instr_count, t_diff, wait_time };
 }
 
+void cpu::add_to_stack_trace(const uint16_t p)
+{
+	auto da = disassemble(p);
+
+	stacktrace.push_back({ p, da["instruction-text"][0] });
+
+	while (stacktrace.size() >= max_stacktrace_depth)
+		stacktrace.erase(stacktrace.begin());
+}
+
+void cpu::pop_from_stack_trace()
+{
+	if (!stacktrace.empty())
+		stacktrace.pop_back();
+}
+
+std::vector<std::pair<uint16_t, std::string> > cpu::get_stack_trace() const
+{
+	return stacktrace;
+}
+
 void cpu::reset()
 {
 	memset(regs0_5, 0x00, sizeof regs0_5);
@@ -1591,6 +1612,8 @@ bool cpu::misc_operations(const uint16_t instr)
 			return true;
 
 		case 0b0000000000000010: // RTI
+			if (debug_mode)
+				pop_from_stack_trace();
 			setPC(popStack());
 			setPSW(popStack(), !!getPSW_runmode());
 			psw &= ~020;  // disable TRAP flag
@@ -1605,6 +1628,8 @@ bool cpu::misc_operations(const uint16_t instr)
 			return true;
 
 		case 0b0000000000000110: // RTT
+			if (debug_mode)
+				pop_from_stack_trace();
 			setPC(popStack());
 			setPSW(popStack(), !!getPSW_runmode());
 			return true;
@@ -1645,6 +1670,9 @@ bool cpu::misc_operations(const uint16_t instr)
 	}
 
 	if ((instr & 0b1111111000000000) == 0b0000100000000000) { // JSR
+		if (debug_mode)
+			add_to_stack_trace(instruction_start);
+
 		int dst_mode = (instr >> 3) & 7;
 		if (dst_mode == 0)  // cannot jump to a register
 			return false;
@@ -1674,6 +1702,9 @@ bool cpu::misc_operations(const uint16_t instr)
 	}
 
 	if ((instr & 0b1111111111111000) == 0b0000000010000000) { // RTS
+		if (debug_mode)
+			pop_from_stack_trace();
+
 		const int link_reg = instr & 7;
 
 		// MOVE link, PC
@@ -1732,6 +1763,9 @@ void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 
 				// TODO set MMR2?
 			}
+
+			if (debug_mode)
+				add_to_stack_trace(instruction_start);
 
 			// make sure the trap vector is retrieved from kernel space
 			psw &= 037777;  // mask off 14/15 to make it into kernel-space
@@ -2280,12 +2314,12 @@ void cpu::step()
 	instruction_count++;
 
 	try {
-		uint16_t temp_pc = getPC();
+		instruction_start = getPC();
 
 		if (!b->isMMR1Locked())
-			b->setMMR2(temp_pc);
+			b->setMMR2(instruction_start);
 
-		uint16_t instr = b->readWord(temp_pc);
+		uint16_t instr = b->readWord(instruction_start);
 
 		addRegister(7, rm_cur, 2);
 
@@ -2301,7 +2335,7 @@ void cpu::step()
 		if (misc_operations(instr))
 			return;
 
-		DOLOG(warning, true, "UNHANDLED instruction %06o @ %06o", instr, temp_pc);
+		DOLOG(warning, true, "UNHANDLED instruction %06o @ %06o", instr, instruction_start);
 
 		trap(010);  // floating point nog niet geimplementeerd
 	}

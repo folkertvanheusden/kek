@@ -1005,7 +1005,29 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 			else if (cmd == "turbo") {
 				turbo = !turbo;
 
+				if (turbo)
+					c->set_debug(false);
+
 				cnsl->put_string_lf(format("Turbo set to %s", turbo ? "ON" : "OFF"));
+
+				continue;
+			}
+			else if (cmd == "debug") {
+				bool new_mode = !c->get_debug();
+				c->set_debug(new_mode);
+
+				cnsl->put_string_lf(format("Debug mode set to %s", new_mode ? "ON" : "OFF"));
+
+				continue;
+			}
+			else if (cmd == "bt") {
+				if (c->get_debug() == false)
+					cnsl->put_string_lf("Debug mode is disabled!");
+
+				auto backtrace = c->get_stack_trace();
+
+				for(auto & element: backtrace)
+					cnsl->put_string_lf(format("%06o %s", element.first, element.second.c_str()));
 
 				continue;
 			}
@@ -1030,6 +1052,8 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 				cnsl->put_string_lf("                follows v/p (virtual/physical), all octal values, mmr0-3 are registers");
 				cnsl->put_string_lf("trace/t       - toggle tracing");
 				cnsl->put_string_lf("turbo         - toggle turbo mode (cannot be interrupted)");
+				cnsl->put_string_lf("debug         - enable CPU debug mode");
+				cnsl->put_string_lf("bt            - show backtrace - need to enable debug first");
 				cnsl->put_string_lf("strace        - start tracing from address - invoke without address to disable");
 				cnsl->put_string_lf("trl           - set trace run-level, empty for all");
 				cnsl->put_string_lf("regdump       - dump register contents");
