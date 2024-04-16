@@ -13,7 +13,7 @@ private:
 	int                register_nr { -1      };
 	std::set<uint16_t> values;
 
-	enum hwreg_t { hr_mmr0 = 100, hr_mmr1, hr_mmr2, hr_mmr3 };
+	enum hwreg_t { hr_mmr0 = 100, hr_mmr1, hr_mmr2, hr_mmr3, hr_psw = 200 };
 
 	std::string get_name(hwreg_t reg) const;
 

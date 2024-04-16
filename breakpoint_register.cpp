@@ -30,6 +30,8 @@ std::string breakpoint_register::get_name(hwreg_t reg) const
 			return "mmr2";
 		case hr_mmr3:
 			return "mmr3";
+		case hr_psw:
+			return "psw";
 	}
 
 	return "???";
@@ -56,6 +58,9 @@ std::optional<std::string> breakpoint_register::is_triggered() const
 				break;
 			case hr_mmr3:
 				v = b->getMMR3();
+				break;
+			case hr_psw:
+				v = c->getPSW();
 				break;
 		}
 	}
@@ -100,6 +105,9 @@ std::pair<breakpoint_register *, std::optional<std::string> > breakpoint_registe
 		int which = key[3] - '0';
 
 		return { new breakpoint_register(b, hr_mmr0 + which, values), { } };
+	}
+	else if (key.substr(0, 3) == "PSW" or key.substr(0, 3) == "psw") {
+		return { new breakpoint_register(b, hr_psw, values), { } };
 	}
 
 	return { nullptr, { } };
