@@ -64,7 +64,7 @@ std::optional<std::string> breakpoint_register::is_triggered() const
 	if (it == values.end())
 		return { };
 
-	return get_name(hwreg_t(register_nr)) + format("%06o", v);
+	return get_name(hwreg_t(register_nr)) + "=" + format("%06o", v);
 }
 
 std::pair<breakpoint_register *, std::optional<std::string> > breakpoint_register::parse(bus *const b, const std::string & in)
