@@ -16,15 +16,55 @@ breakpoint_register::~breakpoint_register()
 {
 }
 
+std::string breakpoint_register::get_name(hwreg_t reg) const
+{
+	if (reg < 8)
+		return format("R%d", reg);
+
+	switch(reg) {
+		case hr_mmr0:
+			return "mmr0";
+		case hr_mmr1:
+			return "mmr1";
+		case hr_mmr2:
+			return "mmr2";
+		case hr_mmr3:
+			return "mmr3";
+	}
+
+	return "???";
+}
+
 std::optional<std::string> breakpoint_register::is_triggered() const
 {
-	uint16_t v  = c->getRegister(register_nr);  // TODO run-mode
+	uint16_t v  = 0;
+
+	if (register_nr < 8)
+		v = c->getRegister(register_nr);  // TODO run-mode
+	else {
+		hwreg_t reg = hwreg_t(register_nr);
+
+		switch(reg) {
+			case hr_mmr0:
+				v = b->getMMR0();
+				break;
+			case hr_mmr1:
+				v = b->getMMR1();
+				break;
+			case hr_mmr2:
+				v = b->getMMR2();
+				break;
+			case hr_mmr3:
+				v = b->getMMR3();
+				break;
+		}
+	}
 
 	auto     it = values.find(v);
 	if (it == values.end())
 		return { };
 
-	return format("R%d=%06o", register_nr, v);
+	return get_name(hwreg_t(register_nr)) + format("%06o", v);
 }
 
 std::pair<breakpoint_register *, std::optional<std::string> > breakpoint_register::parse(bus *const b, const std::string & in)
@@ -56,6 +96,11 @@ std::pair<breakpoint_register *, std::optional<std::string> > breakpoint_registe
 	else if (key == "PC" || key == "pc") {
 		return { new breakpoint_register(b, 7, values), { } };
 	}
+	else if (key.substr(0, 3) == "MMR" or key.substr(0, 3) == "mmr") {
+		int which = key[3] - '0';
+
+		return { new breakpoint_register(b, hr_mmr0 + which, values), { } };
+	}
 
 	return { nullptr, { } };
 }
@@ -66,7 +111,7 @@ std::string breakpoint_register::emit() const
 
 	for(auto & v: values) {
 		if (out.empty())
-			out = format("R%d", register_nr) + "=";
+			out = get_name(hwreg_t(register_nr)) + "=";
 		else
 			out += ",";
 
