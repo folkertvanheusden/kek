@@ -65,7 +65,7 @@ std::string breakpoint_memory::emit() const
 
 	for(auto & v: values) {
 		if (out.empty())
-			out = format("MEM%c%c[%08a]=", word_mode == wm_byte ? 'B' : 'W', is_virtual ? 'V' : 'P', addr);
+			out = format("MEM%c%c[%08o]=", word_mode == wm_byte ? 'B' : 'W', is_virtual ? 'V' : 'P', addr);
 		else
 			out += ",";
 

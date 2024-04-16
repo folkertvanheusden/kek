@@ -317,7 +317,7 @@ void help()
 #include "breakpoint_parser.h"
 int main(int argc, char *argv[])
 {
-#if 1
+#if 0
 	{
 	bus *b = new bus();
 	cpu *c = new cpu(b, &event);
