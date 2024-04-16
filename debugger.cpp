@@ -912,21 +912,22 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 					std::string out;
 
 					for(int i=0; i<n; i++) {
-						int val = parts[2] == "v" ? b->read(addr + i, wm_word, rm_cur, true) : b->readPhysical(addr + i);
+						uint32_t cur_addr = addr + i * 2;
+						int val = parts[2] == "v" ? b->read(cur_addr, wm_word, rm_cur, true) : b->readPhysical(cur_addr);
 
 						if (val == -1) {
-							cnsl->put_string_lf(format("Can't read from %06o\n", addr + i));
+							cnsl->put_string_lf(format("Can't read from %06o\n", cur_addr));
 							break;
 						}
 
 						if (n == 1)
-							cnsl->put_string_lf(format("value at %06o, octal: %o, hex: %x, dec: %d\n", addr + i, val, val, val));
+							cnsl->put_string_lf(format("value at %06o, octal: %o, hex: %x, dec: %d\n", cur_addr, val, val, val));
 
 						if (n > 1) {
 							if (i > 0)
 								out += " ";
 
-							out += format("%06o", val);
+							out += format("%06o=%06o", cur_addr, val);
 						}
 					}
 
