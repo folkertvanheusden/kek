@@ -57,15 +57,9 @@ std::optional<std::string> cpu::check_breakpoint()
 
 int cpu::set_breakpoint(breakpoint *const bp)
 {
-	int id = 0;
+	breakpoints.insert({ ++bp_nr, bp });
 
-	do {
-		id = rand();
-	} while(breakpoints.find(id) != breakpoints.end());
-
-	breakpoints.insert({ id, bp });
-
-	return id;
+	return bp_nr;
 }
 
 bool cpu::remove_breakpoint(const int bp_id)

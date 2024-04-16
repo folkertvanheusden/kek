@@ -64,6 +64,7 @@ private:
 	std::atomic_bool        any_queued_interrupts { false };
 
 	std::map<int, breakpoint *> breakpoints;
+	int                         bp_nr       { 0 };
 
 	bus *const b { nullptr };
 
