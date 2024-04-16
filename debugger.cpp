@@ -574,7 +574,7 @@ void dump_par_pdr(console *const cnsl, bus *const b, const uint16_t pdrs, const 
 	else
 		cnsl->put_string_lf(format("%s DISABLED", name.c_str()));
 
-	cnsl->put_string_lf("   PAR             PDR LEN");
+	cnsl->put_string_lf("   PAR             PDR    LEN");
 
 	for(int i=0; i<8; i++) {
 		if (selection.has_value() && i != selection.value())

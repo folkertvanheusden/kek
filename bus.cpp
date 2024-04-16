@@ -738,8 +738,7 @@ void bus::addToMMR1(const int8_t delta, const uint8_t reg)
 	assert(reg >= 0 && reg <= 7);
 	assert(delta >= -2 && delta <= 2);
 
-	if (getMMR0() & 0160000)  // MMR1 etc are locked
-		return;
+	assert((getMMR0() & 0160000) == 0);  // MMR1 should not be locked
 
 #if defined(ESP32)
 //	if (MMR1 > 255)
