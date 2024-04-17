@@ -33,6 +33,7 @@ private:
 	std::atomic_bool *const disk_write_acitivity { nullptr };
 
 	uint32_t get_bus_address() const;
+	void     update_bus_address(const uint32_t a);
 	uint32_t calcOffset(uint16_t) const;
 
 public:

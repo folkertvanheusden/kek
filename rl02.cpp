@@ -94,6 +94,14 @@ uint32_t rl02::get_bus_address() const
 	return registers[(RL02_BAR - RL02_BASE) / 2] | (uint32_t((registers[(RL02_CSR - RL02_BASE) / 2] >> 4) & 3) << 16);
 }
 
+void rl02::update_bus_address(const uint32_t a)
+{
+	registers[(RL02_BAR - RL02_BASE) / 2] = a;
+
+	registers[(RL02_CSR - RL02_BASE) / 2] &= ~(3 << 4);
+	registers[(RL02_CSR - RL02_BASE) / 2] |= ((a >> 16) & 3) << 4;
+}
+
 uint32_t rl02::calcOffset(const uint16_t da) const
 {
 	int       sector = da & 63;
@@ -135,7 +143,6 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 
 			DOLOG(debug, false, "RL02 read %d bytes (dec) from %d (dec) to %06o (oct)", count, disk_offset, memory_address);
 
-			uint32_t p = memory_address;
 			while(count > 0) {
 				uint32_t cur = std::min(uint32_t(sizeof xfer_buffer), count);
 
@@ -144,8 +151,11 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 					break;
 				}
 
-				for(uint32_t i=0; i<cur; i++, p++)
-					b->writeUnibusByte(p, xfer_buffer[i]);
+				for(uint32_t i=0; i<cur; i++, memory_address++) {
+					b->writeUnibusByte(memory_address, xfer_buffer[i]);
+
+					update_bus_address(memory_address);
+				}
 
 				temp_disk_offset += cur;
 
