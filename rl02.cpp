@@ -89,7 +89,12 @@ void rl02::writeByte(const uint16_t addr, const uint8_t v)
 	writeWord(addr, vtemp);
 }
 
-uint32_t rl02::calcOffset(const uint16_t da)
+uint32_t rl02::get_bus_address() const
+{
+	return registers[(RL02_BAR - RL02_BASE) / 2] | (uint32_t((registers[(RL02_CSR - RL02_BASE) / 2] >> 4) & 3) << 16);
+}
+
+uint32_t rl02::calcOffset(const uint16_t da) const
 {
 	int       sector = da & 63;
 	int       track  = (da >> 6) & 1023;
@@ -124,7 +129,7 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 
 			uint32_t temp_disk_offset = disk_offset;
 
-			uint32_t memory_address   = registers[(RL02_BAR - RL02_BASE) / 2];
+			uint32_t memory_address   = get_bus_address();
 
 			uint32_t count            = (65536l - registers[(RL02_MPR - RL02_BASE) / 2]) * 2;
 
@@ -140,7 +145,7 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 				}
 
 				for(uint32_t i=0; i<cur; i++, p++)
-					b->writeByte(p, xfer_buffer[i]);
+					b->writeUnibusByte(p, xfer_buffer[i]);
 
 				temp_disk_offset += cur;
 
@@ -150,7 +155,7 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 			if (registers[(RL02_CSR - RL02_BASE) / 2] & 64) {  // interrupt enable?
 				DOLOG(debug, false, "RL02 triggering interrupt");
 
-				b->getCpu()->queue_interrupt(5, 0254);
+				b->getCpu()->queue_interrupt(5, 0160);
 			}
 
 			*disk_read_acitivity = false;

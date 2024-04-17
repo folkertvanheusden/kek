@@ -32,7 +32,8 @@ private:
 	std::atomic_bool *const disk_read_acitivity  { nullptr };
 	std::atomic_bool *const disk_write_acitivity { nullptr };
 
-	uint32_t calcOffset(uint16_t);
+	uint32_t get_bus_address() const;
+	uint32_t calcOffset(uint16_t) const;
 
 public:
 	rl02(const std::vector<disk_backend *> & files, bus *const b, std::atomic_bool *const disk_read_acitivity, std::atomic_bool *const disk_write_acitivity);
