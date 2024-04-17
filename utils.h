@@ -22,3 +22,5 @@ void set_thread_name(std::string name);
 
 ssize_t WRITE(int fd, const char *whereto, size_t len);
 ssize_t READ(int fd, char *whereto, size_t len);
+
+void update_word(uint16_t *const w, const bool msb, const uint8_t v);

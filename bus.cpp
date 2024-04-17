@@ -12,6 +12,7 @@
 #include "memory.h"
 #include "tm-11.h"
 #include "tty.h"
+#include "utils.h"
 
 #if defined(ESP32) || defined(BUILD_FOR_RP2040)
 #if defined(ESP32)
@@ -765,8 +766,7 @@ void bus::write_pdr(const uint32_t a, const int run_mode, const uint16_t value, 
 	if (word_mode == wm_byte) {
 		assert(a != 0 || value < 256);
 
-		a & 1 ? (pages[run_mode][is_d][page].pdr &= 0x00ff, pages[run_mode][is_d][page].pdr |= value << 8) :
-			(pages[run_mode][is_d][page].pdr &= 0xff00, pages[run_mode][is_d][page].pdr |= value     );
+		update_word(&pages[run_mode][is_d][page].pdr, a & 1, value);
 	}
 	else {
 		pages[run_mode][is_d][page].pdr = value;
@@ -782,13 +782,10 @@ void bus::write_par(const uint32_t a, const int run_mode, const uint16_t value, 
 	bool is_d = a & 16;
 	int  page = (a >> 1) & 7;
 
-	if (word_mode == wm_byte) {
-		a & 1 ? (pages[run_mode][is_d][page].par &= 0x00ff, pages[run_mode][is_d][page].par |= value << 8) :
-			(pages[run_mode][is_d][page].par &= 0xff00, pages[run_mode][is_d][page].par |= value     );
-	}
-	else {
+	if (word_mode == wm_byte)
+		update_word(&pages[run_mode][is_d][page].par, a & 1, value);
+	else
 		pages[run_mode][is_d][page].par = value;
-	}
 
 	pages[run_mode][is_d][page].pdr &= ~(128 /*A*/ + 64 /*W*/);  // reset PDR A/W when PAR is written to
 
@@ -816,16 +813,13 @@ write_rc_t bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint1
 	if (is_io) {
 		uint16_t a = m_offset - io_base + 0160000;  // TODO
 
-		if (word_mode) {
+		if (word_mode == wm_byte) {
 			if (a == ADDR_PSW || a == ADDR_PSW + 1) { // PSW
 				DOLOG(debug, false, "WRITE-I/O PSW %s: %03o", a & 1 ? "MSB" : "LSB", value);
 
 				uint16_t vtemp = c->getPSW();
 
-				if (a == ADDR_PSW)
-					vtemp = (vtemp & 0xff00) | value;
-				else
-					vtemp = (vtemp & 0x00ff) | (value << 8);
+				update_word(&vtemp, a & 1, value);
 
 				vtemp &= ~16;  // cannot set T bit via this
 
@@ -839,10 +833,7 @@ write_rc_t bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint1
 
 				uint16_t v = c->getStackLimitRegister();
 
-				if (a == ADDR_STACKLIM)
-					v = (v & 0xff00) | value;
-				else
-					v = (v & 0x00ff) | (value << 8);
+				update_word(&v, a & 1, value);
 
 				v |= 0377;
 
@@ -854,10 +845,7 @@ write_rc_t bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint1
 			if (a == ADDR_MICROPROG_BREAK_REG || a == ADDR_MICROPROG_BREAK_REG + 1) {  // microprogram break register
 				DOLOG(debug, false, "WRITE-I/O micropram break register %s: %03o", a & 1 ? "MSB" : "LSB", value);
 
-				if (a == ADDR_MICROPROG_BREAK_REG)
-					microprogram_break_register = (microprogram_break_register & 0xff00) | value;
-				else
-					microprogram_break_register = (microprogram_break_register & 0x00ff) | (value << 8);
+				update_word(&microprogram_break_register, a & 1, value);
 
 				return { false };
 			}
@@ -865,10 +853,7 @@ write_rc_t bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint1
 			if (a == ADDR_MMR0 || a == ADDR_MMR0 + 1) { // MMR0
 				DOLOG(debug, false, "WRITE-I/O MMR0 register %s: %03o", a & 1 ? "MSB" : "LSB", value);
 
-				if (a == ADDR_MMR0)
-					MMR0 = (MMR0 & 0xff00) | value;
-				else
-					MMR0 = (MMR0 & 0x00ff) | (value << 8);
+				update_word(&MMR0, a & 1, value);
 
 				return { false };
 			}
