@@ -34,6 +34,8 @@ private:
 	std::atomic_bool *const disk_read_acitivity  { nullptr };
 	std::atomic_bool *const disk_write_acitivity { nullptr };
 
+	void update_bus_address(const uint16_t v);
+
 public:
 	rk05(const std::vector<disk_backend *> & files, bus *const b, std::atomic_bool *const disk_read_acitivity, std::atomic_bool *const disk_write_acitivity);
 	virtual ~rk05();

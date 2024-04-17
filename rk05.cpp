@@ -83,6 +83,18 @@ uint16_t rk05::readWord(const uint16_t addr)
 	return vtemp;
 }
 
+void rk05::update_bus_address(const uint16_t v)
+{
+	uint32_t org_v = registers[(RK05_BA - RK05_BASE) / 2] | (uint32_t((registers[(RK05_CS - RK05_BASE) / 2] >> 4) & 3) << 16);
+
+	org_v += v;
+
+	registers[(RK05_BA - RK05_BASE) / 2] = org_v;
+
+	registers[(RK05_CS - RK05_BASE) / 2] &= ~(3 << 4);
+	registers[(RK05_CS - RK05_BASE) / 2] |= ((org_v >> 16) & 3) << 4;
+}
+
 void rk05::writeByte(const uint16_t addr, const uint8_t v)
 {
 	uint16_t vtemp = registers[(addr - RK05_BASE) / 2];
@@ -137,7 +149,7 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 				if (v & 2048)
 					DOLOG(debug, false, "RK05 inhibit BA increase");
 				else
-					registers[(RK05_BA - RK05_BASE) / 2] += reclen;
+					update_bus_address(reclen);
 
 				if (++sector >= 12) {
 					sector = 0;
@@ -178,7 +190,7 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 						b->writeUnibusByte(p++, xfer_buffer[i]);
 
 						if ((v & 2048) == 0)
-							registers[(RK05_BA - RK05_BASE) / 2] += 2;
+							update_bus_address(2);
 					}
 
 					temp -= cur;
