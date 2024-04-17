@@ -16,6 +16,13 @@
 #include "rp2040.h"
 #endif
 
+#if defined(ESP32) || defined(BUILD_FOR_RP2040)
+// ESP32 goes in a crash-loop when allocating 128kB
+// see also https://github.com/espressif/esp-idf/issues/1934
+#define DEFAULT_N_PAGES 12
+#else
+#define DEFAULT_N_PAGES 31
+#endif
 
 #define ADDR_MMR0 0177572
 #define ADDR_MMR1 0177574
@@ -97,6 +104,7 @@ private:
 	rl02    *rl02_ { nullptr };
 	tty     *tty_  { nullptr };
 
+	int      n_pages { DEFAULT_N_PAGES };
 	memory  *m     { nullptr };
 
 	// 8 pages, D/I, 3 modes and 1 invalid mode
@@ -131,6 +139,9 @@ public:
 	void set_console_switch(const int bit, const bool state) { console_switches &= ~(1 << bit); console_switches |= state << bit; }
 	uint16_t get_console_switches() { return console_switches; }
 	void set_debug_mode() { console_switches |= 128; }
+
+	int  get_memory_size() const { return n_pages; }
+	void set_memory_size(const int n_pages);
 
 	void mmudebug(const uint16_t a);
 

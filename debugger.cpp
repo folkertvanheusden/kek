@@ -987,6 +987,23 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 				continue;
 			}
+			else if (parts[0] == "ramsize") {
+				if (parts.size() == 2)
+					b->set_memory_size(std::stoi(parts.at(1)));
+				else {
+					int n_pages = b->get_memory_size();
+
+					cnsl->put_string_lf(format("Memory size: %u pages or %u kB (decimal)", n_pages, n_pages * 8192 / 1024));
+				}
+
+				continue;
+			}
+			else if (parts[0] == "bl" && parts.size() == 2) {
+				setBootLoader(b, parts.at(1) == "rk05" ? BL_RK05 : BL_RL02);
+				cnsl->put_string_lf("Bootloader set");
+
+				continue;
+			}
 			else if (parts[0] == "trl") {
 				if (parts.size() == 1)
 					t_rl.reset();
@@ -1066,6 +1083,8 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 					"toggle        - set switch (s=, 0...15 (decimal)) of the front panel to state (t=, 0 or 1)",
 					"cls           - clear screen",
 					"stats         - show run statistics",
+					"ramsize       - set ram size (page count (8 kB))",
+					"bl            - set bootload (rl02 or rk05)",
 #if defined(ESP32)
 					"cfgnet        - configure network (e.g. WiFi)",
 					"startnet      - start network",

@@ -14,16 +14,8 @@
 #include "tty.h"
 #include "utils.h"
 
-#if defined(ESP32) || defined(BUILD_FOR_RP2040)
 #if defined(ESP32)
 #include <esp_debug_helpers.h>
-#endif
-
-// ESP32 goes in a crash-loop when allocating 128kB
-// see also https://github.com/espressif/esp-idf/issues/1934
-constexpr int n_pages = 12;
-#else
-constexpr int n_pages = 31;  // 30=240kB (for EKBEEx.BIC)
 #endif
 
 constexpr const int di_ena_mask[4] = { 4, 2, 0, 1 };
@@ -47,6 +39,18 @@ bus::~bus()
 	delete rl02_;
 	delete tty_;
 	delete m;
+}
+
+void bus::set_memory_size(const int n_pages)
+{
+	this->n_pages = n_pages;
+
+	uint32_t n_bytes = n_pages * 8192l;
+
+	delete m;
+	m = new memory(n_bytes);
+
+	DOLOG(info, false, "Memory is now %u kB in size", n_bytes / 1024);
 }
 
 void bus::reset()
@@ -403,7 +407,7 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 		}
 
 		// LO size register field must be all 1s, so subtract 1
-		constexpr uint32_t system_size = n_pages * 8192l / 64 - 1;
+		uint32_t system_size = n_pages * 8192l / 64 - 1;
 
 		if (a == ADDR_SYSSIZE + 2) {  // system size HI
 			uint16_t temp = system_size >> 16;
@@ -434,7 +438,7 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 		return 0;
 	}
 
-	if (m_offset >= n_pages * 8192) {
+	if (m_offset >= uint32_t(n_pages * 8192)) {
 		if (peek_only) {
 			DOLOG(debug, false, "READ from %06o - out of range!", addr_in);
 			return 0;
@@ -1063,7 +1067,7 @@ write_rc_t bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint1
 
 	DOLOG(debug, false, "WRITE to %06o/%07o %c %c: %06o", addr_in, m_offset, space == d_space ? 'D' : 'I', word_mode == wm_byte ? 'B' : 'W', value);
 
-	if (m_offset >= n_pages * 8192) {
+	if (m_offset >= uint32_t(n_pages * 8192)) {
 		c->trap(004);  // no such RAM
 		throw 1;
 	}
