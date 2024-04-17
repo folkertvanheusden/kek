@@ -123,10 +123,10 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 			uint16_t cylinder = (temp >> 5) & 255;
 			uint16_t device   = temp >> 13;
 
-			const uint32_t diskoff = track * 12 + sector;
+			const uint32_t diskoff  = track * 12 + sector;
 
 			const uint32_t diskoffb = diskoff * 512l; // RK05 is high density
-			const uint16_t memoff = registers[(RK05_BA - RK05_BASE) / 2];
+			const uint16_t memoff   = registers[(RK05_BA - RK05_BASE) / 2];
 
 			registers[(RK05_CS - RK05_BASE) / 2] &= ~(1 << 13); // reset search complete
 
@@ -151,6 +151,7 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 				else
 					update_bus_address(reclen);
 
+				// TODO ^ in blocks of 512 bytes to keep this admin correct:
 				if (++sector >= 12) {
 					sector = 0;
 					if (++surface >= 2) {
@@ -170,7 +171,7 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 
 				DOLOG(debug, false, "RK05 drive %d position sec %d surf %d cyl %d, reclen %zo, READ from %o, mem: %o", device, sector, surface, cylinder, reclen, diskoffb, memoff);
 
-				uint8_t xfer_buffer[512];
+				uint8_t xfer_buffer[512] { 0 };
 
 				uint32_t temp_diskoffb = diskoffb;
 
@@ -194,13 +195,14 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 					}
 
 					temp -= cur;
-				}
 
-				if (++sector >= 12) {
-					sector = 0;
-					if (++surface >= 2) {
-						surface = 0;
-						cylinder++;
+					if (++sector >= 12) {
+						sector = 0;
+
+						if (++surface >= 2) {
+							surface = 0;
+							cylinder++;
+						}
 					}
 				}
 
