@@ -87,14 +87,7 @@ void rk05::writeByte(const uint16_t addr, const uint8_t v)
 {
 	uint16_t vtemp = registers[(addr - RK05_BASE) / 2];
 
-	if (addr & 1) {
-		vtemp &= ~0xff00;
-		vtemp |= v << 8;
-	}
-	else {
-		vtemp &= ~0x00ff;
-		vtemp |= v;
-	}
+	update_word(&vtemp, addr & 1, v);
 
 	writeWord(addr, vtemp);
 }
@@ -135,7 +128,6 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 
 				uint8_t *xfer_buffer = new uint8_t[reclen];
 
-				uint32_t p = reclen;
 				for(size_t i=0; i<reclen; i++)
 					xfer_buffer[i] = b->readUnibusByte(memoff + i);
 
@@ -145,7 +137,7 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 				if (v & 2048)
 					DOLOG(debug, false, "RK05 inhibit BA increase");
 				else
-					registers[(RK05_BA - RK05_BASE) / 2] += p;
+					registers[(RK05_BA - RK05_BASE) / 2] += reclen;
 
 				if (++sector >= 12) {
 					sector = 0;
@@ -171,7 +163,7 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 				uint32_t temp_diskoffb = diskoffb;
 
 				uint32_t temp = reclen;
-				uint32_t p = memoff;
+				uint32_t p    = memoff;
 				while(temp > 0) {
 					uint32_t cur = std::min(uint32_t(sizeof xfer_buffer), temp);
 
@@ -183,19 +175,14 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 					temp_diskoffb += cur;
 
 					for(uint32_t i=0; i<cur; i++) {
-						if (p >= 0160000)
-							break;
-
 						b->writeUnibusByte(p++, xfer_buffer[i]);
+
+						if ((v & 2048) == 0)
+							registers[(RK05_BA - RK05_BASE) / 2] += 2;
 					}
 
 					temp -= cur;
 				}
-
-				if (v & 2048)
-					DOLOG(debug, false, "RK05 inhibit BA increase");
-				else
-					registers[(RK05_BA - RK05_BASE) / 2] += p;
 
 				if (++sector >= 12) {
 					sector = 0;
