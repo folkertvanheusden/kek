@@ -155,7 +155,7 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 			if (registers[(RL02_CSR - RL02_BASE) / 2] & 64) {  // interrupt enable?
 				DOLOG(debug, false, "RL02 triggering interrupt");
 
-				b->getCpu()->queue_interrupt(5, 0160);
+				b->getCpu()->queue_interrupt(4, 0160);
 			}
 
 			*disk_read_acitivity = false;

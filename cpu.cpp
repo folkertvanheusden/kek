@@ -327,7 +327,21 @@ void cpu::setPSW_flags_nzv(const uint16_t value, const word_mode_t word_mode)
 	setPSW_v(false);
 }
 
-bool cpu::check_queued_interrupts()
+bool cpu::check_pending_interrupts() const
+{
+	uint8_t start_level = getPSW_spl() + 1;
+
+	for(uint8_t i=start_level; i < 8; i++) {
+		auto interrupts = queued_interrupts.find(i);
+
+		if (interrupts->second.empty() == false)
+			return true;
+	}
+
+	return false;
+}
+
+bool cpu::execute_any_pending_interrupt()
 {
 #if defined(BUILD_FOR_RP2040)
 	xSemaphoreTake(qi_lock, portMAX_DELAY);
@@ -380,7 +394,7 @@ void cpu::queue_interrupt(const uint8_t level, const uint8_t vector)
 #endif
 
 	auto it = queued_interrupts.find(level);
-
+	assert(it != queued_interrupts.end());
 	it->second.insert(vector);
 
 #if defined(BUILD_FOR_RP2040)
@@ -1573,13 +1587,15 @@ bool cpu::misc_operations(const uint16_t instr)
 		case 0b0000000000000001: // WAIT
 			{
 				uint64_t start = get_us();
+
 #if defined(BUILD_FOR_RP2040)
 				uint8_t rc = 0;
 				xQueueReceive(qi_q, &rc, 0);
 #else
 				std::unique_lock<std::mutex> lck(qi_lock);
 
-				qi_cv.wait(lck);
+				if (check_pending_interrupts() == false)
+					qi_cv.wait(lck);
 #endif
 				uint64_t end = get_us();
 
@@ -2285,7 +2301,7 @@ void cpu::step()
 	if (!b->isMMR1Locked())
 		b->clearMMR1();
 
-	if (any_queued_interrupts && check_queued_interrupts()) {
+	if (any_queued_interrupts && execute_any_pending_interrupt()) {
 		if (!b->isMMR1Locked())
 			b->clearMMR1();
 	}
