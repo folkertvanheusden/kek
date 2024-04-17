@@ -1120,13 +1120,16 @@ void bus::writeWord(const uint16_t a, const uint16_t value, const d_i_space_t s)
 	write(a, wm_word, value, rm_cur, s);
 }
 
-uint16_t bus::readUnibusByte(const uint32_t a)
+uint8_t bus::readUnibusByte(const uint32_t a)
 {
-	return m->readByte(a);
+	uint8_t v = m->readByte(a);
+	DOLOG(debug, false, "readUnibusByte[%08o]=%03o", a, v);
+	return v;
 }
 
 void bus::writeUnibusByte(const uint32_t a, const uint8_t v)
 {
+	DOLOG(debug, false, "writeUnibusByte[%08o]=%03o", a, v);
 	m->writeByte(a, v);
 }
 
