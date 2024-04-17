@@ -117,7 +117,7 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 			const size_t reclen = wc < 0 ? (-wc * 2) : wc * 2;
 
 			uint16_t temp     = registers[(RK05_DA - RK05_BASE) / 2];
-			uint8_t  sector   = temp & 0b1111;
+			uint8_t  sector   = temp & 15;
 			uint8_t  surface  = (temp >> 4) & 1;
 			int      track    = (temp >> 4) & 511;
 			uint16_t cylinder = (temp >> 5) & 255;
@@ -138,7 +138,7 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 
 				DOLOG(debug, false, "RK05 drive %d position sec %d surf %d cyl %d, reclen %zo, WRITE to %o, mem: %o", device, sector, surface, cylinder, reclen, diskoffb, memoff);
 
-				uint8_t *xfer_buffer = new uint8_t[reclen];
+				uint8_t *xfer_buffer = new uint8_t[reclen]();
 
 				for(size_t i=0; i<reclen; i++)
 					xfer_buffer[i] = b->readUnibusByte(memoff + i);
