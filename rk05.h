@@ -27,9 +27,10 @@ class bus;
 class rk05
 {
 private:
-	bus      *const b { nullptr };
-	uint16_t        registers  [7];
+	bus      *const b                { nullptr };
+	uint16_t        registers  [7]   { 0       };
 	std::vector<disk_backend *> fhs;
+	uint8_t         xfer_buffer[512] { 0       };
 
 	std::atomic_bool *const disk_read_acitivity  { nullptr };
 	std::atomic_bool *const disk_write_acitivity { nullptr };

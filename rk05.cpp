@@ -138,31 +138,39 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 
 				DOLOG(debug, false, "RK05 drive %d position sec %d surf %d cyl %d, reclen %zo, WRITE to %o, mem: %o", device, sector, surface, cylinder, reclen, diskoffb, memoff);
 
-				uint8_t *xfer_buffer = new uint8_t[reclen]();
+				uint32_t  work_reclen   = reclen;
+				uint32_t  work_memoff   = memoff;
+				uint32_t  work_diskoffb = diskoffb;
 
-				for(size_t i=0; i<reclen; i++)
-					xfer_buffer[i] = b->readUnibusByte(memoff + i);
+				assert(sizeof(xfer_buffer) == 512);
 
-				if (!fhs.at(device)->write(diskoffb, reclen, xfer_buffer))
-					DOLOG(ll_error, true, "RK05(%d) write error %s", device, strerror(errno));
+				while(work_reclen > 0) {
+					uint32_t cur = std::min(uint32_t(sizeof xfer_buffer), work_reclen);
+					work_reclen -= cur;
 
-				if (v & 2048)
-					DOLOG(debug, false, "RK05 inhibit BA increase");
-				else
-					update_bus_address(reclen);
+					for(size_t i=0; i<cur; i++)
+						xfer_buffer[i] = b->readUnibusByte(work_memoff++);
 
-				// TODO ^ in blocks of 512 bytes to keep this admin correct:
-				if (++sector >= 12) {
-					sector = 0;
-					if (++surface >= 2) {
-						surface = 0;
-						cylinder++;
+					if (!fhs.at(device)->write(work_diskoffb, cur, xfer_buffer))
+						DOLOG(ll_error, true, "RK05(%d) write error %s", device, strerror(errno));
+
+					work_diskoffb += cur;
+
+					if (v & 2048)
+						DOLOG(debug, false, "RK05 inhibit BA increase");
+					else
+						update_bus_address(cur);
+
+					if (++sector >= 12) {
+						sector = 0;
+						if (++surface >= 2) {
+							surface = 0;
+							cylinder++;
+						}
 					}
 				}
 
 				registers[(RK05_DA - RK05_BASE) / 2] = sector | (surface << 4) | (cylinder << 5);
-
-				delete [] xfer_buffer;
 
 				*disk_write_acitivity = false;
 			}
@@ -170,8 +178,6 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 				*disk_read_acitivity = true;
 
 				DOLOG(debug, false, "RK05 drive %d position sec %d surf %d cyl %d, reclen %zo, READ from %o, mem: %o", device, sector, surface, cylinder, reclen, diskoffb, memoff);
-
-				uint8_t xfer_buffer[512] { 0 };
 
 				uint32_t temp_diskoffb = diskoffb;
 
