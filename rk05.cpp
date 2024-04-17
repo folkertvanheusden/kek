@@ -83,9 +83,14 @@ uint16_t rk05::readWord(const uint16_t addr)
 	return vtemp;
 }
 
+uint32_t rk05::get_bus_address() const
+{
+	return registers[(RK05_BA - RK05_BASE) / 2] | (uint32_t((registers[(RK05_CS - RK05_BASE) / 2] >> 4) & 3) << 16);
+}
+
 void rk05::update_bus_address(const uint16_t v)
 {
-	uint32_t org_v = registers[(RK05_BA - RK05_BASE) / 2] | (uint32_t((registers[(RK05_CS - RK05_BASE) / 2] >> 4) & 3) << 16);
+	uint32_t org_v = get_bus_address();
 
 	org_v += v;
 
@@ -126,7 +131,7 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 			const uint32_t diskoff  = track * 12 + sector;
 
 			const uint32_t diskoffb = diskoff * 512l; // RK05 is high density
-			const uint16_t memoff   = registers[(RK05_BA - RK05_BASE) / 2];
+			const uint32_t memoff   = get_bus_address();
 
 			registers[(RK05_CS - RK05_BASE) / 2] &= ~(1 << 13); // reset search complete
 
