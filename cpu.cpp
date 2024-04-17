@@ -1344,10 +1344,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 					 // retrieve word from '15/14'-stack
 					 uint16_t v             = popStack();
-
 					 bool     set_flags     = true;
-
-					 mtpi_count++;
 
 					 if (dst_mode == 0)
 						setRegister(dst_reg, v, rm_prev);

@@ -53,7 +53,6 @@ private:
 	uint64_t running_since      { 0     };
 	uint64_t wait_time          { 0     };
 	bool     it_is_a_trap       { false };
-	uint64_t mtpi_count         { 0     };
 
 	bool     debug_mode         { false };
 	std::vector<std::pair<uint16_t, std::string> > stacktrace;
