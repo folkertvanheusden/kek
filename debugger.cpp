@@ -1038,40 +1038,48 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 				break;
 			}
 			else if (cmd == "help" || cmd == "h" || cmd == "?") {
-				cnsl->put_string_lf("disassemble/d - show current instruction (pc=/n=)");
-				cnsl->put_string_lf("go            - run until trap or ^e");
+				constexpr const char *const help[] = {
+					"disassemble/d - show current instruction (pc=/n=)",
+					"go            - run until trap or ^e",
 #if !defined(ESP32)
-				cnsl->put_string_lf("quit/q        - stop emulator");
+					"quit/q        - stop emulator",
 #endif
-				cnsl->put_string_lf("examine/e     - show memory address (<octal address> <p|v> [<n>])");
-				cnsl->put_string_lf("reset/r       - reset cpu/bus/etc");
-				cnsl->put_string_lf("single/s      - run 1 instruction (implicit 'disassemble' command)");
-				cnsl->put_string_lf("sbp/cbp/lbp   - set/clear/list breakpoint(s)");
-				cnsl->put_string_lf("                e.g.: (pc=0123 and memwv[04000]=0200,0300 and (r4=07,05 or r5=0456))");
-				cnsl->put_string_lf("                values seperated by ',', char after mem is w/b (word/byte), then");
-				cnsl->put_string_lf("                follows v/p (virtual/physical), all octal values, mmr0-3 are registers");
-				cnsl->put_string_lf("trace/t       - toggle tracing");
-				cnsl->put_string_lf("turbo         - toggle turbo mode (cannot be interrupted)");
-				cnsl->put_string_lf("debug         - enable CPU debug mode");
-				cnsl->put_string_lf("bt            - show backtrace - need to enable debug first");
-				cnsl->put_string_lf("strace        - start tracing from address - invoke without address to disable");
-				cnsl->put_string_lf("trl           - set trace run-level, empty for all");
-				cnsl->put_string_lf("regdump       - dump register contents");
-				cnsl->put_string_lf("mmudump       - dump MMU settings (PARs/PDRs)");
-				cnsl->put_string_lf("mmures        - resolve a virtual address");
-				cnsl->put_string_lf("setpc         - set PC to value");
-				cnsl->put_string_lf("setmem        - set memory (a=) to value (v=), both in octal, one byte");
-				cnsl->put_string_lf("toggle        - set switch (s=, 0...15 (decimal)) of the front panel to state (t=, 0 or 1)");
-				cnsl->put_string_lf("cls           - clear screen");
-				cnsl->put_string_lf("stats         - show run statistics");
+					"examine/e     - show memory address (<octal address> <p|v> [<n>])",
+					"reset/r       - reset cpu/bus/etc",
+					"single/s      - run 1 instruction (implicit 'disassemble' command)",
+					"sbp/cbp/lbp   - set/clear/list breakpoint(s)",
+					"                e.g.: (pc=0123 and memwv[04000]=0200,0300 and (r4=07,05 or r5=0456))",
+					"                values seperated by ',', char after mem is w/b (word/byte), then",
+					"                follows v/p (virtual/physical), all octal values, mmr0-3 and psw are",
+					"                registers",
+					"trace/t       - toggle tracing",
+					"turbo         - toggle turbo mode (cannot be interrupted)",
+					"debug         - enable CPU debug mode",
+					"bt            - show backtrace - need to enable debug first",
+					"strace        - start tracing from address - invoke without address to disable",
+					"trl           - set trace run-level, empty for all",
+					"regdump       - dump register contents",
+					"mmudump       - dump MMU settings (PARs/PDRs)",
+					"mmures        - resolve a virtual address",
+					"setpc         - set PC to value",
+					"setmem        - set memory (a=) to value (v=), both in octal, one byte",
+					"toggle        - set switch (s=, 0...15 (decimal)) of the front panel to state (t=, 0 or 1)",
+					"cls           - clear screen",
+					"stats         - show run statistics",
 #if defined(ESP32)
-				cnsl->put_string_lf("cfgnet        - configure network (e.g. WiFi)");
-				cnsl->put_string_lf("startnet      - start network");
-				cnsl->put_string_lf("chknet        - check network status");
-				cnsl->put_string_lf("serspd        - set serial speed in bps (8N1 are default)");
-				cnsl->put_string_lf("init          - reload (disk-)configuration from flash");
+					"cfgnet        - configure network (e.g. WiFi)",
+					"startnet      - start network",
+					"chknet        - check network status",
+					"serspd        - set serial speed in bps (8N1 are default)",
+					"init          - reload (disk-)configuration from flash",
 #endif
-				cnsl->put_string_lf("cfgdisk       - configure disk");
+					"cfgdisk       - configure disk",
+					nullptr
+				};
+
+				size_t i=0;
+				while(help[i])
+					cnsl->put_string_lf(help[i++]);
 				continue;
 			}
 			else {
