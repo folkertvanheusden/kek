@@ -151,32 +151,32 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 
 		//// REGISTERS ////
 		if (a >= ADDR_KERNEL_R && a <= ADDR_KERNEL_R + 5) { // kernel R0-R5
-			uint16_t temp = c->getRegister(a - ADDR_KERNEL_R) & (word_mode ? 0xff : 0xffff);
+			uint16_t temp = c->getRegister(a - ADDR_KERNEL_R) & (word_mode == wm_byte ? 0xff : 0xffff);
 			if (!peek_only) DOLOG(debug, false, "READ-I/O kernel R%d: %06o", a - ADDR_KERNEL_R, temp);
 			return temp;
 		}
 		if (a >= ADDR_USER_R && a <= ADDR_USER_R + 5) { // user R0-R5
-			uint16_t temp = c->getRegister(a - ADDR_USER_R) & (word_mode ? 0xff : 0xffff);
+			uint16_t temp = c->getRegister(a - ADDR_USER_R) & (word_mode == wm_byte ? 0xff : 0xffff);
 			if (!peek_only) DOLOG(debug, false, "READ-I/O user R%d: %06o", a - ADDR_USER_R, temp);
 			return temp;
 		}
 		if (a == ADDR_KERNEL_SP) { // kernel SP
-			uint16_t temp = c->getStackPointer(0) & (word_mode ? 0xff : 0xffff);
+			uint16_t temp = c->getStackPointer(0) & (word_mode == wm_byte ? 0xff : 0xffff);
 			if (!peek_only) DOLOG(debug, false, "READ-I/O kernel SP: %06o", temp);
 			return temp;
 		}
 		if (a == ADDR_PC) { // PC
-			uint16_t temp = c->getPC() & (word_mode ? 0xff : 0xffff);
+			uint16_t temp = c->getPC() & (word_mode == wm_byte ? 0xff : 0xffff);
 			if (!peek_only) DOLOG(debug, false, "READ-I/O PC: %06o", temp);
 			return temp;
 		}
 		if (a == ADDR_SV_SP) { // supervisor SP
-			uint16_t temp = c->getStackPointer(1) & (word_mode ? 0xff : 0xffff);
+			uint16_t temp = c->getStackPointer(1) & (word_mode == wm_byte ? 0xff : 0xffff);
 			if (!peek_only) DOLOG(debug, false, "READ-I/O supervisor SP: %06o", temp);
 			return temp;
 		}
 		if (a == ADDR_USER_SP) { // user SP
-			uint16_t temp = c->getStackPointer(3) & (word_mode ? 0xff : 0xffff);
+			uint16_t temp = c->getStackPointer(3) & (word_mode == wm_byte ? 0xff : 0xffff);
 			if (!peek_only) DOLOG(debug, false, "READ-I/O user SP: %06o", temp);
 			return temp;
 		}
@@ -283,7 +283,7 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 			return 0;
 		}
 
-		if (word_mode) {
+		if (word_mode == wm_byte) {
 			if (a == ADDR_PSW) { // PSW
 				uint8_t temp = c->getPSW();
 				if (!peek_only) DOLOG(debug, false, "READ-I/O PSW LSB: %03o", temp);
@@ -381,25 +381,25 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 		if (tm11 && a >= TM_11_BASE && a < TM_11_END && !peek_only) {
 			DOLOG(debug, false, "READ-I/O TM11 register %d", (a - TM_11_BASE) / 2);
 
-			return word_mode ? tm11->readByte(a) : tm11->readWord(a);
+			return word_mode == wm_byte ? tm11->readByte(a) : tm11->readWord(a);
 		}
 
 		if (rk05_ && a >= RK05_BASE && a < RK05_END && !peek_only) {
 			DOLOG(debug, false, "READ-I/O RK05 register %d", (a - RK05_BASE) / 2);
 
-			return word_mode ? rk05_->readByte(a) : rk05_->readWord(a);
+			return word_mode == wm_byte ? rk05_->readByte(a) : rk05_->readWord(a);
 		}
 
 		if (rl02_ && a >= RL02_BASE && a < RL02_END && !peek_only) {
 			DOLOG(debug, false, "READ-I/O RL02 register %d", (a - RL02_BASE) / 2);
 
-			return word_mode ? rl02_->readByte(a) : rl02_->readWord(a);
+			return word_mode == wm_byte ? rl02_->readByte(a) : rl02_->readWord(a);
 		}
 
 		if (tty_ && a >= PDP11TTY_BASE && a < PDP11TTY_END && !peek_only) {
 			DOLOG(debug, false, "READ-I/O TTY register %d", (a - PDP11TTY_BASE) / 2);
 
-			return word_mode ? tty_->readByte(a) : tty_->readWord(a);
+			return word_mode == wm_byte ? tty_->readByte(a) : tty_->readWord(a);
 		}
 
 		// LO size register field must be all 1s, so subtract 1
@@ -418,7 +418,7 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 		}
 
 		if (!peek_only) {
-			DOLOG(debug, false, "READ-I/O UNHANDLED read %08o (%c), (base: %o)", m_offset, word_mode ? 'B' : ' ', get_io_base());
+			DOLOG(debug, false, "READ-I/O UNHANDLED read %08o (%c), (base: %o)", m_offset, word_mode == wm_byte ? 'B' : ' ', get_io_base());
 
 			c->trap(004);  // no such i/o
 			throw 1;
@@ -450,7 +450,7 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 	else
 		temp = m->readWord(m_offset);
 
-	if (!peek_only) DOLOG(debug, false, "READ from %06o/%07o %c %c: %o (%s)", addr_in, m_offset, space == d_space ? 'D' : 'I', word_mode ? 'B' : 'W', temp, mode_selection == rm_prev ? "prev" : "cur");
+	if (!peek_only) DOLOG(debug, false, "READ from %06o/%07o %c %c: %o (%s)", addr_in, m_offset, space == d_space ? 'D' : 'I', word_mode == wm_byte ? 'B' : 'W', temp, mode_selection == rm_prev ? "prev" : "cur");
 
 	return temp;
 }
@@ -789,7 +789,7 @@ void bus::write_par(const uint32_t a, const int run_mode, const uint16_t value, 
 
 	pages[run_mode][is_d][page].pdr &= ~(128 /*A*/ + 64 /*W*/);  // reset PDR A/W when PAR is written to
 
-	DOLOG(debug, false, "WRITE-I/O PAR run-mode %d: %c for %d: %o (%07o)", run_mode, is_d ? 'D' : 'I', page, word_mode ? value & 0xff : value, pages[run_mode][is_d][page].par * 64);
+	DOLOG(debug, false, "WRITE-I/O PAR run-mode %d: %c for %d: %o (%07o)", run_mode, is_d ? 'D' : 'I', page, word_mode == wm_byte ? value & 0xff : value, pages[run_mode][is_d][page].par * 64);
 }
 
 write_rc_t bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t value, const rm_selection_t mode_selection, const d_i_space_t space)
@@ -962,25 +962,25 @@ write_rc_t bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint1
 
 		if (tm11 && a >= TM_11_BASE && a < TM_11_END) {
 			DOLOG(debug, false, "WRITE-I/O TM11 register %d: %06o", (a - TM_11_BASE) / 2, value);
-			word_mode ? tm11->writeByte(a, value) : tm11->writeWord(a, value);
+			word_mode == wm_byte ? tm11->writeByte(a, value) : tm11->writeWord(a, value);
 			return { false };
 		}
 
 		if (rk05_ && a >= RK05_BASE && a < RK05_END) {
 			DOLOG(debug, false, "WRITE-I/O RK05 register %d: %06o", (a - RK05_BASE) / 2, value);
-			word_mode ? rk05_->writeByte(a, value) : rk05_->writeWord(a, value);
+			word_mode == wm_byte ? rk05_->writeByte(a, value) : rk05_->writeWord(a, value);
 			return { false };
 		}
 
 		if (rl02_ && a >= RL02_BASE && a < RL02_END) {
 			DOLOG(debug, false, "WRITE-I/O RL02 register %d: %06o", (a - RL02_BASE) / 2, value);
-			word_mode ? rl02_->writeByte(a, value) : rl02_->writeWord(a, value);
+			word_mode == wm_byte ? rl02_->writeByte(a, value) : rl02_->writeWord(a, value);
 			return { false };
 		}
 
 		if (tty_ && a >= PDP11TTY_BASE && a < PDP11TTY_END) {
 			DOLOG(debug, false, "WRITE-I/O TTY register %d: %06o", (a - PDP11TTY_BASE) / 2, value);
-			word_mode ? tty_->writeByte(a, value) : tty_->writeWord(a, value);
+			word_mode == wm_byte ? tty_->writeByte(a, value) : tty_->writeWord(a, value);
 			return { false };
 		}
 
@@ -1040,7 +1040,7 @@ write_rc_t bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint1
 
 		///////////
 
-		DOLOG(debug, false, "WRITE-I/O UNHANDLED %08o(%c): %06o (base: %o)", m_offset, word_mode ? 'B' : 'W', value, get_io_base());
+		DOLOG(debug, false, "WRITE-I/O UNHANDLED %08o(%c): %06o (base: %o)", m_offset, word_mode == wm_byte ? 'B' : 'W', value, get_io_base());
 
 		if (word_mode == wm_word && (a & 1)) {
 			DOLOG(debug, false, "WRITE-I/O to %08o (value: %06o) - odd address!", m_offset, value);
@@ -1061,7 +1061,7 @@ write_rc_t bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint1
 		throw 10;
 	}
 
-	DOLOG(debug, false, "WRITE to %06o/%07o %c %c: %06o", addr_in, m_offset, space == d_space ? 'D' : 'I', word_mode ? 'B' : 'W', value);
+	DOLOG(debug, false, "WRITE to %06o/%07o %c %c: %06o", addr_in, m_offset, space == d_space ? 'D' : 'I', word_mode == wm_byte ? 'B' : 'W', value);
 
 	if (m_offset >= n_pages * 8192) {
 		c->trap(004);  // no such RAM
