@@ -1319,9 +1319,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 		case 0b00110101: { // MFPD/MFPI
 					 // always words: word_mode-bit is to select between MFPI and MFPD
-
-					 bool     set_flags = true;
-					 uint16_t v         = 0xffff;
+					 uint16_t v = 0xffff;
 
 					 if (dst_mode == 0)
 						 v = getRegister(dst_reg, rm_prev);
@@ -1330,27 +1328,11 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						auto a = getGAMAddress(dst_mode, dst_reg, wm_word);
 				                addToMMR1(a);
 
-						int      prev_run_mode = getPSW_prev_runmode();
-						bool     is_d          = word_mode == wm_byte;
-						auto     phys          = b->calculate_physical_address(prev_run_mode, a.addr.value());
-						uint32_t phys_a        = is_d ? phys.physical_data : phys.physical_instruction;
-						bool     phys_psw      = is_d ? phys.physical_data_is_psw : phys.physical_instruction_is_psw;
-
-						if (phys_a >= b->get_io_base()) {
-							// read from previous space
-							v = b->read(a.addr.value(), wm_word, rm_prev);
-
-							set_flags = !phys_psw;
-						}
-						else {
-							b->check_odd_addressing(phys_a, prev_run_mode, word_mode ? d_space : i_space, false);  // TODO d/i space must depend on the check done in calculate_physical_address
-
-							v = b->readPhysical(is_d ? phys.physical_data : phys.physical_instruction);
-						}
+						// read from previous space
+						v = b->read(a.addr.value(), wm_word, rm_prev);
 					 }
 
-					 if (set_flags)
-						 setPSW_flags_nzv(v, wm_word);
+					 setPSW_flags_nzv(v, wm_word);
 
 					 // put on current stack
 					 pushStack(v);
