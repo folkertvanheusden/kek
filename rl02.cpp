@@ -200,6 +200,14 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 
 			uint32_t temp_disk_offset = calc_offset();
 
+			uint16_t temp             = registers[(RL02_DAR - RL02_BASE) / 2];
+
+			sector = temp & 63;
+			head   = (temp >> 6) & 1;
+			track  = temp >> 7;
+
+			uint32_t temp_disk_offset = calc_offset();
+
 			DOLOG(debug, false, "RL02 read %d bytes (dec) from %d (dec) to %06o (oct) [cylinder: %d, head: %d, sector: %d]", count, temp_disk_offset, memory_address, track, head, sector);
 
 			update_dar();
