@@ -189,6 +189,8 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 			uint32_t memory_address   = get_bus_address();
 
 			uint32_t count            = (65536l - registers[(RL02_MPR - RL02_BASE) / 2]) * 2;
+			if (count == 65536)
+				count = 0;
 
 			uint16_t temp             = registers[(RL02_DAR - RL02_BASE) / 2];
 
