@@ -42,7 +42,8 @@ private:
 
 	uint32_t get_bus_address() const;
 	void     update_bus_address(const uint32_t a);
-	uint32_t calcOffset() const;
+	void     update_dar();
+	uint32_t calc_offset() const;
 
 public:
 	rl02(const std::vector<disk_backend *> & files, bus *const b, std::atomic_bool *const disk_read_acitivity, std::atomic_bool *const disk_write_acitivity);
