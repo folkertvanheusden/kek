@@ -218,8 +218,6 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 					b->writeUnibusByte(memory_address++, xfer_buffer[i++]);
 
 					update_bus_address(memory_address);
-
-					(*reinterpret_cast<int16_t *>(&registers[(RL02_MPR - RL02_BASE) / 2]))++;
 				}
 
 				temp_disk_offset += cur;
