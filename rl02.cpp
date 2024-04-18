@@ -20,6 +20,17 @@ static const char * const regnames[] = {
 	"multipurpose  "
 	};
 
+static const char * const commands[] = {
+	"no-op",
+	"write check",
+	"get status",
+	"seek",
+	"read header",
+	"write data",
+	"read data",
+	"read data w/o header check"
+	};
+
 rl02::rl02(const std::vector<disk_backend *> & files, bus *const b, std::atomic_bool *const disk_read_acitivity, std::atomic_bool *const disk_write_acitivity) :
 	b(b),
 	disk_read_acitivity(disk_read_acitivity),
@@ -70,13 +81,15 @@ uint16_t rl02::readWord(const uint16_t addr)
 
 	if (addr == RL02_MPR) {  // multi purpose register
 		value = mpr[0];
-		memcpy(&mpr[0], &mpr[1], sizeof(mpr[0]) * 2);
+		mpr[0] = mpr[1];
+		mpr[1] = mpr[2];
+		mpr[2] = 0;
 	}
 	else {
 		value = registers[reg];
 	}
 
-	DOLOG(debug, false, "RL02 read %s/%o: %06o", regnames[reg], addr, value);
+	DOLOG(debug, false, "RL02 read \"%s\"/%o: %06o", regnames[reg], addr, value);
 
 	return value;
 }
@@ -110,16 +123,21 @@ void rl02::update_bus_address(const uint32_t a)
 	registers[(RL02_CSR - RL02_BASE) / 2] |= ((a >> 16) & 3) << 4;
 }
 
-uint32_t rl02::calcOffset() const
+uint32_t rl02::calc_offset() const
 {
 	return (rl02_sectors_per_track * track * 2 + head * rl02_sectors_per_track + sector) * rl02_bytes_per_sector;
 }
 
+void rl02::update_dar()
+{
+	registers[(RL02_DAR - RL02_BASE) / 2] = (sector & 63) | (head << 6) | (track << 7);
+}
+
 void rl02::writeWord(const uint16_t addr, uint16_t v)
 {
-	DOLOG(debug, false, "RL02 write %06o: %06o", addr, v);
-
 	const int reg = (addr - RL02_BASE) / 2;
+
+	DOLOG(debug, false, "RL02 write \"%s\"/%06o: %06o", regnames[reg], addr, v);
 
         registers[reg] = v;
 
@@ -128,7 +146,7 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 
 		const bool    do_exec = !(v & 128);
 
-		DOLOG(debug, false, "RL02 set command %d, exec: %d", command, do_exec);
+		DOLOG(debug, false, "RL02 set command %d, exec: %d (%s)", command, do_exec, commands[command]);
 
 		int           device  = 0;  // TODO
 
@@ -142,33 +160,31 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 		else if (command == 3) {  // seek
 			uint16_t temp = registers[(RL02_DAR - RL02_BASE) / 2];
 
-			int cylinder_count = (((temp >> 7) & 255) + 1) * (temp & 4 ? 1 : -1);
+			int cylinder_count = (temp >> 7) * (temp & 4 ? 1 : -1);
 
-			int32_t new_track = 0;  // when bit 4 is set, a reset is performed
+			int16_t new_track = track + cylinder_count;
 
-			if ((temp & 8) == 0) {
-				new_track = track + cylinder_count;
-
-				if (new_track < 0)
-					new_track = 0;
-				else if (new_track >= rl02_track_count)
-					new_track = rl02_track_count;
-			}
+			if (new_track < 0)
+				new_track = 0;
+			else if (new_track >= rl02_track_count)
+				new_track = rl02_track_count - 1;
 
 			DOLOG(debug, false, "RL02: seek from cylinder %d to %d (distance: %d, DAR: %06o)", track, new_track, cylinder_count, temp);
 			track  = new_track;
 
+			update_dar();
+
 			do_int = true;
 		}
 		else if (command == 4) {  // read header
+			mpr[0] = (sector & 63) | (head << 6) | (track << 7);
+			mpr[1] = 0;  // zero
+			mpr[2] = 0;  // TODO: CRC
+
+			do_int = true;
 		}
 		else if (command == 6 || command == 7) {  // read data / read data without header check
-			uint16_t temp = registers[(RL02_DAR - RL02_BASE) / 2];
-			sector = temp & 63;
-			head   = !!(temp & 64);
-			track  = temp >> 7;
-
-			uint32_t temp_disk_offset = calcOffset();
+			uint32_t temp_disk_offset = calc_offset();
 
 			uint32_t memory_address   = get_bus_address();
 
@@ -176,18 +192,24 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 
 			DOLOG(debug, false, "RL02 read %d bytes (dec) from %d (dec) to %06o (oct) [cylinder: %d, head: %d, sector: %d]", count, temp_disk_offset, memory_address, track, head, sector);
 
+			update_dar();
+
 			while(count > 0) {
 				uint32_t cur = std::min(uint32_t(sizeof xfer_buffer), count);
 
 				if (!fhs.at(device)->read(temp_disk_offset, cur, xfer_buffer)) {
-					DOLOG(ll_error, true, "RL02 read error %s", strerror(errno));
+					DOLOG(ll_error, true, "RL02 read error %s, disk offset %u, read size %u, cylinder %d, head %d, sector %d", strerror(errno), temp_disk_offset, cur, track, head, sector);
 					break;
 				}
 
-				for(uint32_t i=0; i<cur; i++, memory_address++) {
-					b->writeUnibusByte(memory_address, xfer_buffer[i]);
+				for(uint32_t i=0; i<cur;) {
+					// BA and MPR are increased by 2
+					b->writeUnibusByte(memory_address++, xfer_buffer[i++]);
+					b->writeUnibusByte(memory_address++, xfer_buffer[i++]);
 
 					update_bus_address(memory_address);
+
+					(*reinterpret_cast<int16_t *>(&registers[(RL02_MPR - RL02_BASE) / 2]))++;
 				}
 
 				temp_disk_offset += cur;
@@ -205,9 +227,17 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 						track++;
 					}
 				}
+
+				update_dar();
 			}
 
+			if (registers[(RL02_MPR - RL02_BASE) / 2])
+				DOLOG(warning, false, "RL02: unexpected MPR value after read (%06o)", registers[(RL02_MPR - RL02_BASE) / 2]);
+
 			do_int = true;
+		}
+		else {
+			DOLOG(warning, false, "RL02: command %d not implemented", command);
 		}
 
 		if (do_int) {
