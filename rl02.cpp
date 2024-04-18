@@ -239,9 +239,6 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 				update_dar();
 			}
 
-			if (registers[(RL02_MPR - RL02_BASE) / 2])
-				DOLOG(warning, false, "RL02: unexpected MPR value after read (%06o)", registers[(RL02_MPR - RL02_BASE) / 2]);
-
 			do_int = true;
 		}
 		else {
