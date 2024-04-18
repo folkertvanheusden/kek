@@ -186,8 +186,6 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 			do_int = true;
 		}
 		else if (command == 6 || command == 7) {  // read data / read data without header check
-			uint32_t temp_disk_offset = calc_offset();
-
 			uint32_t memory_address   = get_bus_address();
 
 			uint32_t count            = (65536l - registers[(RL02_MPR - RL02_BASE) / 2]) * 2;
@@ -197,6 +195,9 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 			sector = temp & 63;
 			head   = (temp >> 6) & 1;
 			track  = temp >> 7;
+
+			uint32_t temp_disk_offset = calc_offset();
+
 			DOLOG(debug, false, "RL02 read %d bytes (dec) from %d (dec) to %06o (oct) [cylinder: %d, head: %d, sector: %d]", count, temp_disk_offset, memory_address, track, head, sector);
 
 			update_dar();
