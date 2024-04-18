@@ -1,4 +1,4 @@
-// (C) 2018-2023 by Folkert van Heusden
+// (C) 2018-2024 by Folkert van Heusden
 // Released under MIT license
 
 #include <errno.h>
@@ -12,9 +12,6 @@
 #include "rl02.h"
 #include "utils.h"
 
-
-constexpr int sectors_per_track = 40;
-constexpr int bytes_per_sector  = 256;
 
 static const char * const regnames[] = { 
 	"control status",
@@ -43,6 +40,10 @@ void rl02::reset()
 {
 	memset(registers,   0x00, sizeof registers);
 	memset(xfer_buffer, 0x00, sizeof xfer_buffer);
+
+	track  = 0;
+	head   = 0;
+	sector = 0;
 }
 
 uint8_t rl02::readByte(const uint16_t addr)
@@ -102,13 +103,9 @@ void rl02::update_bus_address(const uint32_t a)
 	registers[(RL02_CSR - RL02_BASE) / 2] |= ((a >> 16) & 3) << 4;
 }
 
-uint32_t rl02::calcOffset(const uint16_t da) const
+uint32_t rl02::calcOffset() const
 {
-	int       sector = da & 63;
-	int       track  = (da >> 6) & 1023;
-	uint32_t  offset = (sectors_per_track * track + sector) * bytes_per_sector;
-
-	return offset;
+	return (rl02_sectors_per_track * track * 2 + head * rl02_sectors_per_track + sector) * rl02_bytes_per_sector;
 }
 
 void rl02::writeWord(const uint16_t addr, uint16_t v)
@@ -126,22 +123,49 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 
 		DOLOG(debug, false, "RL02 set command %d, exec: %d", command, do_exec);
 
-		uint32_t disk_offset = calcOffset(registers[(RL02_DAR - RL02_BASE) / 2] & ~1);
-		int      device      = 0;  // TODO
+		int           device  = 0;  // TODO
+
+		bool          do_int  = false;
+
+		*disk_read_acitivity = true;
 
 		if (command == 2) {  // get status
 			registers[(RL02_MPR - RL02_BASE) / 2] = 0;
 		}
-		else if (command == 6 || command == 7) {  // read data / read data without header check
-			*disk_read_acitivity = true;
+		else if (command == 3) {  // seek
+			uint16_t temp = registers[(RL02_DAR - RL02_BASE) / 2];
 
-			uint32_t temp_disk_offset = disk_offset;
+			int cylinder_count = (((temp >> 7) & 255) + 1) * (temp & 4 ? 1 : -1);
+
+			int32_t new_track = 0;  // when bit 4 is set, a reset is performed
+
+			if ((temp & 8) == 0) {
+				new_track = track + cylinder_count;
+
+				if (new_track < 0)
+					new_track = 0;
+				else if (new_track >= rl02_track_count)
+					new_track = rl02_track_count;
+			}
+
+			DOLOG(debug, false, "RL02: seek from cylinder %d to %d (distance: %d, DAR: %06o)", track, new_track, cylinder_count, temp);
+			track  = new_track;
+
+			do_int = true;
+		}
+		else if (command == 6 || command == 7) {  // read data / read data without header check
+			uint16_t temp = registers[(RL02_DAR - RL02_BASE) / 2];
+			sector = temp & 63;
+			head   = !!(temp & 64);
+			track  = temp >> 7;
+
+			uint32_t temp_disk_offset = calcOffset();
 
 			uint32_t memory_address   = get_bus_address();
 
 			uint32_t count            = (65536l - registers[(RL02_MPR - RL02_BASE) / 2]) * 2;
 
-			DOLOG(debug, false, "RL02 read %d bytes (dec) from %d (dec) to %06o (oct)", count, disk_offset, memory_address);
+			DOLOG(debug, false, "RL02 read %d bytes (dec) from %d (dec) to %06o (oct) [cylinder: %d, head: %d, sector: %d]", count, temp_disk_offset, memory_address, track, head, sector);
 
 			while(count > 0) {
 				uint32_t cur = std::min(uint32_t(sizeof xfer_buffer), count);
@@ -160,15 +184,31 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 				temp_disk_offset += cur;
 
 				count -= cur;
+
+				sector++;
+				if (sector >= rl02_sectors_per_track) {
+					sector = 0;
+
+					head++;
+					if (head >= 2) {
+						head = 0;
+
+						track++;
+					}
+				}
 			}
 
+			do_int = true;
+		}
+
+		if (do_int) {
 			if (registers[(RL02_CSR - RL02_BASE) / 2] & 64) {  // interrupt enable?
 				DOLOG(debug, false, "RL02 triggering interrupt");
 
 				b->getCpu()->queue_interrupt(4, 0160);
 			}
-
-			*disk_read_acitivity = false;
 		}
+
+		*disk_read_acitivity = false;
 	}
 }

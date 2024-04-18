@@ -1,4 +1,4 @@
-// (C) 2018-2023 by Folkert van Heusden
+// (C) 2018-2024 by Folkert van Heusden
 // Released under MIT license
 
 #pragma once
@@ -19,6 +19,10 @@
 #define RL02_BASE  RL02_CSR
 #define RL02_END  (RL02_MPR + 2)
 
+constexpr const int rl02_sectors_per_track = 40;
+constexpr const int rl02_track_count       = 512;
+constexpr const int rl02_bytes_per_sector  = 256;
+
 class bus;
 
 class rl02
@@ -26,7 +30,10 @@ class rl02
 private:
 	bus      *const b;
 	uint16_t        registers[4];
-	uint8_t         xfer_buffer[512];
+	uint8_t         xfer_buffer[rl02_bytes_per_sector];
+	int16_t         track  { 0 };
+	uint8_t         head   { 0 };
+	uint8_t         sector { 0 };
 	std::vector<disk_backend *> fhs;
 
 	std::atomic_bool *const disk_read_acitivity  { nullptr };
@@ -34,7 +41,7 @@ private:
 
 	uint32_t get_bus_address() const;
 	void     update_bus_address(const uint32_t a);
-	uint32_t calcOffset(uint16_t) const;
+	uint32_t calcOffset() const;
 
 public:
 	rl02(const std::vector<disk_backend *> & files, bus *const b, std::atomic_bool *const disk_read_acitivity, std::atomic_bool *const disk_write_acitivity);
