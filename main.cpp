@@ -305,6 +305,7 @@ void help()
 	printf("-b       enable bootloader (builtin)\n");
 	printf("-n       ncurses UI\n");
 	printf("-d       enable debugger\n");
+	printf("-S x     set ram size (in number of 8 kB pages)\n");
 	printf("-s x,y   set console switche state: set bit x (0...15) to y (0/1)\n");
 	printf("-t       enable tracing (disassemble to stderr, requires -d as well)\n");
 	printf("-l x     log to file x\n");
@@ -363,12 +364,14 @@ int main(int argc, char *argv[])
 
 	disk_backend *temp_d = nullptr;
 
+	std::optional<int> set_ram_size;
+
 	std::string  validate_json;
 
 	bool         metrics = false;
 
 	int  opt          = -1;
-	while((opt = getopt(argc, argv, "hMT:Br:R:p:ndtL:bl:s:Q:N:J:X")) != -1)
+	while((opt = getopt(argc, argv, "hMT:Br:R:p:ndtL:bl:s:Q:N:J:XS:")) != -1)
 	{
 		switch(opt) {
 			case 'h':
@@ -478,6 +481,10 @@ int main(int argc, char *argv[])
 				logfile = optarg;
 				break;
 
+			case 'S':
+				set_ram_size = std::stoi(optarg);
+				break;
+
 			default:
 			        fprintf(stderr, "-%c is not understood\n", opt);
 				return 1;
@@ -492,6 +499,9 @@ int main(int argc, char *argv[])
 		return run_cpu_validation(validate_json);
 
 	bus *b = new bus();
+
+	if (set_ram_size.has_value())
+		b->set_memory_size(set_ram_size.value());
 
 	b->set_console_switches(console_switches);
 
