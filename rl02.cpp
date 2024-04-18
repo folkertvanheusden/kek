@@ -38,8 +38,9 @@ rl02::~rl02()
 
 void rl02::reset()
 {
-	memset(registers,   0x00, sizeof registers);
+	memset(registers,   0x00, sizeof registers  );
 	memset(xfer_buffer, 0x00, sizeof xfer_buffer);
+	memset(mpr,         0x00, sizeof mpr        );
 
 	track  = 0;
 	head   = 0;
@@ -65,9 +66,15 @@ uint16_t rl02::readWord(const uint16_t addr)
 		setBit(registers[reg], 7, true);  // controller ready (CRDY)
 	}
 
-	uint16_t value = registers[reg];
+	uint16_t value = 0;
 
-	// TODO
+	if (addr == RL02_MPR) {  // multi purpose register
+		value = mpr[0];
+		memcpy(&mpr[0], &mpr[1], sizeof(mpr[0]) * 2);
+	}
+	else {
+		value = registers[reg];
+	}
 
 	DOLOG(debug, false, "RL02 read %s/%o: %06o", regnames[reg], addr, value);
 
@@ -152,6 +159,8 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 			track  = new_track;
 
 			do_int = true;
+		}
+		else if (command == 4) {  // read header
 		}
 		else if (command == 6 || command == 7) {  // read data / read data without header check
 			uint16_t temp = registers[(RL02_DAR - RL02_BASE) / 2];

@@ -34,6 +34,7 @@ private:
 	int16_t         track  { 0 };
 	uint8_t         head   { 0 };
 	uint8_t         sector { 0 };
+	uint16_t        mpr[3];
 	std::vector<disk_backend *> fhs;
 
 	std::atomic_bool *const disk_read_acitivity  { nullptr };
