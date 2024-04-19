@@ -202,7 +202,7 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 
 			DOLOG(debug, false, "RL02 read %d bytes (dec) from %d (dec) to %06o (oct) [cylinder: %d, head: %d, sector: %d]", count, temp_disk_offset, memory_address, track, head, sector);
 
-			update_dar();
+//			update_dar();
 
 			while(count > 0) {
 				uint32_t cur = std::min(uint32_t(sizeof xfer_buffer), count);
@@ -217,7 +217,7 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 					b->writeUnibusByte(memory_address++, xfer_buffer[i++]);
 					b->writeUnibusByte(memory_address++, xfer_buffer[i++]);
 
-					update_bus_address(memory_address);
+					// update_bus_address(memory_address);
 				}
 
 				temp_disk_offset += cur;
@@ -236,7 +236,7 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 					}
 				}
 
-				update_dar();
+//				update_dar();
 			}
 
 			do_int = true;
