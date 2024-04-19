@@ -716,6 +716,18 @@ void show_run_statistics(console *const cnsl, cpu *const c)
 	cnsl->put_string_lf(format("MIPS: %.2f, relative speed: %.2f%%", std::get<0>(stats), std::get<1>(stats)));
 }
 
+void show_queued_interrupts(console *const cnsl, cpu *const c)
+{
+	cnsl->put_string_lf(format("Current level: %d", c->getPSW_spl()));
+
+	auto queued_interrupts = c->get_queued_interrupts();
+
+	for(auto & level: queued_interrupts) {
+		for(auto & qi: level.second)
+			cnsl->put_string_lf(format("Level: %d, interrupt: %03o", level.first, qi));
+	}
+}
+
 void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const stop_event, const bool tracing_in)
 {
 	int32_t trace_start_addr = -1;
@@ -1037,6 +1049,11 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 				continue;
 			}
+			else if (cmd == "qi") {
+				show_queued_interrupts(cnsl, c);
+
+				continue;
+			}
 			else if (cmd == "bt") {
 				if (c->get_debug() == false)
 					cnsl->put_string_lf("Debug mode is disabled!");
@@ -1078,6 +1095,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 					"regdump       - dump register contents",
 					"mmudump       - dump MMU settings (PARs/PDRs)",
 					"mmures        - resolve a virtual address",
+					"qi            - show queued interrupts",
 					"setpc         - set PC to value",
 					"setmem        - set memory (a=) to value (v=), both in octal, one byte",
 					"toggle        - set switch (s=, 0...15 (decimal)) of the front panel to state (t=, 0 or 1)",

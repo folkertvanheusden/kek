@@ -124,6 +124,8 @@ public:
 	uint64_t get_wait_time() const { return wait_time; }
 	std::tuple<double, double, uint64_t, uint32_t, double> get_mips_rel_speed(const std::optional<uint64_t> & instruction_count, const std::optional<uint64_t> & t_diff_1s) const;
 
+	std::map<uint8_t, std::set<uint8_t> > get_queued_interrupts() const { return queued_interrupts; }
+
 	bool get_debug() const { return debug_mode; }
 	void set_debug(const bool d) { debug_mode = d; stacktrace.clear(); }
 	std::vector<std::pair<uint16_t, std::string> > get_stack_trace() const;
