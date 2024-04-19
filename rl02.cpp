@@ -208,7 +208,7 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 				uint32_t cur = std::min(uint32_t(sizeof xfer_buffer), count);
 
 				if (!fhs.at(device)->read(temp_disk_offset, cur, xfer_buffer)) {
-					DOLOG(ll_error, true, "RL02 read error %s, disk offset %u, read size %u, cylinder %d, head %d, sector %d", strerror(errno), temp_disk_offset, cur, track, head, sector);
+					DOLOG(ll_error, true, "RL02 read error, device %d, disk offset %u, read size %u, cylinder %d, head %d, sector %d", device, temp_disk_offset, cur, track, head, sector);
 					break;
 				}
 
