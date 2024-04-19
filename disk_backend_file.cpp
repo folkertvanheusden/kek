@@ -1,4 +1,4 @@
-// (C) 2018-2023 by Folkert van Heusden
+// (C) 2018-2024 by Folkert van Heusden
 // Released under MIT license
 
 #include <fcntl.h>
@@ -44,7 +44,7 @@ bool disk_backend_file::read(const off_t offset, const size_t n, uint8_t *const 
 #else
 	ssize_t rc = pread(fd, target, n, offset);
 	if (rc != ssize_t(n)) {
-		DOLOG(debug, false, "disk_backend_file::read: read failure. expected %zu bytes, got %zd", n, rc);
+		DOLOG(warning, false, "disk_backend_file::read: read failure. expected %zu bytes, got %zd", n, rc);
 		return false;
 	}
 
@@ -62,6 +62,12 @@ bool disk_backend_file::write(const off_t offset, const size_t n, const uint8_t 
 
 	return ::write(fd, from, n) == ssize_t(n);
 #else
-	return pwrite(fd, from, n, offset) == ssize_t(n);
+	ssize_t rc = pwrite(fd, from, n, offset);
+	if (rc != ssize_t(n)) {
+		DOLOG(warning, false, "disk_backend_file::write: write failure. expected %zu bytes, got %zd", n, rc);
+		return false;
+	}
+
+	return true;
 #endif
 }

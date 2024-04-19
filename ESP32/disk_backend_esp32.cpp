@@ -1,4 +1,4 @@
-// (C) 2018-2023 by Folkert van Heusden
+// (C) 2018-2024 by Folkert van Heusden
 // Released under MIT license
 
 #include <fcntl.h>
@@ -8,6 +8,8 @@
 #include "error.h"
 #include "log.h"
 
+
+static SdFat sd;
 
 disk_backend_esp32::disk_backend_esp32(const std::string & filename) :
 	filename(filename),
@@ -22,10 +24,16 @@ disk_backend_esp32::~disk_backend_esp32()
 	delete fh;
 }
 
+void disk_backend_esp32::emit_error()
+{
+	DOLOG(ll_error, true, "SdFat error: %d/%d", sd.sdErrorCode(), sd.sdErrorData());
+}
+
 bool disk_backend_esp32::begin()
 {
 	if (!fh->open(filename.c_str(), O_RDWR)) {
 		DOLOG(ll_error, true, "rk05: cannot open \"%s\"", filename.c_str());
+		emit_error();
 
 		return false;
 	}
@@ -41,13 +49,18 @@ bool disk_backend_esp32::read(const off_t offset, const size_t n, uint8_t *const
 	digitalWrite(LED_BUILTIN, LOW);
 #endif
 
-	if (!fh->seek(offset))
+	if (!fh->seek(offset)) {
 		DOLOG(ll_error, true, "seek error %s", strerror(errno));
+		emit_error();
+		return false;
+	}
 
 	yield();
 
-	if (fh->read(target, n) != size_t(n)) {
-       		DOLOG(debug, true, "fread error: %s", strerror(errno));
+	ssize_t rc = fh->read(target, n);
+	if (size_t(rc) != n) {
+       		DOLOG(ll_error, true, "fread error: %s (%zd/%zu)", strerror(errno), rc, n);
+		emit_error();
 
 #if defined(ESP32) && !defined(SHA2017)
 		digitalWrite(LED_BUILTIN, HIGH);
@@ -72,13 +85,18 @@ bool disk_backend_esp32::write(const off_t offset, const size_t n, const uint8_t
 	digitalWrite(LED_BUILTIN, LOW);
 #endif
 
-	if (!fh->seek(offset))
+	if (!fh->seek(offset)) {
 		DOLOG(ll_error, true, "seek error %s", strerror(errno));
+		emit_error();
+		return false;
+	}
 
 	yield();
 
-	if (fh->write(from, n) != n) {
-		DOLOG(ll_error, true, "RK05 fwrite error %s", strerror(errno));
+	ssize_t rc = fh->write(from, n);
+	if (size_t(rc) != n) {
+		DOLOG(ll_error, true, "RK05 fwrite error %s (%zd/%zu)", strerror(errno), rc, n);
+		emit_error();
 
 #if defined(ESP32) && !defined(SHA2017)
 		digitalWrite(LED_BUILTIN, HIGH);

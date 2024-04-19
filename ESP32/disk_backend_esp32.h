@@ -1,4 +1,4 @@
-// (C) 2018-2023 by Folkert van Heusden
+// (C) 2018-2024 by Folkert van Heusden
 // Released under MIT license
 
 #include <string>
@@ -16,6 +16,8 @@ class disk_backend_esp32 : public disk_backend
 private:
 	const std::string filename;
 	File32     *const fh { nullptr };
+
+	void emit_error();
 
 public:
 	disk_backend_esp32(const std::string & filename);
