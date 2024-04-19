@@ -308,8 +308,10 @@ void setup() {
 #if !defined(BUILD_FOR_RP2040)
 	Serial.print(F("Free RAM after init: "));
 	Serial.println(ESP.getFreeHeap());
-	Serial.print(F("Free PSRAM: "));
-	Serial.println(ESP.getFreePsram());
+	if (psramFound()) {
+		Serial.print(F("Free PSRAM: "));
+		Serial.println(ESP.getFreePsram());
+	}
 #endif
 
 #if !defined(SHA2017)
