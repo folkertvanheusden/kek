@@ -349,15 +349,23 @@ bool cpu::execute_any_pending_interrupt()
 	std::unique_lock<std::mutex> lck(qi_lock);
 #endif
 
+	any_queued_interrupts = false;
+
 	uint8_t current_level = getPSW_spl();
 
 	// uint8_t start_level = current_level <= 3 ? 0 : current_level + 1;
-	uint8_t start_level   = current_level + 1;
+	// uint8_t start_level   = current_level + 1;
+	uint8_t start_level   = current_level;
 
-	for(uint8_t i=start_level; i < 8; i++) {
+	for(uint8_t i=0; i < 8; i++) {
 		auto interrupts = queued_interrupts.find(i);
 
 		if (interrupts->second.empty() == false) {
+			any_queued_interrupts = true;
+
+			if (i < start_level)
+				continue;
+
 			auto    vector = interrupts->second.begin();
 
 			uint8_t v      = *vector;
@@ -375,8 +383,6 @@ bool cpu::execute_any_pending_interrupt()
 			return true;
 		}
 	}
-
-	any_queued_interrupts = false;
 
 #if defined(BUILD_FOR_RP2040)
 	xSemaphoreGive(qi_lock);
