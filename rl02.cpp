@@ -148,7 +148,7 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 
 		DOLOG(debug, false, "RL02 set command %d, exec: %d (%s)", command, do_exec, commands[command]);
 
-		int           device  = 0;  // TODO
+		int           device  = (v >> 8) & 3;
 
 		bool          do_int  = false;
 
