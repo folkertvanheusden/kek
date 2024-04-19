@@ -157,7 +157,7 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 						xfer_buffer[i] = b->readUnibusByte(work_memoff++);
 
 					if (!fhs.at(device)->write(work_diskoffb, cur, xfer_buffer))
-						DOLOG(ll_error, true, "RK05(%d) write error %s", device, strerror(errno));
+						DOLOG(ll_error, true, "RK05(%d) write error %s to %u len %u", device, strerror(errno), work_diskoffb, cur);
 
 					work_diskoffb += cur;
 
@@ -192,7 +192,7 @@ void rk05::writeWord(const uint16_t addr, uint16_t v)
 					uint32_t cur = std::min(uint32_t(sizeof xfer_buffer), temp);
 
 					if (!fhs.at(device)->read(temp_diskoffb, cur, xfer_buffer)) {
-						DOLOG(ll_error, true, "RK05 read error %s", strerror(errno));
+						DOLOG(ll_error, true, "RK05 read error %s from %u len %u", strerror(errno), temp_diskoffb, cur);
 						break;
 					}
 
