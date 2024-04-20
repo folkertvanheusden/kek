@@ -1,4 +1,4 @@
-// (C) 2018-2023 by Folkert van Heusden
+// (C) 2018-2024 by Folkert van Heusden
 // Released under MIT license
 
 #pragma once
@@ -9,8 +9,11 @@
 class memory
 {
 private:
-	const uint32_t size { 0       };
-	uint8_t       *m    { nullptr };
+	const uint32_t size     { 0       };
+	uint8_t       *m        { nullptr };
+#ifdef ESP32
+	bool           is_psram { false   };
+#endif
 
 public:
 	memory(const uint32_t size);
