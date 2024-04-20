@@ -39,12 +39,18 @@ void setlog(const char *lf, const log_level_t ll_file, const log_level_t ll_scre
 
 	logfile = lf ? strdup(lf) : nullptr;
 
-	log_level_file = ll_file;
+	log_level_file   = ll_file;
 	log_level_screen = ll_screen;
 
 	l_timestamp = timestamp;
 
 	atexit(closelog);
+}
+
+void setll(const log_level_t ll_file, const log_level_t ll_screen)
+{
+	log_level_file   = ll_file;
+	log_level_screen = ll_screen;
 }
 
 void setloguid(const int uid, const int gid)

@@ -12,6 +12,7 @@ typedef enum { debug, info, warning, ll_error, none } log_level_t;  // TODO ll_ 
 
 log_level_t parse_ll(const std::string & str);
 void setlog(const char *lf, const log_level_t ll_file, const log_level_t ll_screen, const bool l_timestamp);
+void setll(const log_level_t ll_file, const log_level_t ll_screen);
 void setloguid(const int uid, const int gid);
 void closelog();
 void dolog(const log_level_t ll, const char *fmt, ...);
