@@ -16,6 +16,8 @@
 #include "bus.h"
 
 
+constexpr const int initial_trap_delay   = 8;
+
 constexpr const int max_stacktrace_depth = 16;
 
 typedef struct {
@@ -53,7 +55,7 @@ private:
 	uint64_t running_since      { 0     };
 	uint64_t wait_time          { 0     };
 	bool     it_is_a_trap       { false };
-
+	std::optional<int> trap_delay { 0   };
 	bool     debug_mode         { false };
 	std::vector<std::pair<uint16_t, std::string> > stacktrace;
 

@@ -329,6 +329,9 @@ void cpu::setPSW_flags_nzv(const uint16_t value, const word_mode_t word_mode)
 
 bool cpu::check_pending_interrupts() const
 {
+	if (trap_delay.has_value() && trap_delay.value() > 1)
+		return false;
+
 	uint8_t start_level = getPSW_spl() + 1;
 
 	for(uint8_t i=start_level; i < 8; i++) {
@@ -349,6 +352,19 @@ bool cpu::execute_any_pending_interrupt()
 	std::unique_lock<std::mutex> lck(qi_lock);
 #endif
 
+	bool can_trigger = false;
+
+	if (trap_delay.has_value()) {
+		trap_delay.value()--;
+
+		if (trap_delay.value() > 0)
+			return false;
+
+		trap_delay.reset();
+
+		can_trigger = true;
+	}
+
 	any_queued_interrupts = false;
 
 	uint8_t current_level = getPSW_spl();
@@ -365,6 +381,11 @@ bool cpu::execute_any_pending_interrupt()
 
 			if (i < start_level)
 				continue;
+
+			if (can_trigger == false) {
+				trap_delay = initial_trap_delay;
+				return false;
+			}
 
 			auto    vector = interrupts->second.begin();
 
@@ -1797,6 +1818,7 @@ void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 
 			// if we reach this point then the trap was processed without causing
 			// another trap
+			DOLOG(debug, false, "Trapping to %06o with PSW %06o", pc, psw);
 		}
 		catch(const int exception) {
 			DOLOG(debug, false, "trap during execution of trap (%d)", exception);
