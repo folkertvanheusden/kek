@@ -357,6 +357,8 @@ bool cpu::execute_any_pending_interrupt()
 	if (trap_delay.has_value()) {
 		trap_delay.value()--;
 
+		DOLOG(debug, false, "Delayed trap: %d instructions left", trap_delay.value());
+
 		if (trap_delay.value() > 0)
 			return false;
 
