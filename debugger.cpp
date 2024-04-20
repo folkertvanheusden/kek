@@ -720,6 +720,12 @@ void show_queued_interrupts(console *const cnsl, cpu *const c)
 {
 	cnsl->put_string_lf(format("Current level: %d", c->getPSW_spl()));
 
+	auto delay = c->get_interrupt_delay_left();
+	if (delay.has_value())
+		cnsl->put_string_lf(format("Current delay left: %d", delay.value()));
+	else
+		cnsl->put_string_lf("No delay");
+
 	auto queued_interrupts = c->get_queued_interrupts();
 
 	for(auto & level: queued_interrupts) {
