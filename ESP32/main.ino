@@ -256,8 +256,9 @@ void setup() {
 #endif
 
 #if !defined(BUILD_FOR_RP2040)
-	Serial.print(F("Free RAM before init (decimal bytes): "));
-	Serial.println(ESP.getFreeHeap());
+	uint32_t free_heap = ESP.getFreeHeap();
+	Serial.printf("Free RAM before init: %d decimal bytes (or %d pages (value for the ramsize command in the debugger))", free_heap, std::min(int(free_heap / 8192l), DEFAULT_N_PAGES));
+	Serial.println(F(""));
 #endif
 
 	Serial.println(F("Init bus"));
@@ -306,8 +307,9 @@ void setup() {
 #endif
 
 #if !defined(BUILD_FOR_RP2040)
-	Serial.print(F("Free RAM after init: "));
+	Serial.print(F("Free RAM after init (decimal bytes): "));
 	Serial.println(ESP.getFreeHeap());
+
 	if (psramFound()) {
 		Serial.print(F("Free PSRAM: "));
 		Serial.println(ESP.getFreePsram());
