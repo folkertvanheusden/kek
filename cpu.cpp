@@ -127,9 +127,9 @@ std::vector<std::pair<uint16_t, std::string> > cpu::get_stack_trace() const
 void cpu::reset()
 {
 	memset(regs0_5, 0x00, sizeof regs0_5);
-	memset(sp, 0x00, sizeof sp);
-	pc = 0;
-	psw = 0;  // 7 << 5;
+	memset(sp,      0x00, sizeof sp);
+	pc   = 0;
+	psw  = 0;  // 7 << 5;
 	fpsr = 0;
 	init_interrupt_queue();
 }
@@ -149,6 +149,8 @@ uint16_t cpu::getRegister(const int nr, const rm_selection_t mode_selection) con
 		return sp[getPSW_runmode()];
 	}
 
+	assert(nr == 7);
+
 	return pc;
 }
 
@@ -166,6 +168,7 @@ void cpu::setRegister(const int nr, const uint16_t value, const rm_selection_t m
 			sp[getPSW_runmode()] = value;
 	}
 	else {
+		assert(nr == 7);
 		pc = value;
 	}
 }
@@ -210,6 +213,8 @@ uint16_t cpu::addRegister(const int nr, const rm_selection_t mode_selection, con
 		return sp[getPSW_runmode()] += value;
 	}
 
+	assert(nr == 7);
+
 	return pc += value;
 }
 
@@ -222,8 +227,10 @@ void cpu::lowlevel_register_set(const uint8_t set, const uint8_t reg, const uint
 		regs0_5[set][reg] = value;
 	else if (reg == 6)
 		sp[set == 0 ? 0 : 3] = value;
-	else
+	else {
+		assert(reg == 7);
 		pc = value;
+	}
 }
 
 uint16_t cpu::lowlevel_register_get(const uint8_t set, const uint8_t reg)
@@ -236,6 +243,8 @@ uint16_t cpu::lowlevel_register_get(const uint8_t set, const uint8_t reg)
 
 	if (reg == 6)
 		return sp[set == 0 ? 0 : 3];
+
+	assert(reg == 7);
 
 	return pc;
 }
