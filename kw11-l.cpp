@@ -1,4 +1,4 @@
-// (C) 2018-2023 by Folkert van Heusden
+// (C) 2018-2024 by Folkert van Heusden
 // Released under MIT license
 
 #include <unistd.h>
@@ -6,6 +6,7 @@
 #include "console.h"
 #include "cpu.h"
 #include "kw11-l.h"
+#include "log.h"
 #include "utils.h"
 
 #if defined(ESP32)
@@ -46,17 +47,22 @@ kw11_l::~kw11_l()
 
 void kw11_l::operator()()
 {
+	DOLOG(debug, true, "Starting KW11-L thread");
+
 	while(!stop_flag) {
 		if (*cnsl->get_running_flag()) {
 			b->set_lf_crs_b7();
-
+ 
 			if (b->get_lf_crs() & 64)
 				b->getCpu()->queue_interrupt(6, 0100);
 
+			// TODO: dependant on cpu cycles processed
 			myusleep(1000000 / 50);  // 20ms
 		}
 		else {
 			myusleep(1000000 / 10);  // 100ms
 		}
 	}
+
+	DOLOG(debug, true, "KW11-L thread terminating");
 }
