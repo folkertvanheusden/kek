@@ -652,14 +652,14 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 					DOLOG(debug, false, "MMR0: %06o", MMR0);
 
 					if (trap_action == T_TRAP_250) {
-						DOLOG(debug, false, "Page access %d: trap 0250", access_control);
+						DOLOG(debug, false, "Page access %d (for virtual address %06o): trap 0250", access_control, a);
 
 						c->trap(0250);  // trap
 
 						throw 5;
 					}
 					else {  // T_ABORT_4
-						DOLOG(debug, false, "Page access %d: trap 004", access_control);
+						DOLOG(debug, false, "Page access %d (for virtual address %06o): trap 004", access_control, a);
 
 						c->trap(004);  // abort
 
