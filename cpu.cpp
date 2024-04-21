@@ -410,6 +410,9 @@ bool cpu::execute_any_pending_interrupt()
 
 			trap(v, i, true);
 
+			// when there are more interrupts scheduled, invoke them asap
+			trap_delay = initial_trap_delay;
+
 #if defined(BUILD_FOR_RP2040)
 			xSemaphoreGive(qi_lock);
 #endif
