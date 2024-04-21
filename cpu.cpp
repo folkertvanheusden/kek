@@ -392,7 +392,7 @@ bool cpu::execute_any_pending_interrupt()
 		if (interrupts->second.empty() == false) {
 			any_queued_interrupts = true;
 
-			if (i < start_level)
+			if (i < start_level)  // at leas we know now that there's an interrupt scheduled
 				continue;
 
 			if (can_trigger == false) {

@@ -141,6 +141,7 @@ public:
 	void queue_interrupt(const uint8_t level, const uint8_t vector);
 	std::map<uint8_t, std::set<uint8_t> > get_queued_interrupts() const { return queued_interrupts; }
 	std::optional<int> get_interrupt_delay_left() const { return trap_delay; }
+	bool check_if_interrupts_pending() const { return any_queued_interrupts; }
 
 	void trap(uint16_t vector, const int new_ipl = -1, const bool is_interrupt = false);
 	bool is_it_a_trap() const { return it_is_a_trap; }

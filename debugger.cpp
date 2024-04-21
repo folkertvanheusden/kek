@@ -726,6 +726,8 @@ void show_queued_interrupts(console *const cnsl, cpu *const c)
 	else
 		cnsl->put_string_lf("No delay");
 
+	cnsl->put_string_lf(format("Interrupt pending flag: %d", c->check_if_interrupts_pending()));
+
 	auto queued_interrupts = c->get_queued_interrupts();
 
 	for(auto & level: queued_interrupts) {
