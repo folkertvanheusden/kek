@@ -346,6 +346,8 @@ bool cpu::check_pending_interrupts() const
 	for(uint8_t i=start_level; i < 8; i++) {
 		auto interrupts = queued_interrupts.find(i);
 
+		assert(interrupts != queued_interrupts.end());
+
 		if (interrupts->second.empty() == false)
 			return true;
 	}
@@ -2316,7 +2318,7 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 	// PSW
 	std::string psw_str = format("%d%d|%d|%d|%c%c%c%c%c", psw >> 14, (psw >> 12) & 3, (psw >> 11) & 1, (psw >> 5) & 7,
                         psw & 16?'t':'-', psw & 8?'n':'-', psw & 4?'z':'-', psw & 2 ? 'v':'-', psw & 1 ? 'c':'-');
-	out.insert({ "psw", { psw_str } });
+	out.insert({ "psw", { std::move(psw_str) } });
 	out.insert({ "psw-value", { format("%06o", psw) } });
 
 	// values worked with
