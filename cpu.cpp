@@ -1569,8 +1569,11 @@ bool cpu::condition_code_operations(const uint16_t instr)
 	}
 
 	if ((instr & ~7) == 0000230) { // SPLx
-		int level = instr & 7;
-		setPSW_spl(level);
+		if (getPSW_runmode() == 0) {  // only in kernel mode
+			int level = instr & 7;
+
+			setPSW_spl(level);
+		}
 
 //		// trap via vector 010  only(?) on an 11/60 and not(?) on an 11/70
 //		trap(010);
