@@ -13,7 +13,6 @@
 #include "utils.h"
 
 
-bool flag = false;
 static const char * const regnames[] = { 
 	"control status",
 	"bus address",
@@ -180,13 +179,56 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 		}
 		else if (command == 4) {  // read header
 			mpr[0] = (sector & 63) | (head << 6) | (track << 7);
-			DOLOG(ll_error, true, "GREP3 %06o", mpr[0]);
-			if (mpr[0] == 032606)
-				flag = true;
 			mpr[1] = 0;  // zero
 			mpr[2] = 0;  // TODO: CRC
 
 			DOLOG(debug, false, "RL02 read header [cylinder: %d, head: %d, sector: %d] %06o", track, head, sector, mpr[0]);
+
+			do_int = true;
+		}
+		else if (command == 5) {  // write data
+			uint32_t memory_address   = get_bus_address();
+
+			uint32_t count            = (65536l - registers[(RL02_MPR - RL02_BASE) / 2]) * 2;
+			if (count == 65536)
+				count = 0;
+
+			uint16_t temp             = registers[(RL02_DAR - RL02_BASE) / 2];
+
+			sector = temp & 63;
+			head   = (temp >> 6) & 1;
+			track  = temp >> 7;
+
+			uint32_t temp_disk_offset = calc_offset();
+
+			DOLOG(debug, false, "RL02 write %d bytes (dec) to %d (dec) from %06o (oct) [cylinder: %d, head: %d, sector: %d]", count, temp_disk_offset, memory_address, track, head, sector);
+
+			while(count > 0) {
+				uint32_t cur = std::min(uint32_t(sizeof xfer_buffer), count);
+
+				if (!fhs.at(device)->write(temp_disk_offset, cur, xfer_buffer)) {
+					DOLOG(ll_error, true, "RL02 write error, device %d, disk offset %u, read size %u, cylinder %d, head %d, sector %d", device, temp_disk_offset, cur, track, head, sector);
+					break;
+				}
+
+				mpr[0] += count / 2;
+
+				temp_disk_offset += cur;
+
+				count -= cur;
+
+				sector++;
+				if (sector >= rl02_sectors_per_track) {
+					sector = 0;
+
+					head++;
+					if (head >= 2) {
+						head = 0;
+
+						track++;
+					}
+				}
+			}
 
 			do_int = true;
 		}
@@ -198,18 +240,12 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 				count = 0;
 
 			uint16_t temp             = registers[(RL02_DAR - RL02_BASE) / 2];
-			DOLOG(ll_error, true, "GREP2 %06o", temp);
 
 			sector = temp & 63;
 			head   = (temp >> 6) & 1;
 			track  = temp >> 7;
 
 			uint32_t temp_disk_offset = calc_offset();
-
-			DOLOG(ll_error, true, "GREP1 %02x", b->getMMR3() & 0x20);
-
-			if (flag)
-			printf("%06o\n", b->getCpu()->getPC());
 
 			DOLOG(debug, false, "RL02 read %d bytes (dec) from %d (dec) to %06o (oct) [cylinder: %d, head: %d, sector: %d]", count, temp_disk_offset, memory_address, track, head, sector);
 
