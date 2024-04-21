@@ -1067,6 +1067,25 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 					setll(ll_screen, ll_file);
 				}
 			}
+			else if (parts[0] == "setll" && parts.size() == 2) {
+				auto ll_parts = split(parts[1], ",");
+
+				if (ll_parts.size() != 2)
+					cnsl->put_string_lf("Loglevel for either screen or file missing");
+				else {
+					log_level_t ll_screen  = parse_ll(ll_parts[0]);
+					log_level_t ll_file    = parse_ll(ll_parts[1]);
+
+					setll(ll_screen, ll_file);
+				}
+
+				continue;
+			}
+			else if (parts[0] == "setsl" && parts.size() == 3) {
+				setloghost(parts.at(1).c_str(), parse_ll(parts[2]));
+
+				continue;
+			}
 			else if (cmd == "qi") {
 				show_queued_interrupts(cnsl, c);
 
@@ -1106,6 +1125,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 					"                registers",
 					"trace/t       - toggle tracing",
 					"setll         - set loglevel: terminal,file",
+					"setsl         - set syslog target: requires a hostname and a loglevel",
 					"turbo         - toggle turbo mode (cannot be interrupted)",
 					"debug         - enable CPU debug mode",
 					"bt            - show backtrace - need to enable debug first",

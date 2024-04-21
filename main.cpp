@@ -493,7 +493,7 @@ int main(int argc, char *argv[])
 
 	console *cnsl = nullptr;
 
-	setlog(logfile, ll_file, ll_screen, timestamp);
+	setlogfile(logfile, ll_file, ll_screen, timestamp);
 
 	if (validate_json.empty() == false)
 		return run_cpu_validation(validate_json);
