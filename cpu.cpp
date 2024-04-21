@@ -421,6 +421,9 @@ bool cpu::execute_any_pending_interrupt()
 		}
 	}
 
+	if (any_queued_interrupts && trap_delay.has_value() == false)
+		trap_delay = initial_trap_delay;
+
 #if defined(BUILD_FOR_RP2040)
 	xSemaphoreGive(qi_lock);
 #endif
