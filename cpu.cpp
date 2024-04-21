@@ -1627,7 +1627,10 @@ bool cpu::misc_operations(const uint16_t instr)
 {
 	switch(instr) {
 		case 0b0000000000000000: // HALT
-			*event = EVENT_HALT;
+			if (getPSW_runmode() == 0)  // only in kernel mode
+				*event = EVENT_HALT;
+			else
+				trap(4);
 			return true;
 
 		case 0b0000000000000001: // WAIT
@@ -1681,8 +1684,11 @@ bool cpu::misc_operations(const uint16_t instr)
 			return true;
 
 		case 0b0000000000000101: // RESET
-			b->init();
-			init_interrupt_queue();
+			if (getPSW_runmode() == 0) {  // only in kernel mode
+				b->init();
+
+				init_interrupt_queue();
+			}
 			return true;
 	}
 
