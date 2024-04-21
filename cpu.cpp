@@ -383,8 +383,8 @@ bool cpu::execute_any_pending_interrupt()
 	uint8_t current_level = getPSW_spl();
 
 	// uint8_t start_level = current_level <= 3 ? 0 : current_level + 1;
-	// uint8_t start_level   = current_level + 1;
-	uint8_t start_level   = current_level;
+	// PDP-11_70_Handbook_1977-78.pdf page 1-5, "processor priority"
+	uint8_t start_level   = current_level + 1;
 
 	for(uint8_t i=0; i < 8; i++) {
 		auto interrupts = queued_interrupts.find(i);
