@@ -13,11 +13,12 @@
 #include "utils.h"
 
 
+bool flag = false;
 static const char * const regnames[] = { 
 	"control status",
-	"bus address   ",
-	"disk address  ",
-	"multipurpose  "
+	"bus address",
+	"disk address",
+	"multipurpose"
 	};
 
 static const char * const commands[] = {
@@ -112,7 +113,7 @@ void rl02::writeByte(const uint16_t addr, const uint8_t v)
 
 uint32_t rl02::get_bus_address() const
 {
-	return registers[(RL02_BAR - RL02_BASE) / 2] | (uint32_t((registers[(RL02_CSR - RL02_BASE) / 2] >> 4) & 3) << 16);
+	return (registers[(RL02_BAR - RL02_BASE) / 2] | (uint32_t((registers[(RL02_CSR - RL02_BASE) / 2] >> 4) & 3) << 16)) & ~1;
 }
 
 void rl02::update_bus_address(const uint32_t a)
@@ -155,7 +156,8 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 		*disk_read_acitivity = true;
 
 		if (command == 2) {  // get status
-			registers[(RL02_MPR - RL02_BASE) / 2] = 0;
+			mpr[0] = 5 /* lock on */ | (1 << 3) /* brush home */ | (1 << 4) /* heads over disk */ | (head << 6) | (1 << 7) /* RL02 */;
+			mpr[1] = mpr[0];
 		}
 		else if (command == 3) {  // seek
 			uint16_t temp = registers[(RL02_DAR - RL02_BASE) / 2];
@@ -172,12 +174,15 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 			DOLOG(debug, false, "RL02: seek from cylinder %d to %d (distance: %d, DAR: %06o)", track, new_track, cylinder_count, temp);
 			track  = new_track;
 
-			update_dar();
+//			update_dar();
 
 			do_int = true;
 		}
 		else if (command == 4) {  // read header
 			mpr[0] = (sector & 63) | (head << 6) | (track << 7);
+			DOLOG(ll_error, true, "GREP3 %06o", mpr[0]);
+			if (mpr[0] == 032606)
+				flag = true;
 			mpr[1] = 0;  // zero
 			mpr[2] = 0;  // TODO: CRC
 
@@ -193,12 +198,18 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 				count = 0;
 
 			uint16_t temp             = registers[(RL02_DAR - RL02_BASE) / 2];
+			DOLOG(ll_error, true, "GREP2 %06o", temp);
 
 			sector = temp & 63;
 			head   = (temp >> 6) & 1;
 			track  = temp >> 7;
 
 			uint32_t temp_disk_offset = calc_offset();
+
+			DOLOG(ll_error, true, "GREP1 %02x", b->getMMR3() & 0x20);
+
+			if (flag)
+			printf("%06o\n", b->getCpu()->getPC());
 
 			DOLOG(debug, false, "RL02 read %d bytes (dec) from %d (dec) to %06o (oct) [cylinder: %d, head: %d, sector: %d]", count, temp_disk_offset, memory_address, track, head, sector);
 
@@ -218,6 +229,8 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 					b->writeUnibusByte(memory_address++, xfer_buffer[i++]);
 
 					// update_bus_address(memory_address);
+
+					mpr[0]++;
 				}
 
 				temp_disk_offset += cur;
@@ -249,7 +262,7 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 			if (registers[(RL02_CSR - RL02_BASE) / 2] & 64) {  // interrupt enable?
 				DOLOG(debug, false, "RL02 triggering interrupt");
 
-				b->getCpu()->queue_interrupt(4, 0160);
+				b->getCpu()->queue_interrupt(5, 0160);
 			}
 		}
 
