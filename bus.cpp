@@ -626,6 +626,7 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 		uint32_t io_base  = get_io_base();
 		bool     is_io    = m_offset >= io_base;
 
+		[[unlikely]]
 		if (trap_on_failure) {
 			{
 				auto rc = get_trap_action(run_mode, d, apf, is_write);
@@ -673,6 +674,7 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 				}
 			}
 
+			[[unlikely]]
 			if (m_offset >= n_pages * 8192l && !is_io) {
 				DOLOG(debug, !peek_only, "bus::calculate_physical_address %o >= %o", m_offset, n_pages * 8192l);
 				DOLOG(debug, false, "TRAP(04) (throw 6) on address %06o", a);
