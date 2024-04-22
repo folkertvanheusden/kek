@@ -806,6 +806,8 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 			        addToMMR1(g_dst);
 				uint16_t shift = g_dst.value.value() & 077;
 
+				DOLOG(debug, true, "shift %06o with %d", R, shift);
+
 				bool     sign  = SIGN(R, wm_word);
 
 				if (shift == 0) {
@@ -830,13 +832,14 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 				}
 				else {
 					int      shift_n     = 64 - shift;
-					uint64_t value       = (0xffffffff00000000ll | R) >> shift_n;
+					uint16_t new_value   = (uint64_t(0xffffffff0000) | R) >> (shift_n - 1);
 
-					setPSW_c(R >> (shift_n - 1));
+					setPSW_c(new_value & 1);
+					new_value >>= 1;
+
+					R = new_value;
 
 					setPSW_v(SIGN(R, wm_word) != SIGN(oldR, wm_word));
-
-					R = value;
 				}
 
 				R &= 0xffff;
@@ -2065,7 +2068,7 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 			}
 
 			if (text.empty() && name.empty() == false)
-				text = name + space + src_text + comma + dst_text.operand;
+				text = name + space + src_text + comma + dst_text.operand;  // TODO: swap for ASH, ASHC
 
 			if (text.empty() == false && next_word != -1)
 				instruction_words.push_back(next_word);
