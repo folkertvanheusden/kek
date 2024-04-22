@@ -287,6 +287,11 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 			return 0;
 		}
 
+		if (a >= 0172100 && a <= 0172137) {  // MM11-LP parity
+			if (!peek_only) DOLOG(debug, false, "READ-I/O MM11-LP parity (%06o): %o", a, 1);
+			return 1;
+		}
+
 		if (word_mode == wm_byte) {
 			if (a == ADDR_PSW) { // PSW
 				uint8_t temp = c->getPSW();
@@ -621,6 +626,7 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 		uint32_t io_base  = get_io_base();
 		bool     is_io    = m_offset >= io_base;
 
+		[[unlikely]]
 		if (trap_on_failure) {
 			{
 				auto rc = get_trap_action(run_mode, d, apf, is_write);
@@ -652,14 +658,14 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 					DOLOG(debug, false, "MMR0: %06o", MMR0);
 
 					if (trap_action == T_TRAP_250) {
-						DOLOG(debug, false, "Page access %d: trap 0250", access_control);
+						DOLOG(debug, false, "Page access %d (for virtual address %06o): trap 0250", access_control, a);
 
 						c->trap(0250);  // trap
 
 						throw 5;
 					}
 					else {  // T_ABORT_4
-						DOLOG(debug, false, "Page access %d: trap 004", access_control);
+						DOLOG(debug, false, "Page access %d (for virtual address %06o): trap 004", access_control, a);
 
 						c->trap(004);  // abort
 
@@ -668,6 +674,7 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 				}
 			}
 
+			[[unlikely]]
 			if (m_offset >= n_pages * 8192l && !is_io) {
 				DOLOG(debug, !peek_only, "bus::calculate_physical_address %o >= %o", m_offset, n_pages * 8192l);
 				DOLOG(debug, false, "TRAP(04) (throw 6) on address %06o", a);
@@ -985,6 +992,11 @@ write_rc_t bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint1
 		if (tty_ && a >= PDP11TTY_BASE && a < PDP11TTY_END) {
 			DOLOG(debug, false, "WRITE-I/O TTY register %d: %06o", (a - PDP11TTY_BASE) / 2, value);
 			word_mode == wm_byte ? tty_->writeByte(a, value) : tty_->writeWord(a, value);
+			return { false };
+		}
+
+		if (a >= 0172100 && a <= 0172137) {  // MM11-LP parity
+			DOLOG(debug, false, "WRITE-I/O MM11-LP parity (%06o): %o", a, value);
 			return { false };
 		}
 

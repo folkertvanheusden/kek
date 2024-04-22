@@ -119,13 +119,14 @@ bool disk_backend_nbd::connect(const bool retry)
 			}
 		}
 
-		if (memcmp(nbd_hello.magic1, "NBDMAGIC", 8) != 0) {
+		if (fd != -1 && memcmp(nbd_hello.magic1, "NBDMAGIC", 8) != 0) {
 			close(fd);
 			fd = -1;
 			DOLOG(warning, true, "disk_backend_nbd::connect: magic invalid");
 		}
 
-		DOLOG(info, false, "NBD size: %u", NTOHLL(nbd_hello.size));
+		if (fd != -1)
+			DOLOG(info, false, "NBD size: %u", NTOHLL(nbd_hello.size));
 	}
 	while(fd == -1 && retry);
 

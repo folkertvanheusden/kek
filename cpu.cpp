@@ -127,9 +127,9 @@ std::vector<std::pair<uint16_t, std::string> > cpu::get_stack_trace() const
 void cpu::reset()
 {
 	memset(regs0_5, 0x00, sizeof regs0_5);
-	memset(sp, 0x00, sizeof sp);
-	pc = 0;
-	psw = 0;  // 7 << 5;
+	memset(sp,      0x00, sizeof sp);
+	pc   = 0;
+	psw  = 0;  // 7 << 5;
 	fpsr = 0;
 	init_interrupt_queue();
 }
@@ -149,6 +149,8 @@ uint16_t cpu::getRegister(const int nr, const rm_selection_t mode_selection) con
 		return sp[getPSW_runmode()];
 	}
 
+	assert(nr == 7);
+
 	return pc;
 }
 
@@ -166,6 +168,7 @@ void cpu::setRegister(const int nr, const uint16_t value, const rm_selection_t m
 			sp[getPSW_runmode()] = value;
 	}
 	else {
+		assert(nr == 7);
 		pc = value;
 	}
 }
@@ -210,6 +213,8 @@ uint16_t cpu::addRegister(const int nr, const rm_selection_t mode_selection, con
 		return sp[getPSW_runmode()] += value;
 	}
 
+	assert(nr == 7);
+
 	return pc += value;
 }
 
@@ -222,8 +227,10 @@ void cpu::lowlevel_register_set(const uint8_t set, const uint8_t reg, const uint
 		regs0_5[set][reg] = value;
 	else if (reg == 6)
 		sp[set == 0 ? 0 : 3] = value;
-	else
+	else {
+		assert(reg == 7);
 		pc = value;
+	}
 }
 
 uint16_t cpu::lowlevel_register_get(const uint8_t set, const uint8_t reg)
@@ -236,6 +243,8 @@ uint16_t cpu::lowlevel_register_get(const uint8_t set, const uint8_t reg)
 
 	if (reg == 6)
 		return sp[set == 0 ? 0 : 3];
+
+	assert(reg == 7);
 
 	return pc;
 }
@@ -337,6 +346,8 @@ bool cpu::check_pending_interrupts() const
 	for(uint8_t i=start_level; i < 8; i++) {
 		auto interrupts = queued_interrupts.find(i);
 
+		assert(interrupts != queued_interrupts.end());
+
 		if (interrupts->second.empty() == false)
 			return true;
 	}
@@ -372,8 +383,8 @@ bool cpu::execute_any_pending_interrupt()
 	uint8_t current_level = getPSW_spl();
 
 	// uint8_t start_level = current_level <= 3 ? 0 : current_level + 1;
-	// uint8_t start_level   = current_level + 1;
-	uint8_t start_level   = current_level;
+	// PDP-11_70_Handbook_1977-78.pdf page 1-5, "processor priority"
+	uint8_t start_level   = current_level + 1;
 
 	for(uint8_t i=0; i < 8; i++) {
 		auto interrupts = queued_interrupts.find(i);
@@ -381,7 +392,7 @@ bool cpu::execute_any_pending_interrupt()
 		if (interrupts->second.empty() == false) {
 			any_queued_interrupts = true;
 
-			if (i < start_level)
+			if (i < start_level)  // at leas we know now that there's an interrupt scheduled
 				continue;
 
 			if (can_trigger == false) {
@@ -399,6 +410,9 @@ bool cpu::execute_any_pending_interrupt()
 
 			trap(v, i, true);
 
+			// when there are more interrupts scheduled, invoke them asap
+			trap_delay = initial_trap_delay;
+
 #if defined(BUILD_FOR_RP2040)
 			xSemaphoreGive(qi_lock);
 #endif
@@ -406,6 +420,9 @@ bool cpu::execute_any_pending_interrupt()
 			return true;
 		}
 	}
+
+	if (any_queued_interrupts && trap_delay.has_value() == false)
+		trap_delay = initial_trap_delay;
 
 #if defined(BUILD_FOR_RP2040)
 	xSemaphoreGive(qi_lock);
@@ -789,6 +806,8 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 			        addToMMR1(g_dst);
 				uint16_t shift = g_dst.value.value() & 077;
 
+				DOLOG(debug, true, "shift %06o with %d", R, shift);
+
 				bool     sign  = SIGN(R, wm_word);
 
 				if (shift == 0) {
@@ -812,14 +831,14 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 					setPSW_v(SIGN(R, wm_word) != SIGN(oldR, wm_word));
 				}
 				else {
-					int      shift_n     = 64 - shift;
-					uint32_t sign_extend = sign ? 0x8000 : 0;
+                                        int      shift_n     = 64 - shift;
+                                        uint32_t sign_extend = sign ? 0x8000 : 0;
 
-					for(int i=0; i<shift_n; i++) {
-						setPSW_c(R & 1);
-						R >>= 1;
-						R |= sign_extend;
-					}
+                                        for(int i=0; i<shift_n; i++) {
+                                                setPSW_c(R & 1);
+                                                R >>= 1;
+                                                R |= sign_extend;
+                                        }
 
 					setPSW_v(SIGN(R, wm_word) != SIGN(oldR, wm_word));
 				}
@@ -863,8 +882,7 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 					int shift_n = (64 - shift) - 1;
 
 					// extend sign-bit
-					if (sign)  // convert to unsigned 64b int & extend sign
-					{
+					if (sign) {  // convert to unsigned 64b int & extend sign
 						R0R1 = (uint64_t(R0R1) | 0xffffffff00000000ll) >> shift_n;
 
 						setPSW_c(R0R1 & 1);
@@ -1555,8 +1573,11 @@ bool cpu::condition_code_operations(const uint16_t instr)
 	}
 
 	if ((instr & ~7) == 0000230) { // SPLx
-		int level = instr & 7;
-		setPSW_spl(level);
+		if (getPSW_runmode() == 0) {  // only in kernel mode
+			int level = instr & 7;
+
+			setPSW_spl(level);
+		}
 
 //		// trap via vector 010  only(?) on an 11/60 and not(?) on an 11/70
 //		trap(010);
@@ -1610,7 +1631,10 @@ bool cpu::misc_operations(const uint16_t instr)
 {
 	switch(instr) {
 		case 0b0000000000000000: // HALT
-			*event = EVENT_HALT;
+			if (getPSW_runmode() == 0)  // only in kernel mode
+				*event = EVENT_HALT;
+			else
+				trap(4);
 			return true;
 
 		case 0b0000000000000001: // WAIT
@@ -1664,8 +1688,11 @@ bool cpu::misc_operations(const uint16_t instr)
 			return true;
 
 		case 0b0000000000000101: // RESET
-			b->init();
-			init_interrupt_queue();
+			if (getPSW_runmode() == 0) {  // only in kernel mode
+				b->init();
+
+				init_interrupt_queue();
+			}
 			return true;
 	}
 
@@ -2041,7 +2068,7 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 			}
 
 			if (text.empty() && name.empty() == false)
-				text = name + space + src_text + comma + dst_text.operand;
+				text = name + space + src_text + comma + dst_text.operand;  // TODO: swap for ASH, ASHC
 
 			if (text.empty() == false && next_word != -1)
 				instruction_words.push_back(next_word);
@@ -2307,7 +2334,7 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 	// PSW
 	std::string psw_str = format("%d%d|%d|%d|%c%c%c%c%c", psw >> 14, (psw >> 12) & 3, (psw >> 11) & 1, (psw >> 5) & 7,
                         psw & 16?'t':'-', psw & 8?'n':'-', psw & 4?'z':'-', psw & 2 ? 'v':'-', psw & 1 ? 'c':'-');
-	out.insert({ "psw", { psw_str } });
+	out.insert({ "psw", { std::move(psw_str) } });
 	out.insert({ "psw-value", { format("%06o", psw) } });
 
 	// values worked with
