@@ -622,11 +622,11 @@ int main(int argc, char *argv[])
 		delete metrics_thread;
 	}
 
+	delete lf;
+
 	delete cnsl;
 
 	delete b;
-
-	delete lf;
 
 	return 0;
 }
