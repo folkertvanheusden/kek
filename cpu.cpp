@@ -832,8 +832,9 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 				}
 				else {
 					int      shift_n     = 64 - shift;
-					uint16_t new_value   = (uint64_t(0xffffffff0000) | R) >> (shift_n - 1);
+					uint16_t new_value   = (sign ? uint64_t(0xffffffff0000) : 0) | R;
 
+					new_value >>= shift_n - 1;
 					setPSW_c(new_value & 1);
 					new_value >>= 1;
 
@@ -881,8 +882,7 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 					int shift_n = (64 - shift) - 1;
 
 					// extend sign-bit
-					if (sign)  // convert to unsigned 64b int & extend sign
-					{
+					if (sign) {  // convert to unsigned 64b int & extend sign
 						R0R1 = (uint64_t(R0R1) | 0xffffffff00000000ll) >> shift_n;
 
 						setPSW_c(R0R1 & 1);
