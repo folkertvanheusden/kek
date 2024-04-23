@@ -47,6 +47,8 @@ kw11_l::~kw11_l()
 
 void kw11_l::operator()()
 {
+	set_thread_name("kek:kw-11l");
+
 	DOLOG(debug, true, "Starting KW11-L thread");
 
 	while(!stop_flag) {

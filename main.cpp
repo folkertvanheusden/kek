@@ -263,6 +263,8 @@ int run_cpu_validation(const std::string & filename)
 
 void get_metrics(cpu *const c)
 {
+	set_thread_name("kek:metrics");
+
 	uint64_t previous_instruction_count = c->get_instructions_executed_count();
 	uint64_t previous_ts                = get_us();
 	uint64_t previous_idle_time         = c->get_wait_time();
