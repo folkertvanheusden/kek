@@ -116,15 +116,19 @@ reg_to_r0:
 ; sets r0 to 1 for wrap, else 0
 next_sector:
 	clr r0
+; inc sector
 	inc r3
+; sector 40(dec)?
 	cmp r3,#050
 	blt ns_finished
 ; sector wrap
 	clr r3
+; next head
 	inc r2
 	cmp r2,#02
 	blt ns_finished
 	clr r2
+; next track
 	inc r1
 	cmp r1,#01000
 	blt ns_finished
