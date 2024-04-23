@@ -163,6 +163,18 @@ void set_thread_name(std::string name)
 #endif
 }
 
+std::string get_thread_name()
+{
+#ifdef linux
+	char buffer[16 + 1] { };
+	pthread_getname_np(pthread_self(), buffer, sizeof buffer);
+
+	return buffer;
+#else
+	return pcTaskGetName(xTaskGetCurrentTaskHandle());
+#endif
+}
+
 ssize_t WRITE(int fd, const char *whereto, size_t len)
 {
 	ssize_t cnt=0;

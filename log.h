@@ -21,11 +21,19 @@ void dolog(const log_level_t ll, const char *fmt, ...);
 #ifdef TURBO
 #define DOLOG(ll, always, fmt, ...) do { } while(0)
 #else
+#if defined(ESP32)
 #define DOLOG(ll, always, fmt, ...) do {				\
 	extern log_level_t log_level_file, log_level_screen;		\
 									\
-	[[unlikely]]							\
-	if (always || ll <= log_level_file || ll <= log_level_screen) 	\
+	if (always || ll <= log_level_file || ll <= log_level_screen)   \
 		dolog(ll, fmt, ##__VA_ARGS__);				\
 	} while(0)
+#else
+#define DOLOG(ll, always, fmt, ...) do {				\
+	extern log_level_t log_level_file, log_level_screen;		\
+									\
+	if (always || ll <= log_level_file || ll <= log_level_screen) [[unlikely]] \
+		dolog(ll, fmt, ##__VA_ARGS__);				\
+	} while(0)
+#endif
 #endif
