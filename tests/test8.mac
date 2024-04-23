@@ -1,5 +1,0 @@
-	NOP
-label:	.DW	077700
-	NOP
-
-	make_raw

@@ -1,0 +1,138 @@
+; this is part of KEK, the PDP11/70 emulator
+
+	.link 1000
+start:
+	mov #start, sp
+
+	clr r1  ; cyl
+	clr r2	; head
+	clr r3	; sector
+
+write_loop:
+	jsr pc,reg_to_r0
+	jsr pc,set_buffer
+	jsr pc,write_sector
+	jsr pc,next_sector
+	cmp #1,r0
+	beq init_check_loop
+	jmp write_loop
+
+init_check_loop:
+	clr r1
+	clr r2
+	clr r3
+
+check_loop:
+	jsr pc,reg_to_r0
+	jsr pc,read_sector
+	jsr pc,chk_buffer
+	cmp #0, r0
+	bne finished_failure
+	jsr pc,next_sector
+	cmp #1, r0
+	beq finished_success
+	jmp check_loop
+
+finished_success:
+	mov #123,R0
+	halt
+
+finished_failure:
+	clr R0
+	halt
+
+write_sector:
+	mov #buffer,0174402  ; bus address
+	mov r0,0174404  ; disk address 
+	mov #-0200,0174406  ; word count (128 = 256 bytes)
+	mov #012,0174400  ; go!
+write_wait:
+	bit #0200,0174400
+	beq write_wait
+	rts pc
+
+read_sector:
+	mov #buffer,0174402  ; bus address
+	mov r0,0174404  ; disk address 
+	mov #-0200,0174406  ; word count (128)
+	mov #014,0174400  ; go!
+read_wait:
+	bit #0200,0174400
+	beq read_wait
+	rts pc
+
+set_buffer:
+; fill allmost all bytes with a pattern unique for this sector
+	mov R0,-(SP)
+	mov R5,-(SP)
+	mov #0125,R0
+	mov #buffer,R5
+sb_loop:
+	movb r1,(r5)+
+	movb r2,(r5)+
+	movb r3,(r5)+
+	sob r0, sb_loop
+	mov (SP)+,R5
+	mov (SP)+,R0
+	rts pc
+
+; see if the pattern is (still) there
+; return 0 if ok, else !0
+chk_buffer:
+	mov R5,-(SP)
+	mov #0125,R0
+	mov #buffer,R5
+cb_loop:
+	cmpb r1,(r5)+
+	bne fail
+	cmpb r2,(r5)+
+	bne fail
+	cmpb r3,(r5)+
+	bne fail
+	sob r0, cb_loop
+fail:
+	mov (SP)+,R5
+	rts pc
+
+reg_to_r0:
+	mov r4,-(sp)
+; cylinder
+	mov r1,r4
+	bic #0177000,r4
+	ash #7,r4
+	mov r4,r0
+; head
+	mov r2,r4
+	bic #0177776,r4
+	ash #6,r4
+	add r4,r0
+; sector
+	mov r3,r4
+	bic #0177700,r4
+	add r4,r0
+	mov (sp)+,r4
+	rts pc
+
+; sets r0 to 1 for wrap, else 0
+next_sector:
+	clr r0
+	inc r3
+	cmp r3,#050
+	blt ns_finished
+; sector wrap
+	clr r3
+	inc r2
+	cmp r2,#02
+	blt ns_finished
+	clr r2
+	inc r1
+	cmp r1,#01000
+	blt ns_finished
+	clr r1
+	mov #1,r0
+ns_finished:
+	rts pc
+
+buffer:
+; 256 bytes(!) buffer
+	.blkw 0200
