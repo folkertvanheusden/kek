@@ -72,7 +72,7 @@ int console_ncurses::wait_for_char_ll(const short timeout)
 
 void console_ncurses::put_char_ll(const char c)
 {
-	if (c >= 32 || (c != 12 && c != 27 && c != 13)) {
+	if ((c >= 32 && c < 127) || c == 10) {
 		std::unique_lock<std::mutex> lck(ncurses_mutex);
 
 		wprintw(w_main->win, "%c", c);
@@ -213,22 +213,28 @@ void console_ncurses::panel_update_thread()
 			werase(w_panel->win);
 		}
 
-		// speed
-		uint64_t cur_instr_cnt = c->get_instructions_executed_count();
+		{
+			std::unique_lock<std::mutex> lck(ncurses_mutex);
 
-		mvwprintw(w_panel->win, 1, 1 + 39, "%8ld", (cur_instr_cnt - prev_instr_cnt) * refresh_rate);
+			// speed
+			uint64_t cur_instr_cnt = c->get_instructions_executed_count();
 
-		prev_instr_cnt = cur_instr_cnt;
+			mvwprintw(w_panel->win, 1, 1 + 39, "%8ld", (cur_instr_cnt - prev_instr_cnt) * refresh_rate);
 
-		// ncurses
-		wmove(w_main->win, ty, tx);
+			prev_instr_cnt = cur_instr_cnt;
 
-		mydoupdate();
+			// ncurses
+			wmove(w_main->win, ty, tx);
+
+			mydoupdate();
+		}
 	}
 }
 
 void console_ncurses::refresh_virtual_terminal()
 {
+	std::unique_lock<std::mutex> lck(ncurses_mutex);
+
 	wclear(w_main->win);
 
 	for(int row=0; row<t_height; row++)
