@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 
+#include "device.h"
 #include "disk_backend.h"
 
 
@@ -24,7 +25,7 @@
 
 class bus;
 
-class rk05
+class rk05 : public device
 {
 private:
 	bus      *const b                { nullptr };
@@ -42,11 +43,11 @@ public:
 	rk05(const std::vector<disk_backend *> & files, bus *const b, std::atomic_bool *const disk_read_acitivity, std::atomic_bool *const disk_write_acitivity);
 	virtual ~rk05();
 
-	void reset();
+	void reset() override;
 
-	uint8_t  readByte(const uint16_t addr);
-	uint16_t readWord(const uint16_t addr);
+	uint8_t  readByte(const uint16_t addr) override;
+	uint16_t readWord(const uint16_t addr) override;
 
-	void writeByte(const uint16_t addr, const uint8_t v);
-	void writeWord(const uint16_t addr, uint16_t v);
+	void writeByte(const uint16_t addr, const uint8_t  v) override;
+	void writeWord(const uint16_t addr, const uint16_t v) override;
 };

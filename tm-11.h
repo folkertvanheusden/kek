@@ -1,4 +1,4 @@
-// (C) 2018-2023 by Folkert van Heusden
+// (C) 2018-2024 by Folkert van Heusden
 // Released under MIT license
 
 #pragma once
@@ -6,6 +6,8 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string>
+
+#include "device.h"
 
 #define TM_11_MTS	0172520	// status register
 #define TM_11_MTC	0172522	// command register
@@ -16,9 +18,10 @@
 #define TM_11_BASE	TM_11_MTS
 #define TM_11_END	(TM_11_MTRD + 2)
 
+
 class memory;
 
-class tm_11
+class tm_11 : public device
 {
 private:
 	memory   *const m                  { nullptr };
@@ -31,11 +34,11 @@ public:
 	tm_11(const std::string & file, memory *const m);
 	virtual ~tm_11();
 
-	void reset();
+	void reset() override;
 
-	uint8_t readByte(const uint16_t addr);
-	uint16_t readWord(const uint16_t addr);
+	uint8_t  readByte(const uint16_t addr) override;
+	uint16_t readWord(const uint16_t addr) override;
 
-	void writeByte(const uint16_t addr, const uint8_t v);
-	void writeWord(const uint16_t addr, uint16_t v);
+	void writeByte(const uint16_t addr, const uint8_t v) override;
+	void writeWord(const uint16_t addr, uint16_t v)      override;
 };

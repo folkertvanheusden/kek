@@ -109,7 +109,7 @@ void rk05::writeByte(const uint16_t addr, const uint8_t v)
 	writeWord(addr, vtemp);
 }
 
-void rk05::writeWord(const uint16_t addr, uint16_t v)
+void rk05::writeWord(const uint16_t addr, const uint16_t v)
 {
 	const int reg = (addr - RK05_BASE) / 2;
 

@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 
+#include "device.h"
 #include "disk_backend.h"
 
 
@@ -25,7 +26,7 @@ constexpr const int rl02_bytes_per_sector  = 256;
 
 class bus;
 
-class rl02
+class rl02 : public device
 {
 private:
 	bus      *const b;
@@ -49,11 +50,11 @@ public:
 	rl02(const std::vector<disk_backend *> & files, bus *const b, std::atomic_bool *const disk_read_acitivity, std::atomic_bool *const disk_write_acitivity);
 	virtual ~rl02();
 
-	void reset();
+	void reset() override;
 
-	uint8_t  readByte(const uint16_t addr);
-	uint16_t readWord(const uint16_t addr);
+	uint8_t  readByte(const uint16_t addr) override;
+	uint16_t readWord(const uint16_t addr) override;
 
-	void writeByte(const uint16_t addr, const uint8_t  v);
-	void writeWord(const uint16_t addr, const uint16_t v);
+	void writeByte(const uint16_t addr, const uint8_t  v) override;
+	void writeWord(const uint16_t addr, const uint16_t v) override;
 };
