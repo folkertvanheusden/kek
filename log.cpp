@@ -66,7 +66,7 @@ void setloghost(const char *const host, const log_level_t ll)
 	l_timestamp    = false;
 }
 
-void setll(const log_level_t ll_file, const log_level_t ll_screen)
+void setll(const log_level_t ll_screen, const log_level_t ll_file)
 {
 	log_level_file   = ll_file;
 	log_level_screen = ll_screen;

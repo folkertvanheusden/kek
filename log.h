@@ -13,7 +13,7 @@ typedef enum { ll_emerg = 0, ll_alert, ll_critical, ll_error, warning, notice, i
 log_level_t parse_ll(const std::string & str);
 void setlogfile(const char *const lf, const log_level_t ll_file, const log_level_t ll_screen, const bool l_timestamp);
 void setloghost(const char *const host, const log_level_t ll);
-void setll(const log_level_t ll_file, const log_level_t ll_screen);
+void setll(const log_level_t ll_screen, const log_level_t ll_file);
 void setloguid(const int uid, const int gid);
 void closelog();
 void dolog(const log_level_t ll, const char *fmt, ...);
