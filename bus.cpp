@@ -56,7 +56,10 @@ json_t *bus::serialize()
 	if (tty_)
 		json_object_set(j_out, "tty", tty_->serialize());
 
-	// TODO: mmu, cpu, rl02, rk05, tm11
+	if (mmu_)
+		json_object_set(j_out, "mmu", mmu_->serialize());
+
+	// TODO: cpu, rl02, rk05, tm11
 
 	return j_out;
 }
@@ -83,6 +86,12 @@ bus *bus::deserialize(const json_t *const j, console *const cnsl)
 	if (temp) {
 		tty *tty_ = tty::deserialize(temp, b, cnsl);
 		b->add_tty(tty_);
+	}
+
+	temp = json_object_get(j, "mmu");
+	if (temp) {
+		mmu *mmu_ = mmu::deserialize(temp);
+		b->add_mmu(mmu_);
 	}
 
 	// TODO: mmu, cpu, rl02, rk05, tm11
@@ -133,6 +142,12 @@ void bus::add_ram(memory *const m)
 {
 	delete this->m;
 	this->m = m;
+}
+
+void bus::add_mmu(mmu *const mmu_)
+{
+	delete this->mmu_;
+	this->mmu_ = mmu_;
 }
 
 void bus::add_cpu(cpu *const c)

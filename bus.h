@@ -111,6 +111,7 @@ public:
 
 	void add_ram   (memory *const m      );
 	void add_cpu   (cpu    *const c      );
+	void add_mmu   (mmu    *const mmu_   );
 	void add_tm11  (tm_11  *const tm11   );
 	void add_rk05  (rk05   *const rk05_  );
 	void add_rl02  (rl02   *const rl02_  );

@@ -1,8 +1,10 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
 
 #include "device.h"
+#include "gen.h"
 
 #define ADDR_PDR_SV_START 0172200
 #define ADDR_PDR_SV_END   0172240
@@ -39,9 +41,17 @@ private:
 	uint16_t PIR { 0 };
 	uint16_t CSR { 0 };
 
+	void add_par_pdr(json_t *const target, const int run_mode, const bool is_d, const std::string & name);
+	void set_par_pdr(const json_t *const j_in, const int run_mode, const bool is_d, const std::string & name);
+
 public:
 	mmu();
 	virtual ~mmu();
+
+#if IS_POSIX
+	json_t *serialize();
+	static mmu *deserialize(const json_t *const j);
+#endif
 
 	void     reset() override;
 
