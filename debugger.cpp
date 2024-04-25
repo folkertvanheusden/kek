@@ -588,10 +588,10 @@ void dump_range_as_instructions(console *const cnsl, bus *const b, const uint16_
 
 void mmu_dump(console *const cnsl, bus *const b, const bool verbose)
 {
-	uint16_t mmr0 = b->getMMR0();
-	uint16_t mmr1 = b->getMMR1();
-	uint16_t mmr2 = b->getMMR2();
-	uint16_t mmr3 = b->getMMR3();
+	uint16_t mmr0 = b->getMMU()->getMMR0();
+	uint16_t mmr1 = b->getMMU()->getMMR1();
+	uint16_t mmr2 = b->getMMU()->getMMR2();
+	uint16_t mmr3 = b->getMMU()->getMMR3();
 
 	cnsl->put_string_lf(mmr0 & 1 ? "MMU enabled" : "MMU NOT enabled");
 
@@ -639,7 +639,7 @@ const char *trap_action_to_str(const trap_action_t ta)
 void mmu_resolve(console *const cnsl, bus *const b, const uint16_t va)
 {
 	int  run_mode = b->getCpu()->getPSW_runmode();
-	cnsl->put_string_lf(format("Run mode: %d, use data space: %d", run_mode, b->get_use_data_space(run_mode)));
+	cnsl->put_string_lf(format("Run mode: %d, use data space: %d", run_mode, b->getMMU()->get_use_data_space(run_mode)));
 
 	auto data     = b->calculate_physical_address(run_mode, va);
 
@@ -648,7 +648,7 @@ void mmu_resolve(console *const cnsl, bus *const b, const uint16_t va)
 	cnsl->put_string_lf(format("Phys. addr. instruction: %08o (psw: %d)", data.physical_instruction, data.physical_instruction_is_psw));
 	cnsl->put_string_lf(format("Phys. addr. data: %08o (psw: %d)", data.physical_data, data.physical_data_is_psw));
 
-	uint16_t mmr3 = b->getMMR3();
+	uint16_t mmr3 = b->getMMU()->getMMR3();
 
 	if (run_mode == 0) {
 		dump_par_pdr(cnsl, b, ADDR_PDR_K_START,       ADDR_PAR_K_START,       "kernel i-space", 0, data.apf);

@@ -8,9 +8,11 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include "tm-11.h"
+#include "gen.h"
+#include "mmu.h"
 #include "rk05.h"
 #include "rl02.h"
+#include "tm-11.h"
 
 #if defined(BUILD_FOR_RP2040)
 #include "rp2040.h"
@@ -70,12 +72,6 @@ class cpu;
 class memory;
 class tty;
 
-typedef enum { d_space, i_space } d_i_space_t;
-
-typedef enum { wm_word = 0, wm_byte = 1 } word_mode_t;
-
-typedef enum { rm_prev, rm_cur } rm_selection_t;
-
 typedef enum { T_PROCEED, T_ABORT_4, T_TRAP_250 } trap_action_t;
 
 typedef struct {
@@ -86,10 +82,6 @@ typedef struct {
 	uint32_t physical_data;
 	bool     physical_data_is_psw;
 } memory_addresses_t;
-
-typedef struct {
-	uint16_t par, pdr;
-} page_t;
 
 typedef struct {
 	bool is_psw;
@@ -104,13 +96,10 @@ private:
 	rl02    *rl02_ { nullptr };
 	tty     *tty_  { nullptr };
 
+	mmu     *mmu_  { nullptr };
+
 	int      n_pages { DEFAULT_N_PAGES };
 	memory  *m     { nullptr };
-
-	// 8 pages, D/I, 3 modes and 1 invalid mode
-	page_t   pages[4][2][8];
-
-	uint16_t MMR0 { 0 }, MMR1 { 0 }, MMR2 { 0 }, MMR3 { 0 }, CPUERR { 0 }, PIR { 0 }, CSR { 0 };
 
 #if defined(BUILD_FOR_RP2040)
 	SemaphoreHandle_t lf_csr_lock { xSemaphoreCreateBinary() };
@@ -123,11 +112,6 @@ private:
 
 	uint16_t console_switches { 0 };
 	uint16_t console_leds     { 0 };
-
-	uint16_t read_pdr (const uint32_t a, const int run_mode, const word_mode_t word_mode, const bool peek_only);
-	uint16_t read_par (const uint32_t a, const int run_mode, const word_mode_t word_mode, const bool peek_only);
-	void     write_pdr(const uint32_t a, const int run_mode, const uint16_t value, const word_mode_t word_mode);
-	void     write_par(const uint32_t a, const int run_mode, const uint16_t value, const word_mode_t word_mode);
 
 public:
 	bus();
@@ -153,9 +137,11 @@ public:
 	void add_rl02(rl02 *const rl02_);
 	void add_tty (tty *const tty_);
 
-	cpu *getCpu() { return this->c; }
+	cpu *getCpu() { return c; }
 
-	tty *getTty() { return this->tty_; }
+	tty *getTty() { return tty_; }
+
+	mmu *getMMU() { return mmu_; }
 
 	void init();  // invoked by 'RESET' command
 
@@ -178,29 +164,15 @@ public:
 
 	void writeUnibusByte(const uint32_t a, const uint8_t value);
 
-	uint16_t getMMR0() const { return MMR0; }
-	uint16_t getMMR1() const { return MMR1; }
-	uint16_t getMMR2() const { return MMR2; }
-	uint16_t getMMR3() const { return MMR3; }
-	uint16_t getMMR(int nr) const { const uint16_t *const mmrs[] { &MMR0, &MMR1, &MMR2, &MMR3 }; return *mmrs[nr]; }
-	bool     isMMR1Locked() const { return !!(MMR0 & 0160000); }
-	void     clearMMR1();
-	void     addToMMR1(const int8_t delta, const uint8_t reg);
-	void     setMMR0(const uint16_t value);
-	void     setMMR0Bit(const int bit);
-	void     clearMMR0Bit(const int bit);
-	void     setMMR2(uint16_t value);
-
 	void     check_odd_addressing(const uint16_t a, const int run_mode, const d_i_space_t space, const bool is_write);
 	void     trap_odd(const uint16_t a);
 
-	uint32_t get_io_base() const { return MMR0 & 1 ? (MMR3 & 16 ? 017760000 : 0760000) : 0160000; }
+	uint32_t get_io_base() const { return mmu_->getMMR0() & 1 ? (mmu_->getMMR3() & 16 ? 017760000 : 0760000) : 0160000; }
 	bool     is_psw(const uint16_t addr, const int run_mode, const d_i_space_t space) const;
 
 	std::pair<trap_action_t, int> get_trap_action(const int run_mode, const bool d, const int apf, const bool is_write);
 	uint32_t calculate_physical_address(const int run_mode, const uint16_t a, const bool trap_on_failure, const bool is_write, const bool peek_only, const d_i_space_t space);
 
-	bool get_use_data_space(const int run_mode) const;
 	memory_addresses_t calculate_physical_address(const int run_mode, const uint16_t a) const;
 	void check_address(const bool trap_on_failure, const bool is_write, const memory_addresses_t & addr, const word_mode_t word_mode, const bool is_data, const int run_mode);
 };

@@ -122,7 +122,7 @@ int run_cpu_validation(const std::string & filename)
 		{
 			json_t *a_mmr0 = json_object_get(test, "mmr0-before");
 			assert(a_mmr0);
-			b->setMMR0(json_integer_value(a_mmr0));
+			b->getMMU()->setMMR0(json_integer_value(a_mmr0));
 		}
 
 		disassemble(c, nullptr, start_pc, false);
@@ -209,7 +209,7 @@ int run_cpu_validation(const std::string & filename)
 				json_t *a_mmr = json_object_get(test, format("mmr%d-after", r).c_str());
 				assert(a_mmr);
 				uint16_t should_be_mmr = json_integer_value(a_mmr);
-				uint16_t is_mmr = b->getMMR(r);
+				uint16_t is_mmr = b->getMMU()->getMMR(r);
 				if (should_be_mmr != is_mmr) {
 					int is_d1 = is_mmr >> 11;
 					if (is_d1 & 16)
