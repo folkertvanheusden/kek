@@ -722,6 +722,7 @@ void show_queued_interrupts(console *const cnsl, cpu *const c)
 	}
 }
 
+#if IS_POSIX
 void serialize_state(console *const cnsl, const bus *const b, const std::string & filename)
 {
 	json_t *j = b->serialize();
@@ -740,6 +741,7 @@ void serialize_state(console *const cnsl, const bus *const b, const std::string 
 
 	cnsl->put_string_lf(format("Serialize to %s: %s", filename.c_str(), ok ? "OK" : "failed"));
 }
+#endif
 
 void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const stop_event, const bool tracing_in)
 {
@@ -1088,10 +1090,12 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 				continue;
 			}
+#if IS_POSIX
 			else if (parts[0] == "ser" && parts.size() == 2) {
 				serialize_state(cnsl, b, parts.at(1));
 				continue;
 			}
+#endif
 			else if (parts[0] == "setsl" && parts.size() == 3) {
 				setloghost(parts.at(1).c_str(), parse_ll(parts[2]));
 
