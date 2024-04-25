@@ -731,7 +731,7 @@ void serialize_state(console *const cnsl, const bus *const b, const std::string 
 
 	FILE *fh = fopen(filename.c_str(), "w");
 	if (fh) {
-		if (json_dumpf(j, fh, 0) == 0)
+		if (json_dumpf(j, fh, JSON_INDENT(4)) == 0)
 			ok = true;
 
 		fclose(fh);
