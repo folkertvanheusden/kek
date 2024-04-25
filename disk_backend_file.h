@@ -22,9 +22,11 @@ public:
 	static disk_backend_file *deserialize(const json_t *const j);
 #endif
 
-	bool begin() override;
+	std::string get_identifier() const override { return filename; }
 
-	bool read(const off_t offset, const size_t n, uint8_t *const target) override;
+	bool begin(const bool snapshots) override;
 
-	bool write(const off_t offset, const size_t n, const uint8_t *const from) override;
+	bool read(const off_t offset, const size_t n, uint8_t *const target, const size_t sector_size) override;
+
+	bool write(const off_t offset, const size_t n, const uint8_t *const from, const size_t sector_size) override;
 };

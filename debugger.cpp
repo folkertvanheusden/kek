@@ -125,7 +125,7 @@ std::optional<std::tuple<std::vector<disk_backend *>, std::vector<disk_backend *
 
 	disk_backend *d = new disk_backend_nbd(nbd_host.c_str(), nbd_port);
 
-	if (d->begin() == false) {
+	if (d->begin(false) == false) {
 		c->put_string_lf("Cannot initialize NBD client from configuration file");
 		delete d;
 		return { };
@@ -273,7 +273,7 @@ std::optional<std::tuple<std::vector<disk_backend *>, std::vector<disk_backend *
 
 	disk_backend *d = new disk_backend_nbd(hostname, atoi(port_str.c_str()));
 
-	if (d->begin() == false) {
+	if (d->begin(false) == false) {
 		c->put_string_lf("Cannot initialize NBD client");
 		delete d;
 		return { };
@@ -397,7 +397,7 @@ std::optional<std::tuple<std::vector<disk_backend *>, std::vector<disk_backend *
 			disk_backend *temp = new disk_backend_esp32(selected_file);
 #endif
 
-			if (!temp->begin()) {
+			if (!temp->begin(false)) {
 				c->put_string("Cannot use: ");
 				c->put_string_lf(selected_file.c_str());
 

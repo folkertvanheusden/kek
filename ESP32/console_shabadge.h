@@ -22,7 +22,7 @@ private:
 	void put_char_ll(const char c) override;
 
 public:
-	console_shabadge(std::atomic_uint32_t *const stop_event, bus *const b, std::vector<Stream *> & io_ports);
+	console_shabadge(std::atomic_uint32_t *const stop_event, std::vector<Stream *> & io_ports);
 	virtual ~console_shabadge();
 
 	void panel_update_thread() override;
