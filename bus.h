@@ -45,6 +45,7 @@
 #define ADDR_CCR 0177746
 #define ADDR_SYSTEM_ID 0177764
 
+class console;
 class cpu;
 class kw11_l;
 class memory;
@@ -91,7 +92,7 @@ public:
 
 #if IS_POSIX
 	json_t *serialize();
-	static bus *deserialize(const json_t *const j);
+	static bus *deserialize(const json_t *const j, console *const cnsl);
 #endif
 
 	void reset();
@@ -108,12 +109,13 @@ public:
 
 	void mmudebug(const uint16_t a);
 
-	void add_ram (memory *const m    );
-	void add_cpu (cpu    *const c    );
-	void add_tm11(tm_11  *const tm11 );
-	void add_rk05(rk05   *const rk05_);
-	void add_rl02(rl02   *const rl02_);
-	void add_tty (tty    *const tty_ );
+	void add_ram   (memory *const m      );
+	void add_cpu   (cpu    *const c      );
+	void add_tm11  (tm_11  *const tm11   );
+	void add_rk05  (rk05   *const rk05_  );
+	void add_rl02  (rl02   *const rl02_  );
+	void add_tty   (tty    *const tty_   );
+	void add_KW11_L(kw11_l *const kw11_l_);
 
 	memory *getRAM()    { return m;       }
 	cpu    *getCpu()    { return c;       }

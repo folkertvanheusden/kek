@@ -47,17 +47,45 @@ json_t *bus::serialize()
 {
 	json_t *j_out = json_object();
 
-	json_object_set(j_out, "memory", m->serialize());
+	if (m)
+		json_object_set(j_out, "memory", m->serialize());
+
+	if (kw11_l_)
+		json_object_set(j_out, "kw11-l", kw11_l_->serialize());
+
+	if (tty_)
+		json_object_set(j_out, "tty", tty_->serialize());
+
+	// TODO: mmu, cpu, rl02, rk05, tm11
 
 	return j_out;
 }
 
-bus *bus::deserialize(const json_t *const j)
+bus *bus::deserialize(const json_t *const j, console *const cnsl)
 {
 	bus *b = new bus();
 
-	memory *m = memory::deserialize(json_object_get(j, "memory"));
-	b->add_ram(m);
+	json_t *temp = nullptr;
+
+	temp = json_object_get(j, "memory");
+	if (temp) {
+		memory *m = memory::deserialize(temp);
+		b->add_ram(m);
+	}
+
+	temp = json_object_get(j, "kw11-l");
+	if (temp) {
+		kw11_l *kw11_l_ = kw11_l::deserialize(temp, b, cnsl);
+		b->add_KW11_L(kw11_l_);
+	}
+
+	temp = json_object_get(j, "tty");
+	if (temp) {
+		tty *tty_ = tty::deserialize(temp, b, cnsl);
+		b->add_tty(tty_);
+	}
+
+	// TODO: mmu, cpu, rl02, rk05, tm11
 
 	return b;
 }
@@ -91,6 +119,14 @@ void bus::reset()
 		rl02_->reset();
 	if (tty_)
 		tty_->reset();
+	if (kw11_l_)
+		kw11_l_->reset();
+}
+
+void bus::add_KW11_L(kw11_l *const kw11_l_)
+{
+	delete this->kw11_l_;
+	this->kw11_l_ = kw11_l_;
 }
 
 void bus::add_ram(memory *const m)

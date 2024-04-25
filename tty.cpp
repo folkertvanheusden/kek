@@ -1,4 +1,4 @@
-// (C) 2018-2023 by Folkert van Heusden
+// (C) 2018-2024 by Folkert van Heusden
 // Released under MIT license
 
 #include <errno.h>
@@ -193,3 +193,38 @@ void tty::writeWord(const uint16_t addr, uint16_t v)
 	DOLOG(debug, false, "set register %o to %o", addr, v);
 	registers[(addr - PDP11TTY_BASE) / 2] = v;
 }
+
+#if IS_POSIX
+json_t *tty::serialize()
+{
+	json_t *j = json_object();
+
+        json_t *ja_reg = json_array();
+        for(size_t i=0; i<4; i++)
+                json_array_append(ja_reg, json_integer(registers[i]));
+        json_object_set(j, "registers", ja_reg);
+
+        json_t *ja_buf = json_array();
+	for(auto & c: chars)
+                json_array_append(ja_buf, json_integer(c));
+        json_object_set(j, "input-buffer", ja_buf);
+
+	return j;
+}
+
+tty *tty::deserialize(const json_t *const j, bus *const b, console *const cnsl)
+{
+	tty *out  = new tty(cnsl, b);
+
+	json_t *ja_reg = json_object_get(j, "registers");
+	for(size_t i=0; i<4; i++)
+		out->registers[i] = json_integer_value(json_array_get(ja_reg, i));
+
+	json_t *ja_buf   = json_object_get(j, "input-buffer");
+	size_t  buf_size = json_array_size(ja_buf);
+	for(size_t i=0; i<buf_size; i++)
+		out->chars.push_back(json_integer_value(json_array_get(ja_buf, i)));
+
+	return out;
+}
+#endif

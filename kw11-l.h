@@ -6,6 +6,7 @@
 
 #include "bus.h"
 #include "console.h"
+#include "gen.h"
 
 
 class kw11_l
@@ -30,6 +31,13 @@ private:
 public:
 	kw11_l(bus *const b);
 	virtual ~kw11_l();
+
+	void     reset();
+
+#if IS_POSIX
+	json_t *serialize();
+	static kw11_l *deserialize(const json_t *const j, bus *const b, console *const cnsl);
+#endif
 
 	void     begin(console *const cnsl);
 	void     operator()();
