@@ -2,13 +2,30 @@
 
 #include <cstdint>
 
+#include "device.h"
+
+#define ADDR_PDR_SV_START 0172200
+#define ADDR_PDR_SV_END   0172240
+#define ADDR_PAR_SV_START 0172240
+#define ADDR_PAR_SV_END   0172300
+
+#define ADDR_PDR_K_START 0172300
+#define ADDR_PDR_K_END   0172340
+#define ADDR_PAR_K_START 0172340
+#define ADDR_PAR_K_END   0172400
+
+#define ADDR_PDR_U_START 0177600
+#define ADDR_PDR_U_END   0177640
+#define ADDR_PAR_U_START 0177640
+#define ADDR_PAR_U_END   0177700
+
 
 typedef struct {
 	uint16_t par;
 	uint16_t pdr;
 } page_t;
 
-class mmu
+class mmu : public device
 {
 private:
 	// 8 pages, D/I, 3 modes and 1 invalid mode
@@ -26,7 +43,7 @@ public:
 	mmu();
 	virtual ~mmu();
 
-	void     reset();
+	void     reset() override;
 
 	bool     is_enabled() const { return MMR0 & 1; }
 	bool     is_locked()  const { return !!(MMR0 & 0160000); }
@@ -63,9 +80,15 @@ public:
 	uint16_t getPIR() const { return PIR; };
 	void     setPIR(const uint16_t v) { PIR = v; }
 
-	uint16_t read_par(const uint32_t a, const int run_mode, const word_mode_t word_mode, const bool peek_only);
-	uint16_t read_pdr(const uint32_t a, const int run_mode, const word_mode_t word_mode, const bool peek_only);
+	uint16_t read_par(const uint32_t a, const int run_mode);
+	uint16_t read_pdr(const uint32_t a, const int run_mode);
 
 	void     write_pdr(const uint32_t a, const int run_mode, const uint16_t value, const word_mode_t word_mode);
 	void     write_par(const uint32_t a, const int run_mode, const uint16_t value, const word_mode_t word_mode);
+
+	uint8_t  readByte(const uint16_t addr) override;
+	uint16_t readWord(const uint16_t addr) override;
+
+	void     writeByte(const uint16_t addr, const uint8_t v) override;
+	void     writeWord(const uint16_t addr, uint16_t v)      override;
 };

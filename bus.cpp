@@ -244,18 +244,17 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 		}
 
 		/// MMU ///
-		if (a >= ADDR_PDR_SV_START && a < ADDR_PDR_SV_END)
-			return mmu_->read_pdr(a, 1, word_mode, peek_only);
-		else if (a >= ADDR_PAR_SV_START && a < ADDR_PAR_SV_END)
-			return mmu_->read_par(a, 1, word_mode, peek_only);
-		else if (a >= ADDR_PDR_K_START && a < ADDR_PDR_K_END)
-			return mmu_->read_pdr(a, 0, word_mode, peek_only);
-		else if (a >= ADDR_PAR_K_START && a < ADDR_PAR_K_END)
-			return mmu_->read_par(a, 0, word_mode, peek_only);
-		else if (a >= ADDR_PDR_U_START && a < ADDR_PDR_U_END)
-			return mmu_->read_pdr(a, 3, word_mode, peek_only);
-		else if (a >= ADDR_PAR_U_START && a < ADDR_PAR_U_END)
-			return mmu_->read_par(a, 3, word_mode, peek_only);
+		if ((a >= ADDR_PDR_SV_START && a < ADDR_PDR_SV_END) ||
+				(a >= ADDR_PAR_SV_START && a < ADDR_PAR_SV_END) ||
+				(a >= ADDR_PDR_K_START && a < ADDR_PDR_K_END) ||
+				(a >= ADDR_PAR_K_START && a < ADDR_PAR_K_END) ||
+				(a >= ADDR_PDR_U_START && a < ADDR_PDR_U_END) ||
+				(a >= ADDR_PAR_U_START && a < ADDR_PAR_U_END)) {
+			if (word_mode == wm_word)
+				return mmu_->readWord(a);
+
+			return mmu_->readByte(a);
+		}
 		///////////
 
 		if (a >= 0177740 && a <= 0177753) { // cache control register and others
@@ -894,35 +893,19 @@ write_rc_t bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint1
 
 		/// MMU ///
 		// supervisor
-		if (a >= ADDR_PDR_SV_START && a < ADDR_PDR_SV_END) {
-			mmu_->write_pdr(a, 1, value, word_mode);
-			return { false };
-		}
-		if (a >= ADDR_PAR_SV_START && a < ADDR_PAR_SV_END) {
-			mmu_->write_par(a, 1, value, word_mode);
-			return { false };
-		}
+		if ((a >= ADDR_PDR_SV_START && a < ADDR_PDR_SV_END) ||
+				(a >= ADDR_PAR_SV_START && a < ADDR_PAR_SV_END) ||
+				(a >= ADDR_PDR_K_START && a < ADDR_PDR_K_END) ||
+				(a >= ADDR_PAR_K_START && a < ADDR_PAR_K_END) ||
+				(a >= ADDR_PDR_U_START && a < ADDR_PDR_U_END) ||
+				(a >= ADDR_PAR_U_START && a < ADDR_PAR_U_END)) {
+			if (word_mode == wm_word)
+				mmu_->writeWord(a, value);
+			else
+				mmu_->writeByte(a, value);
 
-		// kernel
-		if (a >= ADDR_PDR_K_START && a < ADDR_PDR_K_END) {
-			mmu_->write_pdr(a, 0, value, word_mode);
 			return { false };
 		}
-		if (a >= ADDR_PAR_K_START && a < ADDR_PAR_K_END) {
-			mmu_->write_par(a, 0, value, word_mode);
-			return { false };
-		}
-
-		// user
-		if (a >= ADDR_PDR_U_START && a < ADDR_PDR_U_END) {
-			mmu_->write_pdr(a, 3, value, word_mode);
-			return { false };
-		}
-		if (a >= ADDR_PAR_U_START && a < ADDR_PAR_U_END) {
-			mmu_->write_par(a, 3, value, word_mode);
-			return { false };
-		}
-		////
 
 		if (a >= 0177740 && a <= 0177753) { // cache control register and others
 			// TODO
