@@ -298,6 +298,7 @@ void get_metrics(cpu *const c)
 void help()
 {
 	printf("-h       this help\n");
+	printf("-D x     deserialize state from file\n");
 	printf("-T t.bin load file as a binary tape file (like simh \"load\" command), also for .BIC files\n");
 	printf("-B       run tape file as a unit test (for .BIC files)\n");
 	printf("-R d.rk  load file as a RK05 disk device\n");
@@ -372,13 +373,19 @@ int main(int argc, char *argv[])
 
 	bool         metrics = false;
 
+	std::string  deserialize;
+
 	int  opt          = -1;
-	while((opt = getopt(argc, argv, "hMT:Br:R:p:ndtL:bl:s:Q:N:J:XS:")) != -1)
+	while((opt = getopt(argc, argv, "hD:MT:Br:R:p:ndtL:bl:s:Q:N:J:XS:")) != -1)
 	{
 		switch(opt) {
 			case 'h':
 				help();
 				return 1;
+
+			case 'D':
+				deserialize = optarg;
+				break;
 
 			case 'M':
 				metrics = true;
@@ -500,17 +507,65 @@ int main(int argc, char *argv[])
 	if (validate_json.empty() == false)
 		return run_cpu_validation(validate_json);
 
-	bus *b = new bus();
+	bus *b = nullptr;
 
-	if (set_ram_size.has_value())
-		b->set_memory_size(set_ram_size.value());
-	else
-		b->set_memory_size(DEFAULT_N_PAGES * 8192l);
+	if (deserialize.empty()) {
+		b = new bus();
 
-	b->set_console_switches(console_switches);
+		if (set_ram_size.has_value())
+			b->set_memory_size(set_ram_size.value());
+		else
+			b->set_memory_size(DEFAULT_N_PAGES * 8192l);
 
-	cpu *c = new cpu(b, &event);
-	b->add_cpu(c);
+		b->set_console_switches(console_switches);
+
+		cpu *c = new cpu(b, &event);
+		b->add_cpu(c);
+
+		if (rk05_files.empty() == false) {
+			if (enable_bootloader == false)
+				DOLOG(warning, true, "Note: loading RK05 with no (RK05-) bootloader selected");
+			else
+				bootloader = BL_RK05;
+
+			b->add_rk05(new rk05(rk05_files, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
+		}
+
+		if (rl02_files.empty() == false) {
+			if (enable_bootloader == false)
+				DOLOG(warning, true, "Note: loading RL02 with no (RL02-) bootloader selected");
+			else
+				bootloader = BL_RL02;
+
+			b->add_rl02(new rl02(rl02_files, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
+		}
+
+		if (enable_bootloader)
+			setBootLoader(b, bootloader);
+
+		tty *tty_ = new tty(cnsl, b);
+
+		b->add_tty(tty_);
+	}
+	else {
+		FILE *fh = fopen(deserialize.c_str(), "r");
+		if (!fh)
+			error_exit(true, "Failed to open %s", deserialize.c_str());
+
+		json_error_t je { };
+		json_t *j = json_loadf(fh, 0, &je);
+
+		fclose(fh);
+
+		if (!j)
+			error_exit(true, "State file %s is corrupt: %s", deserialize.c_str(), je.text);
+
+		b = bus::deserialize(j, cnsl, &event);
+
+		json_decref(j);
+	}
+
+	running = cnsl->get_running_flag();
 
 	std::atomic_bool interrupt_emulation { false };
 
@@ -522,11 +577,11 @@ int main(int argc, char *argv[])
 		if (bic_start.has_value() == false)
 			return 1;  // fail
 
-		c->setRegister(7, bic_start.value());
+		b->getCpu()->setRegister(7, bic_start.value());
 	}
 
 	if (sa_set)
-		c->setRegister(7, start_addr);
+		b->getCpu()->setRegister(7, start_addr);
 
 #if !defined(_WIN32)
 	if (withUI)
@@ -541,34 +596,7 @@ int main(int argc, char *argv[])
 		cnsl = new console_posix(&event, b);
 	}
 
-	if (rk05_files.empty() == false) {
-		if (enable_bootloader == false)
-			DOLOG(warning, true, "Note: loading RK05 with no (RK05-) bootloader selected");
-		else
-			bootloader = BL_RK05;
-
-		b->add_rk05(new rk05(rk05_files, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
-	}
-
-	if (rl02_files.empty() == false) {
-		if (enable_bootloader == false)
-			DOLOG(warning, true, "Note: loading RL02 with no (RL02-) bootloader selected");
-		else
-			bootloader = BL_RL02;
-
-		b->add_rl02(new rl02(rl02_files, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
-	}
-
-	if (enable_bootloader)
-		setBootLoader(b, bootloader);
-
-	running = cnsl->get_running_flag();
-
-	tty *tty_ = new tty(cnsl, b);
-
-	b->add_tty(tty_);
-
-	DOLOG(info, true, "Start running at %06o", c->getRegister(7));
+	DOLOG(info, true, "Start running at %06o", b->getCpu()->getRegister(7));
 
 #if !defined(_WIN32)
 	struct sigaction sa { };
@@ -588,7 +616,7 @@ int main(int argc, char *argv[])
 
 	std::thread *metrics_thread = nullptr;
 	if (metrics)
-		metrics_thread = new std::thread(get_metrics, c);
+		metrics_thread = new std::thread(get_metrics, b->getCpu());
 
 	cnsl->start_thread();
 
@@ -599,13 +627,13 @@ int main(int argc, char *argv[])
 	else if (run_debugger || (bootloader == BL_NONE && test.empty() && tape.empty()))
 		debugger(cnsl, b, &event, tracing);
 	else {
-		c->emulation_start();  // for statistics
+		b->getCpu()->emulation_start();  // for statistics
 
 		for(;;) {
 			*running = true;
 
 			while(event == EVENT_NONE)
-				c->step();
+				b->getCpu()->step();
 
 			*running = false;
 
@@ -615,7 +643,7 @@ int main(int argc, char *argv[])
 				break;
 		}
 
-		auto stats = c->get_mips_rel_speed({ }, { });
+		auto stats = b->getCpu()->get_mips_rel_speed({ }, { });
 		cnsl->put_string_lf(format("MIPS: %.2f, relative speed: %.2f%%, instructions executed: %" PRIu64 " in %.2f seconds", std::get<0>(stats), std::get<1>(stats), std::get<2>(stats), std::get<3>(stats) / 1000000.));
 	}
 
