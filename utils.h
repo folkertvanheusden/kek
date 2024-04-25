@@ -18,6 +18,7 @@ unsigned long get_ms();
 uint64_t get_us();
 void myusleep(uint64_t us);
 
+std::string get_thread_name();
 void set_thread_name(std::string name);
 
 ssize_t WRITE(int fd, const char *whereto, size_t len);

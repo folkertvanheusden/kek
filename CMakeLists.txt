@@ -37,6 +37,7 @@ add_executable(
   log.cpp
   main.cpp
   memory.cpp
+  mmu.cpp
   rk05.cpp
   rl02.cpp
   terminal.cpp

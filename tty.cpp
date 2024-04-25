@@ -130,6 +130,8 @@ uint16_t tty::readWord(const uint16_t addr)
 
 void tty::operator()()
 {
+	set_thread_name("kek:tty");
+
 	while(!stop_flag) {
 		if (c->poll_char()) {
 #if defined(BUILD_FOR_RP2040)

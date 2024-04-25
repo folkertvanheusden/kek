@@ -1,8 +1,0 @@
-label:	MOV	#2000,SP
-	NOP
-	INC	SP
-	NOP
-	DEC	SP
-	NOP
-
-	make_raw

@@ -499,27 +499,13 @@ int disassemble(cpu *const c, console *const cnsl, const uint16_t pc, const bool
 				work_values.c_str()
 				);
 	else
-		result = format("R0: %s, R1: %s, R2: %s, R3: %s, R4: %s, R5: %s, SP: %s, PC: %06o, PSW: %s (%s), instr: %s: %s - MMR0/1/2/3: %s/%s/%s/%s",
+		result = format("R0: %s, R1: %s, R2: %s, R3: %s, R4: %s, R5: %s, SP: %s, PC: %06o, PSW: %s (%s), instr: %s: %s",
 				registers[0].c_str(), registers[1].c_str(), registers[2].c_str(), registers[3].c_str(), registers[4].c_str(), registers[5].c_str(),
 				registers[6].c_str(), pc, 
 				psw.c_str(), data["psw-value"][0].c_str(),
 				instruction_values.c_str(),
-				instruction.c_str(),
-				MMR0.c_str(), MMR1.c_str(), MMR2.c_str(), MMR3.c_str()
+				instruction.c_str()
 				);
-#if defined(COMPARE_OUTPUT)
-	{
-		std::string temp = format("R0: %s, R1: %s, R2: %s, R3: %s, R4: %s, R5: %s, SP: %s, PC: %06o, PSW: %s, instr: %s",
-				registers[0].c_str(), registers[1].c_str(), registers[2].c_str(), registers[3].c_str(), registers[4].c_str(), registers[5].c_str(), registers[6].c_str(), pc, 
-				psw.c_str(),
-				data["instruction-values"][0].c_str()
-				);
-
-		FILE *fh = fopen("compare.dat", "a+");
-		fprintf(fh, "%s\n", temp.c_str());
-		fclose(fh);
-	}
-#endif
 
 	if (cnsl)
 		cnsl->debug(result);
@@ -530,7 +516,7 @@ int disassemble(cpu *const c, console *const cnsl, const uint16_t pc, const bool
 	for(auto sp_val : data["sp"])
 		sp += (sp.empty() ? "" : ",") + sp_val;
 
-	DOLOG(debug, false, "SP: %s", sp.c_str());
+	DOLOG(debug, false, "SP: %s, MMR0/1/2/3: %s/%s/%s/%s", sp.c_str(), MMR0.c_str(), MMR1.c_str(), MMR2.c_str(), MMR3.c_str());
 
 #if 0
 	if (c->getPSW_runmode() == 3) {
@@ -602,10 +588,10 @@ void dump_range_as_instructions(console *const cnsl, bus *const b, const uint16_
 
 void mmu_dump(console *const cnsl, bus *const b, const bool verbose)
 {
-	uint16_t mmr0 = b->getMMR0();
-	uint16_t mmr1 = b->getMMR1();
-	uint16_t mmr2 = b->getMMR2();
-	uint16_t mmr3 = b->getMMR3();
+	uint16_t mmr0 = b->getMMU()->getMMR0();
+	uint16_t mmr1 = b->getMMU()->getMMR1();
+	uint16_t mmr2 = b->getMMU()->getMMR2();
+	uint16_t mmr3 = b->getMMU()->getMMR3();
 
 	cnsl->put_string_lf(mmr0 & 1 ? "MMU enabled" : "MMU NOT enabled");
 
@@ -653,7 +639,7 @@ const char *trap_action_to_str(const trap_action_t ta)
 void mmu_resolve(console *const cnsl, bus *const b, const uint16_t va)
 {
 	int  run_mode = b->getCpu()->getPSW_runmode();
-	cnsl->put_string_lf(format("Run mode: %d, use data space: %d", run_mode, b->get_use_data_space(run_mode)));
+	cnsl->put_string_lf(format("Run mode: %d, use data space: %d", run_mode, b->getMMU()->get_use_data_space(run_mode)));
 
 	auto data     = b->calculate_physical_address(run_mode, va);
 
@@ -662,7 +648,7 @@ void mmu_resolve(console *const cnsl, bus *const b, const uint16_t va)
 	cnsl->put_string_lf(format("Phys. addr. instruction: %08o (psw: %d)", data.physical_instruction, data.physical_instruction_is_psw));
 	cnsl->put_string_lf(format("Phys. addr. data: %08o (psw: %d)", data.physical_data, data.physical_data_is_psw));
 
-	uint16_t mmr3 = b->getMMR3();
+	uint16_t mmr3 = b->getMMU()->getMMR3();
 
 	if (run_mode == 0) {
 		dump_par_pdr(cnsl, b, ADDR_PDR_K_START,       ADDR_PAR_K_START,       "kernel i-space", 0, data.apf);

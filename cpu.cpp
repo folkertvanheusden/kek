@@ -460,10 +460,10 @@ void cpu::queue_interrupt(const uint8_t level, const uint8_t vector)
 
 void cpu::addToMMR1(const gam_rc_t & g)
 {
-	if (!b->isMMR1Locked() && g.mmr1_update.has_value()) {
+	if (!b->getMMU()->isMMR1Locked() && g.mmr1_update.has_value()) {
 		assert(g.mmr1_update.value().delta);
 
-		b->addToMMR1(g.mmr1_update.value().delta, g.mmr1_update.value().reg);
+		b->getMMU()->addToMMR1(g.mmr1_update.value().delta, g.mmr1_update.value().reg);
 	}
 }
 
@@ -472,7 +472,7 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t wo
 {
 	gam_rc_t g { word_mode, mode_selection, i_space, mode, { }, { }, { }, { } };
 
-	d_i_space_t isR7_space = reg == 7 ? i_space : (b->get_use_data_space(getPSW_runmode()) ? d_space : i_space);
+	d_i_space_t isR7_space = reg == 7 ? i_space : (b->getMMU()->get_use_data_space(getPSW_runmode()) ? d_space : i_space);
 	//                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ always d_space here? TODO
 
 	g.space     = isR7_space;
@@ -1737,8 +1737,8 @@ bool cpu::misc_operations(const uint16_t instr)
 
 		// PUSH link
 		pushStack(getRegister(link_reg));
-		if (!b->isMMR1Locked()) {
-			b->addToMMR1(-2, 6);
+		if (!b->getMMU()->isMMR1Locked()) {
+			b->getMMU()->addToMMR1(-2, 6);
 
 			addToMMR1(a);
 		}
@@ -1806,7 +1806,7 @@ void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 				setRegister(6, 04);
 			}
 			else {
-				b->clearMMR1();
+				b->getMMU()->clearMMR1();
 
 				before_psw = getPSW();
 
@@ -2343,10 +2343,10 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 		work_values_str.push_back(format("%06o", v));
 	out.insert({ "work-values", work_values_str });
 
-	out.insert({ "MMR0", { format("%06o", b->getMMR0()) } });
-	out.insert({ "MMR1", { format("%06o", b->getMMR1()) } });
-	out.insert({ "MMR2", { format("%06o", b->getMMR2()) } });
-	out.insert({ "MMR3", { format("%06o", b->getMMR3()) } });
+	out.insert({ "MMR0", { format("%06o", b->getMMU()->getMMR0()) } });
+	out.insert({ "MMR1", { format("%06o", b->getMMU()->getMMR1()) } });
+	out.insert({ "MMR2", { format("%06o", b->getMMU()->getMMR2()) } });
+	out.insert({ "MMR3", { format("%06o", b->getMMU()->getMMR3()) } });
 
 	return out;
 }
@@ -2355,12 +2355,12 @@ void cpu::step()
 {
 	it_is_a_trap = false;
 
-	if (!b->isMMR1Locked())
-		b->clearMMR1();
+	if (!b->getMMU()->isMMR1Locked())
+		b->getMMU()->clearMMR1();
 
 	if (any_queued_interrupts && execute_any_pending_interrupt()) {
-		if (!b->isMMR1Locked())
-			b->clearMMR1();
+		if (!b->getMMU()->isMMR1Locked())
+			b->getMMU()->clearMMR1();
 	}
 
 	instruction_count++;
@@ -2368,8 +2368,8 @@ void cpu::step()
 	try {
 		instruction_start = getPC();
 
-		if (!b->isMMR1Locked())
-			b->setMMR2(instruction_start);
+		if (!b->getMMU()->isMMR1Locked())
+			b->getMMU()->setMMR2(instruction_start);
 
 		uint16_t instr = b->readWord(instruction_start);
 

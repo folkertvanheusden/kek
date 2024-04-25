@@ -66,7 +66,7 @@ void setloghost(const char *const host, const log_level_t ll)
 	l_timestamp    = false;
 }
 
-void setll(const log_level_t ll_file, const log_level_t ll_screen)
+void setll(const log_level_t ll_screen, const log_level_t ll_file)
 {
 	log_level_file   = ll_file;
 	log_level_screen = ll_screen;
@@ -136,9 +136,9 @@ void dolog(const log_level_t ll, const char *fmt, ...)
 
 		const char *const ll_names[] = { "emerg  ", "alert  ", "crit   ", "error  ", "warning", "notice ", "info   ", "debug  ", "none   " };
 
-		asprintf(&ts_str, "%04d-%02d-%02d %02d:%02d:%02d.%06d] %s ",
+		asprintf(&ts_str, "%04d-%02d-%02d %02d:%02d:%02d.%06d %s|%s] ",
 				tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, int(now % 1000000),
-				ll_names[ll]);
+				ll_names[ll], get_thread_name().c_str());
 
 		if (ll <= log_level_file && is_file == false)
 			send_syslog(ll, str);

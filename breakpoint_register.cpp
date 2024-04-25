@@ -48,16 +48,16 @@ std::optional<std::string> breakpoint_register::is_triggered() const
 
 		switch(reg) {
 			case hr_mmr0:
-				v = b->getMMR0();
+				v = b->getMMU()->getMMR0();
 				break;
 			case hr_mmr1:
-				v = b->getMMR1();
+				v = b->getMMU()->getMMR1();
 				break;
 			case hr_mmr2:
-				v = b->getMMR2();
+				v = b->getMMU()->getMMR2();
 				break;
 			case hr_mmr3:
-				v = b->getMMR3();
+				v = b->getMMU()->getMMR3();
 				break;
 			case hr_psw:
 				v = c->getPSW();

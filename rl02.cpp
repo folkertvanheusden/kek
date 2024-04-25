@@ -213,6 +213,15 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 			while(count > 0) {
 				uint32_t cur = std::min(uint32_t(sizeof xfer_buffer), count);
 
+				for(uint32_t i=0; i<cur;) {
+					// BA and MPR are increased by 2
+					xfer_buffer[i++] = b->readUnibusByte(memory_address++);
+					xfer_buffer[i++] = b->readUnibusByte(memory_address++);
+
+					// update_bus_address(memory_address);
+					mpr[0]++;
+				}
+
 				if (!fhs.at(device)->write(temp_disk_offset, cur, xfer_buffer)) {
 					DOLOG(ll_error, true, "RL02: write error, device %d, disk offset %u, read size %u, cylinder %d, head %d, sector %d", device, temp_disk_offset, cur, track, head, sector);
 					break;
