@@ -1,10 +1,14 @@
-// (C) 2018-2023 by Folkert van Heusden
+// (C) 2018-2024 by Folkert van Heusden
 // Released under MIT license
 
 #pragma once
-
+#include "gen.h"
 #include <assert.h>
+#if IS_POSIX
+#include <jansson.h>
+#endif
 #include <stdint.h>
+
 
 class memory
 {
@@ -17,6 +21,10 @@ public:
 	~memory();
 
 	void reset();
+#if IS_POSIX
+	json_t *serialize();
+	static memory *deserialize(const json_t *const j);
+#endif
 
 	uint16_t readByte(const uint32_t a) const { return m[a]; }
 	void writeByte(const uint32_t a, const uint16_t v) { assert(a < size); m[a] = v; }
