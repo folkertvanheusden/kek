@@ -15,3 +15,15 @@ typedef enum { rm_prev, rm_cur } rm_selection_t;
 
 #define IS_POSIX (defined(linux) || defined (__unix__) || (defined (__APPLE__) && defined (__MACH__)))
 #define IS_UP (!(IS_POSIX))  /* is microprocessor */
+
+#if IS_POSIX
+#include <jansson.h>
+#endif
+
+#if defined(ESP32) || defined(BUILD_FOR_RP2040)
+// ESP32 goes in a crash-loop when allocating 128kB
+// see also https://github.com/espressif/esp-idf/issues/1934
+#define DEFAULT_N_PAGES 12
+#else
+#define DEFAULT_N_PAGES 31
+#endif

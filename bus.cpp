@@ -23,8 +23,6 @@
 
 bus::bus()
 {
-	m = new memory(n_pages * 8192l);
-
 	mmu_ = new mmu();
 
 	kw11_l_ = new kw11_l(this);
@@ -44,6 +42,27 @@ bus::~bus()
 	delete m;
 }
 
+#if IS_POSIX
+json_t *bus::serialize()
+{
+	json_t *j_out = json_object();
+
+	json_object_set(j_out, "memory", m->serialize());
+
+	return j_out;
+}
+
+bus *bus::deserialize(const json_t *const j)
+{
+	bus *b = new bus();
+
+	memory *m = memory::deserialize(json_object_get(j, "memory"));
+	b->add_ram(m);
+
+	return b;
+}
+#endif
+
 void bus::set_memory_size(const int n_pages)
 {
 	this->n_pages = n_pages;
@@ -58,10 +77,10 @@ void bus::set_memory_size(const int n_pages)
 
 void bus::reset()
 {
-	m->reset();
-
-	mmu_->reset();
-
+	if (m)
+		m->reset();
+	if (mmu_)
+		mmu_->reset();
 	if (c)
 		c->reset();
 	if (tm11)
@@ -74,16 +93,22 @@ void bus::reset()
 		tty_->reset();
 }
 
+void bus::add_ram(memory *const m)
+{
+	delete this->m;
+	this->m = m;
+}
+
 void bus::add_cpu(cpu *const c)
 {
 	delete this->c;
-	this->c     = c;
+	this->c = c;
 }
 
 void bus::add_tm11(tm_11 *const tm11)
 {
 	delete this->tm11;
-	this->tm11  = tm11;
+	this->tm11= tm11;
 } 
 
 void bus::add_rk05(rk05 *const rk05_)

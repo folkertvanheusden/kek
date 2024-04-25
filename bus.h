@@ -18,14 +18,6 @@
 #include "rp2040.h"
 #endif
 
-#if defined(ESP32) || defined(BUILD_FOR_RP2040)
-// ESP32 goes in a crash-loop when allocating 128kB
-// see also https://github.com/espressif/esp-idf/issues/1934
-#define DEFAULT_N_PAGES 12
-#else
-#define DEFAULT_N_PAGES 31
-#endif
-
 #define ADDR_MMR0 0177572
 #define ADDR_MMR1 0177574
 #define ADDR_MMR2 0177576
@@ -97,6 +89,11 @@ public:
 	bus();
 	~bus();
 
+#if IS_POSIX
+	json_t *serialize();
+	static bus *deserialize(const json_t *const j);
+#endif
+
 	void reset();
 	void init();  // invoked by 'RESET' command
 
@@ -111,12 +108,14 @@ public:
 
 	void mmudebug(const uint16_t a);
 
-	void add_cpu (cpu   *const c    );
-	void add_tm11(tm_11 *const tm11 );
-	void add_rk05(rk05  *const rk05_);
-	void add_rl02(rl02  *const rl02_);
-	void add_tty (tty   *const tty_ );
+	void add_ram (memory *const m    );
+	void add_cpu (cpu    *const c    );
+	void add_tm11(tm_11  *const tm11 );
+	void add_rk05(rk05   *const rk05_);
+	void add_rl02(rl02   *const rl02_);
+	void add_tty (tty    *const tty_ );
 
+	memory *getRAM()    { return m;       }
 	cpu    *getCpu()    { return c;       }
 	kw11_l *getKW11_L() { return kw11_l_; }
 	tty    *getTty()    { return tty_;    }

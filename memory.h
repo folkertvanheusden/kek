@@ -2,12 +2,10 @@
 // Released under MIT license
 
 #pragma once
-#include "gen.h"
 #include <assert.h>
-#if IS_POSIX
-#include <jansson.h>
-#endif
 #include <stdint.h>
+
+#include "gen.h"
 
 
 class memory
