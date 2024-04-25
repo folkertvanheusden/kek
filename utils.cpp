@@ -1,5 +1,7 @@
-// (C) 2018-2023 by Folkert van Heusden
+// (C) 2018-2024 by Folkert van Heusden
 // Released under MIT license
+
+#include "gen.h"
 
 #if defined(ESP32) || defined(BUILD_FOR_RP2040)
 #include <Arduino.h>
@@ -165,7 +167,7 @@ void set_thread_name(std::string name)
 
 std::string get_thread_name()
 {
-#ifdef linux
+#if IS_POSIX
 	char buffer[16 + 1] { };
 	pthread_getname_np(pthread_self(), buffer, sizeof buffer);
 

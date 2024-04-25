@@ -2,7 +2,8 @@
 // Released under MIT license
 
 #include <optional>
-#ifdef linux
+#include "gen.h"
+#if IS_POSIX
 #include <dirent.h>
 #include <jansson.h>
 #include <sys/stat.h>
@@ -18,13 +19,12 @@
 #include "console.h"
 #include "cpu.h"
 #include "disk_backend.h"
-#ifdef linux
+#if IS_POSIX
 #include "disk_backend_file.h"
 #else
 #include "disk_backend_esp32.h"
 #endif
 #include "disk_backend_nbd.h"
-#include "gen.h"
 #include "loaders.h"
 #include "log.h"
 #include "tty.h"
@@ -67,7 +67,7 @@ typedef enum { BE_NETWORK, BE_SD } disk_backend_t;
 #if !defined(BUILD_FOR_RP2040)
 std::optional<std::tuple<std::vector<disk_backend *>, std::vector<disk_backend *>, std::string> > load_disk_configuration(console *const c)
 {
-#ifdef linux
+#if IS_POSIX
 	json_error_t error;
 	json_t *json = json_load_file("." NET_DISK_CFG_FILE, JSON_REJECT_DUPLICATES, &error);
 	if (!json) {
@@ -147,7 +147,7 @@ std::optional<std::tuple<std::vector<disk_backend *>, std::vector<disk_backend *
 
 bool save_disk_configuration(const std::string & nbd_host, const int nbd_port, const std::optional<std::string> & tape_file, const disk_type_t dt, console *const cnsl)
 {
-#ifdef linux
+#if IS_POSIX
 	json_t *json = json_object();
 
 	json_object_set(json, "NBD-host", json_string(nbd_host.c_str()));
@@ -297,7 +297,7 @@ std::optional<std::tuple<std::vector<disk_backend *>, std::vector<disk_backend *
 // RK05, RL02 files
 std::optional<std::tuple<std::vector<disk_backend *>, std::vector<disk_backend *>, std::string> > select_disk_files(console *const c)
 {
-#ifdef linux
+#if IS_POSIX
 	c->put_string_lf("Files in current directory: ");
 #else
 	c->debug("MISO: %d", int(MISO));
@@ -377,7 +377,7 @@ std::optional<std::tuple<std::vector<disk_backend *>, std::vector<disk_backend *
 
 		bool can_open_file = false;
 
-#ifdef linux
+#if IS_POSIX
 		struct stat st { };
 		can_open_file = stat(selected_file.c_str(), &st) == 0;
 #else
@@ -391,7 +391,7 @@ std::optional<std::tuple<std::vector<disk_backend *>, std::vector<disk_backend *
 			if (disk_type.value() == DT_TAPE)
 				return { { { }, { }, selected_file } };
 
-#ifdef linux
+#if IS_POSIX
 			disk_backend *temp = new disk_backend_file(selected_file);
 #else
 			disk_backend *temp = new disk_backend_esp32(selected_file);

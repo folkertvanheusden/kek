@@ -12,3 +12,6 @@ typedef enum { d_space, i_space } d_i_space_t;
 typedef enum { wm_word = 0, wm_byte = 1 } word_mode_t;
 
 typedef enum { rm_prev, rm_cur } rm_selection_t;
+
+#define IS_POSIX (defined(linux) || defined (__unix__) || (defined (__APPLE__) && defined (__MACH__)))
+#define IS_UP (!(IS_POSIX))  /* is microprocessor */
