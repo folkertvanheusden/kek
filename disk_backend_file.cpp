@@ -19,6 +19,26 @@ disk_backend_file::~disk_backend_file()
 	close(fd);
 }
 
+#if IS_POSIX
+json_t *disk_backend_file::serialize() const
+{
+	json_t *j = json_object();
+
+	json_object_set(j, "disk-backend-type", json_string("file"));
+
+	// TODO store checksum of backend
+	json_object_set(j, "filename", json_string(filename.c_str()));
+
+	return j;
+}
+
+disk_backend_file *disk_backend_file::deserialize(const json_t *const j)
+{
+	// TODO verify checksum of backend
+	return new disk_backend_file(json_string_value(json_object_get(j, "filename")));
+}
+#endif
+
 bool disk_backend_file::begin()
 {
 	fd = open(filename.c_str(), O_RDWR);

@@ -1,4 +1,4 @@
-// (C) 2018-2023 by Folkert van Heusden
+// (C) 2018-2024 by Folkert van Heusden
 // Released under MIT license
 
 #pragma once
@@ -6,12 +6,19 @@
 #include <stdint.h>
 #include <sys/types.h>
 
+#include "gen.h"
+
 
 class disk_backend
 {
 public:
 	disk_backend();
 	virtual ~disk_backend();
+
+#if IS_POSIX
+	virtual json_t *serialize() const = 0;
+	static disk_backend *deserialize(const json_t *const j);
+#endif
 
 	virtual bool begin() = 0;
 

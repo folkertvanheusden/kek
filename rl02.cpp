@@ -31,10 +31,10 @@ static const char * const commands[] = {
 	"read data w/o header check"
 	};
 
-rl02::rl02(const std::vector<disk_backend *> & files, bus *const b, std::atomic_bool *const disk_read_acitivity, std::atomic_bool *const disk_write_acitivity) :
+rl02::rl02(const std::vector<disk_backend *> & files, bus *const b, std::atomic_bool *const disk_read_activity, std::atomic_bool *const disk_write_activity) :
 	b(b),
-	disk_read_acitivity(disk_read_acitivity),
-	disk_write_acitivity(disk_write_acitivity)
+	disk_read_activity (disk_read_activity),
+	disk_write_activity(disk_write_activity)
 {
 	fhs = files;
 
@@ -57,6 +57,54 @@ void rl02::reset()
 	head   = 0;
 	sector = 0;
 }
+
+#if IS_POSIX
+json_t *rl02::serialize() const
+{
+	json_t *j = json_object();
+
+	json_t *j_backends = json_array();
+	for(auto & dbe: fhs)
+		json_array_append(j_backends, dbe->serialize());
+
+	json_object_set(j, "backends", j_backends);
+
+	for(int regnr=0; regnr<4; regnr++)
+		json_object_set(j, format("register-%d", regnr).c_str(), json_integer(registers[regnr]));
+
+	for(int mprnr=0; mprnr<3; mprnr++)
+		json_object_set(j, format("mpr-%d", mprnr).c_str(), json_integer(mpr[mprnr]));
+
+	json_object_set(j, "track",  json_integer(track));
+	json_object_set(j, "head",   json_integer(head));
+	json_object_set(j, "sector", json_integer(sector));
+
+	return j;
+}
+
+rl02 *rl02::deserialize(const json_t *const j, bus *const b)
+{
+	std::vector<disk_backend *> backends;
+
+	json_t *j_backends = json_object_get(j, "backends");
+	for(size_t i=0; i<json_array_size(j_backends); i++)
+		backends.push_back(disk_backend::deserialize(json_array_get(j_backends, i)));
+
+	rl02 *r = new rl02(backends, b, nullptr, nullptr);
+
+	for(int regnr=0; regnr<4; regnr++)
+		r->registers[regnr] = json_integer_value(json_object_get(j, format("register-%d", regnr).c_str()));
+
+	for(int mprnr=0; mprnr<3; mprnr++)
+		r->mpr[mprnr] = json_integer_value(json_object_get(j, format("mpr-%d", mprnr).c_str()));
+
+	r->track  = json_integer_value(json_object_get(j, "track" ));
+	r->head   = json_integer_value(json_object_get(j, "head"  ));
+	r->sector = json_integer_value(json_object_get(j, "sector"));
+
+	return r;
+}
+#endif
 
 uint8_t rl02::readByte(const uint16_t addr)
 {
@@ -152,8 +200,6 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 
 		bool          do_int  = false;
 
-		*disk_read_acitivity = true;
-
 		if (size_t(device) >= fhs.size()) {
 			DOLOG(info, false, "RL02: PDP11/70 is accessing a not-attached virtual disk %d", device);
 
@@ -194,6 +240,9 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 			do_int = true;
 		}
 		else if (command == 5) {  // write data
+			if (disk_write_activity)
+				*disk_write_activity = true;
+
 			uint32_t memory_address   = get_bus_address();
 
 			uint32_t count            = (65536l - registers[(RL02_MPR - RL02_BASE) / 2]) * 2;
@@ -247,8 +296,14 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 			}
 
 			do_int = true;
+
+			if (disk_write_activity)
+				*disk_write_activity = false;
 		}
 		else if (command == 6 || command == 7) {  // read data / read data without header check
+			if (disk_read_activity)
+				*disk_read_activity = true;
+
 			uint32_t memory_address   = get_bus_address();
 
 			uint32_t count            = (65536l - registers[(RL02_MPR - RL02_BASE) / 2]) * 2;
@@ -305,6 +360,9 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 			}
 
 			do_int = true;
+
+			if (disk_read_activity)
+				*disk_read_activity = false;
 		}
 		else {
 			DOLOG(warning, false, "RL02: command %d not implemented", command);
@@ -317,7 +375,5 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 				b->getCpu()->queue_interrupt(5, 0160);
 			}
 		}
-
-		*disk_read_acitivity = false;
 	}
 }
