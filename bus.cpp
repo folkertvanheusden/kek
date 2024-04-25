@@ -24,6 +24,8 @@ bus::bus()
 {
 	m = new memory(n_pages * 8192l);
 
+	mmu_ = new mmu();
+
 	reset();
 
 #if defined(BUILD_FOR_RP2040)
