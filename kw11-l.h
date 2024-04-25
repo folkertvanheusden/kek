@@ -11,18 +11,18 @@
 class kw11_l
 {
 private:
-	bus         *const b         { nullptr };
-	console           *cnsl      { nullptr };
+	bus         *const b          { nullptr };
+	console           *cnsl       { nullptr };
 
 #if defined(BUILD_FOR_RP2040)
 	SemaphoreHandle_t lf_csr_lock { xSemaphoreCreateBinary() };
 #else
-	std::thread *      th        { nullptr };
-	std::mutex lf_csr_lock;
+	std::thread       *th         { nullptr };
+	std::mutex         lf_csr_lock;
 #endif
-	uint16_t   lf_csr { 0 };
+	uint16_t           lf_csr     { 0       };
 
-	std::atomic_bool   stop_flag { false };
+	std::atomic_bool   stop_flag  { false   };
 
 	uint8_t  get_lf_crs();
 	void     set_lf_crs_b7();

@@ -34,8 +34,11 @@ kw11_l::~kw11_l()
 	stop_flag = true;
 
 #if !defined(ESP32) && !defined(BUILD_FOR_RP2040)
-	th->join();
-	delete th;
+	if (th) {
+		th->join();
+
+		delete th;
+	}
 #endif
 }
 
@@ -62,7 +65,6 @@ void kw11_l::operator()()
 
 	while(!stop_flag) {
 		if (*cnsl->get_running_flag()) {
-			DOLOG(debug, true, "KW11-L tick");
 			set_lf_crs_b7();
  
 			if (get_lf_crs() & 64)

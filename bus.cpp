@@ -833,8 +833,11 @@ write_rc_t bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint1
 			return { false };
 		}
 
-		if (a == ADDR_LFC) // line frequency clock and status register
+		if (a == ADDR_LFC) { // line frequency clock and status register
 			kw11_l_->writeWord(a, value);
+
+			return { false };
+		}
 
 		if (tm11 && a >= TM_11_BASE && a < TM_11_END) {
 			DOLOG(debug, false, "WRITE-I/O TM11 register %d: %06o", (a - TM_11_BASE) / 2, value);
