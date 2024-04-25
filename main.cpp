@@ -584,13 +584,13 @@ int main(int argc, char *argv[])
 	if (test.empty() == false)
 		load_p11_x11(b, test);
 
-	kw11_l *lf = new kw11_l(b, cnsl);
-
 	std::thread *metrics_thread = nullptr;
 	if (metrics)
 		metrics_thread = new std::thread(get_metrics, c);
 
 	cnsl->start_thread();
+
+	b->getKW11_L()->begin(cnsl);
 
 	if (is_bic)
 		run_bic(cnsl, b, &event, tracing, bic_start.value());
@@ -624,11 +624,11 @@ int main(int argc, char *argv[])
 		delete metrics_thread;
 	}
 
-	delete lf;
-
-	delete cnsl;
+	cnsl->stop_thread();
 
 	delete b;
+
+	delete cnsl;
 
 	return 0;
 }

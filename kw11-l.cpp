@@ -25,13 +25,8 @@ void thread_wrapper_kw11(void *p)
 }
 #endif
 
-kw11_l::kw11_l(bus *const b, console *const cnsl) : b(b), cnsl(cnsl)
+kw11_l::kw11_l(bus *const b): b(b)
 {
-#if defined(ESP32) || defined(BUILD_FOR_RP2040)
-	xTaskCreate(&thread_wrapper_kw11, "kw11-l", 2048, this, 1, nullptr);
-#else
-	th = new std::thread(std::ref(*this));
-#endif
 }
 
 kw11_l::~kw11_l()
@@ -39,9 +34,26 @@ kw11_l::~kw11_l()
 	stop_flag = true;
 
 #if !defined(ESP32) && !defined(BUILD_FOR_RP2040)
-	th->join();
+	if (th) {
+		th->join();
 
-	delete th;
+		delete th;
+	}
+#endif
+}
+
+void kw11_l::begin(console *const cnsl)
+{
+	this->cnsl = cnsl;
+
+#if defined(ESP32) || defined(BUILD_FOR_RP2040)
+	xTaskCreate(&thread_wrapper_kw11, "kw11-l", 2048, this, 1, nullptr);
+
+#if defined(BUILD_FOR_RP2040)
+	xSemaphoreGive(lf_csr_lock);  // initialize
+#endif
+#else
+	th = new std::thread(std::ref(*this));
 #endif
 }
 
@@ -53,9 +65,9 @@ void kw11_l::operator()()
 
 	while(!stop_flag) {
 		if (*cnsl->get_running_flag()) {
-			b->set_lf_crs_b7();
+			set_lf_crs_b7();
  
-			if (b->get_lf_crs() & 64)
+			if (get_lf_crs() & 64)
 				b->getCpu()->queue_interrupt(6, 0100);
 
 			// TODO: dependant on cpu cycles processed
@@ -67,4 +79,78 @@ void kw11_l::operator()()
 	}
 
 	DOLOG(debug, true, "KW11-L thread terminating");
+}
+
+uint16_t kw11_l::readWord(const uint16_t a)
+{
+	if (a != ADDR_LFC) {
+		DOLOG(debug, true, "KW11-L readWord not for us (%06o)", a);
+		return 0;
+	}
+
+#if defined(BUILD_FOR_RP2040)
+	xSemaphoreTake(lf_csr_lock, portMAX_DELAY);
+#else
+	std::unique_lock<std::mutex> lck(lf_csr_lock);
+#endif
+
+	uint16_t temp = lf_csr;
+
+#if defined(BUILD_FOR_RP2040)
+       	xSemaphoreGive(lf_csr_lock);
+#endif
+
+	return temp;
+}
+
+void kw11_l::writeWord(const uint16_t a, const uint16_t value)
+{
+	if (a != ADDR_LFC) {
+		DOLOG(debug, true, "KW11-L writeWord not for us (%06o to %06o)", value, a);
+		return;
+	}
+
+#if defined(BUILD_FOR_RP2040)
+	xSemaphoreTake(lf_csr_lock, portMAX_DELAY);
+#else
+	std::unique_lock<std::mutex> lck(lf_csr_lock);
+#endif
+
+	DOLOG(debug, false, "WRITE-I/O set line frequency clock/status register: %06o", value);
+	lf_csr = value;
+#if defined(BUILD_FOR_RP2040)
+	xSemaphoreGive(lf_csr_lock);
+#endif
+}
+
+void kw11_l::set_lf_crs_b7()
+{
+#if defined(BUILD_FOR_RP2040)
+	xSemaphoreTake(lf_csr_lock, portMAX_DELAY);
+#else
+	std::unique_lock<std::mutex> lck(lf_csr_lock);
+#endif
+
+	lf_csr |= 128;
+
+#if defined(BUILD_FOR_RP2040)
+	xSemaphoreGive(lf_csr_lock);
+#endif
+}
+
+uint8_t kw11_l::get_lf_crs()
+{
+#if defined(BUILD_FOR_RP2040)
+	xSemaphoreTake(lf_csr_lock, portMAX_DELAY);
+#else
+	std::unique_lock<std::mutex> lck(lf_csr_lock);
+#endif
+
+	uint8_t rc = lf_csr;
+
+#if defined(BUILD_FOR_RP2040)
+	xSemaphoreGive(lf_csr_lock);
+#endif
+
+	return rc;
 }
