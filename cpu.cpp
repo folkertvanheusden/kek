@@ -2423,6 +2423,18 @@ json_t *cpu::serialize()
 	if (trap_delay.has_value())
 		json_object_set(j, "trap_delay", json_integer(trap_delay.value()));
 
+	json_t *j_queued_interrupts = json_object();
+	for(auto & il: queued_interrupts) {
+		json_t *ja_qi_level = json_array();
+		for(auto & v: il.second)
+			json_array_append(ja_qi_level, json_integer(v));
+
+		json_object_set(j_queued_interrupts, format("%d", il.first).c_str(), ja_qi_level);
+	}
+	json_object_set(j, "queued_interrupts", j_queued_interrupts);
+
+	json_object_set(j, "any_queued_interrupts", json_boolean(any_queued_interrupts));
+
 	return j;
 }
 
@@ -2454,6 +2466,18 @@ cpu *cpu::deserialize(const json_t *const j, bus *const b, std::atomic_uint32_t 
 		c->trap_delay    = json_integer_value(temp);
 	else
 		c->trap_delay.reset();
+	c->any_queued_interrupts = json_boolean_value(json_object_get(j, "any_queued_interrupts"));
+
+	c->init_interrupt_queue();
+	json_t *j_queued_interrupts = json_object_get(j, "queued_interrupts");
+	for(int level=0; level<8; level++) {
+		auto it = c->queued_interrupts.find(level);
+
+		json_t *ja_qi_level = json_object_get(j_queued_interrupts, format("%d", level).c_str());
+
+		for(size_t i=0; i<json_array_size(ja_qi_level); i++)
+			it->second.insert(json_integer_value(json_array_get(ja_qi_level, i)));
+	}
 
 	return c;
 }

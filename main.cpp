@@ -570,6 +570,9 @@ int main(int argc, char *argv[])
 		b = bus::deserialize(j, cnsl, &event);
 
 		json_decref(j);
+
+		DOLOG(warning, true, "DO NOT FORGET TO DELETE AND NOT TO RE-USE THE STATE FILE (\"%s\")! (unless updated)", deserialize.c_str());
+		myusleep(251000);
 	}
 
 	if (b->getTty() == nullptr) {
