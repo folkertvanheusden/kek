@@ -41,7 +41,7 @@ private:
 	uint16_t PIR { 0 };
 	uint16_t CSR { 0 };
 
-	void add_par_pdr(json_t *const target, const int run_mode, const bool is_d, const std::string & name);
+	void add_par_pdr(json_t *const target, const int run_mode, const bool is_d, const std::string & name) const;
 	void set_par_pdr(const json_t *const j_in, const int run_mode, const bool is_d, const std::string & name);
 
 public:
@@ -49,7 +49,7 @@ public:
 	virtual ~mmu();
 
 #if IS_POSIX
-	json_t *serialize();
+	json_t *serialize() const;
 	static mmu *deserialize(const json_t *const j);
 #endif
 

@@ -43,7 +43,7 @@ bus::~bus()
 }
 
 #if IS_POSIX
-json_t *bus::serialize()
+json_t *bus::serialize() const
 {
 	json_t *j_out = json_object();
 
@@ -59,12 +59,15 @@ json_t *bus::serialize()
 	if (mmu_)
 		json_object_set(j_out, "mmu", mmu_->serialize());
 
-	// TODO: cpu, rl02, rk05, tm11
+	if (c)
+		json_object_set(j_out, "cpu", c->serialize());
+
+	// TODO: rl02, rk05, tm11
 
 	return j_out;
 }
 
-bus *bus::deserialize(const json_t *const j, console *const cnsl)
+bus *bus::deserialize(const json_t *const j, console *const cnsl, std::atomic_uint32_t *const event)
 {
 	bus *b = new bus();
 
@@ -94,7 +97,13 @@ bus *bus::deserialize(const json_t *const j, console *const cnsl)
 		b->add_mmu(mmu_);
 	}
 
-	// TODO: mmu, cpu, rl02, rk05, tm11
+	temp = json_object_get(j, "cpu");
+	if (temp) {
+		cpu *cpu_ = cpu::deserialize(temp, b, event);
+		b->add_cpu(cpu_);
+	}
+
+	// TODO: rl02, rk05, tm11
 
 	return b;
 }

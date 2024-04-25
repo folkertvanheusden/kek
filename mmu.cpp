@@ -222,7 +222,7 @@ void mmu::writeByte(const uint16_t a, const uint8_t value)
 }
 
 #if IS_POSIX
-void mmu::add_par_pdr(json_t *const target, const int run_mode, const bool is_d, const std::string & name)
+void mmu::add_par_pdr(json_t *const target, const int run_mode, const bool is_d, const std::string & name) const
 {
 	json_t *j = json_object();
 
@@ -239,7 +239,7 @@ void mmu::add_par_pdr(json_t *const target, const int run_mode, const bool is_d,
 	json_object_set(target, name.c_str(), j);
 }
 
-json_t *mmu::serialize()
+json_t *mmu::serialize() const
 {
 	json_t *j = json_object();
 

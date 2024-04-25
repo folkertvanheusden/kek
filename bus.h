@@ -91,8 +91,8 @@ public:
 	~bus();
 
 #if IS_POSIX
-	json_t *serialize();
-	static bus *deserialize(const json_t *const j, console *const cnsl);
+	json_t *serialize() const;
+	static bus *deserialize(const json_t *const j, console *const cnsl, std::atomic_uint32_t *const event);
 #endif
 
 	void reset();

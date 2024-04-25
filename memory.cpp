@@ -29,7 +29,7 @@ void memory::reset()
 }
 
 #if IS_POSIX
-json_t *memory::serialize()
+json_t *memory::serialize() const
 {
 	json_t *j = json_object();
 
@@ -50,7 +50,7 @@ memory *memory::deserialize(const json_t *const j)
 
 	json_t *ja   = json_object_get(j, "contents");
 	for(size_t i=0; i<size; i++)
-		m->writeByte(i, json_integer_value(json_array_get(ja, i)));
+		m->m[i] = json_integer_value(json_array_get(ja, i));
 
 	return m;
 }

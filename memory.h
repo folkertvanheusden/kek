@@ -20,7 +20,7 @@ public:
 
 	void reset();
 #if IS_POSIX
-	json_t *serialize();
+	json_t *serialize() const;
 	static memory *deserialize(const json_t *const j);
 #endif
 
