@@ -98,18 +98,18 @@ public:
 	~bus();
 
 	void reset();
+	void init();  // invoked by 'RESET' command
 
 	void set_console_switches(const uint16_t new_state) { console_switches = new_state; }
 	void set_console_switch(const int bit, const bool state) { console_switches &= ~(1 << bit); console_switches |= state << bit; }
 	uint16_t get_console_switches() { return console_switches; }
 	void set_debug_mode() { console_switches |= 128; }
+	uint16_t get_console_leds() { return console_leds; }
 
 	int  get_memory_size() const { return n_pages; }
 	void set_memory_size(const int n_pages);
 
 	void mmudebug(const uint16_t a);
-
-	uint16_t get_console_leds() { return console_leds; }
 
 	void add_cpu (cpu   *const c    );
 	void add_tm11(tm_11 *const tm11 );
@@ -121,8 +121,6 @@ public:
 	kw11_l *getKW11_L() { return kw11_l_; }
 	tty    *getTty()    { return tty_;    }
 	mmu    *getMMU()    { return mmu_;    }
-
-	void init();  // invoked by 'RESET' command
 
 	uint16_t read    (const uint16_t a, const word_mode_t word_mode, const rm_selection_t mode_selection, const bool peek_only=false, const d_i_space_t s = i_space);
 	uint16_t readByte(const uint16_t a) { return read(a, wm_byte, rm_cur); }
