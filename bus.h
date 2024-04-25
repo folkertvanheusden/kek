@@ -154,15 +154,14 @@ public:
 	uint16_t peekWord(const uint16_t a);
 
 	uint8_t  readUnibusByte(const uint32_t a);
+	void     writeUnibusByte(const uint32_t a, const uint8_t value);
 
 	write_rc_t write    (const uint16_t a, const word_mode_t word_mode, uint16_t value, const rm_selection_t mode_selection, const d_i_space_t s = i_space);
 	void       writeByte(const uint16_t a, const uint8_t value) { write(a, wm_byte, value, rm_cur); }
 	void       writeWord(const uint16_t a, const uint16_t value, const d_i_space_t s = i_space);
 
 	uint16_t readPhysical(const uint32_t a);
-	void writePhysical(const uint32_t a, const uint16_t value);
-
-	void writeUnibusByte(const uint32_t a, const uint8_t value);
+	void     writePhysical(const uint32_t a, const uint16_t value);
 
 	void     check_odd_addressing(const uint16_t a, const int run_mode, const d_i_space_t space, const bool is_write);
 	void     trap_odd(const uint16_t a);
