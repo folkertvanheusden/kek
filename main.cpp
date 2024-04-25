@@ -507,6 +507,17 @@ int main(int argc, char *argv[])
 	if (validate_json.empty() == false)
 		return run_cpu_validation(validate_json);
 
+	DOLOG(info, true, "This PDP-11 emulator is called \"kek\" (reason for that is forgotten) and was written by Folkert van Heusden.");
+
+	DOLOG(info, true, "Built on: " __DATE__ " " __TIME__);
+
+#if !defined(_WIN32)
+	if (withUI)
+		cnsl = new console_ncurses(&event);
+	else
+#endif
+		cnsl = new console_posix(&event);
+
 	bus *b = nullptr;
 
 	if (deserialize.empty()) {
@@ -542,10 +553,6 @@ int main(int argc, char *argv[])
 
 		if (enable_bootloader)
 			setBootLoader(b, bootloader);
-
-		tty *tty_ = new tty(cnsl, b);
-
-		b->add_tty(tty_);
 	}
 	else {
 		FILE *fh = fopen(deserialize.c_str(), "r");
@@ -565,6 +572,14 @@ int main(int argc, char *argv[])
 		json_decref(j);
 	}
 
+	if (b->getTty() == nullptr) {
+		tty *tty_ = new tty(cnsl, b);
+
+		b->add_tty(tty_);
+	}
+
+	cnsl->set_bus(b);
+
 	running = cnsl->get_running_flag();
 
 	std::atomic_bool interrupt_emulation { false };
@@ -582,19 +597,6 @@ int main(int argc, char *argv[])
 
 	if (sa_set)
 		b->getCpu()->setRegister(7, start_addr);
-
-#if !defined(_WIN32)
-	if (withUI)
-		cnsl = new console_ncurses(&event, b);
-	else
-#endif
-	{
-		DOLOG(info, true, "This PDP-11 emulator is called \"kek\" (reason for that is forgotten) and was written by Folkert van Heusden.");
-
-		DOLOG(info, true, "Built on: " __DATE__ " " __TIME__);
-
-		cnsl = new console_posix(&event, b);
-	}
 
 	DOLOG(info, true, "Start running at %06o", b->getCpu()->getRegister(7));
 

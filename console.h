@@ -31,7 +31,7 @@ private:
 protected:
 	std::atomic_uint32_t *const stop_event    { nullptr };
 
-	bus              *const b                { nullptr };
+	bus                    *b                { nullptr };
 #if !defined(BUILD_FOR_RP2040)
 	std::thread            *th               { nullptr };
 #endif
@@ -57,8 +57,10 @@ protected:
 	virtual void put_char_ll(const char c) = 0;
 
 public:
-	console(std::atomic_uint32_t *const stop_event, bus *const b, const int t_width = 80, const int t_height = 25);
+	console(std::atomic_uint32_t *const stop_event, const int t_width = 80, const int t_height = 25);
 	virtual ~console();
+
+	void         set_bus(bus *const b) { this->b = b; }
 
 	void         start_thread();
 	void         stop_thread();

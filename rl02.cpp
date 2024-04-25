@@ -33,7 +33,7 @@ static const char * const commands[] = {
 
 rl02::rl02(const std::vector<disk_backend *> & files, bus *const b, std::atomic_bool *const disk_read_activity, std::atomic_bool *const disk_write_activity) :
 	b(b),
-	disk_read_activity (disk_read_activity),
+	disk_read_activity (disk_read_activity ),
 	disk_write_activity(disk_write_activity)
 {
 	fhs = files;

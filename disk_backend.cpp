@@ -26,6 +26,7 @@ disk_backend *disk_backend::deserialize(const json_t *const j)
 		return disk_backend_nbd::deserialize(j);
 
 	// should not be reached
+	assert(false);
 
 	return nullptr;
 }
