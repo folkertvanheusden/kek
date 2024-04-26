@@ -270,11 +270,6 @@ void setup() {
 	Serial.println(F("Connect CPU to BUS"));
 	b->add_cpu(c);
 
-	Serial.println(F("Connect RK05 and RL02 to BUS"));
-	b->add_rk05(new rk05(rk05_files, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
-
-	b->add_rl02(new rl02(rl02_files, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
-
 	constexpr uint32_t hwSerialConfig = SERIAL_8N1;
 	uint32_t bitrate = load_serial_speed_configuration();
 
@@ -298,6 +293,11 @@ void setup() {
 	cnsl->set_bus(b);
 
 	running = cnsl->get_running_flag();
+
+	Serial.println(F("Connect RK05 and RL02 to BUS"));
+	b->add_rk05(new rk05(rk05_files, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
+
+	b->add_rl02(new rl02(rl02_files, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
 
 	Serial.println(F("Init TTY"));
 	tty_ = new tty(cnsl, b);
