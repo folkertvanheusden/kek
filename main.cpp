@@ -574,7 +574,7 @@ int main(int argc, char *argv[])
 	std::optional<uint16_t> bic_start;
 
 	if (tape.empty() == false) {
-		bic_start = loadTape(b, tape);
+		bic_start = load_tape(b, tape);
 
 		if (bic_start.has_value() == false)
 			return 1;  // fail

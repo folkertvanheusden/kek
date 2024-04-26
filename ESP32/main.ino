@@ -70,6 +70,9 @@ std::atomic_bool    *running         { nullptr };
 
 bool                 trace_output    { false };
 
+std::vector<disk_backend *> rk05_files;
+std::vector<disk_backend *> rl02_files;
+
 void console_thread_wrapper_panel(void *const c)
 {
 	console *const cnsl = reinterpret_cast<console *>(c);
@@ -193,12 +196,7 @@ void recall_configuration(console *const cnsl)
 	cnsl->put_string_lf("Starting network...");
 	start_network(cnsl);
 
-	auto disk_configuration = load_disk_configuration(cnsl);
-
-	if (disk_configuration.has_value()) {
-		cnsl->put_string_lf("Starting disk...");
-		set_disk_configuration(b, cnsl, disk_configuration.value());
-	}
+	// TODO
 }
 #endif
 
@@ -268,6 +266,9 @@ void setup() {
 	Serial.println(F("Init bus"));
 	b = new bus();
 
+	Serial.println(F("Allocate memory"));
+	b->set_memory_size(DEFAULT_N_PAGES);
+
 	Serial.println(F("Init CPU"));
 	c = new cpu(b, &stop_event);
 
@@ -297,6 +298,11 @@ void setup() {
 	cnsl->set_bus(b);
 
 	running = cnsl->get_running_flag();
+
+	Serial.println(F("Connect RK05 and RL02 to BUS"));
+	b->add_rk05(new rk05(rk05_files, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
+
+	b->add_rl02(new rl02(rl02_files, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
 
 	Serial.println(F("Init TTY"));
 	tty_ = new tty(cnsl, b);

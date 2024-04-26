@@ -10,7 +10,6 @@
 #include <sys/types.h>
 #else
 #include <Arduino.h>
-#include <ArduinoJson.h>
 #include <LittleFS.h>
 #endif
 
@@ -47,153 +46,10 @@ void check_network(console *const c);
 void start_network(console *const c);
 
 void set_tty_serial_speed(console *const c, const uint32_t bps);
-
-void recall_configuration(console *const c);
 #endif
-
-#define NET_DISK_CFG_FILE "net-disk.json"
 
 #if !defined(BUILD_FOR_RP2040) && !defined(linux)
 extern SdFs SD;
-#endif
-
-#ifndef linux
-#define MAX_CFG_SIZE 1024
-StaticJsonDocument<MAX_CFG_SIZE> json_doc;
-#endif
-
-typedef enum { BE_NETWORK, BE_SD } disk_backend_t;
-
-#if !defined(BUILD_FOR_RP2040)
-std::optional<std::tuple<std::vector<disk_backend *>, std::vector<disk_backend *>, std::string> > load_disk_configuration(console *const c)
-{
-#if IS_POSIX
-	json_error_t error;
-	json_t *json = json_load_file("." NET_DISK_CFG_FILE, JSON_REJECT_DUPLICATES, &error);
-	if (!json) {
-		c->put_string_lf(format("Cannot load ." NET_DISK_CFG_FILE ": %s", error.text));
-
-		return { };
-	}
-
-	std::string nbd_host       = json_string_value (json_object_get(json, "NBD-host"));
-	int         nbd_port       = json_integer_value(json_object_get(json, "NBD-port"));
-
-	std::string disk_type_temp = json_string_value (json_object_get(json, "disk-type"));
-
-	std::string tape_file      = json_string_value (json_object_get(json, "tape-file"));
-
-	json_decref(json);
-#else
-	File dataFile = LittleFS.open("/" NET_DISK_CFG_FILE, "r");
-	if (!dataFile)
-		return { };
-
-	size_t size = dataFile.size();
-
-	char buffer[MAX_CFG_SIZE];
-
-	if (size > sizeof buffer) {  // this should not happen
-		dataFile.close();
-
-		return { };
-	}
-
-	dataFile.read(reinterpret_cast<uint8_t *>(buffer), size);
-	buffer[(sizeof buffer) - 1] = 0x00;
-
-	dataFile.close();
-
-	auto error = deserializeJson(json_doc, buffer);
-	if (error)  // this should not happen
-		return { };
-
-	String nbd_host = json_doc["NBD-host"];
-	int    nbd_port = json_doc["NBD-port"];
-
-	String disk_type_temp = json_doc["disk-type"];
-
-	String tape_file      = json_doc["tape-file"];
-#endif
-
-	disk_type_t disk_type = DT_RK05;
-
-	if (disk_type_temp == "rl02")
-		disk_type = DT_RL02;
-	else if (disk_type_temp == "tape")
-		disk_type = DT_TAPE;
-
-	disk_backend *d = new disk_backend_nbd(nbd_host.c_str(), nbd_port);
-
-	if (d->begin(false) == false) {
-		c->put_string_lf("Cannot initialize NBD client from configuration file");
-		delete d;
-		return { };
-	}
-
-	c->put_string_lf(format("Connection to NBD server at %s:%d success", nbd_host.c_str(), nbd_port));
-
-	if (disk_type == DT_RK05)
-		return { { { d }, { }, "" } };
-
-	if (disk_type == DT_RL02)
-		return { { { }, { d }, "" } };
-
-	if (disk_type == DT_TAPE)
-		return { { { }, { }, tape_file.c_str() } };
-
-	return { };
-}
-
-bool save_disk_configuration(const std::string & nbd_host, const int nbd_port, const std::optional<std::string> & tape_file, const disk_type_t dt, console *const cnsl)
-{
-#if IS_POSIX
-	json_t *json = json_object();
-
-	json_object_set(json, "NBD-host", json_string(nbd_host.c_str()));
-	json_object_set(json, "NBD-port", json_integer(nbd_port));
-
-	if (dt == DT_RK05)
-		json_object_set(json, "disk-type", json_string("rk05"));
-	else if (dt == DT_RL02)
-		json_object_set(json, "disk-type", json_string("rl02"));
-	else
-		json_object_set(json, "disk-type", json_string("tape"));
-
-	json_object_set(json, "tape-file", json_string(tape_file.has_value() ? tape_file.value().c_str() : ""));
-
-	bool succeeded = json_dump_file(json, "." NET_DISK_CFG_FILE, 0) == 0;
-	json_decref(json);
-
-	if (succeeded == false) {
-		cnsl->put_string_lf(format("Cannot write ." NET_DISK_CFG_FILE));
-
-		return false;
-	}
-#else
-	json_doc["NBD-host"] = nbd_host;
-	json_doc["NBD-port"] = nbd_port;
-
-	if (dt == DT_RK05)
-		json_doc["disk-type"] = "rk05";
-	else if (dt == DT_RL02)
-		json_doc["disk-type"] = "rl02";
-	else
-		json_doc["disk-type"] = "tape";
-
-	json_doc["tape-file"] = tape_file.has_value() ? tape_file.value() : "";
-
-	File dataFile = LittleFS.open("/" NET_DISK_CFG_FILE, "w");
-	if (!dataFile)
-		return false;
-
-	serializeJson(json_doc, dataFile);
-
-	dataFile.close();
-#endif
-
-	return true;
-}
 #endif
 
 #if !defined(BUILD_FOR_RP2040)
@@ -997,11 +853,6 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 				continue;
 			}
-			else if (cmd == "init") {
-				recall_configuration(cnsl);
-
-				continue;
-			}
 #endif
 			else if (cmd == "stats") {
 				show_run_statistics(cnsl, c);
@@ -1160,7 +1011,6 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 					"startnet      - start network",
 					"chknet        - check network status",
 					"serspd        - set serial speed in bps (8N1 are default)",
-					"init          - reload (disk-)configuration from flash",
 #endif
 					"cfgdisk       - configure disk",
 					nullptr
