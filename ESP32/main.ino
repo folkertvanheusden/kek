@@ -193,12 +193,7 @@ void recall_configuration(console *const cnsl)
 	cnsl->put_string_lf("Starting network...");
 	start_network(cnsl);
 
-	auto disk_configuration = load_disk_configuration(cnsl);
-
-	if (disk_configuration.has_value()) {
-		cnsl->put_string_lf("Starting disk...");
-		set_disk_configuration(b, cnsl, disk_configuration.value());
-	}
+	// TODO
 }
 #endif
 
