@@ -14,6 +14,7 @@
 
 #include "breakpoint.h"
 #include "bus.h"
+#include "gen.h"
 
 
 constexpr const int initial_trap_delay   = 8;
@@ -61,6 +62,7 @@ private:
 
 	// level, vector
 	std::map<uint8_t, std::set<uint8_t> > queued_interrupts;
+	std::atomic_bool        any_queued_interrupts { false };
 #if defined(BUILD_FOR_RP2040)
 	SemaphoreHandle_t       qi_lock { xSemaphoreCreateBinary() };
 	QueueHandle_t           qi_q    { xQueueCreate(16, 1)      };
@@ -68,7 +70,6 @@ private:
 	std::mutex              qi_lock;
 	std::condition_variable qi_cv;
 #endif
-	std::atomic_bool        any_queued_interrupts { false };
 
 	std::map<int, breakpoint *> breakpoints;
 	int                         bp_nr       { 0 };
@@ -110,6 +111,11 @@ private:
 public:
 	explicit cpu(bus *const b, std::atomic_uint32_t *const event);
 	~cpu();
+
+#if IS_POSIX
+	json_t *serialize();
+	static cpu *deserialize(const json_t *const j, bus *const b, std::atomic_uint32_t *const event);
+#endif
 
 	std::optional<std::string> check_breakpoint();
 	int set_breakpoint(breakpoint *const bp);

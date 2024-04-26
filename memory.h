@@ -2,9 +2,11 @@
 // Released under MIT license
 
 #pragma once
-
 #include <assert.h>
 #include <stdint.h>
+
+#include "gen.h"
+
 
 class memory
 {
@@ -20,6 +22,10 @@ public:
 	~memory();
 
 	void reset();
+#if IS_POSIX
+	json_t *serialize() const;
+	static memory *deserialize(const json_t *const j);
+#endif
 
 	uint16_t readByte(const uint32_t a) const { return m[a]; }
 	void writeByte(const uint32_t a, const uint16_t v) { assert(a < size); m[a] = v; }

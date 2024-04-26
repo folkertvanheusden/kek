@@ -25,9 +25,8 @@ void thread_wrapper_console(void *p)
 }
 #endif
 
-console::console(std::atomic_uint32_t *const stop_event, bus *const b, const int t_width, const int t_height) :
+console::console(std::atomic_uint32_t *const stop_event, const int t_width, const int t_height) :
 	stop_event(stop_event),
-	b(b),
 	t_width(t_width),
 	t_height(t_height)
 {
@@ -49,6 +48,8 @@ console::~console()
 
 void console::start_thread() 
 {
+	assert(b);
+
 	stop_thread_flag = false;
 
 #if defined(BUILD_FOR_RP2040)

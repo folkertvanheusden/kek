@@ -9,8 +9,9 @@
 #include <string>
 #include <vector>
 
-#include "device.h"
+#include "disk_device.h"
 #include "disk_backend.h"
+#include "gen.h"
 
 
 #define RL02_CSR 0174400  // control status register
@@ -26,7 +27,7 @@ constexpr const int rl02_bytes_per_sector  = 256;
 
 class bus;
 
-class rl02 : public device
+class rl02: public disk_device
 {
 private:
 	bus      *const b;
@@ -36,10 +37,9 @@ private:
 	uint8_t         head   { 0 };
 	uint8_t         sector { 0 };
 	uint16_t        mpr[3];
-	std::vector<disk_backend *> fhs;
 
-	std::atomic_bool *const disk_read_acitivity  { nullptr };
-	std::atomic_bool *const disk_write_acitivity { nullptr };
+	std::atomic_bool *const disk_read_activity  { nullptr };
+	std::atomic_bool *const disk_write_activity { nullptr };
 
 	uint32_t get_bus_address() const;
 	void     update_bus_address(const uint32_t a);
@@ -47,10 +47,15 @@ private:
 	uint32_t calc_offset() const;
 
 public:
-	rl02(const std::vector<disk_backend *> & files, bus *const b, std::atomic_bool *const disk_read_acitivity, std::atomic_bool *const disk_write_acitivity);
+	rl02(const std::vector<disk_backend *> & files, bus *const b, std::atomic_bool *const disk_read_activity, std::atomic_bool *const disk_write_activity);
 	virtual ~rl02();
 
 	void reset() override;
+
+#if IS_POSIX
+	json_t *serialize() const;
+	static rl02 *deserialize(const json_t *const j, bus *const b);
+#endif
 
 	uint8_t  readByte(const uint16_t addr) override;
 	uint16_t readWord(const uint16_t addr) override;

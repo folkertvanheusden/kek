@@ -29,7 +29,7 @@ void disk_backend_esp32::emit_error()
 	DOLOG(ll_error, true, "SdFat error: %d/%d", sd.sdErrorCode(), sd.sdErrorData());
 }
 
-bool disk_backend_esp32::begin()
+bool disk_backend_esp32::begin(const bool dummy)
 {
 	if (!fh->open(filename.c_str(), O_RDWR)) {
 		DOLOG(ll_error, true, "rk05: cannot open \"%s\"", filename.c_str());
@@ -41,7 +41,7 @@ bool disk_backend_esp32::begin()
 	return true;
 }
 
-bool disk_backend_esp32::read(const off_t offset, const size_t n, uint8_t *const target)
+bool disk_backend_esp32::read(const off_t offset, const size_t n, uint8_t *const target, const size_t sector_size)
 {
 	DOLOG(debug, false, "disk_backend_esp32::read: read %zu bytes from offset %zu", n, offset);
 
@@ -77,7 +77,7 @@ bool disk_backend_esp32::read(const off_t offset, const size_t n, uint8_t *const
 	return true;
 }
 
-bool disk_backend_esp32::write(const off_t offset, const size_t n, const uint8_t *const from)
+bool disk_backend_esp32::write(const off_t offset, const size_t n, const uint8_t *const from, const size_t sector_size)
 {
 	DOLOG(debug, false, "disk_backend_esp32::write: write %zu bytes to offset %zu", n, offset);
 

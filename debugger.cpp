@@ -2,7 +2,8 @@
 // Released under MIT license
 
 #include <optional>
-#ifdef linux
+#include "gen.h"
+#if IS_POSIX
 #include <dirent.h>
 #include <jansson.h>
 #include <sys/stat.h>
@@ -18,13 +19,12 @@
 #include "console.h"
 #include "cpu.h"
 #include "disk_backend.h"
-#ifdef linux
+#if IS_POSIX
 #include "disk_backend_file.h"
 #else
 #include "disk_backend_esp32.h"
 #endif
 #include "disk_backend_nbd.h"
-#include "gen.h"
 #include "loaders.h"
 #include "log.h"
 #include "tty.h"
@@ -38,7 +38,7 @@
 #include "rp2040.h"
 #endif
 
-void setBootLoader(bus *const b);
+void set_boot_loader(bus *const b);
 
 void configure_disk(console *const c);
 
@@ -67,7 +67,7 @@ typedef enum { BE_NETWORK, BE_SD } disk_backend_t;
 #if !defined(BUILD_FOR_RP2040)
 std::optional<std::tuple<std::vector<disk_backend *>, std::vector<disk_backend *>, std::string> > load_disk_configuration(console *const c)
 {
-#ifdef linux
+#if IS_POSIX
 	json_error_t error;
 	json_t *json = json_load_file("." NET_DISK_CFG_FILE, JSON_REJECT_DUPLICATES, &error);
 	if (!json) {
@@ -125,7 +125,7 @@ std::optional<std::tuple<std::vector<disk_backend *>, std::vector<disk_backend *
 
 	disk_backend *d = new disk_backend_nbd(nbd_host.c_str(), nbd_port);
 
-	if (d->begin() == false) {
+	if (d->begin(false) == false) {
 		c->put_string_lf("Cannot initialize NBD client from configuration file");
 		delete d;
 		return { };
@@ -147,7 +147,7 @@ std::optional<std::tuple<std::vector<disk_backend *>, std::vector<disk_backend *
 
 bool save_disk_configuration(const std::string & nbd_host, const int nbd_port, const std::optional<std::string> & tape_file, const disk_type_t dt, console *const cnsl)
 {
-#ifdef linux
+#if IS_POSIX
 	json_t *json = json_object();
 
 	json_object_set(json, "NBD-host", json_string(nbd_host.c_str()));
@@ -196,108 +196,37 @@ bool save_disk_configuration(const std::string & nbd_host, const int nbd_port, c
 }
 #endif
 
-std::optional<disk_backend_t> select_disk_backend(console *const c)
-{
-#if defined(BUILD_FOR_RP2040)
-	return BE_SD;
-#elif linux
-	c->put_string("1. network (NBD), 2. local filesystem, 9. abort");
-#else
-	c->put_string("1. network (NBD), 2. local SD card, 9. abort");
-#endif
-
-	int ch = -1;
-	while(ch == -1 && ch != '1' && ch != '2' && ch != '9') {
-		auto temp = c->wait_char(500);
-
-		if (temp.has_value())
-			ch = temp.value();
-	}
-
-	c->put_string_lf(format("%c", ch));
-
-	if (ch == '1')
-		return BE_NETWORK;
-
-	if (ch == '2')
-		return BE_SD;
-
-	return { };
-}
-
-std::optional<disk_type_t> select_disk_type(console *const c)
-{
-	c->put_string("1. RK05, 2. RL02, 3. tape/BIC, 9. abort");
-
-	int ch = -1;
-	while(ch == -1 && ch != '1' && ch != '2' && ch != '3' && ch != '9') {
-		auto temp = c->wait_char(500);
-
-		if (temp.has_value())
-			ch = temp.value();
-	}
-
-	c->put_string_lf(format("%c", ch));
-
-	if (ch == '1')
-		return DT_RK05;
-
-	if (ch == '2')
-		return DT_RL02;
-
-	if (ch == '3')
-		return DT_TAPE;
-
-	return { };
-}
-
 #if !defined(BUILD_FOR_RP2040)
-std::optional<std::tuple<std::vector<disk_backend *>, std::vector<disk_backend *>, std::string> > select_nbd_server(console *const c)
+std::optional<disk_backend *> select_nbd_server(console *const cnsl)
 {
-	c->flush_input();
+	cnsl->flush_input();
 
-	std::string hostname = c->read_line("Enter hostname (or empty to abort): ");
+	std::string hostname = cnsl->read_line("Enter hostname (or empty to abort): ");
 
 	if (hostname.empty())
 		return { };
 
-	std::string port_str = c->read_line("Enter port number (or empty to abort): ");
+	std::string port_str = cnsl->read_line("Enter port number (or empty to abort): ");
 
 	if (port_str.empty())
 		return { };
 
-	auto disk_type = select_disk_type(c);
-
-	if (disk_type.has_value() == false)
-		return { };
-
 	disk_backend *d = new disk_backend_nbd(hostname, atoi(port_str.c_str()));
 
-	if (d->begin() == false) {
-		c->put_string_lf("Cannot initialize NBD client");
+	if (d->begin(false) == false) {
+		cnsl->put_string_lf("Cannot initialize NBD client");
 		delete d;
 		return { };
 	}
 
-	if (save_disk_configuration(hostname, atoi(port_str.c_str()), { }, disk_type.value(), c))
-		c->put_string_lf("NBD disk configuration saved");
-	else
-		c->put_string_lf("NBD disk configuration NOT saved");
-
-	if (disk_type.value() == DT_RK05)
-		return { { { d }, { }, "" } };
-
-	if (disk_type.value() == DT_RL02)
-		return { { { }, { d }, "" } };
-
-	return { };
+	return d;
 }
 #endif
 
-// RK05, RL02 files
-std::optional<std::tuple<std::vector<disk_backend *>, std::vector<disk_backend *>, std::string> > select_disk_files(console *const c)
+// disk image files
+std::optional<disk_backend *> select_disk_file(console *const c)
 {
-#ifdef linux
+#if IS_POSIX
 	c->put_string_lf("Files in current directory: ");
 #else
 	c->debug("MISO: %d", int(MISO));
@@ -367,17 +296,12 @@ std::optional<std::tuple<std::vector<disk_backend *>, std::vector<disk_backend *
 		if (selected_file.empty())
 			return { };
 
-		auto disk_type = select_disk_type(c);
-
-		if (disk_type.has_value() == false)
-			return { };
-
 		c->put_string("Opening file: ");
 		c->put_string_lf(selected_file.c_str());
 
 		bool can_open_file = false;
 
-#ifdef linux
+#if IS_POSIX
 		struct stat st { };
 		can_open_file = stat(selected_file.c_str(), &st) == 0;
 #else
@@ -388,16 +312,13 @@ std::optional<std::tuple<std::vector<disk_backend *>, std::vector<disk_backend *
 #endif
 
 		if (can_open_file) {
-			if (disk_type.value() == DT_TAPE)
-				return { { { }, { }, selected_file } };
-
-#ifdef linux
+#if IS_POSIX
 			disk_backend *temp = new disk_backend_file(selected_file);
 #else
 			disk_backend *temp = new disk_backend_esp32(selected_file);
 #endif
 
-			if (!temp->begin()) {
+			if (!temp->begin(false)) {
 				c->put_string("Cannot use: ");
 				c->put_string_lf(selected_file.c_str());
 
@@ -406,63 +327,136 @@ std::optional<std::tuple<std::vector<disk_backend *>, std::vector<disk_backend *
 				continue;
 			}
 
-			if (disk_type.value() == DT_RK05)
-				return { { { temp }, { }, "" } };
-
-			if (disk_type.value() == DT_RL02)
-				return { { { }, { temp }, "" } };
+			return { temp };
 		}
 
 		c->put_string_lf("open failed");
 	}
+
+	return { };
 }
 
-void set_disk_configuration(bus *const b, console *const cnsl, std::tuple<std::vector<disk_backend *>, std::vector<disk_backend *>, std::string> & disk_files)
+int wait_for_key(const std::string & title, console *const cnsl, const std::vector<char> & allowed)
 {
-	if (std::get<0>(disk_files).empty() == false)
-		b->add_rk05(new rk05(std::get<0>(disk_files), b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
+	cnsl->put_string_lf(title);
 
-	if (std::get<1>(disk_files).empty() == false)
-		b->add_rl02(new rl02(std::get<1>(disk_files), b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
+	cnsl->put_string("> ");
 
-	if (std::get<2>(disk_files).empty() == false) {
-		auto addr = loadTape(b, std::get<2>(disk_files));
+	int ch = -1;
+	while(ch == -1) {
+		auto temp = cnsl->wait_char(500);
 
-		if (addr.has_value())
-			b->getCpu()->setPC(addr.value());
+		if (temp.has_value()) {
+			for(auto & a: allowed) {
+				if (a == temp.value()) {
+					ch = temp.value();
+					break;
+				}
+			}
+		}
 	}
 
-	if (std::get<0>(disk_files).empty() == false)
-		setBootLoader(b, BL_RK05);
-	else if (std::get<1>(disk_files).empty() == false)
-		setBootLoader(b, BL_RL02);
+	cnsl->put_string_lf(format("%c", ch));
+
+	return ch;
+}
+
+std::optional<disk_backend *> select_disk_backend(console *const cnsl)
+{
+#if defined(BUILD_FOR_RP2040)
+	return select_disk_file(cnsl);
+#else
+	int ch = wait_for_key("1. local disk, 2. network disk (NBD), 9. abort", cnsl, { '1', '2', '9' });
+	if (ch == '9')
+		return { };
+
+	if (ch == '1')
+		return select_disk_file(cnsl);
+
+	if (ch == '2')
+		return select_nbd_server(cnsl);
+
+	return { };
+#endif
 }
 
 void configure_disk(bus *const b, console *const cnsl)
 {
+	// TODO tape
+	int ch = wait_for_key("1. RK05, 2. RL02, 9. abort", cnsl, { '1', '2', '3', '9' });
+
+	bootloader_t bl = BL_NONE;
+	disk_device *dd = nullptr;
+
+	if (ch == '1') {
+		dd = b->getRK05();
+		bl = BL_RK05;
+	}
+	else if (ch == '2') {
+		dd = b->getRL02();
+		bl = BL_RL02;
+	}
+	else if (ch == '9') {
+		return;
+	}
+
 	for(;;) {
-		cnsl->put_string_lf("Load disk");
+		std::vector<char> keys_allowed { '1', '2', '9' };
 
-		auto backend = select_disk_backend(cnsl);
+		auto cartridge_slots = dd->access_disk_backends();
+		int slot_key = 'A';
+		for(auto & slot: *cartridge_slots) {
+			cnsl->put_string_lf(format(" %c. %s", slot_key, slot ? slot->get_identifier().c_str() : "-"));
+			keys_allowed.push_back(slot_key);
+			slot_key++;
+		}
 
-		if (backend.has_value() == false)
+		int ch = wait_for_key("Select cartridge to setup, 1. to add a cartridge, 2. to load a bootloader or 9. to exit", cnsl, keys_allowed);
+		if (ch == '9')
 			break;
 
-		std::optional<std::tuple<std::vector<disk_backend *>, std::vector<disk_backend *>, std::string> > files;
+		if (ch == '1') {
+			auto image_file = select_disk_backend(cnsl);
 
-#if !defined(BUILD_FOR_RP2040)
-		if (backend == BE_NETWORK)
-			files = select_nbd_server(cnsl);
-		else // if (backend == BE_SD)
-#endif
-			files = select_disk_files(cnsl);
+			if (image_file.has_value()) {
+				cartridge_slots->push_back(image_file.value());
 
-		if (files.has_value() == false)
-			break;
+				cnsl->put_string_lf("Cartridge loaded");
+			}
+		}
+		else if (ch == '2') {
+			set_boot_loader(b, bl);
 
-		set_disk_configuration(b, cnsl, files.value());
+			cnsl->put_string_lf("Bootloader loaded");
+		}
+		else {
+			int slot = ch - 'A';
 
-		break;
+			for(;;) {
+				int ch = wait_for_key("Select cartridge action: 1. load, 2. unload, 9. exit", cnsl, { '1', '2', '9' });
+				if (ch == '9')
+					break;
+
+				if (ch == '1') {
+					auto image_file = select_disk_backend(cnsl);
+
+					if (image_file.has_value()) {
+						delete cartridge_slots->at(slot);
+						cartridge_slots->at(slot) = image_file.value();
+
+						cnsl->put_string_lf("Cartridge loaded");
+					}
+				}
+				else if (ch == '2') {
+					if (cartridge_slots->at(slot)) {
+						delete cartridge_slots->at(slot);
+						cartridge_slots->at(slot) = nullptr;
+
+						cnsl->put_string_lf("Cartridge unloaded");
+					}
+				}
+			}
+		}
 	}
 }
 
@@ -721,6 +715,27 @@ void show_queued_interrupts(console *const cnsl, cpu *const c)
 			cnsl->put_string_lf(format("Level: %d, interrupt: %03o", level.first, qi));
 	}
 }
+
+#if IS_POSIX
+void serialize_state(console *const cnsl, const bus *const b, const std::string & filename)
+{
+	json_t *j = b->serialize();
+
+	bool ok = false;
+
+	FILE *fh = fopen(filename.c_str(), "w");
+	if (fh) {
+		if (json_dumpf(j, fh, JSON_INDENT(4)) == 0)
+			ok = true;
+
+		fclose(fh);
+	}
+
+	json_decref(j);
+
+	cnsl->put_string_lf(format("Serialize to %s: %s", filename.c_str(), ok ? "OK" : "failed"));
+}
+#endif
 
 void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const stop_event, const bool tracing_in)
 {
@@ -1005,7 +1020,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 				continue;
 			}
 			else if (parts[0] == "bl" && parts.size() == 2) {
-				setBootLoader(b, parts.at(1) == "rk05" ? BL_RK05 : BL_RL02);
+				set_boot_loader(b, parts.at(1) == "rk05" ? BL_RK05 : BL_RL02);
 				cnsl->put_string_lf("Bootloader set");
 
 				continue;
@@ -1069,6 +1084,12 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 				continue;
 			}
+#if IS_POSIX
+			else if (parts[0] == "ser" && parts.size() == 2) {
+				serialize_state(cnsl, b, parts.at(1));
+				continue;
+			}
+#endif
 			else if (parts[0] == "setsl" && parts.size() == 3) {
 				setloghost(parts.at(1).c_str(), parse_ll(parts[2]));
 
@@ -1130,6 +1151,10 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 					"stats         - show run statistics",
 					"ramsize       - set ram size (page count (8 kB))",
 					"bl            - set bootload (rl02 or rk05)",
+#if IS_POSIX
+					"ser           - serialize state to a file",
+//					"dser          - deserialize state from a file",
+#endif
 #if defined(ESP32)
 					"cfgnet        - configure network (e.g. WiFi)",
 					"startnet      - start network",

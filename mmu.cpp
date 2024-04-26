@@ -220,3 +220,80 @@ void mmu::writeByte(const uint16_t a, const uint8_t value)
 	else if (a >= ADDR_PAR_U_START && a < ADDR_PAR_U_END)
 		write_par(a, 3, value, wm_byte);
 }
+
+#if IS_POSIX
+void mmu::add_par_pdr(json_t *const target, const int run_mode, const bool is_d, const std::string & name) const
+{
+	json_t *j = json_object();
+
+	json_t *ja_par = json_array();
+	for(int i=0; i<8; i++)
+		json_array_append(ja_par, json_integer(pages[run_mode][is_d][i].par));
+	json_object_set(j, "par", ja_par);
+
+	json_t *ja_pdr = json_array();
+	for(int i=0; i<8; i++)
+		json_array_append(ja_pdr, json_integer(pages[run_mode][is_d][i].pdr));
+	json_object_set(j, "pdr", ja_pdr);
+
+	json_object_set(target, name.c_str(), j);
+}
+
+json_t *mmu::serialize() const
+{
+	json_t *j = json_object();
+
+	for(int run_mode=0; run_mode<4; run_mode++) {
+		if (run_mode == 2)
+			continue;
+
+		for(int is_d=0; is_d<2; is_d++)
+			add_par_pdr(j, run_mode, is_d, format("runmode_%d_d_%d", run_mode, is_d));
+	}
+
+        json_object_set(j, "MMR0", json_integer(MMR0));
+        json_object_set(j, "MMR1", json_integer(MMR1));
+        json_object_set(j, "MMR2", json_integer(MMR2));
+        json_object_set(j, "MMR3", json_integer(MMR3));
+        json_object_set(j, "CPUERR", json_integer(CPUERR));
+        json_object_set(j, "PIR", json_integer(PIR));
+        json_object_set(j, "CSR", json_integer(CSR));
+
+	return j;
+}
+
+void mmu::set_par_pdr(const json_t *const j_in, const int run_mode, const bool is_d, const std::string & name)
+{
+	json_t *j = json_object_get(j_in, name.c_str());
+
+	json_t *j_par = json_object_get(j, "par");
+	for(int i=0; i<8; i++)
+		pages[run_mode][is_d][i].par = json_integer_value(json_array_get(j_par, i));
+	json_t *j_pdr = json_object_get(j, "pdr");
+	for(int i=0; i<8; i++)
+		pages[run_mode][is_d][i].pdr = json_integer_value(json_array_get(j_pdr, i));
+}
+
+mmu *mmu::deserialize(const json_t *const j)
+{
+	mmu *m = new mmu();
+
+	for(int run_mode=0; run_mode<4; run_mode++) {
+		if (run_mode == 2)
+			continue;
+
+		for(int is_d=0; is_d<2; is_d++)
+			m->set_par_pdr(j, run_mode, is_d, format("runmode_%d_d_%d", run_mode, is_d));
+	}
+
+        m->MMR0   = json_integer_value(json_object_get(j, "MMR0"));
+        m->MMR1   = json_integer_value(json_object_get(j, "MMR1"));
+        m->MMR2   = json_integer_value(json_object_get(j, "MMR2"));
+        m->MMR3   = json_integer_value(json_object_get(j, "MMR3"));
+        m->CPUERR = json_integer_value(json_object_get(j, "CPUERR"));
+        m->PIR    = json_integer_value(json_object_get(j, "PIR"));
+        m->CSR    = json_integer_value(json_object_get(j, "CSR"));
+
+	return m;
+}
+#endif

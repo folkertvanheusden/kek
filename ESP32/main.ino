@@ -38,7 +38,6 @@
 #include "esp32.h"
 #endif
 #include "gen.h"
-#include "kw11-l.h"
 #include "loaders.h"
 #include "memory.h"
 #include "tty.h"
@@ -217,7 +216,7 @@ void setup() {
 	while(!Serial)
 		delay(100);
 
-	Serial.println(F("This PDP-11 emulator is called \"kek\" (reason for that is forgotten) and was written by Folkert van Heusden."));
+	Serial.println(F("PDP11 emulator, by Folkert van Heusden"));
 	Serial.print(F("GIT hash: "));
 	Serial.println(version_str);
 	Serial.println(F("Build on: " __DATE__ " " __TIME__));
@@ -291,13 +290,11 @@ void setup() {
 
 	std::vector<Stream *> serial_ports { &Serial_RS232, &Serial };
 #if defined(SHA2017)
-	cnsl = new console_shabadge(&stop_event, b, serial_ports);
+	cnsl = new console_shabadge(&stop_event, serial_ports);
 #elif defined(ESP32) || defined(BUILD_FOR_RP2040)
-	cnsl = new console_esp32(&stop_event, b, serial_ports, 80, 25);
+	cnsl = new console_esp32(&stop_event, serial_ports, 80, 25);
 #endif
-
-	Serial.println(F("Start line-frequency interrupt"));
-	kw11_l *lf = new kw11_l(b, cnsl);
+	cnsl->set_bus(b);
 
 	running = cnsl->get_running_flag();
 
