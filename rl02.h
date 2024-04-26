@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-#include "device.h"
+#include "disk_device.h"
 #include "disk_backend.h"
 #include "gen.h"
 
@@ -27,7 +27,7 @@ constexpr const int rl02_bytes_per_sector  = 256;
 
 class bus;
 
-class rl02 : public device
+class rl02: public disk_device
 {
 private:
 	bus      *const b;
@@ -37,10 +37,9 @@ private:
 	uint8_t         head   { 0 };
 	uint8_t         sector { 0 };
 	uint16_t        mpr[3];
-	std::vector<disk_backend *> fhs;
 
-	std::atomic_bool *const disk_read_activity   { nullptr };
-	std::atomic_bool *const disk_write_activity  { nullptr };
+	std::atomic_bool *const disk_read_activity  { nullptr };
+	std::atomic_bool *const disk_write_activity { nullptr };
 
 	uint32_t get_bus_address() const;
 	void     update_bus_address(const uint32_t a);

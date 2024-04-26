@@ -495,7 +495,7 @@ int main(int argc, char *argv[])
 	if (validate_json.empty() == false)
 		return run_cpu_validation(validate_json);
 
-	DOLOG(info, true, "This PDP-11 emulator is called \"kek\" (reason for that is forgotten) and was written by Folkert van Heusden.");
+	DOLOG(info, true, "PDP11 emulator, by Folkert van Heusden");
 
 	DOLOG(info, true, "Built on: " __DATE__ " " __TIME__);
 
@@ -525,26 +525,18 @@ int main(int argc, char *argv[])
 		cpu *c = new cpu(b, &event);
 		b->add_cpu(c);
 
-		if (rk05_files.empty() == false) {
-			if (enable_bootloader == false)
-				DOLOG(warning, true, "Note: loading RK05 with no (RK05-) bootloader selected");
-			else
-				bootloader = BL_RK05;
+		if (rk05_files.empty() == false)
+			bootloader = BL_RK05;
 
-			b->add_rk05(new rk05(rk05_files, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
-		}
-
-		if (rl02_files.empty() == false) {
-			if (enable_bootloader == false)
-				DOLOG(warning, true, "Note: loading RL02 with no (RL02-) bootloader selected");
-			else
-				bootloader = BL_RL02;
-
-			b->add_rl02(new rl02(rl02_files, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
-		}
+		if (rl02_files.empty() == false)
+			bootloader = BL_RL02;
 
 		if (enable_bootloader)
-			setBootLoader(b, bootloader);
+			set_boot_loader(b, bootloader);
+
+		b->add_rk05(new rk05(rk05_files, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
+
+		b->add_rl02(new rl02(rl02_files, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
 	}
 	else {
 		FILE *fh = fopen(deserialize.c_str(), "r");

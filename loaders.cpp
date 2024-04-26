@@ -28,7 +28,7 @@ void loadbin(bus *const b, uint16_t base, const char *const file)
 	fclose(fh);
 }
 
-void setBootLoader(bus *const b, const bootloader_t which)
+void set_boot_loader(bus *const b, const bootloader_t which)
 {
 	cpu *const c      = b -> getCpu();
 

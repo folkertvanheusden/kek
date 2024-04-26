@@ -216,7 +216,7 @@ void setup() {
 	while(!Serial)
 		delay(100);
 
-	Serial.println(F("This PDP-11 emulator is called \"kek\" (reason for that is forgotten) and was written by Folkert van Heusden."));
+	Serial.println(F("PDP11 emulator, by Folkert van Heusden"));
 	Serial.print(F("GIT hash: "));
 	Serial.println(version_str);
 	Serial.println(F("Build on: " __DATE__ " " __TIME__));
