@@ -256,7 +256,7 @@ void setup() {
 	Serial.print(F("Free RAM after init (decimal bytes): "));
 	Serial.println(ESP.getFreeHeap());
 
-	if (psramFound()) {
+	if (psramInit()) {
 		uint32_t free_psram = ESP.getFreePsram();
 		Serial.printf("Free PSRAM: %d decimal bytes (or %d pages (see 'ramsize' in the debugger))", free_psram, free_psram / 8192l);
 		Serial.println(F(""));
