@@ -196,49 +196,31 @@ bool save_disk_configuration(const std::string & nbd_host, const int nbd_port, c
 }
 #endif
 
-#if 0
 #if !defined(BUILD_FOR_RP2040)
-std::optional<std::tuple<std::vector<disk_backend *>, std::vector<disk_backend *>, std::string> > select_nbd_server(console *const c)
+std::optional<disk_backend *> select_nbd_server(console *const cnsl)
 {
-	c->flush_input();
+	cnsl->flush_input();
 
-	std::string hostname = c->read_line("Enter hostname (or empty to abort): ");
+	std::string hostname = cnsl->read_line("Enter hostname (or empty to abort): ");
 
 	if (hostname.empty())
 		return { };
 
-	std::string port_str = c->read_line("Enter port number (or empty to abort): ");
+	std::string port_str = cnsl->read_line("Enter port number (or empty to abort): ");
 
 	if (port_str.empty())
-		return { };
-
-	auto disk_type = select_disk_type(c);
-
-	if (disk_type.has_value() == false)
 		return { };
 
 	disk_backend *d = new disk_backend_nbd(hostname, atoi(port_str.c_str()));
 
 	if (d->begin(false) == false) {
-		c->put_string_lf("Cannot initialize NBD client");
+		cnsl->put_string_lf("Cannot initialize NBD client");
 		delete d;
 		return { };
 	}
 
-	if (save_disk_configuration(hostname, atoi(port_str.c_str()), { }, disk_type.value(), c))
-		c->put_string_lf("NBD disk configuration saved");
-	else
-		c->put_string_lf("NBD disk configuration NOT saved");
-
-	if (disk_type.value() == DT_RK05)
-		return { { { d }, { }, "" } };
-
-	if (disk_type.value() == DT_RL02)
-		return { { { }, { d }, "" } };
-
-	return { };
+	return d;
 }
-#endif
 #endif
 
 // disk image files
@@ -379,6 +361,25 @@ int wait_for_key(const std::string & title, console *const cnsl, const std::vect
 	return ch;
 }
 
+std::optional<disk_backend *> select_disk_backend(console *const cnsl)
+{
+#if defined(BUILD_FOR_RP2040)
+	return select_disk_file(cnsl);
+#else
+	int ch = wait_for_key("1. local disk, 2. network disk (NBD), 9. abort", cnsl, { '1', '2', '9' });
+	if (ch == '9')
+		return { };
+
+	if (ch == '1')
+		return select_disk_file(cnsl);
+
+	if (ch == '2')
+		return select_nbd_server(cnsl);
+
+	return { };
+#endif
+}
+
 void configure_disk(bus *const b, console *const cnsl)
 {
 	// TODO tape
@@ -415,7 +416,7 @@ void configure_disk(bus *const b, console *const cnsl)
 			break;
 
 		if (ch == '1') {
-			auto image_file = select_disk_file(cnsl);
+			auto image_file = select_disk_backend(cnsl);
 
 			if (image_file.has_value()) {
 				cartridge_slots->push_back(image_file.value());
@@ -437,7 +438,7 @@ void configure_disk(bus *const b, console *const cnsl)
 					break;
 
 				if (ch == '1') {
-					auto image_file = select_disk_file(cnsl);
+					auto image_file = select_disk_backend(cnsl);
 
 					if (image_file.has_value()) {
 						delete cartridge_slots->at(slot);
@@ -1152,7 +1153,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 					"bl            - set bootload (rl02 or rk05)",
 #if IS_POSIX
 					"ser           - serialize state to a file",
-					"dser          - deserialize state from a file",
+//					"dser          - deserialize state from a file",
 #endif
 #if defined(ESP32)
 					"cfgnet        - configure network (e.g. WiFi)",
