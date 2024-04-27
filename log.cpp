@@ -15,7 +15,9 @@
 #include "error.h"
 #include "log.h"
 #include "utils.h"
+#if defined(_WIN32)
 #include "win32.h"
+#endif
 
 
 static const char *logfile          = strdup("/tmp/kek.log");

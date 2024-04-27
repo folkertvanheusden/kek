@@ -4,6 +4,7 @@
 #include <cassert>
 
 #include "disk_backend.h"
+#include "gen.h"
 #if IS_POSIX
 #include "disk_backend_file.h"
 #include "disk_backend_nbd.h"

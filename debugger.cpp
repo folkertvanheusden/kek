@@ -26,6 +26,7 @@
 #include "disk_backend_nbd.h"
 #include "loaders.h"
 #include "log.h"
+#include "memory.h"
 #include "tty.h"
 #include "utils.h"
 
@@ -821,6 +822,12 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 				continue;
 			}
 #if defined(ESP32)
+			else if (cmd == "debug") {
+				if (heap_caps_check_integrity_all(true) == false)
+					cnsl->put_string_lf("HEAP corruption!");
+
+				continue;
+			}
 			else if (cmd == "cfgnet") {
 				configure_network(cnsl);
 
@@ -859,7 +866,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 				if (parts.size() == 2)
 					b->set_memory_size(std::stoi(parts.at(1)));
 				else {
-					int n_pages = b->get_memory_size();
+					int n_pages = b->getRAM()->get_memory_size();
 
 					cnsl->put_string_lf(format("Memory size: %u pages or %u kB (decimal)", n_pages, n_pages * 8192 / 1024));
 				}
@@ -1016,6 +1023,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 					"startnet      - start network",
 					"chknet        - check network status",
 					"serspd        - set serial speed in bps (8N1 are default)",
+					"debug         - debugging info",
 #endif
 					"cfgdisk       - configure disk",
 					nullptr
