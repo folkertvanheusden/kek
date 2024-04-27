@@ -365,7 +365,7 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 				*disk_read_activity = false;
 		}
 		else {
-			DOLOG(warning, false, "RL02: command %d not implemented", command);
+			DOLOG(debug, false, "RL02: command %d not implemented", command);
 		}
 
 		if (do_int) {

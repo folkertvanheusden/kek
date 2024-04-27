@@ -29,7 +29,8 @@ private:
 #endif
 
 protected:
-	std::atomic_uint32_t *const stop_event    { nullptr };
+	std::atomic_uint32_t *const stop_event   { nullptr };
+	std::atomic_bool        stop_panel       { false   };
 
 	bus                    *b                { nullptr };
 #if !defined(BUILD_FOR_RP2040)
@@ -88,5 +89,6 @@ public:
 	std::atomic_bool * get_disk_read_activity_flag()  { return &disk_read_activity_flag; }
 	std::atomic_bool * get_disk_write_activity_flag() { return &disk_write_activity_flag; }
 
+	void         stop_panel_thread() { stop_panel = true; }
 	virtual void panel_update_thread() = 0;
 };

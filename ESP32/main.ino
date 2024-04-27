@@ -78,6 +78,8 @@ void console_thread_wrapper_panel(void *const c)
 	console *const cnsl = reinterpret_cast<console *>(c);
 
 	cnsl->panel_update_thread();
+
+	vTaskSuspend(nullptr);
 }
 
 uint32_t load_serial_speed_configuration()
