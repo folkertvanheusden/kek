@@ -133,7 +133,7 @@ void console_ncurses::panel_update_thread()
 
 	constexpr int refresh_rate = 50;
 
-	while(*stop_event != EVENT_TERMINATE) {
+	while(*stop_event != EVENT_TERMINATE && stop_panel == false) {
 		myusleep(1000000 / refresh_rate);
 
 		// note that these are approximately as there's no mutex on the emulation

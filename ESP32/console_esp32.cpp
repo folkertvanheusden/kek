@@ -72,7 +72,6 @@ void console_esp32::panel_update_thread()
 	pixels.begin();
 
 	pixels.clear();
-
 	pixels.show();
 
 	constexpr uint8_t brightness = 16;
@@ -103,7 +102,7 @@ void console_esp32::panel_update_thread()
 	pixels.clear();
 	pixels.show();
 
-	for(;;) {
+	while(!stop_panel) {
 		vTaskDelay(20 / portTICK_PERIOD_MS);
 
 		try {
@@ -141,5 +140,10 @@ void console_esp32::panel_update_thread()
 			put_string_lf("Unknown exception in panel thread");
 		}
 	}
+
+	pixels.clear();
+	pixels.show();
+
+	Serial.println(F("panel task terminating"));
 #endif
 }

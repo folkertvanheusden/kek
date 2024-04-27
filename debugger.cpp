@@ -951,6 +951,11 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 				continue;
 			}
+			else if (cmd == "dp") {
+				cnsl->stop_panel_thread();
+
+				continue;
+			}
 			else if (cmd == "bt") {
 				if (c->get_debug() == false)
 					cnsl->put_string_lf("Debug mode is disabled!");
@@ -1006,6 +1011,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 					"ser           - serialize state to a file",
 //					"dser          - deserialize state from a file",
 #endif
+					"dp            - stop panel",
 #if defined(ESP32)
 					"cfgnet        - configure network (e.g. WiFi)",
 					"startnet      - start network",
