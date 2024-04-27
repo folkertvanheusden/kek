@@ -23,8 +23,6 @@
 
 bus::bus()
 {
-	m = new memory(n_pages * 8192l);
-
 	mmu_ = new mmu();
 
 	kw11_l_ = new kw11_l(this);
@@ -44,6 +42,82 @@ bus::~bus()
 	delete m;
 }
 
+#if IS_POSIX
+json_t *bus::serialize() const
+{
+	json_t *j_out = json_object();
+
+	if (m)
+		json_object_set(j_out, "memory", m->serialize());
+
+	if (kw11_l_)
+		json_object_set(j_out, "kw11-l", kw11_l_->serialize());
+
+	if (tty_)
+		json_object_set(j_out, "tty", tty_->serialize());
+
+	if (mmu_)
+		json_object_set(j_out, "mmu", mmu_->serialize());
+
+	if (c)
+		json_object_set(j_out, "cpu", c->serialize());
+
+	if (rl02_)
+		json_object_set(j_out, "rl02", rl02_->serialize());
+
+	// TODO: rk05, tm11
+
+	return j_out;
+}
+
+bus *bus::deserialize(const json_t *const j, console *const cnsl, std::atomic_uint32_t *const event)
+{
+	bus *b = new bus();
+
+	json_t *temp = nullptr;
+
+	temp = json_object_get(j, "memory");
+	if (temp) {
+		memory *m = memory::deserialize(temp);
+		b->add_ram(m);
+	}
+
+	temp = json_object_get(j, "kw11-l");
+	if (temp) {
+		kw11_l *kw11_l_ = kw11_l::deserialize(temp, b, cnsl);
+		b->add_KW11_L(kw11_l_);
+	}
+
+	temp = json_object_get(j, "tty");
+	if (temp) {
+		tty *tty_ = tty::deserialize(temp, b, cnsl);
+		b->add_tty(tty_);
+	}
+
+	temp = json_object_get(j, "mmu");
+	if (temp) {
+		mmu *mmu_ = mmu::deserialize(temp);
+		b->add_mmu(mmu_);
+	}
+
+	temp = json_object_get(j, "cpu");
+	if (temp) {
+		cpu *cpu_ = cpu::deserialize(temp, b, event);
+		b->add_cpu(cpu_);
+	}
+
+	temp = json_object_get(j, "rl02");
+	if (temp) {
+		rl02 *rl02_ = rl02::deserialize(temp, b);
+		b->add_rl02(rl02_);
+	}
+
+	// TODO: rk05, tm11
+
+	return b;
+}
+#endif
+
 void bus::set_memory_size(const int n_pages)
 {
 	this->n_pages = n_pages;
@@ -58,10 +132,10 @@ void bus::set_memory_size(const int n_pages)
 
 void bus::reset()
 {
-	m->reset();
-
-	mmu_->reset();
-
+	if (m)
+		m->reset();
+	if (mmu_)
+		mmu_->reset();
 	if (c)
 		c->reset();
 	if (tm11)
@@ -72,18 +146,38 @@ void bus::reset()
 		rl02_->reset();
 	if (tty_)
 		tty_->reset();
+	if (kw11_l_)
+		kw11_l_->reset();
+}
+
+void bus::add_KW11_L(kw11_l *const kw11_l_)
+{
+	delete this->kw11_l_;
+	this->kw11_l_ = kw11_l_;
+}
+
+void bus::add_ram(memory *const m)
+{
+	delete this->m;
+	this->m = m;
+}
+
+void bus::add_mmu(mmu *const mmu_)
+{
+	delete this->mmu_;
+	this->mmu_ = mmu_;
 }
 
 void bus::add_cpu(cpu *const c)
 {
 	delete this->c;
-	this->c     = c;
+	this->c = c;
 }
 
 void bus::add_tm11(tm_11 *const tm11)
 {
 	delete this->tm11;
-	this->tm11  = tm11;
+	this->tm11= tm11;
 } 
 
 void bus::add_rk05(rk05 *const rk05_)

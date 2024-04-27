@@ -290,6 +290,7 @@ void setup() {
 #elif defined(ESP32) || defined(BUILD_FOR_RP2040)
 	cnsl = new console_esp32(&stop_event, b, serial_ports, 80, 25);
 #endif
+	cnsl->set_bus(b);
 
 	running = cnsl->get_running_flag();
 

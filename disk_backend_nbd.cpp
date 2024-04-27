@@ -47,6 +47,27 @@ disk_backend_nbd::~disk_backend_nbd()
 	close(fd);
 }
 
+#if IS_POSIX
+json_t *disk_backend_nbd::serialize() const
+{
+	json_t *j = json_object();
+
+	json_object_set(j, "disk-backend-type", json_string("nbd"));
+
+	// TODO store checksum of backend
+	json_object_set(j, "host", json_string(host.c_str()));
+	json_object_set(j, "port", json_integer(port));
+
+	return j;
+}
+
+disk_backend_nbd *disk_backend_nbd::deserialize(const json_t *const j)
+{
+	// TODO verify checksum of backend
+	return new disk_backend_nbd(json_string_value(json_object_get(j, "host")), json_integer_value(json_object_get(j, "port")));
+}
+#endif
+
 bool disk_backend_nbd::begin()
 {
 	if (!connect(false)) {

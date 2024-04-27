@@ -1,4 +1,4 @@
-// (C) 2018-2023 by Folkert van Heusden
+// (C) 2018-2024 by Folkert van Heusden
 // Released under MIT license
 
 #include <string>
@@ -16,6 +16,11 @@ private:
 public:
 	disk_backend_file(const std::string & filename);
 	virtual ~disk_backend_file();
+
+#if IS_POSIX
+	json_t *serialize() const override;
+	static disk_backend_file *deserialize(const json_t *const j);
+#endif
 
 	bool begin() override;
 

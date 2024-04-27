@@ -16,8 +16,7 @@
 #include "error.h"
 
 
-console_posix::console_posix(std::atomic_uint32_t *const stop_event, bus *const b) :
-	console(stop_event, b)
+console_posix::console_posix(std::atomic_uint32_t *const stop_event): console(stop_event)
 {
 #if !defined(_WIN32)
 	if (tcgetattr(STDIN_FILENO, &org_tty_opts) == -1)

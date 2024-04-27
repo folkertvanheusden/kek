@@ -14,7 +14,7 @@
 #define NEOPIXELS_PIN	25
 
 console_esp32::console_esp32(std::atomic_uint32_t *const stop_event, bus *const b, std::vector<Stream *> & io_ports, const int t_width, const int t_height) :
-	console(stop_event, b, t_width, t_height),
+	console(stop_event, t_width, t_height),
 	io_ports(io_ports)
 {
 }

@@ -18,14 +18,6 @@
 #include "rp2040.h"
 #endif
 
-#if defined(ESP32) || defined(BUILD_FOR_RP2040)
-// ESP32 goes in a crash-loop when allocating 128kB
-// see also https://github.com/espressif/esp-idf/issues/1934
-#define DEFAULT_N_PAGES 12
-#else
-#define DEFAULT_N_PAGES 31
-#endif
-
 #define ADDR_MMR0 0177572
 #define ADDR_MMR1 0177574
 #define ADDR_MMR2 0177576
@@ -53,6 +45,7 @@
 #define ADDR_CCR 0177746
 #define ADDR_SYSTEM_ID 0177764
 
+class console;
 class cpu;
 class kw11_l;
 class memory;
@@ -97,32 +90,39 @@ public:
 	bus();
 	~bus();
 
+#if IS_POSIX
+	json_t *serialize() const;
+	static bus *deserialize(const json_t *const j, console *const cnsl, std::atomic_uint32_t *const event);
+#endif
+
 	void reset();
+	void init();  // invoked by 'RESET' command
 
 	void set_console_switches(const uint16_t new_state) { console_switches = new_state; }
 	void set_console_switch(const int bit, const bool state) { console_switches &= ~(1 << bit); console_switches |= state << bit; }
 	uint16_t get_console_switches() { return console_switches; }
 	void set_debug_mode() { console_switches |= 128; }
+	uint16_t get_console_leds() { return console_leds; }
 
 	int  get_memory_size() const { return n_pages; }
 	void set_memory_size(const int n_pages);
 
 	void mmudebug(const uint16_t a);
 
-	uint16_t get_console_leds() { return console_leds; }
+	void add_ram   (memory *const m      );
+	void add_cpu   (cpu    *const c      );
+	void add_mmu   (mmu    *const mmu_   );
+	void add_tm11  (tm_11  *const tm11   );
+	void add_rk05  (rk05   *const rk05_  );
+	void add_rl02  (rl02   *const rl02_  );
+	void add_tty   (tty    *const tty_   );
+	void add_KW11_L(kw11_l *const kw11_l_);
 
-	void add_cpu (cpu   *const c    );
-	void add_tm11(tm_11 *const tm11 );
-	void add_rk05(rk05  *const rk05_);
-	void add_rl02(rl02  *const rl02_);
-	void add_tty (tty   *const tty_ );
-
+	memory *getRAM()    { return m;       }
 	cpu    *getCpu()    { return c;       }
 	kw11_l *getKW11_L() { return kw11_l_; }
 	tty    *getTty()    { return tty_;    }
 	mmu    *getMMU()    { return mmu_;    }
-
-	void init();  // invoked by 'RESET' command
 
 	uint16_t read    (const uint16_t a, const word_mode_t word_mode, const rm_selection_t mode_selection, const bool peek_only=false, const d_i_space_t s = i_space);
 	uint16_t readByte(const uint16_t a) { return read(a, wm_byte, rm_cur); }

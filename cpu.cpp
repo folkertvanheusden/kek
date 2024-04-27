@@ -2395,3 +2395,66 @@ void cpu::step()
 		DOLOG(debug, false, "bus-trap during execution of command (%d)", exception_nr);
 	}
 }
+
+#if IS_POSIX
+json_t *cpu::serialize()
+{
+	json_t *j = json_object();
+
+	for(int set=0; set<2; set++) {
+		for(int regnr=0; regnr<6; regnr++)
+			json_object_set(j, format("register-%d-%d", set, regnr).c_str(), json_integer(regs0_5[set][regnr]));
+	}
+
+	for(int spnr=0; spnr<4; spnr++)
+		json_object_set(j, format("sp-%d", spnr).c_str(), json_integer(sp[spnr]));
+
+        json_object_set(j, "pc", json_integer(pc));
+        json_object_set(j, "instruction_start", json_integer(instruction_start));
+        json_object_set(j, "psw", json_integer(psw));
+        json_object_set(j, "fpsr", json_integer(fpsr));
+        json_object_set(j, "stackLimitRegister", json_integer(stackLimitRegister));
+        json_object_set(j, "processing_trap_depth", json_integer(processing_trap_depth));
+        json_object_set(j, "instruction_count", json_integer(instruction_count));
+        json_object_set(j, "running_since", json_integer(running_since));
+        json_object_set(j, "wait_time", json_integer(wait_time));
+        json_object_set(j, "it_is_a_trap", json_boolean(it_is_a_trap));
+        json_object_set(j, "debug_mode", json_boolean(debug_mode));
+	if (trap_delay.has_value())
+		json_object_set(j, "trap_delay", json_integer(trap_delay.value()));
+
+	return j;
+}
+
+cpu *cpu::deserialize(const json_t *const j, bus *const b, std::atomic_uint32_t *const event)
+{
+	cpu *c = new cpu(b, event);
+
+	for(int set=0; set<2; set++) {
+		for(int regnr=0; regnr<6; regnr++)
+			c->regs0_5[set][regnr] = json_integer_value(json_object_get(j, format("register-%d-%d", set, regnr).c_str()));
+	}
+
+	for(int spnr=0; spnr<4; spnr++)
+		c->sp[spnr] = json_integer_value(json_object_get(j, format("sp-%d", spnr).c_str()));
+
+        c->pc                    = json_integer_value(json_object_get(j, "pc"));
+        c->instruction_start     = json_integer_value(json_object_get(j, "instruction_start"));
+        c->psw                   = json_integer_value(json_object_get(j, "psw"));
+        c->fpsr                  = json_integer_value(json_object_get(j, "fpsr"));
+        c->stackLimitRegister    = json_integer_value(json_object_get(j, "stackLimitRegister"));
+        c->processing_trap_depth = json_integer_value(json_object_get(j, "processing_trap_depth"));
+        c->instruction_count     = json_integer_value(json_object_get(j, "instruction_count"));
+        c->running_since         = get_us();
+        c->wait_time             = 0;
+        c->it_is_a_trap          = json_boolean_value(json_object_get(j, "it_is_a_trap"));
+        c->debug_mode            = json_boolean_value(json_object_get(j, "debug_mode"));
+	json_t *temp = json_object_get(j, "trap_delay");
+	if (temp)
+		c->trap_delay    = json_integer_value(temp);
+	else
+		c->trap_delay.reset();
+
+	return c;
+}
+#endif

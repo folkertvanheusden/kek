@@ -13,8 +13,7 @@
 #include "utils.h"
 
 
-console_ncurses::console_ncurses(std::atomic_uint32_t *const stop_event, bus *const b) :
-	console(stop_event, b)
+console_ncurses::console_ncurses(std::atomic_uint32_t *const stop_event): console(stop_event)
 {
 	init_ncurses(true);
 

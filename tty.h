@@ -1,4 +1,4 @@
-// (C) 2018-2023 by Folkert van Heusden
+// (C) 2018-2024 by Folkert van Heusden
 // Released under MIT license
 
 #pragma once
@@ -13,6 +13,7 @@
 
 #include "bus.h"
 #include "console.h"
+#include "gen.h"
 
 
 #define PDP11TTY_TKS		0177560	// reader status
@@ -49,6 +50,11 @@ private:
 public:
 	tty(console *const c, bus *const b);
 	virtual ~tty();
+
+#if IS_POSIX
+	json_t *serialize();
+	static tty *deserialize(const json_t *const j, bus *const b, console *const cnsl);
+#endif
 
 	void reset();
 

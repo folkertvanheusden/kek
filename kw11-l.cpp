@@ -57,6 +57,11 @@ void kw11_l::begin(console *const cnsl)
 #endif
 }
 
+void kw11_l::reset()
+{
+	lf_csr = 0;
+}
+
 void kw11_l::operator()()
 {
 	set_thread_name("kek:kw-11l");
@@ -154,3 +159,25 @@ uint8_t kw11_l::get_lf_crs()
 
 	return rc;
 }
+
+#if IS_POSIX
+json_t *kw11_l::serialize()
+{
+	json_t *j = json_object();
+
+	json_object_set(j, "CSR", json_integer(lf_csr));
+
+	return j;
+}
+
+kw11_l *kw11_l::deserialize(const json_t *const j, bus *const b, console *const cnsl)
+{
+	uint16_t CSR = json_integer_value(json_object_get(j, "CSR"));
+
+	kw11_l *out  = new kw11_l(b);
+	out->lf_csr  = CSR;
+	out->begin(cnsl);
+
+	return out;
+}
+#endif
