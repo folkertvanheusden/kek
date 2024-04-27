@@ -32,6 +32,8 @@ public:
 	console_ncurses(std::atomic_uint32_t *const stop_event);
 	virtual ~console_ncurses();
 
+	void begin() override;
+
 	void put_string_lf(const std::string & what) override;
 
 	void resize_terminal() override;

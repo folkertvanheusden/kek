@@ -50,6 +50,8 @@ public:
 	mmu();
 	virtual ~mmu();
 
+	void     begin();
+
 #if IS_POSIX
 	json_t *serialize() const;
 	static mmu *deserialize(const json_t *const j);

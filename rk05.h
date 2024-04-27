@@ -42,6 +42,7 @@ public:
 	rk05(bus *const b, std::atomic_bool *const disk_read_acitivity, std::atomic_bool *const disk_write_acitivity);
 	virtual ~rk05();
 
+	void begin() override;
 	void reset() override;
 
 	uint8_t  readByte(const uint16_t addr) override;

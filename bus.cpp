@@ -24,6 +24,7 @@
 bus::bus()
 {
 	mmu_ = new mmu();
+	mmu_->begin();
 
 	kw11_l_ = new kw11_l(this);
 

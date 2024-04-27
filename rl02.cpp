@@ -36,13 +36,17 @@ rl02::rl02(bus *const b, std::atomic_bool *const disk_read_activity, std::atomic
 	disk_read_activity (disk_read_activity ),
 	disk_write_activity(disk_write_activity)
 {
-	reset();
 }
 
 rl02::~rl02()
 {
 	for(auto fh : fhs)
 		delete fh;
+}
+
+void rl02::begin()
+{
+	reset();
 }
 
 void rl02::reset()
@@ -85,6 +89,7 @@ rl02 *rl02::deserialize(const json_t *const j, bus *const b)
 	std::vector<disk_backend *> backends;
 
 	rl02 *r = new rl02(b, nullptr, nullptr);
+	r->begin();
 
 	json_t *j_backends = json_object_get(j, "backends");
 	for(size_t i=0; i<json_array_size(j_backends); i++)

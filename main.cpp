@@ -534,9 +534,13 @@ int main(int argc, char *argv[])
 		if (enable_bootloader)
 			set_boot_loader(b, bootloader);
 
-		b->add_rk05(new rk05(b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
+		auto rk05_dev = new rk05(b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag());
+		rk05_dev->begin();
+		b->add_rk05(rk05_dev);
 
-		b->add_rl02(new rl02(b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
+		auto rl02_dev = new rl02(b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag());
+		rl02_dev->begin();
+		b->add_rl02(rl02_dev);
 	}
 	else {
 		FILE *fh = fopen(deserialize.c_str(), "r");
@@ -566,6 +570,7 @@ int main(int argc, char *argv[])
 	}
 
 	cnsl->set_bus(b);
+	cnsl->begin();
 
 	running = cnsl->get_running_flag();
 

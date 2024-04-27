@@ -46,6 +46,10 @@ console::~console()
 	delete [] screen_buffer;
 }
 
+void console::begin()
+{
+}
+
 void console::start_thread() 
 {
 	assert(b);

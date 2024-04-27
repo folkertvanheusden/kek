@@ -28,13 +28,17 @@ rk05::rk05(bus *const b, std::atomic_bool *const disk_read_acitivity, std::atomi
 	disk_read_acitivity(disk_read_acitivity),
 	disk_write_acitivity(disk_write_acitivity)
 {
-	reset();
 }
 
 rk05::~rk05()
 {
 	for(auto fh : fhs)
 		delete fh;
+}
+
+void rk05::begin()
+{
+	reset();
 }
 
 void rk05::reset()

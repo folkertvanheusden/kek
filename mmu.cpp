@@ -9,11 +9,15 @@
 
 mmu::mmu()
 {
-	reset();
 }
 
 mmu::~mmu()
 {
+}
+
+void mmu::begin()
+{
+	reset();
 }
 
 void mmu::reset()
@@ -265,6 +269,7 @@ void mmu::set_par_pdr(const json_t *const j_in, const int run_mode, const bool i
 mmu *mmu::deserialize(const json_t *const j)
 {
 	mmu *m = new mmu();
+	m->begin();
 
 	for(int run_mode=0; run_mode<4; run_mode++) {
 		if (run_mode == 2)

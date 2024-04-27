@@ -305,13 +305,19 @@ void setup() {
 	cnsl = new console_esp32(&stop_event, serial_ports, 80, 25);
 #endif
 	cnsl->set_bus(b);
+	cnsl->begin();
 
 	running = cnsl->get_running_flag();
 
-	Serial.println(F("Connect RK05 and RL02 to BUS"));
-	b->add_rk05(new rk05(b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
+	Serial.println(F("Connect RK05 and RL02 devices to BUS"));
+	auto rk05_dev = new rk05(b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag());
+	rk05_dev->begin();
+	b->add_rk05(rk05_dev);
 
-	b->add_rl02(new rl02(b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
+	auto rl02_dev = new rl02(b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag());
+	rl02_dev->begin();
+	b->add_rl02(rl02_dev);
+
 
 	Serial.println(F("Init TTY"));
 	tty_ = new tty(cnsl, b);

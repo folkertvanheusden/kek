@@ -61,6 +61,8 @@ public:
 	console(std::atomic_uint32_t *const stop_event, const int t_width = 80, const int t_height = 25);
 	virtual ~console();
 
+	virtual void begin();
+
 	void         set_bus(bus *const b) { this->b = b; }
 
 	void         start_thread();

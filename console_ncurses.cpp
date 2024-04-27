@@ -16,10 +16,6 @@
 console_ncurses::console_ncurses(std::atomic_uint32_t *const stop_event): console(stop_event)
 {
 	init_ncurses(true);
-
-	resize_terminal();
-
-	th_panel = new std::thread(&console_ncurses::panel_update_thread, this);
 }
 
 console_ncurses::~console_ncurses()
@@ -49,6 +45,13 @@ console_ncurses::~console_ncurses()
 	delete_window(w_main);
 
 	endwin();
+}
+
+void console_ncurses::begin()
+{
+	resize_terminal();
+
+	th_panel = new std::thread(&console_ncurses::panel_update_thread, this);
 }
 
 int console_ncurses::wait_for_char_ll(const short timeout)
