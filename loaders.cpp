@@ -207,7 +207,11 @@ std::optional<uint16_t> load_tape(bus *const b, const std::string & file)
 				break;
 			}
 
-			uint8_t c = fgetc(fh);
+			int c = fgetc(fh);
+			if (c == -1) {
+				DOLOG(warning, true, "read failure");
+				break;
+			}
 #endif
 
 			csum += c;
