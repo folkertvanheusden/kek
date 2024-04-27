@@ -31,13 +31,11 @@ static const char * const commands[] = {
 	"read data w/o header check"
 	};
 
-rl02::rl02(const std::vector<disk_backend *> & files, bus *const b, std::atomic_bool *const disk_read_activity, std::atomic_bool *const disk_write_activity) :
+rl02::rl02(bus *const b, std::atomic_bool *const disk_read_activity, std::atomic_bool *const disk_write_activity) :
 	b(b),
 	disk_read_activity (disk_read_activity ),
 	disk_write_activity(disk_write_activity)
 {
-	fhs = files;
-
 	reset();
 }
 
@@ -86,11 +84,11 @@ rl02 *rl02::deserialize(const json_t *const j, bus *const b)
 {
 	std::vector<disk_backend *> backends;
 
+	rl02 *r = new rl02(b, nullptr, nullptr);
+
 	json_t *j_backends = json_object_get(j, "backends");
 	for(size_t i=0; i<json_array_size(j_backends); i++)
-		backends.push_back(disk_backend::deserialize(json_array_get(j_backends, i)));
-
-	rl02 *r = new rl02(backends, b, nullptr, nullptr);
+		r->access_disk_backends()->push_back(disk_backend::deserialize(json_array_get(j_backends, i)));
 
 	for(int regnr=0; regnr<4; regnr++)
 		r->registers[regnr] = json_integer_value(json_object_get(j, format("register-%d", regnr).c_str()));

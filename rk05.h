@@ -39,7 +39,7 @@ private:
 	void     update_bus_address(const uint16_t v);
 
 public:
-	rk05(const std::vector<disk_backend *> & files, bus *const b, std::atomic_bool *const disk_read_acitivity, std::atomic_bool *const disk_write_acitivity);
+	rk05(bus *const b, std::atomic_bool *const disk_read_acitivity, std::atomic_bool *const disk_write_acitivity);
 	virtual ~rk05();
 
 	void reset() override;
