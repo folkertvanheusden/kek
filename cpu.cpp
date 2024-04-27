@@ -715,7 +715,7 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 					    setPSW_z(result == 0);
 				    }
 
-				    putGAM(g_dst, result);
+				    (void)putGAM(g_dst, result);
 
 				    return true;
 			    }
