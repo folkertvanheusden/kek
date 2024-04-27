@@ -291,9 +291,6 @@ void setup() {
 	cnsl = new console_esp32(&stop_event, b, serial_ports, 80, 25);
 #endif
 
-	Serial.println(F("Start line-frequency interrupt"));
-	kw11_l *lf = new kw11_l(b, cnsl);
-
 	running = cnsl->get_running_flag();
 
 	Serial.println(F("Init TTY"));
