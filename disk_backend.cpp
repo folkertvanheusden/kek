@@ -1,6 +1,8 @@
 // (C) 2018-2024 by Folkert van Heusden
 // Released under MIT license
 
+#include <cassert>
+
 #include "disk_backend.h"
 #include "gen.h"
 #if IS_POSIX
@@ -20,17 +22,21 @@ disk_backend::~disk_backend()
 #if IS_POSIX
 disk_backend *disk_backend::deserialize(const json_t *const j)
 {
-	std::string type = json_string_value(json_object_get(j, "disk-backend-type"));
+	std::string   type = json_string_value(json_object_get(j, "disk-backend-type"));
+
+	disk_backend *d    = nullptr;
 
 	if (type == "file")
-		return disk_backend_file::deserialize(j);
+		d = disk_backend_file::deserialize(j);
 
-	if (type == "nbd")
-		return disk_backend_nbd::deserialize(j);
+	else if (type == "nbd")
+		d = disk_backend_nbd::deserialize(j);
 
 	// should not be reached
-	assert(false);
+	assert(d);
 
-	return nullptr;
+	d->begin();
+
+	return d;
 }
 #endif
