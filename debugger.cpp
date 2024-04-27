@@ -822,7 +822,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 			}
 #if defined(ESP32)
 			else if (cmd == "debug") {
-				if (heap_caps_check_integrity(MALLOC_CAP_DEFAULT, true) == false)
+				if (heap_caps_check_integrity_all(true) == false)
 					cnsl->put_string_lf("HEAP corruption!");
 
 				continue;

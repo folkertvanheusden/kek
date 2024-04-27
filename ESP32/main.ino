@@ -18,6 +18,9 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #endif
+#if defined(ESP32)
+#include "esp_heap_caps.h"
+#endif
 
 #if defined(SHA2017)
 #include "console_shabadge.h"
@@ -210,6 +213,14 @@ void set_tty_serial_speed(console *const c, const uint32_t bps)
 		c->put_string_lf("Failed to store configuration file with serial settings");
 }
 
+#if defined(ESP32)
+void heap_caps_alloc_failed_hook(size_t requested_size, uint32_t caps, const char *function_name)
+{
+	printf("%s was called but failed to allocate %d bytes with 0x%X capabilities\r\n", function_name, requested_size, caps);
+}
+
+#endif
+
 void setup() {
 	Serial.begin(115200);
 
@@ -223,6 +234,10 @@ void setup() {
 
 	Serial.print(F("Size of int: "));
 	Serial.println(sizeof(int));
+
+#if defined(ESP32)
+	heap_caps_register_failed_alloc_callback(heap_caps_alloc_failed_hook);
+#endif
 
 #if !defined(BUILD_FOR_RP2040)
 	Serial.print(F("CPU clock frequency (MHz): "));
