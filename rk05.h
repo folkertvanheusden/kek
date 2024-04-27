@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-#include "device.h"
+#include "disk_device.h"
 #include "disk_backend.h"
 
 
@@ -25,12 +25,11 @@
 
 class bus;
 
-class rk05 : public device
+class rk05: public disk_device
 {
 private:
 	bus      *const b                { nullptr };
 	uint16_t        registers  [7]   { 0       };
-	std::vector<disk_backend *> fhs;
 	uint8_t         xfer_buffer[512] { 0       };
 
 	std::atomic_bool *const disk_read_acitivity  { nullptr };

@@ -1,4 +1,4 @@
-// (C) 2018-2023 by Folkert van Heusden
+// (C) 2018-2024 by Folkert van Heusden
 // Released under MIT license
 
 #include <Arduino.h>
@@ -18,7 +18,7 @@ protected:
 	void put_char_ll(const char c) override;
 
 public:
-	console_esp32(std::atomic_uint32_t *const stop_event, bus *const b, std::vector<Stream *> & io_ports, const int t_width, const int t_height);
+	console_esp32(std::atomic_uint32_t *const stop_event, std::vector<Stream *> & io_ports, const int t_width, const int t_height);
 	virtual ~console_esp32();
 
 	void put_string_lf(const std::string & what) override;

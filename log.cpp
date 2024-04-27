@@ -54,16 +54,19 @@ void setlogfile(const char *const lf, const log_level_t ll_file, const log_level
 	atexit(closelog);
 }
 
-void setloghost(const char *const host, const log_level_t ll)
+bool setloghost(const char *const host, const log_level_t ll)
 {
-	inet_aton(host, &syslog_ip_addr.sin_addr);
-	syslog_ip_addr.sin_port = htons(514);
+	syslog_ip_addr.sin_family = AF_INET;
+	bool ok = inet_aton(host, &syslog_ip_addr.sin_addr) == 1;
+	syslog_ip_addr.sin_port   = htons(514);
 
 	is_file        = false;
 
 	log_level_file = ll;
 
 	l_timestamp    = false;
+
+	return ok;
 }
 
 void setll(const log_level_t ll_screen, const log_level_t ll_file)

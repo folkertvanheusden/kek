@@ -1,4 +1,4 @@
-// (C) 2018-2023 by Folkert van Heusden
+// (C) 2018-2024 by Folkert van Heusden
 // Released under MIT license
 
 #include <Adafruit_NeoPixel.h>
@@ -13,7 +13,7 @@
 
 #define NEOPIXELS_PIN	25
 
-console_esp32::console_esp32(std::atomic_uint32_t *const stop_event, bus *const b, std::vector<Stream *> & io_ports, const int t_width, const int t_height) :
+console_esp32::console_esp32(std::atomic_uint32_t *const stop_event, std::vector<Stream *> & io_ports, const int t_width, const int t_height) :
 	console(stop_event, t_width, t_height),
 	io_ports(io_ports)
 {
@@ -72,7 +72,6 @@ void console_esp32::panel_update_thread()
 	pixels.begin();
 
 	pixels.clear();
-
 	pixels.show();
 
 	constexpr uint8_t brightness = 16;
@@ -103,7 +102,7 @@ void console_esp32::panel_update_thread()
 	pixels.clear();
 	pixels.show();
 
-	for(;;) {
+	while(!stop_panel) {
 		vTaskDelay(20 / portTICK_PERIOD_MS);
 
 		try {
@@ -141,5 +140,10 @@ void console_esp32::panel_update_thread()
 			put_string_lf("Unknown exception in panel thread");
 		}
 	}
+
+	pixels.clear();
+	pixels.show();
+
+	Serial.println(F("panel task terminating"));
 #endif
 }

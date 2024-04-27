@@ -119,6 +119,8 @@ public:
 	kw11_l *getKW11_L() { return kw11_l_; }
 	tty    *getTty()    { return tty_;    }
 	mmu    *getMMU()    { return mmu_;    }
+	rk05   *getRK05()   { return rk05_;   }
+	rl02   *getRL02()   { return rl02_;   }
 
 	uint16_t read    (const uint16_t a, const word_mode_t word_mode, const rm_selection_t mode_selection, const bool peek_only=false, const d_i_space_t s = i_space);
 	uint16_t readByte(const uint16_t a) { return read(a, wm_byte, rm_cur); }

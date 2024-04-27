@@ -271,7 +271,7 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 					mpr[0]++;
 				}
 
-				if (!fhs.at(device)->write(temp_disk_offset, cur, xfer_buffer)) {
+				if (fhs.at(device) == nullptr || fhs.at(device)->write(temp_disk_offset, cur, xfer_buffer, 256) == false) {
 					DOLOG(ll_error, true, "RL02: write error, device %d, disk offset %u, read size %u, cylinder %d, head %d, sector %d", device, temp_disk_offset, cur, track, head, sector);
 					break;
 				}
@@ -325,7 +325,7 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 			while(count > 0) {
 				uint32_t cur = std::min(uint32_t(sizeof xfer_buffer), count);
 
-				if (!fhs.at(device)->read(temp_disk_offset, cur, xfer_buffer)) {
+				if (fhs.at(device) == nullptr || fhs.at(device)->read(temp_disk_offset, cur, xfer_buffer, 256) == false) {
 					DOLOG(ll_error, true, "RL02: read error, device %d, disk offset %u, read size %u, cylinder %d, head %d, sector %d", device, temp_disk_offset, cur, track, head, sector);
 					break;
 				}
@@ -365,7 +365,7 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 				*disk_read_activity = false;
 		}
 		else {
-			DOLOG(warning, false, "RL02: command %d not implemented", command);
+			DOLOG(debug, false, "RL02: command %d not implemented", command);
 		}
 
 		if (do_int) {

@@ -23,14 +23,14 @@ void loadbin(bus *const b, uint16_t base, const char *const file)
 	FILE *fh = fopen(file, "rb");
 
 	while(!feof(fh))
-		b -> writeByte(base++, fgetc(fh));
+		b->writeByte(base++, fgetc(fh));
 
 	fclose(fh);
 }
 
-void setBootLoader(bus *const b, const bootloader_t which)
+void set_boot_loader(bus *const b, const bootloader_t which)
 {
-	cpu *const c      = b -> getCpu();
+	cpu       *const c      = b->getCpu();
 
 	uint16_t         offset = 0;
 	uint16_t         start  = 0;
@@ -40,7 +40,7 @@ void setBootLoader(bus *const b, const bootloader_t which)
 	if (which == BL_RK05) {
 		start = offset = 01000;
 
-		static uint16_t rk05_code[] = {
+		constexpr const uint16_t rk05_code[] = {
 			0012700,
 			0177406,
 			0012710,
@@ -92,7 +92,7 @@ void setBootLoader(bus *const b, const bootloader_t which)
 		start = offset = 01000;
 
 		/* from https://www.pdp-11.nl/peripherals/disk/rl-info.html
-		static uint16_t rl02_code[] = {
+		constexpr const uint16_t rl02_code[] = {
 			0012701,
 			0174400,
 			0012761,
@@ -120,7 +120,7 @@ void setBootLoader(bus *const b, const bootloader_t which)
 		*/
 
 		// from http://gunkies.org/wiki/RL11_disk_controller
-		static uint16_t rl02_code[] = {
+		constexpr const uint16_t rl02_code[] = {
 			0012700,
 			0174400,
 			0012760,
@@ -139,12 +139,12 @@ void setBootLoader(bus *const b, const bootloader_t which)
 	}
 
 	for(int i=0; i<size; i++)
-		b -> writeWord(offset + i * 2, bl[i]);
+		b->writeWord(offset + i * 2, bl[i]);
 
-	c -> setRegister(7, start);
+	c->setRegister(7, start);
 }
 
-std::optional<uint16_t> loadTape(bus *const b, const std::string & file)
+std::optional<uint16_t> load_tape(bus *const b, const std::string & file)
 {
 #if defined(ESP32)
 	File32 fh;
@@ -211,7 +211,7 @@ std::optional<uint16_t> loadTape(bus *const b, const std::string & file)
 #endif
 
 			csum += c;
-			b -> writeByte(p++, c);
+			b->writeByte(p++, c);
 		}
 
 #if defined(ESP32)
@@ -271,6 +271,6 @@ void load_p11_x11(bus *const b, const std::string & file)
 
 	fclose(fh);
 
-	cpu *const c      = b -> getCpu();
-	c -> setRegister(7, 0);
+	cpu *const c      = b->getCpu();
+	c->setRegister(7, 0);
 }

@@ -15,8 +15,8 @@
 #define COLORED     0
 #define UNCOLORED   1
 
-console_shabadge::console_shabadge(std::atomic_uint32_t *const stop_event, bus *const b, std::vector<Stream *> & io_ports) :
-	console_esp32(stop_event, b, io_ports, 296 / 8, 128 / 8)
+console_shabadge::console_shabadge(std::atomic_uint32_t *const stop_event, std::vector<Stream *> & io_ports) :
+	console_esp32(stop_event, io_ports, 296 / 8, 128 / 8)
 {
 	if (epd.Init() != 0)
 		Serial.println("Init of DEPG0290B01 failed");

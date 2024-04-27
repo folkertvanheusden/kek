@@ -295,10 +295,19 @@ void get_metrics(cpu *const c)
 	}
 }
 
+void start_disk_devices(const std::vector<disk_backend *> & backends, const bool enable_snapshots)
+{
+	for(auto & backend: backends) {
+		if (backend->begin(enable_snapshots) == false)
+			error_exit(false, "Failed to initialize disk backend \"%s\"", backend->get_identifier().c_str());
+	}
+}
+
 void help()
 {
 	printf("-h       this help\n");
 	printf("-D x     deserialize state from file\n");
+	printf("-P       when serializing state to file (in the debugger), include an overlay: changes to disk-files are then non-persistent, they only exist in the state-dump\n");
 	printf("-T t.bin load file as a binary tape file (like simh \"load\" command), also for .BIC files\n");
 	printf("-B       run tape file as a unit test (for .BIC files)\n");
 	printf("-R d.rk  load file as a RK05 disk device\n");
@@ -318,27 +327,8 @@ void help()
 	printf("-M       log metrics\n");
 }
 
-#include "breakpoint_parser.h"
 int main(int argc, char *argv[])
 {
-#if 0
-	{
-	bus *b = new bus();
-	cpu *c = new cpu(b, &event);
-	b->add_cpu(c);
-
-	std::pair<breakpoint *, std::optional<std::string> > rc = parse_breakpoint(b, "(pc=0123 and (r0=01456 or r2=1) and memWV[0444]=0222)");
-	printf("%p\n", rc.first);
-
-	if (rc.second.has_value())
-		printf("%s\n", rc.second.value().c_str());
-	delete rc.first;
-	delete b;
-	}
-
-	return 0;
-#endif
-
 	//setlocale(LC_ALL, "");
 
 	std::vector<disk_backend *> rk05_files;
@@ -365,7 +355,7 @@ int main(int argc, char *argv[])
 
 	std::string  test;
 
-	disk_backend *temp_d = nullptr;
+	bool         disk_snapshots = false;
 
 	std::optional<int> set_ram_size;
 
@@ -376,7 +366,7 @@ int main(int argc, char *argv[])
 	std::string  deserialize;
 
 	int  opt          = -1;
-	while((opt = getopt(argc, argv, "hD:MT:Br:R:p:ndtL:bl:s:Q:N:J:XS:")) != -1)
+	while((opt = getopt(argc, argv, "hD:MT:Br:R:p:ndtL:bl:s:Q:N:J:XS:P")) != -1)
 	{
 		switch(opt) {
 			case 'h':
@@ -441,17 +431,11 @@ int main(int argc, char *argv[])
 				break;
 
 			case 'R':
-				temp_d = new disk_backend_file(optarg);
-				if (!temp_d->begin())
-					error_exit(false, "Cannot use file \"%s\" for RK05", optarg);
-				rk05_files.push_back(temp_d);
+				rk05_files.push_back(new disk_backend_file(optarg));
 				break;
 
 			case 'r':
-				temp_d = new disk_backend_file(optarg);
-				if (!temp_d->begin())
-					error_exit(false, "Cannot use file \"%s\" for RL02", optarg);
-				rl02_files.push_back(temp_d);
+				rl02_files.push_back(new disk_backend_file(optarg));
 				break;
 
 			case 'N': {
@@ -459,7 +443,7 @@ int main(int argc, char *argv[])
 					  if (parts.size() != 3)
 						  error_exit(false, "-N: parameter missing");
 
-					  temp_d = new disk_backend_nbd(parts.at(0), atoi(parts.at(1).c_str()));
+					  disk_backend *temp_d = new disk_backend_nbd(parts.at(0), atoi(parts.at(1).c_str()));
 
 					  if (parts.at(2) == "rk05")
 						rk05_files.push_back(temp_d);
@@ -494,6 +478,10 @@ int main(int argc, char *argv[])
 				set_ram_size = std::stoi(optarg);
 				break;
 
+			case 'P':
+				disk_snapshots = true;
+				break;
+
 			default:
 			        fprintf(stderr, "-%c is not understood\n", opt);
 				return 1;
@@ -507,9 +495,13 @@ int main(int argc, char *argv[])
 	if (validate_json.empty() == false)
 		return run_cpu_validation(validate_json);
 
-	DOLOG(info, true, "This PDP-11 emulator is called \"kek\" (reason for that is forgotten) and was written by Folkert van Heusden.");
+	DOLOG(info, true, "PDP11 emulator, by Folkert van Heusden");
 
 	DOLOG(info, true, "Built on: " __DATE__ " " __TIME__);
+
+	start_disk_devices(rk05_files, disk_snapshots);
+
+	start_disk_devices(rl02_files, disk_snapshots);
 
 #if !defined(_WIN32)
 	if (withUI)
@@ -533,26 +525,18 @@ int main(int argc, char *argv[])
 		cpu *c = new cpu(b, &event);
 		b->add_cpu(c);
 
-		if (rk05_files.empty() == false) {
-			if (enable_bootloader == false)
-				DOLOG(warning, true, "Note: loading RK05 with no (RK05-) bootloader selected");
-			else
-				bootloader = BL_RK05;
+		if (rk05_files.empty() == false)
+			bootloader = BL_RK05;
 
-			b->add_rk05(new rk05(rk05_files, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
-		}
-
-		if (rl02_files.empty() == false) {
-			if (enable_bootloader == false)
-				DOLOG(warning, true, "Note: loading RL02 with no (RL02-) bootloader selected");
-			else
-				bootloader = BL_RL02;
-
-			b->add_rl02(new rl02(rl02_files, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
-		}
+		if (rl02_files.empty() == false)
+			bootloader = BL_RL02;
 
 		if (enable_bootloader)
-			setBootLoader(b, bootloader);
+			set_boot_loader(b, bootloader);
+
+		b->add_rk05(new rk05(rk05_files, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
+
+		b->add_rl02(new rl02(rl02_files, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
 	}
 	else {
 		FILE *fh = fopen(deserialize.c_str(), "r");
@@ -590,7 +574,7 @@ int main(int argc, char *argv[])
 	std::optional<uint16_t> bic_start;
 
 	if (tape.empty() == false) {
-		bic_start = loadTape(b, tape);
+		bic_start = load_tape(b, tape);
 
 		if (bic_start.has_value() == false)
 			return 1;  // fail

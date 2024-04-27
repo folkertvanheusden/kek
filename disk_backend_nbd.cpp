@@ -1,6 +1,7 @@
 // (C) 2018-2024 by Folkert van Heusden
 // Released under MIT license
 
+#include <cassert>
 #include <fcntl.h>
 #include <string.h>
 #include <unistd.h>
@@ -54,6 +55,8 @@ json_t *disk_backend_nbd::serialize() const
 
 	json_object_set(j, "disk-backend-type", json_string("nbd"));
 
+	json_object_set(j, "overlay", serialize_overlay());
+
 	// TODO store checksum of backend
 	json_object_set(j, "host", json_string(host.c_str()));
 	json_object_set(j, "port", json_integer(port));
@@ -68,8 +71,12 @@ disk_backend_nbd *disk_backend_nbd::deserialize(const json_t *const j)
 }
 #endif
 
-bool disk_backend_nbd::begin()
+bool disk_backend_nbd::begin(const bool snapshots)
 {
+#if IS_POSIX
+	use_overlay = snapshots;
+#endif
+
 	if (!connect(false)) {
 		DOLOG(ll_error, true, "disk_backend_nbd: cannot connect to NBD server");
 		return false;
@@ -84,10 +91,10 @@ bool disk_backend_nbd::connect(const bool retry)
 {
 	do {
 		// LOOP until connected, logging message, exponential backoff?
-		addrinfo *res   = nullptr;
+		addrinfo *res     = nullptr;
 
 		addrinfo hints { 0 };
-		hints.ai_family = AF_INET;
+		hints.ai_family   = AF_INET;
 		hints.ai_socktype = SOCK_STREAM;
 
 		char port_str[8] { 0 };
@@ -130,7 +137,7 @@ bool disk_backend_nbd::connect(const bool retry)
 			uint64_t size;
 			uint32_t flags;
 			uint8_t  padding[124];
-		} nbd_hello;
+		} nbd_hello { };
 
 		if (fd != -1) {
 			if (READ(fd, reinterpret_cast<char *>(&nbd_hello), sizeof nbd_hello) != sizeof nbd_hello) {
@@ -154,14 +161,27 @@ bool disk_backend_nbd::connect(const bool retry)
 	return fd != -1;
 }
 
-bool disk_backend_nbd::read(const off_t offset, const size_t n, uint8_t *const target)
+bool disk_backend_nbd::read(const off_t offset_in, const size_t n, uint8_t *const target, const size_t sector_size)
 {
-	DOLOG(debug, false, "disk_backend_nbd::read: read %zu bytes from offset %zu", n, offset);
+	DOLOG(debug, false, "disk_backend_nbd::read: read %zu bytes from offset %zu", n, offset_in);
 
 	if (n == 0)
 		return true;
 
-	do {
+	size_t o      = 0;
+	off_t  offset = offset_in;
+
+	while(offset < offset_in + off_t(n)) {
+#if IS_POSIX
+		auto o_rc = get_from_overlay(offset, sector_size);
+		if (o_rc.has_value()) {
+			memcpy(&target[o], o_rc.value().data(), sector_size);
+			offset += sector_size;
+			o      += sector_size;
+			continue;
+		}
+#endif
+
 		if (fd == -1 && !connect(true)) {
 			DOLOG(warning, true, "disk_backend_nbd::read: (re-)connect");
 			sleep(1);
@@ -174,12 +194,12 @@ bool disk_backend_nbd::read(const off_t offset, const size_t n, uint8_t *const t
 			uint64_t handle;
 			uint64_t offset;
 			uint32_t length;
-		} nbd_request { 0 };
+		} nbd_request { };
 
 		nbd_request.magic  = ntohl(0x25609513);
 		nbd_request.type   = 0;  // READ
 		nbd_request.offset = HTONLL(uint64_t(offset));
-		nbd_request.length = htonl(n);
+		nbd_request.length = htonl(sector_size);
 
 		if (WRITE(fd, reinterpret_cast<const char *>(&nbd_request), sizeof nbd_request) != sizeof nbd_request) {
 			DOLOG(warning, true, "disk_backend_nbd::read: problem sending request");
@@ -217,25 +237,32 @@ bool disk_backend_nbd::read(const off_t offset, const size_t n, uint8_t *const t
 			return false;
 		}
 
-		if (READ(fd, reinterpret_cast<char *>(target), n) != ssize_t(n)) {
+		if (READ(fd, reinterpret_cast<char *>(target), sector_size) != ssize_t(sector_size)) {
 			DOLOG(warning, true, "disk_backend_nbd::read: problem receiving payload");
 			close(fd);
 			fd = -1;
 			sleep(1);
 			continue;
 		}
+
+		offset += sector_size;
+		o      += sector_size;
 	}
-	while(fd == -1);
 
 	return true;
 }
 
-bool disk_backend_nbd::write(const off_t offset, const size_t n, const uint8_t *const from)
+bool disk_backend_nbd::write(const off_t offset, const size_t n, const uint8_t *const from, const size_t sector_size)
 {
 	DOLOG(debug, false, "disk_backend_nbd::write: write %zu bytes to offset %zu", n, offset);
 
 	if (n == 0)
 		return true;
+
+#if IS_POSIX
+	if (store_mem_range_in_overlay(offset, n, from, sector_size))
+		return true;
+#endif
 
 	do {
 		if (!connect(true)) {
@@ -250,7 +277,7 @@ bool disk_backend_nbd::write(const off_t offset, const size_t n, const uint8_t *
 			uint64_t handle;
 			uint64_t offset;
 			uint32_t length;
-		} nbd_request { 0 };
+		} nbd_request { };
 
 		nbd_request.magic  = ntohl(0x25609513);
 		nbd_request.type   = 1;  // WRITE

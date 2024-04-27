@@ -23,9 +23,11 @@ public:
 	disk_backend_esp32(const std::string & filename);
 	virtual ~disk_backend_esp32();
 
-	bool begin() override;
+	std::string get_identifier() const { return filename; }
 
-	bool read(const off_t offset, const size_t n, uint8_t *const target) override;
+	bool begin(const bool dummy) override;
 
-	bool write(const off_t offset, const size_t n, const uint8_t *const from) override;
+	bool read(const off_t offset, const size_t n, uint8_t *const target, const size_t sector_size) override;
+
+	bool write(const off_t offset, const size_t n, const uint8_t *const from, const size_t sector_size) override;
 };
