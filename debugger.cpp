@@ -942,7 +942,10 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 			}
 #endif
 			else if (parts[0] == "setsl" && parts.size() == 3) {
-				setloghost(parts.at(1).c_str(), parse_ll(parts[2]));
+				if (setloghost(parts.at(1).c_str(), parse_ll(parts[2])) == false)
+					cnsl->put_string_lf("Failed parsing IP address");
+				else
+					send_syslog(info, "Hello, world!");
 
 				continue;
 			}
@@ -1011,7 +1014,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 					"ser           - serialize state to a file",
 //					"dser          - deserialize state from a file",
 #endif
-					"dp            - stop panel",
+					"dp            - disable panel",
 #if defined(ESP32)
 					"cfgnet        - configure network (e.g. WiFi)",
 					"startnet      - start network",
