@@ -16,30 +16,22 @@ memory::memory(const uint32_t size): size(size)
 
 	if (size > 12 * 8192 && psramFound()) {
 		Serial.println(F("Using PSRAM"));
-		is_psram = true;
 
 		m = reinterpret_cast<uint8_t *>(ps_malloc(size));
 
 		reset();
 	}
 	else {
-		m = new uint8_t[size]();
+		m = reinterpret_cast<uint8_t *>(calloc(1, size));
 	}
 #else
-	m = new uint8_t[size]();
+	m = reinterpret_cast<uint8_t *>(calloc(1, size));
 #endif
 }
 
 memory::~memory()
 {
-#if defined(ESP32)
-	if (is_psram)
-		free(m);
-	else
-		delete [] m;
-#else
-	delete [] m;
-#endif
+	free(m);
 }
 
 void memory::reset()

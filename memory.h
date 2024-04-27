@@ -13,9 +13,6 @@ class memory
 private:
 	const uint32_t size     { 0       };
 	uint8_t       *m        { nullptr };
-#ifdef ESP32
-	bool           is_psram { false   };
-#endif
 
 public:
 	memory(const uint32_t size);
