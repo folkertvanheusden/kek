@@ -37,13 +37,9 @@
 #include "rp2040.h"
 #endif
 
-void set_boot_loader(bus *const b);
-
-void configure_disk(console *const c);
-
-void configure_network(console *const c);
-void check_network(console *const c);
-void start_network(console *const c);
+void configure_network(console *const cnsl);
+void check_network(console *const cnsl);
+void start_network(console *const cnsl);
 
 void set_tty_serial_speed(console *const c, const uint32_t bps);
 #endif
