@@ -41,7 +41,7 @@ std::pair<breakpoint_memory *, std::optional<std::string> > breakpoint_memory::p
 		return { nullptr, "memory: key or value missing" };
 
 	auto values_in = parts.at(1);
-	auto v_parts = split(values_in, ",");
+	auto v_parts = split(std::move(values_in), ",");
 	std::set<uint16_t> values;
 	for(auto & v: v_parts)
 		values.insert(std::stoi(v, nullptr, 8));
