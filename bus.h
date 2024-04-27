@@ -75,10 +75,7 @@ private:
 	rl02    *rl02_   { nullptr };
 	tty     *tty_    { nullptr };
 	kw11_l  *kw11_l_ { nullptr };
-
 	mmu     *mmu_    { nullptr };
-
-	int      n_pages { DEFAULT_N_PAGES };
 	memory  *m       { nullptr };
 
 	uint16_t microprogram_break_register { 0 };
@@ -104,7 +101,6 @@ public:
 	void set_debug_mode() { console_switches |= 128; }
 	uint16_t get_console_leds() { return console_leds; }
 
-	int  get_memory_size() const { return n_pages; }
 	void set_memory_size(const int n_pages);
 
 	void mmudebug(const uint16_t a);

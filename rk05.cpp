@@ -23,13 +23,11 @@ static const char * const regnames[] = {
 	"RK05_DATABUF      "
 	};
 
-rk05::rk05(const std::vector<disk_backend *> & files, bus *const b, std::atomic_bool *const disk_read_acitivity, std::atomic_bool *const disk_write_acitivity) :
+rk05::rk05(bus *const b, std::atomic_bool *const disk_read_acitivity, std::atomic_bool *const disk_write_acitivity) :
 	b(b),
 	disk_read_acitivity(disk_read_acitivity),
 	disk_write_acitivity(disk_write_acitivity)
 {
-	fhs = files;
-
 	reset();
 }
 

@@ -534,9 +534,9 @@ int main(int argc, char *argv[])
 		if (enable_bootloader)
 			set_boot_loader(b, bootloader);
 
-		b->add_rk05(new rk05(rk05_files, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
+		b->add_rk05(new rk05(b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
 
-		b->add_rl02(new rl02(rl02_files, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
+		b->add_rl02(new rl02(b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
 	}
 	else {
 		FILE *fh = fopen(deserialize.c_str(), "r");
