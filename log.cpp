@@ -83,8 +83,10 @@ void send_syslog(const int ll, const std::string & what)
 	std::string msg = format("<%d>%s", 16 * 8 + ll, what.c_str());
 
 	int s = socket(AF_INET, SOCK_DGRAM, 0);
-	(void)sendto(s, msg.c_str(), msg.size(), 0, reinterpret_cast<sockaddr *>(&syslog_ip_addr), sizeof syslog_ip_addr);
-	close(s);
+	if (s != -1) {
+		(void)sendto(s, msg.c_str(), msg.size(), 0, reinterpret_cast<sockaddr *>(&syslog_ip_addr), sizeof syslog_ip_addr);
+		close(s);
+	}
 }
 
 void closelog()
