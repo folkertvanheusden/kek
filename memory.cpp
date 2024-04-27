@@ -1,4 +1,4 @@
-// (C) 2018-2023 by Folkert van Heusden
+// (C) 2018-2024 by Folkert van Heusden
 // Released under MIT license
 
 #if defined(ESP32)
@@ -8,7 +8,7 @@
 
 #include "memory.h"
 
-memory::memory(const uint32_t size) : size(size)
+memory::memory(const uint32_t size): size(size)
 {
 #if defined(ESP32)
 	Serial.print(F("Memory size (in bytes, decimal): "));
