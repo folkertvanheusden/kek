@@ -187,11 +187,11 @@ void console_ncurses::panel_update_thread()
 			auto psw       = data["psw"][0];
 
 			std::string instruction_values;
-			for(auto iv : data["instruction-values"])
+			for(auto & iv : data["instruction-values"])
 				instruction_values += (instruction_values.empty() ? "" : ",") + iv;
 
 			std::string work_values;
-			for(auto wv : data["work-values"])
+			for(auto & wv : data["work-values"])
 				work_values += (work_values.empty() ? "" : ",") + wv;
 
 			std::string instruction = data["instruction-text"].at(0);

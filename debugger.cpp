@@ -325,11 +325,11 @@ int disassemble(cpu *const c, console *const cnsl, const uint16_t pc, const bool
 	auto psw       = data["psw"][0];
 
 	std::string instruction_values;
-	for(auto iv : data["instruction-values"])
+	for(auto & iv : data["instruction-values"])
 		instruction_values += (instruction_values.empty() ? "" : ",") + iv;
 
 	std::string work_values;
-	for(auto wv : data["work-values"])
+	for(auto & wv : data["work-values"])
 		work_values += (work_values.empty() ? "" : ",") + wv;
 
 	std::string instruction = data["instruction-text"].at(0);
@@ -391,7 +391,7 @@ std::map<std::string, std::string> split(const std::vector<std::string> & kv_arr
 {
 	std::map<std::string, std::string> out;
 
-	for(auto pair : kv_array) {
+	for(auto & pair : kv_array) {
 		auto kv = split(pair, splitter);
 
 		if (kv.size() == 1)
@@ -663,7 +663,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 				cnsl->put_string_lf("Breakpoints:");
 
-				for(auto a : bps)
+				for(auto & a : bps)
 					cnsl->put_string_lf(format("%d: %s", a.first, a.second->emit().c_str()));
 
 				if (bps.empty())
