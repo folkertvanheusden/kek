@@ -101,12 +101,12 @@ std::pair<breakpoint_register *, std::optional<std::string> > breakpoint_registe
 	else if (key == "PC" || key == "pc") {
 		return { new breakpoint_register(b, 7, values), { } };
 	}
-	else if (key.substr(0, 3) == "MMR" or key.substr(0, 3) == "mmr") {
+	else if (key.substr(0, 3) == "MMR" || key.substr(0, 3) == "mmr") {
 		int which = key[3] - '0';
 
 		return { new breakpoint_register(b, hr_mmr0 + which, values), { } };
 	}
-	else if (key.substr(0, 3) == "PSW" or key.substr(0, 3) == "psw") {
+	else if (key.substr(0, 3) == "PSW" || key.substr(0, 3) == "psw") {
 		return { new breakpoint_register(b, hr_psw, values), { } };
 	}
 
