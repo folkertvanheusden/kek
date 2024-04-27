@@ -821,6 +821,12 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 				continue;
 			}
 #if defined(ESP32)
+			else if (cmd == "debug") {
+				if (heap_caps_check_integrity(MALLOC_CAP_DEFAULT, true) == false)
+					cnsl->put_string_lf("HEAP corruption!");
+
+				continue;
+			}
 			else if (cmd == "cfgnet") {
 				configure_network(cnsl);
 
@@ -1016,6 +1022,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 					"startnet      - start network",
 					"chknet        - check network status",
 					"serspd        - set serial speed in bps (8N1 are default)",
+					"debug         - debugging info",
 #endif
 					"cfgdisk       - configure disk",
 					nullptr
