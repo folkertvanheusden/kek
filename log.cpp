@@ -25,7 +25,7 @@ static sockaddr_in syslog_ip_addr   = { };
 static bool        is_file          = true;
 log_level_t        log_level_file   = warning;
 log_level_t        log_level_screen = warning;
-FILE              *lfh              = nullptr;
+static FILE       *log_fh           = nullptr;
 static int         lf_uid           = -1;
 static int         lf_gid           = -1;
 static bool        l_timestamp      = true;
@@ -41,8 +41,8 @@ int gettid()
 
 void setlogfile(const char *const lf, const log_level_t ll_file, const log_level_t ll_screen, const bool timestamp)
 {
-	if (lfh)
-		fclose(lfh);
+	if (log_fh)
+		fclose(log_fh);
 
 	free((void *)logfile);
 
@@ -98,26 +98,26 @@ void send_syslog(const int ll, const std::string & what)
 
 void closelog()
 {
-	if (lfh) {
-		fclose(lfh);
+	if (log_fh) {
+		fclose(log_fh);
 
-		lfh = nullptr;
+		log_fh = nullptr;
 	}
 }
 
 void dolog(const log_level_t ll, const char *fmt, ...)
 {
 #if !defined(BUILD_FOR_RP2040)
-	if (!lfh && logfile != nullptr) {
+	if (!log_fh && logfile != nullptr) {
 #if !defined(ESP32)
-		lfh = fopen(logfile, "a+");
-		if (!lfh)
+		log_fh = fopen(logfile, "a+");
+		if (!log_fh)
 			error_exit(true, "Cannot access log-file %s", logfile);
 #if !defined(_WIN32)
-		if (lf_uid != -1 && fchown(fileno(lfh), lf_uid, lf_gid) == -1)
+		if (lf_uid != -1 && fchown(fileno(log_fh), lf_uid, lf_gid) == -1)
 			error_exit(true, "Cannot change logfile (%s) ownership", logfile);
 
-		if (fcntl(fileno(lfh), F_SETFD, FD_CLOEXEC) == -1)
+		if (fcntl(fileno(log_fh), F_SETFD, FD_CLOEXEC) == -1)
 			error_exit(true, "fcntl(FD_CLOEXEC) failed");
 #endif
 #endif
@@ -158,8 +158,8 @@ void dolog(const log_level_t ll, const char *fmt, ...)
 		if (ll <= log_level_file && is_file == false)
 			send_syslog(ll, log_buffer);
 #if !defined(ESP32)
-		if (ll <= log_level_file && lfh != nullptr)
-			fprintf(lfh, "%s%s\n", ts_str, log_buffer);
+		if (ll <= log_level_file && log_fh != nullptr)
+			fprintf(log_fh, "%s%s\n", ts_str, log_buffer);
 #endif
 
 		if (ll <= log_level_screen)
@@ -169,8 +169,8 @@ void dolog(const log_level_t ll, const char *fmt, ...)
 		if (ll <= log_level_file && is_file == false)
 			send_syslog(ll, log_buffer);
 #if !defined(ESP32)
-		if (ll <= log_level_file && lfh != nullptr)
-			fprintf(lfh, "%s\n", log_buffer);
+		if (ll <= log_level_file && log_fh != nullptr)
+			fprintf(log_fh, "%s\n", log_buffer);
 #endif
 
 		if (ll <= log_level_screen)
