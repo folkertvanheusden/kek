@@ -40,7 +40,7 @@ void set_boot_loader(bus *const b, const bootloader_t which)
 	if (which == BL_RK05) {
 		start = offset = 01000;
 
-		constexpr const uint16_t rk05_code[] = {
+		static const uint16_t rk05_code[] = {
 			0012700,
 			0177406,
 			0012710,
@@ -92,7 +92,7 @@ void set_boot_loader(bus *const b, const bootloader_t which)
 		start = offset = 01000;
 
 		/* from https://www.pdp-11.nl/peripherals/disk/rl-info.html
-		constexpr const uint16_t rl02_code[] = {
+		static const uint16_t rl02_code[] = {
 			0012701,
 			0174400,
 			0012761,
@@ -120,7 +120,7 @@ void set_boot_loader(bus *const b, const bootloader_t which)
 		*/
 
 		// from http://gunkies.org/wiki/RL11_disk_controller
-		constexpr const uint16_t rl02_code[] = {
+		static const uint16_t rl02_code[] = {
 			0012700,
 			0174400,
 			0012760,
