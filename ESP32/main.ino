@@ -326,7 +326,7 @@ void setup() {
 
 #if !defined(BUILD_FOR_RP2040)  // FIXME: led ring
 	Serial.println(F("Starting panel"));
-	xTaskCreate(&console_thread_wrapper_panel, "panel", 2048, cnsl, 1, nullptr);
+	xTaskCreate(&console_thread_wrapper_panel, "panel", 3072, cnsl, 1, nullptr);
 #endif
 
 #if !defined(BUILD_FOR_RP2040)
