@@ -139,11 +139,11 @@ void dolog(const log_level_t ll, const char *fmt, ...)
 		if (!localtime_r(&t_now, &tm))
 			error_exit(true, "localtime_r failed");
 #endif
-		char *ts_str = nullptr;
+		char ts_str[64] { };
 
 		const char *const ll_names[] = { "emerg  ", "alert  ", "crit   ", "error  ", "warning", "notice ", "info   ", "debug  ", "none   " };
 
-		asprintf(&ts_str, "%04d-%02d-%02d %02d:%02d:%02d.%06d %s|%s] ",
+		snprintf(ts_str, sizeof ts_str, "%04d-%02d-%02d %02d:%02d:%02d.%06d %s|%s] ",
 				tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, int(now % 1000000),
 				ll_names[ll], get_thread_name().c_str());
 
@@ -156,8 +156,6 @@ void dolog(const log_level_t ll, const char *fmt, ...)
 
 		if (ll <= log_level_screen)
 			printf("%s%s\r\n", ts_str, str);
-
-		free(ts_str);
 	}
 	else {
 		if (ll <= log_level_file && is_file == false)
