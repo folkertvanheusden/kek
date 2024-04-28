@@ -31,7 +31,7 @@ std::optional<std::string> breakpoint_memory::is_triggered() const
 	if (it == values.end())
 		return { };
 
-	return format("MEM%c%c[%08a]=%06o", word_mode == wm_byte ? 'B' : 'W', is_virtual ? 'V' : 'P', addr, v);
+	return format("MEM%c%c[%08o]=%06o", word_mode == wm_byte ? 'B' : 'W', is_virtual ? 'V' : 'P', addr, v);
 }
 
 std::pair<breakpoint_memory *, std::optional<std::string> > breakpoint_memory::parse(bus *const b, const std::string & in)
