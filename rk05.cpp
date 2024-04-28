@@ -250,3 +250,38 @@ void rk05::writeWord(const uint16_t addr, const uint16_t v)
 		}
 	}
 }
+
+#if IS_POSIX
+json_t *rk05::serialize() const
+{
+	json_t *j = json_object();
+
+	json_t *j_backends = json_array();
+	for(auto & dbe: fhs)
+		json_array_append(j_backends, dbe->serialize());
+
+	json_object_set(j, "backends", j_backends);
+
+	for(int regnr=0; regnr<7; regnr++)
+		json_object_set(j, format("register-%d", regnr).c_str(), json_integer(registers[regnr]));
+
+	return j;
+}
+
+rk05 *rk05::deserialize(const json_t *const j, bus *const b)
+{
+	std::vector<disk_backend *> backends;
+
+	rk05 *r = new rk05(b, nullptr, nullptr);
+	r->begin();
+
+	json_t *j_backends = json_object_get(j, "backends");
+	for(size_t i=0; i<json_array_size(j_backends); i++)
+		r->access_disk_backends()->push_back(disk_backend::deserialize(json_array_get(j_backends, i)));
+
+	for(int regnr=0; regnr<7; regnr++)
+		r->registers[regnr] = json_integer_value(json_object_get(j, format("register-%d", regnr).c_str()));
+
+	return r;
+}
+#endif

@@ -66,7 +66,10 @@ json_t *bus::serialize() const
 	if (rl02_)
 		json_object_set(j_out, "rl02", rl02_->serialize());
 
-	// TODO: rk05, tm11
+	if (rk05_)
+		json_object_set(j_out, "rk05", rk05_->serialize());
+
+	// TODO: tm11
 
 	return j_out;
 }
@@ -113,7 +116,13 @@ bus *bus::deserialize(const json_t *const j, console *const cnsl, std::atomic_ui
 		b->add_rl02(rl02_);
 	}
 
-	// TODO: rk05, tm11
+	temp = json_object_get(j, "rk05");
+	if (temp) {
+		rk05 *rk05_ = rk05::deserialize(temp, b);
+		b->add_rk05(rk05_);
+	}
+
+	// TODO: tm11
 
 	return b;
 }

@@ -11,6 +11,7 @@
 
 #include "disk_device.h"
 #include "disk_backend.h"
+#include "gen.h"
 
 
 #define RK05_DS		0177400	// drive status
@@ -44,6 +45,11 @@ public:
 
 	void begin() override;
 	void reset() override;
+
+#if IS_POSIX
+	json_t *serialize() const;
+	static rk05 *deserialize(const json_t *const j, bus *const b);
+#endif
 
 	uint8_t  readByte(const uint16_t addr) override;
 	uint16_t readWord(const uint16_t addr) override;
