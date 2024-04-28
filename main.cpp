@@ -525,15 +525,6 @@ int main(int argc, char *argv[])
 		cpu *c = new cpu(b, &event);
 		b->add_cpu(c);
 
-		if (rk05_files.empty() == false)
-			bootloader = BL_RK05;
-
-		if (rl02_files.empty() == false)
-			bootloader = BL_RL02;
-
-		if (enable_bootloader)
-			set_boot_loader(b, bootloader);
-
 		auto rk05_dev = new rk05(b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag());
 		rk05_dev->begin();
 		b->add_rk05(rk05_dev);
@@ -541,6 +532,23 @@ int main(int argc, char *argv[])
 		auto rl02_dev = new rl02(b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag());
 		rl02_dev->begin();
 		b->add_rl02(rl02_dev);
+
+		if (rk05_files.empty() == false) {
+			bootloader = BL_RK05;
+
+			for(auto & file: rk05_files)
+				rk05_dev->access_disk_backends()->push_back(file);
+		}
+
+		if (rl02_files.empty() == false) {
+			bootloader = BL_RL02;
+
+			for(auto & file: rl02_files)
+				rl02_dev->access_disk_backends()->push_back(file);
+		}
+
+		if (enable_bootloader)
+			set_boot_loader(b, bootloader);
 	}
 	else {
 		FILE *fh = fopen(deserialize.c_str(), "r");
