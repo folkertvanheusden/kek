@@ -36,8 +36,8 @@ void setBit(uint16_t & v, const int bit, const bool vb)
 
 std::string format(const char *const fmt, ...)
 {
-#if defined(BUILD_FOR_RP2040)
-	char buffer[128];
+#if defined(BUILD_FOR_RP2040) || defined(ESP32)
+	char buffer[256];
         va_list ap;
 
         va_start(ap, fmt);

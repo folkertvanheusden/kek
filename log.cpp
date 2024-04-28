@@ -29,6 +29,8 @@ FILE              *lfh              = nullptr;
 static int         lf_uid           = -1;
 static int         lf_gid           = -1;
 static bool        l_timestamp      = true;
+static int         log_buffer_size  = 128;
+static char       *log_buffer       = reinterpret_cast<char *>(malloc(log_buffer_size));
 
 #if defined(ESP32)
 int gettid()
@@ -121,12 +123,18 @@ void dolog(const log_level_t ll, const char *fmt, ...)
 #endif
 	}
 
-	char *str = nullptr;
+	for(;;) {
+		va_list ap;
+		va_start(ap, fmt);
+		int needed_length = vsnprintf(log_buffer, log_buffer_size, fmt, ap);
+		va_end(ap);
 
-	va_list ap;
-	va_start(ap, fmt);
-	(void)vasprintf(&str, fmt, ap);
-	va_end(ap);
+		if (needed_length < log_buffer_size)
+			break;
+
+		log_buffer_size *= 2;
+		log_buffer = reinterpret_cast<char *>(realloc(log_buffer, log_buffer_size));
+	}
 
 	if (l_timestamp) {
 		uint64_t now = get_us();
@@ -148,28 +156,26 @@ void dolog(const log_level_t ll, const char *fmt, ...)
 				ll_names[ll], get_thread_name().c_str());
 
 		if (ll <= log_level_file && is_file == false)
-			send_syslog(ll, str);
+			send_syslog(ll, log_buffer);
 #if !defined(ESP32)
 		if (ll <= log_level_file && lfh != nullptr)
-			fprintf(lfh, "%s%s\n", ts_str, str);
+			fprintf(lfh, "%s%s\n", ts_str, log_buffer);
 #endif
 
 		if (ll <= log_level_screen)
-			printf("%s%s\r\n", ts_str, str);
+			printf("%s%s\r\n", ts_str, log_buffer);
 	}
 	else {
 		if (ll <= log_level_file && is_file == false)
-			send_syslog(ll, str);
+			send_syslog(ll, log_buffer);
 #if !defined(ESP32)
 		if (ll <= log_level_file && lfh != nullptr)
-			fprintf(lfh, "%s\n", str);
+			fprintf(lfh, "%s\n", log_buffer);
 #endif
 
 		if (ll <= log_level_screen)
-			printf("%s\r\n", str);
+			printf("%s\r\n", log_buffer);
 	}
-
-	free(str);
 #endif
 }
 
