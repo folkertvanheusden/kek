@@ -188,10 +188,10 @@ void rk05::writeWord(const uint16_t addr, const uint16_t v)
 
 				uint32_t temp_diskoffb = diskoffb;
 
-				uint32_t temp = reclen;
-				uint32_t p    = memoff;
-				while(temp > 0) {
-					uint32_t cur = std::min(uint32_t(sizeof xfer_buffer), temp);
+				uint32_t temp_reclen   = reclen;
+				uint32_t p             = memoff;
+				while(temp_reclen > 0) {
+					uint32_t cur = std::min(uint32_t(sizeof xfer_buffer), temp_reclen);
 
 					if (!fhs.at(device)->read(temp_diskoffb, cur, xfer_buffer, 512)) {
 						DOLOG(ll_error, true, "RK05 read error %s from %u len %u", strerror(errno), temp_diskoffb, cur);
@@ -207,7 +207,7 @@ void rk05::writeWord(const uint16_t addr, const uint16_t v)
 							update_bus_address(2);
 					}
 
-					temp -= cur;
+					temp_reclen -= cur;
 
 					if (++sector >= 12) {
 						sector = 0;
