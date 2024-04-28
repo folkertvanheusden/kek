@@ -183,9 +183,9 @@ int run_cpu_validation(const std::string & filename)
 
 			{
 				json_t *a_sp = json_object_get(registers_after, "sp");
-				size_t array_size = json_array_size(a_sp);
-				assert(array_size == 4);
-				for(size_t i=0; i<array_size; i++) {
+				size_t sp_array_size = json_array_size(a_sp);
+				assert(sp_array_size == 4);
+				for(size_t i=0; i<sp_array_size; i++) {
 					json_t *temp = json_array_get(a_sp, i);
 					uint16_t sp = c->lowlevel_register_sp_get(i);
 					if (json_integer_value(temp) != sp) {
