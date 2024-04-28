@@ -236,20 +236,20 @@ std::optional<disk_backend *> select_disk_backend(console *const cnsl)
 void configure_disk(bus *const b, console *const cnsl)
 {
 	// TODO tape
-	int ch = wait_for_key("1. RK05, 2. RL02, 9. abort", cnsl, { '1', '2', '3', '9' });
+	int type_ch = wait_for_key("1. RK05, 2. RL02, 9. abort", cnsl, { '1', '2', '3', '9' });
 
 	bootloader_t bl = BL_NONE;
 	disk_device *dd = nullptr;
 
-	if (ch == '1') {
+	if (type_ch == '1') {
 		dd = b->getRK05();
 		bl = BL_RK05;
 	}
-	else if (ch == '2') {
+	else if (type_ch == '2') {
 		dd = b->getRL02();
 		bl = BL_RL02;
 	}
-	else if (ch == '9') {
+	else if (type_ch == '9') {
 		return;
 	}
 

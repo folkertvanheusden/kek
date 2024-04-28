@@ -584,11 +584,11 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 	const uint8_t dst_mode   = (dst >> 3) & 7;
 	const uint8_t dst_reg    = dst & 7;
 
-	bool set_flags  = true;
-
 	switch(operation) {
 		case 0b001: { // MOV/MOVB Move Word/Byte
 				    gam_rc_t g_src = getGAM(src_mode, src_reg, word_mode, rm_cur);
+
+				    bool set_flags = true;
 
 				    if (word_mode == wm_byte && dst_mode == 0)
 					    setRegister(dst_reg, int8_t(g_src.value.value()));  // int8_t: sign extension
@@ -945,7 +945,6 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 	const uint8_t  dst_mode  = (dst >> 3) & 7;
 	const uint8_t  dst_reg   = dst & 7;
 	const word_mode_t word_mode = instr & 0x8000 ? wm_byte : wm_word;
-	bool           set_flags = true;
 
 	switch(opcode) {
 		case 0b00000011: { // SWAB
@@ -959,7 +958,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 					 v = (v << 8) | (v >> 8);
 
-					 set_flags = putGAM(g_dst, v);
+					 bool set_flags = putGAM(g_dst, v);
 
 					 if (set_flags) {
 						 setPSW_flags_nzv(v, wm_byte);
