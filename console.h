@@ -79,8 +79,6 @@ public:
 	void         put_string(const std::string & what);
 	virtual void put_string_lf(const std::string & what) = 0;
 
-	void         debug(const std::string fmt, ...);
-
 	virtual void resize_terminal() = 0;
 
 	virtual void refresh_virtual_terminal() = 0;

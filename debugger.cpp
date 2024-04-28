@@ -82,10 +82,10 @@ std::optional<disk_backend *> select_disk_file(console *const c)
 #if IS_POSIX
 	c->put_string_lf("Files in current directory: ");
 #else
-	c->debug("MISO: %d", int(MISO));
-	c->debug("MOSI: %d", int(MOSI));
-	c->debug("SCK : %d", int(SCK ));
-	c->debug("SS  : %d", int(SS  ));
+	c->put_string_lf(format("MISO: %d", int(MISO)));
+	c->put_string_lf(format("MOSI: %d", int(MOSI)));
+	c->put_string_lf(format("SCK : %d", int(SCK )));
+	c->put_string_lf(format("SS  : %d", int(SS  )));
 
 	c->put_string_lf("Files on SD-card:");
 
@@ -96,9 +96,9 @@ std::optional<disk_backend *> select_disk_file(console *const c)
 	if (!SD.begin(SS, SD_SCK_MHZ(15))) {
 		auto err = SD.sdErrorCode();
 		if (err)
-			c->debug("SDerror: 0x%x, data: 0x%x", err, SD.sdErrorData());
+			c->put_string_lf(format("SDerror: 0x%x, data: 0x%x", err, SD.sdErrorData()));
 		else
-			c->debug("Failed to initialize SD card");
+			c->put_string_lf("Failed to initialize SD card");
 
 		return { };
 	}
@@ -355,7 +355,7 @@ int disassemble(cpu *const c, console *const cnsl, const uint16_t pc, const bool
 				);
 
 	if (cnsl)
-		cnsl->debug(result);
+		cnsl->put_string_lf(result);
 	else
 		DOLOG(debug, false, "%s", result.c_str());
 
