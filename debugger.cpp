@@ -286,11 +286,11 @@ void configure_disk(bus *const b, console *const cnsl)
 			int slot = ch - 'A';
 
 			for(;;) {
-				int ch = wait_for_key("Select cartridge action: 1. load, 2. unload, 9. exit", cnsl, { '1', '2', '9' });
-				if (ch == '9')
+				int ch_action = wait_for_key("Select cartridge action: 1. load, 2. unload, 9. exit", cnsl, { '1', '2', '9' });
+				if (ch_action == '9')
 					break;
 
-				if (ch == '1') {
+				if (ch_action == '1') {
 					auto image_file = select_disk_backend(cnsl);
 
 					if (image_file.has_value()) {
@@ -300,7 +300,7 @@ void configure_disk(bus *const b, console *const cnsl)
 						cnsl->put_string_lf("Cartridge loaded");
 					}
 				}
-				else if (ch == '2') {
+				else if (ch_action == '2') {
 					if (cartridge_slots->at(slot)) {
 						delete cartridge_slots->at(slot);
 						cartridge_slots->at(slot) = nullptr;
