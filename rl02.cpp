@@ -204,7 +204,7 @@ void rl02::writeWord(const uint16_t addr, uint16_t v)
 		bool          do_int  = false;
 
 		if (size_t(device) >= fhs.size()) {
-			DOLOG(info, false, "RL02: PDP11/70 is accessing a not-attached virtual disk %d", device);
+			DOLOG(info, false, "RL02: PDP11/70 is accessing virtual disk %d which is not attached", device);
 
 			registers[(RL02_CSR - RL02_BASE) / 2] |= (1 << 10) | (1 << 15);
 
