@@ -59,7 +59,7 @@ void dc11::write_word(const uint16_t addr, uint16_t v)
 {
 	const int reg = (addr - DC11_BASE) / 2;
 
-	DOLOG(debug, false, "DC11: set register %06o (%d) to %o", addr, reg, v);
+	DOLOG(debug, false, "DC11: write register %06o (%d) to %o", addr, reg, v);
 
 	registers[reg] = v;
 }

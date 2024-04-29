@@ -966,6 +966,11 @@ write_rc_t bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint1
 			return { false };
 		}
 
+		if (dc11_ && a >= DC11_BASE && a < DC11_END) {
+			word_mode == wm_byte ? dc11_->write_byte(a, value) : dc11_->write_word(a, value);
+			return { false };
+		}
+
 		if (a >= 0172100 && a <= 0172137) {  // MM11-LP parity
 			DOLOG(debug, false, "WRITE-I/O MM11-LP parity (%06o): %o", a, value);
 			return { false };

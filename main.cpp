@@ -21,6 +21,7 @@
 #include "disk_backend.h"
 #include "disk_backend_file.h"
 #include "disk_backend_nbd.h"
+#include "dc11.h"
 #include "gen.h"
 #include "kw11-l.h"
 #include "loaders.h"
@@ -579,6 +580,10 @@ int main(int argc, char *argv[])
 
 	cnsl->set_bus(b);
 	cnsl->begin();
+
+	// TODO
+	dc11 *dc11_ = new dc11(b);
+	b->add_DC11(dc11_);
 
 	running = cnsl->get_running_flag();
 

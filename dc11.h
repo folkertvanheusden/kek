@@ -11,7 +11,7 @@
 
 #define DC11_RCSR 0174000 // receiver status register
 #define DC11_BASE DC11_RCSR
-#define DC11_END  (DC11_BASE + 4 * 4 + 2)  // 4 interfaces, + 2 to point after it
+#define DC11_END  (DC11_BASE + (4 * 4 + 1) * 2)  // 4 interfaces, + 2 to point after it
 
 class bus;
 
