@@ -29,6 +29,7 @@ add_executable(
   console_ncurses.cpp
   console_posix.cpp
   cpu.cpp
+  dc11.cpp
   debugger.cpp
   disk_backend.cpp
   disk_backend_file.cpp

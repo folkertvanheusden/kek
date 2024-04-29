@@ -9,6 +9,7 @@
 #include <stdio.h>
 
 #include "gen.h"
+#include "dc11.h"
 #include "mmu.h"
 #include "rk05.h"
 #include "rl02.h"
@@ -77,6 +78,7 @@ private:
 	kw11_l  *kw11_l_ { nullptr };
 	mmu     *mmu_    { nullptr };
 	memory  *m       { nullptr };
+	dc11    *dc11_   { nullptr };
 
 	uint16_t microprogram_break_register { 0 };
 
@@ -113,6 +115,7 @@ public:
 	void add_rl02  (rl02   *const rl02_  );
 	void add_tty   (tty    *const tty_   );
 	void add_KW11_L(kw11_l *const kw11_l_);
+	void add_DC11  (dc11   *const dc11_  );
 
 	memory *getRAM()    { return m;       }
 	cpu    *getCpu()    { return c;       }
@@ -121,6 +124,7 @@ public:
 	mmu    *getMMU()    { return mmu_;    }
 	rk05   *getRK05()   { return rk05_;   }
 	rl02   *getRL02()   { return rl02_;   }
+	dc11   *getDC11()   { return dc11_;   }
 
 	uint16_t read    (const uint16_t a, const word_mode_t word_mode, const rm_selection_t mode_selection, const bool peek_only=false, const d_i_space_t s = i_space);
 	uint16_t readByte(const uint16_t a) { return read(a, wm_byte, rm_cur); }
