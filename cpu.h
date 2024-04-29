@@ -160,6 +160,7 @@ public:
 	bool getBitPSW(const int bit) const;
 	int  getPSW_runmode() const { return psw >> 14; };
 	int  getPSW_prev_runmode() const { return (psw >> 12) & 3; };
+	bool get_register_set() const { return !!(psw & 04000); }
 
 	void setPSW_c(const bool v);
 	void setPSW_v(const bool v);

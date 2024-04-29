@@ -137,7 +137,7 @@ void cpu::reset()
 uint16_t cpu::getRegister(const int nr, const rm_selection_t mode_selection) const
 {
 	if (nr < 6) {
-		int set = getBitPSW(11);
+		int set = get_register_set();
 
 		return regs0_5[set][nr];
 	}
@@ -157,7 +157,7 @@ uint16_t cpu::getRegister(const int nr, const rm_selection_t mode_selection) con
 void cpu::setRegister(const int nr, const uint16_t value, const rm_selection_t mode_selection)
 {
 	if (nr < 6) {
-		int set = getBitPSW(11);
+		int set = get_register_set();
 
 		regs0_5[set][nr] = value;
 	}
@@ -204,7 +204,7 @@ bool cpu::put_result(const gam_rc_t & g, const uint16_t value)
 uint16_t cpu::addRegister(const int nr, const rm_selection_t mode_selection, const uint16_t value)
 {
 	if (nr < 6)
-		return regs0_5[getBitPSW(11)][nr] += value;
+		return regs0_5[get_register_set()][nr] += value;
 
 	if (nr == 6) {
 		if (mode_selection == rm_prev)
