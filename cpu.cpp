@@ -1389,8 +1389,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 				                addToMMR1(a);
 
 						// read from previous space
-						// FIXME: address space selection (see MTPI/D)
-						v = b->read(a.addr.value(), wm_word, rm_prev);
+						v = b->read(a.addr.value(), wm_word, rm_prev, false, word_mode == wm_byte ? d_space : i_space);
 					 }
 
 					 setPSW_flags_nzv(v, wm_word);
