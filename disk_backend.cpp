@@ -4,6 +4,7 @@
 #include <cassert>
 
 #include "disk_backend.h"
+#include "gen.h"
 #if IS_POSIX
 #include "disk_backend_file.h"
 #include "disk_backend_nbd.h"
@@ -68,7 +69,7 @@ json_t *disk_backend::serialize_overlay() const
 		for(size_t i=0; i<id.second.size(); i++)
 			json_array_append(j_data, json_integer(id.second.at(i)));
 
-		json_object_set(out, format("%u", id.first).c_str(), j_data);
+		json_object_set(out, format("%lu", id.first).c_str(), j_data);
 	}
 
 	return out;

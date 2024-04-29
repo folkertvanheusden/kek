@@ -26,6 +26,7 @@
 #include "disk_backend_nbd.h"
 #include "loaders.h"
 #include "log.h"
+#include "memory.h"
 #include "tty.h"
 #include "utils.h"
 
@@ -37,13 +38,9 @@
 #include "rp2040.h"
 #endif
 
-void set_boot_loader(bus *const b);
-
-void configure_disk(console *const c);
-
-void configure_network(console *const c);
-void check_network(console *const c);
-void start_network(console *const c);
+void configure_network(console *const cnsl);
+void check_network(console *const cnsl);
+void start_network(console *const cnsl);
 
 void set_tty_serial_speed(console *const c, const uint32_t bps);
 #endif
@@ -85,10 +82,10 @@ std::optional<disk_backend *> select_disk_file(console *const c)
 #if IS_POSIX
 	c->put_string_lf("Files in current directory: ");
 #else
-	c->debug("MISO: %d", int(MISO));
-	c->debug("MOSI: %d", int(MOSI));
-	c->debug("SCK : %d", int(SCK ));
-	c->debug("SS  : %d", int(SS  ));
+	c->put_string_lf(format("MISO: %d", int(MISO)));
+	c->put_string_lf(format("MOSI: %d", int(MOSI)));
+	c->put_string_lf(format("SCK : %d", int(SCK )));
+	c->put_string_lf(format("SS  : %d", int(SS  )));
 
 	c->put_string_lf("Files on SD-card:");
 
@@ -99,9 +96,9 @@ std::optional<disk_backend *> select_disk_file(console *const c)
 	if (!SD.begin(SS, SD_SCK_MHZ(15))) {
 		auto err = SD.sdErrorCode();
 		if (err)
-			c->debug("SDerror: 0x%x, data: 0x%x", err, SD.sdErrorData());
+			c->put_string_lf(format("SDerror: 0x%x, data: 0x%x", err, SD.sdErrorData()));
 		else
-			c->debug("Failed to initialize SD card");
+			c->put_string_lf("Failed to initialize SD card");
 
 		return { };
 	}
@@ -239,20 +236,20 @@ std::optional<disk_backend *> select_disk_backend(console *const cnsl)
 void configure_disk(bus *const b, console *const cnsl)
 {
 	// TODO tape
-	int ch = wait_for_key("1. RK05, 2. RL02, 9. abort", cnsl, { '1', '2', '3', '9' });
+	int type_ch = wait_for_key("1. RK05, 2. RL02, 9. abort", cnsl, { '1', '2', '3', '9' });
 
 	bootloader_t bl = BL_NONE;
 	disk_device *dd = nullptr;
 
-	if (ch == '1') {
+	if (type_ch == '1') {
 		dd = b->getRK05();
 		bl = BL_RK05;
 	}
-	else if (ch == '2') {
+	else if (type_ch == '2') {
 		dd = b->getRL02();
 		bl = BL_RL02;
 	}
-	else if (ch == '9') {
+	else if (type_ch == '9') {
 		return;
 	}
 
@@ -289,11 +286,11 @@ void configure_disk(bus *const b, console *const cnsl)
 			int slot = ch - 'A';
 
 			for(;;) {
-				int ch = wait_for_key("Select cartridge action: 1. load, 2. unload, 9. exit", cnsl, { '1', '2', '9' });
-				if (ch == '9')
+				int ch_action = wait_for_key("Select cartridge action: 1. load, 2. unload, 9. exit", cnsl, { '1', '2', '9' });
+				if (ch_action == '9')
 					break;
 
-				if (ch == '1') {
+				if (ch_action == '1') {
 					auto image_file = select_disk_backend(cnsl);
 
 					if (image_file.has_value()) {
@@ -303,7 +300,7 @@ void configure_disk(bus *const b, console *const cnsl)
 						cnsl->put_string_lf("Cartridge loaded");
 					}
 				}
-				else if (ch == '2') {
+				else if (ch_action == '2') {
 					if (cartridge_slots->at(slot)) {
 						delete cartridge_slots->at(slot);
 						cartridge_slots->at(slot) = nullptr;
@@ -325,11 +322,11 @@ int disassemble(cpu *const c, console *const cnsl, const uint16_t pc, const bool
 	auto psw       = data["psw"][0];
 
 	std::string instruction_values;
-	for(auto iv : data["instruction-values"])
+	for(auto & iv : data["instruction-values"])
 		instruction_values += (instruction_values.empty() ? "" : ",") + iv;
 
 	std::string work_values;
-	for(auto wv : data["work-values"])
+	for(auto & wv : data["work-values"])
 		work_values += (work_values.empty() ? "" : ",") + wv;
 
 	std::string instruction = data["instruction-text"].at(0);
@@ -358,7 +355,7 @@ int disassemble(cpu *const c, console *const cnsl, const uint16_t pc, const bool
 				);
 
 	if (cnsl)
-		cnsl->debug(result);
+		cnsl->put_string_lf(result);
 	else
 		DOLOG(debug, false, "%s", result.c_str());
 
@@ -391,7 +388,7 @@ std::map<std::string, std::string> split(const std::vector<std::string> & kv_arr
 {
 	std::map<std::string, std::string> out;
 
-	for(auto pair : kv_array) {
+	for(auto & pair : kv_array) {
 		auto kv = split(pair, splitter);
 
 		if (kv.size() == 1)
@@ -663,7 +660,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 				cnsl->put_string_lf("Breakpoints:");
 
-				for(auto a : bps)
+				for(auto & a : bps)
 					cnsl->put_string_lf(format("%d: %s", a.first, a.second->emit().c_str()));
 
 				if (bps.empty())
@@ -825,6 +822,12 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 				continue;
 			}
 #if defined(ESP32)
+			else if (cmd == "debug") {
+				if (heap_caps_check_integrity_all(true) == false)
+					cnsl->put_string_lf("HEAP corruption!");
+
+				continue;
+			}
 			else if (cmd == "cfgnet") {
 				configure_network(cnsl);
 
@@ -863,7 +866,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 				if (parts.size() == 2)
 					b->set_memory_size(std::stoi(parts.at(1)));
 				else {
-					int n_pages = b->get_memory_size();
+					int n_pages = b->getRAM()->get_memory_size();
 
 					cnsl->put_string_lf(format("Memory size: %u pages or %u kB (decimal)", n_pages, n_pages * 8192 / 1024));
 				}
@@ -942,12 +945,20 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 			}
 #endif
 			else if (parts[0] == "setsl" && parts.size() == 3) {
-				setloghost(parts.at(1).c_str(), parse_ll(parts[2]));
+				if (setloghost(parts.at(1).c_str(), parse_ll(parts[2])) == false)
+					cnsl->put_string_lf("Failed parsing IP address");
+				else
+					send_syslog(info, "Hello, world!");
 
 				continue;
 			}
 			else if (cmd == "qi") {
 				show_queued_interrupts(cnsl, c);
+
+				continue;
+			}
+			else if (cmd == "dp") {
+				cnsl->stop_panel_thread();
 
 				continue;
 			}
@@ -1006,11 +1017,13 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 					"ser           - serialize state to a file",
 //					"dser          - deserialize state from a file",
 #endif
+					"dp            - disable panel",
 #if defined(ESP32)
 					"cfgnet        - configure network (e.g. WiFi)",
 					"startnet      - start network",
 					"chknet        - check network status",
 					"serspd        - set serial speed in bps (8N1 are default)",
+					"debug         - debugging info",
 #endif
 					"cfgdisk       - configure disk",
 					nullptr

@@ -21,6 +21,8 @@ public:
 	memory(const uint32_t size);
 	~memory();
 
+	uint32_t get_memory_size() const { return size; }
+
 	void reset();
 #if IS_POSIX
 	json_t *serialize() const;

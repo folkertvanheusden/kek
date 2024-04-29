@@ -15,6 +15,11 @@ mmu::~mmu()
 {
 }
 
+void mmu::begin()
+{
+	reset();
+}
+
 void mmu::reset()
 {
 	memset(pages, 0x00, sizeof pages);
@@ -51,8 +56,6 @@ void mmu::setMMR0(uint16_t value)
 		if ((value & 1) == 0)
 			value &= 254;  // bits 7...1 are protected 
 	}
-
-// TODO if bit 15/14/13 are set (either of them), then do not modify bit 1...7
 
 	MMR0 = value;
 }
@@ -101,17 +104,6 @@ void mmu::addToMMR1(const int8_t delta, const uint8_t reg)
 	assert(delta >= -2 && delta <= 2);
 
 	assert((getMMR0() & 0160000) == 0);  // MMR1 should not be locked
-
-#if defined(ESP32)
-//	if (MMR1 > 255)
-//		esp_backtrace_print(32);
-#else
-	if (MMR1 > 255) {
-		extern FILE *lfh;
-		fflush(lfh);
-	}
-	assert(MMR1 < 256);
-#endif
 
 	MMR1 <<= 8;
 
@@ -277,6 +269,7 @@ void mmu::set_par_pdr(const json_t *const j_in, const int run_mode, const bool i
 mmu *mmu::deserialize(const json_t *const j)
 {
 	mmu *m = new mmu();
+	m->begin();
 
 	for(int run_mode=0; run_mode<4; run_mode++) {
 		if (run_mode == 2)

@@ -24,6 +24,7 @@ class memory;
 class tm_11 : public device
 {
 private:
+	std::string     file;
 	memory   *const m                  { nullptr };
 	uint16_t        registers[6]       { 0       };
 	uint8_t         xfer_buffer[65536];
@@ -33,6 +34,8 @@ private:
 public:
 	tm_11(const std::string & file, memory *const m);
 	virtual ~tm_11();
+
+	void begin();
 
 	void reset() override;
 

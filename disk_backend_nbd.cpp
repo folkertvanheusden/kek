@@ -91,10 +91,10 @@ bool disk_backend_nbd::connect(const bool retry)
 {
 	do {
 		// LOOP until connected, logging message, exponential backoff?
-		addrinfo *res   = nullptr;
+		addrinfo *res     = nullptr;
 
 		addrinfo hints { 0 };
-		hints.ai_family = AF_INET;
+		hints.ai_family   = AF_INET;
 		hints.ai_socktype = SOCK_STREAM;
 
 		char port_str[8] { 0 };
@@ -137,7 +137,7 @@ bool disk_backend_nbd::connect(const bool retry)
 			uint64_t size;
 			uint32_t flags;
 			uint8_t  padding[124];
-		} nbd_hello;
+		} nbd_hello { };
 
 		if (fd != -1) {
 			if (READ(fd, reinterpret_cast<char *>(&nbd_hello), sizeof nbd_hello) != sizeof nbd_hello) {
@@ -194,7 +194,7 @@ bool disk_backend_nbd::read(const off_t offset_in, const size_t n, uint8_t *cons
 			uint64_t handle;
 			uint64_t offset;
 			uint32_t length;
-		} nbd_request { 0 };
+		} nbd_request { };
 
 		nbd_request.magic  = ntohl(0x25609513);
 		nbd_request.type   = 0;  // READ

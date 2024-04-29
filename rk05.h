@@ -11,6 +11,7 @@
 
 #include "disk_device.h"
 #include "disk_backend.h"
+#include "gen.h"
 
 
 #define RK05_DS		0177400	// drive status
@@ -39,10 +40,16 @@ private:
 	void     update_bus_address(const uint16_t v);
 
 public:
-	rk05(const std::vector<disk_backend *> & files, bus *const b, std::atomic_bool *const disk_read_acitivity, std::atomic_bool *const disk_write_acitivity);
+	rk05(bus *const b, std::atomic_bool *const disk_read_acitivity, std::atomic_bool *const disk_write_acitivity);
 	virtual ~rk05();
 
+	void begin() override;
 	void reset() override;
+
+#if IS_POSIX
+	json_t *serialize() const;
+	static rk05 *deserialize(const json_t *const j, bus *const b);
+#endif
 
 	uint8_t  readByte(const uint16_t addr) override;
 	uint16_t readWord(const uint16_t addr) override;

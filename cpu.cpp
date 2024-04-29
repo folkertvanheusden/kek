@@ -137,7 +137,7 @@ void cpu::reset()
 uint16_t cpu::getRegister(const int nr, const rm_selection_t mode_selection) const
 {
 	if (nr < 6) {
-		int set = getBitPSW(11);
+		int set = get_register_set();
 
 		return regs0_5[set][nr];
 	}
@@ -157,7 +157,7 @@ uint16_t cpu::getRegister(const int nr, const rm_selection_t mode_selection) con
 void cpu::setRegister(const int nr, const uint16_t value, const rm_selection_t mode_selection)
 {
 	if (nr < 6) {
-		int set = getBitPSW(11);
+		int set = get_register_set();
 
 		regs0_5[set][nr] = value;
 	}
@@ -204,7 +204,7 @@ bool cpu::put_result(const gam_rc_t & g, const uint16_t value)
 uint16_t cpu::addRegister(const int nr, const rm_selection_t mode_selection, const uint16_t value)
 {
 	if (nr < 6)
-		return regs0_5[getBitPSW(11)][nr] += value;
+		return regs0_5[get_register_set()][nr] += value;
 
 	if (nr == 6) {
 		if (mode_selection == rm_prev)
@@ -584,11 +584,11 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 	const uint8_t dst_mode   = (dst >> 3) & 7;
 	const uint8_t dst_reg    = dst & 7;
 
-	bool set_flags  = true;
-
 	switch(operation) {
 		case 0b001: { // MOV/MOVB Move Word/Byte
 				    gam_rc_t g_src = getGAM(src_mode, src_reg, word_mode, rm_cur);
+
+				    bool set_flags = true;
 
 				    if (word_mode == wm_byte && dst_mode == 0)
 					    setRegister(dst_reg, int8_t(g_src.value.value()));  // int8_t: sign extension
@@ -715,7 +715,7 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 					    setPSW_z(result == 0);
 				    }
 
-				    putGAM(g_dst, result);
+				    (void)putGAM(g_dst, result);
 
 				    return true;
 			    }
@@ -945,7 +945,6 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 	const uint8_t  dst_mode  = (dst >> 3) & 7;
 	const uint8_t  dst_reg   = dst & 7;
 	const word_mode_t word_mode = instr & 0x8000 ? wm_byte : wm_word;
-	bool           set_flags = true;
 
 	switch(opcode) {
 		case 0b00000011: { // SWAB
@@ -959,7 +958,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 					 v = (v << 8) | (v >> 8);
 
-					 set_flags = putGAM(g_dst, v);
+					 bool set_flags = putGAM(g_dst, v);
 
 					 if (set_flags) {
 						 setPSW_flags_nzv(v, wm_byte);

@@ -11,6 +11,7 @@ To build for e.g. linux:
 
     Required:
     * libncursesw5-dev
+    * libjansson-dev
 
 To build for e.g. windows:
 

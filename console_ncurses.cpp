@@ -16,10 +16,6 @@
 console_ncurses::console_ncurses(std::atomic_uint32_t *const stop_event): console(stop_event)
 {
 	init_ncurses(true);
-
-	resize_terminal();
-
-	th_panel = new std::thread(&console_ncurses::panel_update_thread, this);
 }
 
 console_ncurses::~console_ncurses()
@@ -49,6 +45,13 @@ console_ncurses::~console_ncurses()
 	delete_window(w_main);
 
 	endwin();
+}
+
+void console_ncurses::begin()
+{
+	resize_terminal();
+
+	th_panel = new std::thread(&console_ncurses::panel_update_thread, this);
 }
 
 int console_ncurses::wait_for_char_ll(const short timeout)
@@ -133,7 +136,7 @@ void console_ncurses::panel_update_thread()
 
 	constexpr int refresh_rate = 50;
 
-	while(*stop_event != EVENT_TERMINATE) {
+	while(*stop_event != EVENT_TERMINATE && stop_panel == false) {
 		myusleep(1000000 / refresh_rate);
 
 		// note that these are approximately as there's no mutex on the emulation
@@ -187,11 +190,11 @@ void console_ncurses::panel_update_thread()
 			auto psw       = data["psw"][0];
 
 			std::string instruction_values;
-			for(auto iv : data["instruction-values"])
+			for(auto & iv : data["instruction-values"])
 				instruction_values += (instruction_values.empty() ? "" : ",") + iv;
 
 			std::string work_values;
-			for(auto wv : data["work-values"])
+			for(auto & wv : data["work-values"])
 				work_values += (work_values.empty() ? "" : ",") + wv;
 
 			std::string instruction = data["instruction-text"].at(0);

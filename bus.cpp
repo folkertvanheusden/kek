@@ -24,6 +24,7 @@
 bus::bus()
 {
 	mmu_ = new mmu();
+	mmu_->begin();
 
 	kw11_l_ = new kw11_l(this);
 
@@ -65,7 +66,10 @@ json_t *bus::serialize() const
 	if (rl02_)
 		json_object_set(j_out, "rl02", rl02_->serialize());
 
-	// TODO: rk05, tm11
+	if (rk05_)
+		json_object_set(j_out, "rk05", rk05_->serialize());
+
+	// TODO: tm11
 
 	return j_out;
 }
@@ -112,7 +116,13 @@ bus *bus::deserialize(const json_t *const j, console *const cnsl, std::atomic_ui
 		b->add_rl02(rl02_);
 	}
 
-	// TODO: rk05, tm11
+	temp = json_object_get(j, "rk05");
+	if (temp) {
+		rk05 *rk05_ = rk05::deserialize(temp, b);
+		b->add_rk05(rk05_);
+	}
+
+	// TODO: tm11
 
 	return b;
 }
@@ -120,8 +130,6 @@ bus *bus::deserialize(const json_t *const j, console *const cnsl, std::atomic_ui
 
 void bus::set_memory_size(const int n_pages)
 {
-	this->n_pages = n_pages;
-
 	uint32_t n_bytes = n_pages * 8192l;
 
 	delete m;
@@ -474,7 +482,7 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 		}
 
 		// LO size register field must be all 1s, so subtract 1
-		uint32_t system_size = n_pages * 8192l / 64 - 1;
+		uint32_t system_size = m->get_memory_size() / 64 - 1;
 
 		if (a == ADDR_SYSSIZE + 2) {  // system size HI
 			uint16_t temp = system_size >> 16;
@@ -505,7 +513,7 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 		return 0;
 	}
 
-	if (m_offset >= uint32_t(n_pages * 8192)) {
+	if (m_offset >= m->get_memory_size()) {
 		if (peek_only) {
 			DOLOG(debug, false, "READ from %06o - out of range!", addr_in);
 			return 0;
@@ -696,8 +704,8 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 				}
 			}
 
-			if (m_offset >= n_pages * 8192l && !is_io) [[unlikely]] {
-				DOLOG(debug, !peek_only, "bus::calculate_physical_address %o >= %o", m_offset, n_pages * 8192l);
+			if (m_offset >= m->get_memory_size() && !is_io) [[unlikely]] {
+				DOLOG(debug, !peek_only, "bus::calculate_physical_address %o >= %o", m_offset, m->get_memory_size());
 				DOLOG(debug, false, "TRAP(04) (throw 6) on address %06o", a);
 
 				if (mmu_->is_locked() == false) {
@@ -1025,7 +1033,7 @@ write_rc_t bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint1
 
 	DOLOG(debug, false, "WRITE to %06o/%07o %c %c: %06o", addr_in, m_offset, space == d_space ? 'D' : 'I', word_mode == wm_byte ? 'B' : 'W', value);
 
-	if (m_offset >= uint32_t(n_pages * 8192)) {
+	if (m_offset >= m->get_memory_size()) {
 		c->trap(004);  // no such RAM
 		throw 1;
 	}
@@ -1042,7 +1050,7 @@ void bus::writePhysical(const uint32_t a, const uint16_t value)
 {
 	DOLOG(debug, false, "physicalWRITE %06o to %o", value, a);
 
-	if (a >= n_pages * 8192l) {
+	if (a >= m->get_memory_size()) {
 		DOLOG(debug, false, "physicalWRITE to %o: trap 004", a);
 		c->trap(004);
 		throw 12;
@@ -1054,7 +1062,7 @@ void bus::writePhysical(const uint32_t a, const uint16_t value)
 
 uint16_t bus::readPhysical(const uint32_t a)
 {
-	if (a >= n_pages * 8192l) {
+	if (a >= m->get_memory_size()) {
 		DOLOG(debug, false, "physicalREAD from %o: trap 004", a);
 		c->trap(004);
 		throw 13;

@@ -18,5 +18,7 @@ public:
 	virtual ~disk_device() {
 	}
 
+	virtual void begin() = 0;
+
 	std::vector<disk_backend *> * access_disk_backends() { return &fhs; }
 };

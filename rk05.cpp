@@ -23,20 +23,22 @@ static const char * const regnames[] = {
 	"RK05_DATABUF      "
 	};
 
-rk05::rk05(const std::vector<disk_backend *> & files, bus *const b, std::atomic_bool *const disk_read_acitivity, std::atomic_bool *const disk_write_acitivity) :
+rk05::rk05(bus *const b, std::atomic_bool *const disk_read_acitivity, std::atomic_bool *const disk_write_acitivity) :
 	b(b),
 	disk_read_acitivity(disk_read_acitivity),
 	disk_write_acitivity(disk_write_acitivity)
 {
-	fhs = files;
-
-	reset();
 }
 
 rk05::~rk05()
 {
 	for(auto fh : fhs)
 		delete fh;
+}
+
+void rk05::begin()
+{
+	reset();
 }
 
 void rk05::reset()
@@ -186,10 +188,10 @@ void rk05::writeWord(const uint16_t addr, const uint16_t v)
 
 				uint32_t temp_diskoffb = diskoffb;
 
-				uint32_t temp = reclen;
-				uint32_t p    = memoff;
-				while(temp > 0) {
-					uint32_t cur = std::min(uint32_t(sizeof xfer_buffer), temp);
+				uint32_t temp_reclen   = reclen;
+				uint32_t p             = memoff;
+				while(temp_reclen > 0) {
+					uint32_t cur = std::min(uint32_t(sizeof xfer_buffer), temp_reclen);
 
 					if (!fhs.at(device)->read(temp_diskoffb, cur, xfer_buffer, 512)) {
 						DOLOG(ll_error, true, "RK05 read error %s from %u len %u", strerror(errno), temp_diskoffb, cur);
@@ -205,7 +207,7 @@ void rk05::writeWord(const uint16_t addr, const uint16_t v)
 							update_bus_address(2);
 					}
 
-					temp -= cur;
+					temp_reclen -= cur;
 
 					if (++sector >= 12) {
 						sector = 0;
@@ -248,3 +250,38 @@ void rk05::writeWord(const uint16_t addr, const uint16_t v)
 		}
 	}
 }
+
+#if IS_POSIX
+json_t *rk05::serialize() const
+{
+	json_t *j = json_object();
+
+	json_t *j_backends = json_array();
+	for(auto & dbe: fhs)
+		json_array_append(j_backends, dbe->serialize());
+
+	json_object_set(j, "backends", j_backends);
+
+	for(int regnr=0; regnr<7; regnr++)
+		json_object_set(j, format("register-%d", regnr).c_str(), json_integer(registers[regnr]));
+
+	return j;
+}
+
+rk05 *rk05::deserialize(const json_t *const j, bus *const b)
+{
+	std::vector<disk_backend *> backends;
+
+	rk05 *r = new rk05(b, nullptr, nullptr);
+	r->begin();
+
+	json_t *j_backends = json_object_get(j, "backends");
+	for(size_t i=0; i<json_array_size(j_backends); i++)
+		r->access_disk_backends()->push_back(disk_backend::deserialize(json_array_get(j_backends, i)));
+
+	for(int regnr=0; regnr<7; regnr++)
+		r->registers[regnr] = json_integer_value(json_object_get(j, format("register-%d", regnr).c_str()));
+
+	return r;
+}
+#endif

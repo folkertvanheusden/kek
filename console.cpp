@@ -46,6 +46,10 @@ console::~console()
 	delete [] screen_buffer;
 }
 
+void console::begin()
+{
+}
+
 void console::start_thread() 
 {
 	assert(b);
@@ -264,33 +268,6 @@ std::string console::read_line(const std::string & prompt)
 	put_string_lf("");
 
 	return edit_lines_hist.at(line_nr);
-}
-
-void console::debug(const std::string fmt, ...)
-{
-#if defined(BUILD_FOR_RP2040)
-	char buffer[128];
-        va_list ap;
-
-        va_start(ap, fmt);
-	vsnprintf(buffer, sizeof buffer, fmt.c_str(), ap);
-	va_end(ap);
-
-	put_string_lf(buffer);
-#else
-	char *buffer = nullptr;
-
-        va_list ap;
-        va_start(ap, fmt);
-
-        vasprintf(&buffer, fmt.c_str(), ap);
-
-        va_end(ap);
-
-	put_string_lf(buffer);
-
-	free(buffer);
-#endif
 }
 
 void console::put_char(const char c)

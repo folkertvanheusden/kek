@@ -47,9 +47,10 @@ private:
 	uint32_t calc_offset() const;
 
 public:
-	rl02(const std::vector<disk_backend *> & files, bus *const b, std::atomic_bool *const disk_read_activity, std::atomic_bool *const disk_write_activity);
+	rl02(bus *const b, std::atomic_bool *const disk_read_activity, std::atomic_bool *const disk_write_activity);
 	virtual ~rl02();
 
+	void begin() override;
 	void reset() override;
 
 #if IS_POSIX

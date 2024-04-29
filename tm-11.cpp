@@ -10,16 +10,20 @@
 #include "memory.h"
 #include "utils.h"
 
-tm_11::tm_11(const std::string & file, memory *const m) : m(m)
+tm_11::tm_11(const std::string & file, memory *const m): file(file), m(m)
 {
-	fh = fopen(file.c_str(), "rb");
-
-	reset();
 }
 
 tm_11::~tm_11()
 {
 	fclose(fh);
+}
+
+void tm_11::begin()
+{
+	fh = fopen(file.c_str(), "rb");
+
+	reset();
 }
 
 void tm_11::reset()

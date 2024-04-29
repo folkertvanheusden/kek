@@ -111,9 +111,9 @@ int run_cpu_validation(const std::string & filename)
 		}
 		{
 			json_t *b_sp = json_object_get(registers_before, "sp");
-			size_t array_size = json_array_size(b_sp);
-			assert(array_size == 4);
-			for(size_t i=0; i<array_size; i++) {
+			size_t sp_array_size = json_array_size(b_sp);
+			assert(sp_array_size == 4);
+			for(size_t i=0; i<sp_array_size; i++) {
 				json_t *temp = json_array_get(b_sp, i);
 				c->lowlevel_register_sp_set(i, json_integer_value(temp));
 			}
@@ -183,9 +183,9 @@ int run_cpu_validation(const std::string & filename)
 
 			{
 				json_t *a_sp = json_object_get(registers_after, "sp");
-				size_t array_size = json_array_size(a_sp);
-				assert(array_size == 4);
-				for(size_t i=0; i<array_size; i++) {
+				size_t sp_array_size = json_array_size(a_sp);
+				assert(sp_array_size == 4);
+				for(size_t i=0; i<sp_array_size; i++) {
 					json_t *temp = json_array_get(a_sp, i);
 					uint16_t sp = c->lowlevel_register_sp_get(i);
 					if (json_integer_value(temp) != sp) {
@@ -525,18 +525,30 @@ int main(int argc, char *argv[])
 		cpu *c = new cpu(b, &event);
 		b->add_cpu(c);
 
-		if (rk05_files.empty() == false)
+		auto rk05_dev = new rk05(b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag());
+		rk05_dev->begin();
+		b->add_rk05(rk05_dev);
+
+		auto rl02_dev = new rl02(b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag());
+		rl02_dev->begin();
+		b->add_rl02(rl02_dev);
+
+		if (rk05_files.empty() == false) {
 			bootloader = BL_RK05;
 
-		if (rl02_files.empty() == false)
+			for(auto & file: rk05_files)
+				rk05_dev->access_disk_backends()->push_back(file);
+		}
+
+		if (rl02_files.empty() == false) {
 			bootloader = BL_RL02;
+
+			for(auto & file: rl02_files)
+				rl02_dev->access_disk_backends()->push_back(file);
+		}
 
 		if (enable_bootloader)
 			set_boot_loader(b, bootloader);
-
-		b->add_rk05(new rk05(rk05_files, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
-
-		b->add_rl02(new rl02(rl02_files, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
 	}
 	else {
 		FILE *fh = fopen(deserialize.c_str(), "r");
@@ -566,6 +578,7 @@ int main(int argc, char *argv[])
 	}
 
 	cnsl->set_bus(b);
+	cnsl->begin();
 
 	running = cnsl->get_running_flag();
 

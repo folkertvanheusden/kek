@@ -30,7 +30,7 @@ void loadbin(bus *const b, uint16_t base, const char *const file)
 
 void set_boot_loader(bus *const b, const bootloader_t which)
 {
-	cpu *const c      = b->getCpu();
+	cpu       *const c      = b->getCpu();
 
 	uint16_t         offset = 0;
 	uint16_t         start  = 0;
@@ -40,7 +40,7 @@ void set_boot_loader(bus *const b, const bootloader_t which)
 	if (which == BL_RK05) {
 		start = offset = 01000;
 
-		static uint16_t rk05_code[] = {
+		static const uint16_t rk05_code[] = {
 			0012700,
 			0177406,
 			0012710,
@@ -92,7 +92,7 @@ void set_boot_loader(bus *const b, const bootloader_t which)
 		start = offset = 01000;
 
 		/* from https://www.pdp-11.nl/peripherals/disk/rl-info.html
-		static uint16_t rl02_code[] = {
+		static const uint16_t rl02_code[] = {
 			0012701,
 			0174400,
 			0012761,
@@ -120,7 +120,7 @@ void set_boot_loader(bus *const b, const bootloader_t which)
 		*/
 
 		// from http://gunkies.org/wiki/RL11_disk_controller
-		static uint16_t rl02_code[] = {
+		static const uint16_t rl02_code[] = {
 			0012700,
 			0174400,
 			0012760,
@@ -207,7 +207,11 @@ std::optional<uint16_t> load_tape(bus *const b, const std::string & file)
 				break;
 			}
 
-			uint8_t c = fgetc(fh);
+			int c = fgetc(fh);
+			if (c == -1) {
+				DOLOG(warning, true, "read failure");
+				break;
+			}
 #endif
 
 			csum += c;

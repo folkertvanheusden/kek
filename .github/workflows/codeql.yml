@@ -30,7 +30,7 @@ jobs:
         if: ${{ matrix.language == 'cpp' }}
         run: |
           sudo apt-get update
-          sudo apt-get install --yes libncurses-dev
+          sudo apt-get install --yes libncurses-dev libjansson-dev
 
       - name: Configure (cpp)
         if: ${{ matrix.language == 'cpp' }}

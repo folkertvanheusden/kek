@@ -29,7 +29,8 @@ private:
 #endif
 
 protected:
-	std::atomic_uint32_t *const stop_event    { nullptr };
+	std::atomic_uint32_t *const stop_event   { nullptr };
+	std::atomic_bool        stop_panel       { false   };
 
 	bus                    *b                { nullptr };
 #if !defined(BUILD_FOR_RP2040)
@@ -60,6 +61,8 @@ public:
 	console(std::atomic_uint32_t *const stop_event, const int t_width = 80, const int t_height = 25);
 	virtual ~console();
 
+	virtual void begin();
+
 	void         set_bus(bus *const b) { this->b = b; }
 
 	void         start_thread();
@@ -76,8 +79,6 @@ public:
 	void         put_string(const std::string & what);
 	virtual void put_string_lf(const std::string & what) = 0;
 
-	void         debug(const std::string fmt, ...);
-
 	virtual void resize_terminal() = 0;
 
 	virtual void refresh_virtual_terminal() = 0;
@@ -88,5 +89,6 @@ public:
 	std::atomic_bool * get_disk_read_activity_flag()  { return &disk_read_activity_flag; }
 	std::atomic_bool * get_disk_write_activity_flag() { return &disk_write_activity_flag; }
 
+	void         stop_panel_thread() { stop_panel = true; }
 	virtual void panel_update_thread() = 0;
 };

@@ -18,6 +18,9 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #endif
+#if defined(ESP32)
+#include "esp_heap_caps.h"
+#endif
 
 #if defined(SHA2017)
 #include "console_shabadge.h"
@@ -70,14 +73,13 @@ std::atomic_bool    *running         { nullptr };
 
 bool                 trace_output    { false };
 
-std::vector<disk_backend *> rk05_files;
-std::vector<disk_backend *> rl02_files;
-
 void console_thread_wrapper_panel(void *const c)
 {
 	console *const cnsl = reinterpret_cast<console *>(c);
 
 	cnsl->panel_update_thread();
+
+	vTaskSuspend(nullptr);
 }
 
 uint32_t load_serial_speed_configuration()
@@ -208,6 +210,14 @@ void set_tty_serial_speed(console *const c, const uint32_t bps)
 		c->put_string_lf("Failed to store configuration file with serial settings");
 }
 
+#if defined(ESP32)
+void heap_caps_alloc_failed_hook(size_t requested_size, uint32_t caps, const char *function_name)
+{
+	printf("%s was called but failed to allocate %d bytes with 0x%X capabilities\r\n", function_name, requested_size, caps);
+}
+
+#endif
+
 void setup() {
 	Serial.begin(115200);
 
@@ -221,6 +231,10 @@ void setup() {
 
 	Serial.print(F("Size of int: "));
 	Serial.println(sizeof(int));
+
+#if defined(ESP32)
+	heap_caps_register_failed_alloc_callback(heap_caps_alloc_failed_hook);
+#endif
 
 #if !defined(BUILD_FOR_RP2040)
 	Serial.print(F("CPU clock frequency (MHz): "));
@@ -296,13 +310,19 @@ void setup() {
 	cnsl = new console_esp32(&stop_event, serial_ports, 80, 25);
 #endif
 	cnsl->set_bus(b);
+	cnsl->begin();
 
 	running = cnsl->get_running_flag();
 
-	Serial.println(F("Connect RK05 and RL02 to BUS"));
-	b->add_rk05(new rk05(rk05_files, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
+	Serial.println(F("Connect RK05 and RL02 devices to BUS"));
+	auto rk05_dev = new rk05(b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag());
+	rk05_dev->begin();
+	b->add_rk05(rk05_dev);
 
-	b->add_rl02(new rl02(rl02_files, b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag()));
+	auto rl02_dev = new rl02(b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag());
+	rl02_dev->begin();
+	b->add_rl02(rl02_dev);
+
 
 	Serial.println(F("Init TTY"));
 	tty_ = new tty(cnsl, b);
@@ -311,7 +331,7 @@ void setup() {
 
 #if !defined(BUILD_FOR_RP2040)  // FIXME: led ring
 	Serial.println(F("Starting panel"));
-	xTaskCreate(&console_thread_wrapper_panel, "panel", 2048, cnsl, 1, nullptr);
+	xTaskCreate(&console_thread_wrapper_panel, "panel", 3072, cnsl, 1, nullptr);
 #endif
 
 #if !defined(BUILD_FOR_RP2040)
