@@ -58,11 +58,11 @@ public:
 
 	void reset();
 
-	uint8_t readByte(const uint16_t addr);
-	uint16_t readWord(const uint16_t addr);
+	uint8_t read_byte(const uint16_t addr);
+	uint16_t read_word(const uint16_t addr);
 
-	void writeByte(const uint16_t addr, const uint8_t v);
-	void writeWord(const uint16_t addr, uint16_t v);
+	void write_byte(const uint16_t addr, const uint8_t v);
+	void write_word(const uint16_t addr, uint16_t v);
 
 	void operator()();
 };

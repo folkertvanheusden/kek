@@ -46,9 +46,9 @@ void rk05::reset()
 	memset(registers, 0x00, sizeof registers);
 }
 
-uint8_t rk05::readByte(const uint16_t addr)
+uint8_t rk05::read_byte(const uint16_t addr)
 {
-	uint16_t v = readWord(addr & ~1);
+	uint16_t v = read_word(addr & ~1);
 
 	if (addr & 1)
 		return v >> 8;
@@ -56,7 +56,7 @@ uint8_t rk05::readByte(const uint16_t addr)
 	return v;
 }
 
-uint16_t rk05::readWord(const uint16_t addr)
+uint16_t rk05::read_word(const uint16_t addr)
 {
 	const int reg = (addr - RK05_BASE) / 2;
 
@@ -102,16 +102,16 @@ void rk05::update_bus_address(const uint16_t v)
 	registers[(RK05_CS - RK05_BASE) / 2] |= ((org_v >> 16) & 3) << 4;
 }
 
-void rk05::writeByte(const uint16_t addr, const uint8_t v)
+void rk05::write_byte(const uint16_t addr, const uint8_t v)
 {
 	uint16_t vtemp = registers[(addr - RK05_BASE) / 2];
 
 	update_word(&vtemp, addr & 1, v);
 
-	writeWord(addr, vtemp);
+	write_word(addr, vtemp);
 }
 
-void rk05::writeWord(const uint16_t addr, const uint16_t v)
+void rk05::write_word(const uint16_t addr, const uint16_t v)
 {
 	const int reg = (addr - RK05_BASE) / 2;
 

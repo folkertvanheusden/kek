@@ -147,7 +147,7 @@ void console_ncurses::panel_update_thread()
 			uint16_t current_PC    = c->getPC();
 			uint32_t full_addr     = b->calculate_physical_address(run_mode, current_PC, false, false, true, i_space);
 
-			uint16_t current_instr = b->readWord(current_PC);
+			uint16_t current_instr = b->read_word(current_PC);
 
 			auto data = c->disassemble(current_PC);
 

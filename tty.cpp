@@ -61,9 +61,9 @@ void tty::reset()
 	memset(registers, 0x00, sizeof registers);
 }
 
-uint8_t tty::readByte(const uint16_t addr)
+uint8_t tty::read_byte(const uint16_t addr)
 {
-	uint16_t v = readWord(addr & ~1);
+	uint16_t v = read_word(addr & ~1);
 
 	if (addr & 1)
 		return v >> 8;
@@ -79,7 +79,7 @@ void tty::notify_rx()
 		b->getCpu()->queue_interrupt(4, 060);
 }
 
-uint16_t tty::readWord(const uint16_t addr)
+uint16_t tty::read_word(const uint16_t addr)
 {
 	const int reg    = (addr - PDP11TTY_BASE) / 2;
 	uint16_t  vtemp  = registers[reg];
@@ -155,7 +155,7 @@ void tty::operator()()
 	}
 }
 
-void tty::writeByte(const uint16_t addr, const uint8_t v)
+void tty::write_byte(const uint16_t addr, const uint8_t v)
 {
 	uint16_t vtemp = registers[(addr - PDP11TTY_BASE) / 2];
 	
@@ -168,10 +168,10 @@ void tty::writeByte(const uint16_t addr, const uint8_t v)
 		vtemp |= v;
 	}
 
-	writeWord(addr, vtemp);
+	write_word(addr, vtemp);
 }
 
-void tty::writeWord(const uint16_t addr, uint16_t v)
+void tty::write_word(const uint16_t addr, uint16_t v)
 {
 	const int reg = (addr - PDP11TTY_BASE) / 2;
 

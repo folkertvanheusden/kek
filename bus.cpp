@@ -333,7 +333,7 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 		}
 
 		if (a == ADDR_LFC) // line frequency clock and status register
-			return kw11_l_->readWord(a);
+			return kw11_l_->read_word(a);
 
 		if (a == ADDR_LP11CSR) { // printer, CSR register, LP11
 			uint16_t temp = 0x80;
@@ -349,9 +349,9 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 				(a >= ADDR_PDR_U_START && a < ADDR_PDR_U_END) ||
 				(a >= ADDR_PAR_U_START && a < ADDR_PAR_U_END)) {
 			if (word_mode == wm_word)
-				return mmu_->readWord(a);
+				return mmu_->read_word(a);
 
-			return mmu_->readByte(a);
+			return mmu_->read_byte(a);
 		}
 		///////////
 
@@ -468,16 +468,16 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 		}
 
 		if (tm11 && a >= TM_11_BASE && a < TM_11_END && !peek_only)
-			return word_mode == wm_byte ? tm11->readByte(a) : tm11->readWord(a);
+			return word_mode == wm_byte ? tm11->read_byte(a) : tm11->read_word(a);
 
 		if (rk05_ && a >= RK05_BASE && a < RK05_END && !peek_only)
-			return word_mode == wm_byte ? rk05_->readByte(a) : rk05_->readWord(a);
+			return word_mode == wm_byte ? rk05_->read_byte(a) : rk05_->read_word(a);
 
 		if (rl02_ && a >= RL02_BASE && a < RL02_END && !peek_only)
-			return word_mode == wm_byte ? rl02_->readByte(a) : rl02_->readWord(a);
+			return word_mode == wm_byte ? rl02_->read_byte(a) : rl02_->read_word(a);
 
 		if (tty_ && a >= PDP11TTY_BASE && a < PDP11TTY_END && !peek_only)
-			return word_mode == wm_byte ? tty_->readByte(a) : tty_->readWord(a);
+			return word_mode == wm_byte ? tty_->read_byte(a) : tty_->read_word(a);
 
 		if (dc11_ && a >= DC11_BASE && a < DC11_END && !peek_only)
 			return word_mode == wm_byte ? dc11_->read_byte(a) : dc11_->read_word(a);
@@ -937,32 +937,32 @@ write_rc_t bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint1
 		}
 
 		if (a == ADDR_LFC) { // line frequency clock and status register
-			kw11_l_->writeWord(a, value);
+			kw11_l_->write_word(a, value);
 
 			return { false };
 		}
 
 		if (tm11 && a >= TM_11_BASE && a < TM_11_END) {
 			DOLOG(debug, false, "WRITE-I/O TM11 register %d: %06o", (a - TM_11_BASE) / 2, value);
-			word_mode == wm_byte ? tm11->writeByte(a, value) : tm11->writeWord(a, value);
+			word_mode == wm_byte ? tm11->write_byte(a, value) : tm11->write_word(a, value);
 			return { false };
 		}
 
 		if (rk05_ && a >= RK05_BASE && a < RK05_END) {
 			DOLOG(debug, false, "WRITE-I/O RK05 register %d: %06o", (a - RK05_BASE) / 2, value);
-			word_mode == wm_byte ? rk05_->writeByte(a, value) : rk05_->writeWord(a, value);
+			word_mode == wm_byte ? rk05_->write_byte(a, value) : rk05_->write_word(a, value);
 			return { false };
 		}
 
 		if (rl02_ && a >= RL02_BASE && a < RL02_END) {
 			DOLOG(debug, false, "WRITE-I/O RL02 register %d: %06o", (a - RL02_BASE) / 2, value);
-			word_mode == wm_byte ? rl02_->writeByte(a, value) : rl02_->writeWord(a, value);
+			word_mode == wm_byte ? rl02_->write_byte(a, value) : rl02_->write_word(a, value);
 			return { false };
 		}
 
 		if (tty_ && a >= PDP11TTY_BASE && a < PDP11TTY_END) {
 			DOLOG(debug, false, "WRITE-I/O TTY register %d: %06o", (a - PDP11TTY_BASE) / 2, value);
-			word_mode == wm_byte ? tty_->writeByte(a, value) : tty_->writeWord(a, value);
+			word_mode == wm_byte ? tty_->write_byte(a, value) : tty_->write_word(a, value);
 			return { false };
 		}
 
@@ -980,9 +980,9 @@ write_rc_t bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint1
 				(a >= ADDR_PDR_U_START && a < ADDR_PDR_U_END) ||
 				(a >= ADDR_PAR_U_START && a < ADDR_PAR_U_END)) {
 			if (word_mode == wm_word)
-				mmu_->writeWord(a, value);
+				mmu_->write_word(a, value);
 			else
-				mmu_->writeByte(a, value);
+				mmu_->write_byte(a, value);
 
 			return { false };
 		}
@@ -1076,7 +1076,7 @@ uint16_t bus::readPhysical(const uint32_t a)
 	return value;
 }
 
-uint16_t bus::readWord(const uint16_t a, const d_i_space_t s)
+uint16_t bus::read_word(const uint16_t a, const d_i_space_t s)
 {
 	return read(a, wm_word, rm_cur, false, s);
 }
@@ -1086,7 +1086,7 @@ uint16_t bus::peekWord(const uint16_t a)
 	return read(a, wm_word, rm_cur, true);
 }
 
-void bus::writeWord(const uint16_t a, const uint16_t value, const d_i_space_t s)
+void bus::write_word(const uint16_t a, const uint16_t value, const d_i_space_t s)
 {
 	write(a, wm_word, value, rm_cur, s);
 }

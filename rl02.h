@@ -58,9 +58,9 @@ public:
 	static rl02 *deserialize(const json_t *const j, bus *const b);
 #endif
 
-	uint8_t  readByte(const uint16_t addr) override;
-	uint16_t readWord(const uint16_t addr) override;
+	uint8_t  read_byte(const uint16_t addr) override;
+	uint16_t read_word(const uint16_t addr) override;
 
-	void writeByte(const uint16_t addr, const uint8_t  v) override;
-	void writeWord(const uint16_t addr, const uint16_t v) override;
+	void write_byte(const uint16_t addr, const uint8_t  v) override;
+	void write_word(const uint16_t addr, const uint16_t v) override;
 };
