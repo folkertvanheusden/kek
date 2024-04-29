@@ -1389,6 +1389,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 				                addToMMR1(a);
 
 						// read from previous space
+						// FIXME: address space selection (see MTPI/D)
 						v = b->read(a.addr.value(), wm_word, rm_prev);
 					 }
 
@@ -1415,6 +1416,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						b->mmudebug(a.addr.value());
 
 						a.mode_selection = rm_prev;
+						a.space   = word_mode == wm_byte ? d_space : i_space;
 						set_flags = putGAM(a, v);
 					 }
 
