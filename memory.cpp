@@ -1,12 +1,13 @@
-// (C) 2018-2023 by Folkert van Heusden
+// (C) 2018-2024 by Folkert van Heusden
 // Released under MIT license
 
 #if defined(ESP32)
 #include <Arduino.h>
 #endif
-#include <string.h>
+#include <cstring>
 
 #include "memory.h"
+
 
 memory::memory(const uint32_t size) : size(size)
 {
