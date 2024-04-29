@@ -29,8 +29,8 @@ static FILE       *log_fh           = nullptr;
 static int         lf_uid           = -1;
 static int         lf_gid           = -1;
 static bool        l_timestamp      = true;
-static int         log_buffer_size  = 128;
-static char       *log_buffer       = reinterpret_cast<char *>(malloc(log_buffer_size));
+static thread_local int   log_buffer_size = 128;
+static thread_local char *log_buffer      = reinterpret_cast<char *>(malloc(log_buffer_size));
 
 #if defined(ESP32)
 int gettid()
