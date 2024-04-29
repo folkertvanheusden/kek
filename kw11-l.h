@@ -42,6 +42,6 @@ public:
 	void     begin(console *const cnsl);
 	void     operator()();
 
-	uint16_t readWord (const uint16_t a);
-	void     writeWord(const uint16_t a, const uint16_t v);
+	uint16_t read_word (const uint16_t a);
+	void     write_word(const uint16_t a, const uint16_t v);
 };

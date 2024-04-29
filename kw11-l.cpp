@@ -86,10 +86,10 @@ void kw11_l::operator()()
 	DOLOG(debug, true, "KW11-L thread terminating");
 }
 
-uint16_t kw11_l::readWord(const uint16_t a)
+uint16_t kw11_l::read_word(const uint16_t a)
 {
 	if (a != ADDR_LFC) {
-		DOLOG(debug, true, "KW11-L readWord not for us (%06o)", a);
+		DOLOG(debug, true, "KW11-L read_word not for us (%06o)", a);
 		return 0;
 	}
 
@@ -108,10 +108,10 @@ uint16_t kw11_l::readWord(const uint16_t a)
 	return temp;
 }
 
-void kw11_l::writeWord(const uint16_t a, const uint16_t value)
+void kw11_l::write_word(const uint16_t a, const uint16_t value)
 {
 	if (a != ADDR_LFC) {
-		DOLOG(debug, true, "KW11-L writeWord not for us (%06o to %06o)", value, a);
+		DOLOG(debug, true, "KW11-L write_word not for us (%06o to %06o)", value, a);
 		return;
 	}
 

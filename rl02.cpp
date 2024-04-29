@@ -109,9 +109,9 @@ rl02 *rl02::deserialize(const json_t *const j, bus *const b)
 }
 #endif
 
-uint8_t rl02::readByte(const uint16_t addr)
+uint8_t rl02::read_byte(const uint16_t addr)
 {
-	uint16_t v = readWord(addr & ~1);
+	uint16_t v = read_word(addr & ~1);
 
 	if (addr & 1)
 		return v >> 8;
@@ -119,7 +119,7 @@ uint8_t rl02::readByte(const uint16_t addr)
 	return v;
 }
 
-uint16_t rl02::readWord(const uint16_t addr)
+uint16_t rl02::read_word(const uint16_t addr)
 {
 	const int reg = (addr - RL02_BASE) / 2;
 
@@ -145,7 +145,7 @@ uint16_t rl02::readWord(const uint16_t addr)
 	return value;
 }
 
-void rl02::writeByte(const uint16_t addr, const uint8_t v)
+void rl02::write_byte(const uint16_t addr, const uint8_t v)
 {
 	uint16_t vtemp = registers[(addr - RL02_BASE) / 2];
 
@@ -158,7 +158,7 @@ void rl02::writeByte(const uint16_t addr, const uint8_t v)
 		vtemp |= v;
 	}
 
-	writeWord(addr, vtemp);
+	write_word(addr, vtemp);
 }
 
 uint32_t rl02::get_bus_address() const
@@ -184,7 +184,7 @@ void rl02::update_dar()
 	registers[(RL02_DAR - RL02_BASE) / 2] = (sector & 63) | (head << 6) | (track << 7);
 }
 
-void rl02::writeWord(const uint16_t addr, uint16_t v)
+void rl02::write_word(const uint16_t addr, uint16_t v)
 {
 	const int reg = (addr - RL02_BASE) / 2;
 

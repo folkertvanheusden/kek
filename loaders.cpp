@@ -23,7 +23,7 @@ void loadbin(bus *const b, uint16_t base, const char *const file)
 	FILE *fh = fopen(file, "rb");
 
 	while(!feof(fh))
-		b->writeByte(base++, fgetc(fh));
+		b->write_byte(base++, fgetc(fh));
 
 	fclose(fh);
 }
@@ -139,7 +139,7 @@ void set_boot_loader(bus *const b, const bootloader_t which)
 	}
 
 	for(int i=0; i<size; i++)
-		b->writeWord(offset + i * 2, bl[i]);
+		b->write_word(offset + i * 2, bl[i]);
 
 	c->setRegister(7, start);
 }
@@ -215,7 +215,7 @@ std::optional<uint16_t> load_tape(bus *const b, const std::string & file)
 #endif
 
 			csum += c;
-			b->writeByte(p++, c);
+			b->write_byte(p++, c);
 		}
 
 #if defined(ESP32)
@@ -259,7 +259,7 @@ void load_p11_x11(bus *const b, const std::string & file)
 		if (n) {
 			uint8_t byte = strtol(buffer, nullptr, 16);
 
-			b->writeByte(addr, byte);
+			b->write_byte(addr, byte);
 
 			n--;
 

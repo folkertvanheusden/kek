@@ -145,7 +145,7 @@ void mmu::write_par(const uint32_t a, const int run_mode, const uint16_t value, 
 	DOLOG(debug, false, "mmu WRITE-I/O PAR run-mode %d: %c for %d: %o (%07o)", run_mode, is_d ? 'D' : 'I', page, word_mode == wm_byte ? value & 0xff : value, pages[run_mode][is_d][page].par * 64);
 }
 
-uint16_t mmu::readWord(const uint16_t a)
+uint16_t mmu::read_word(const uint16_t a)
 {
 	uint16_t v = 0;
 
@@ -165,9 +165,9 @@ uint16_t mmu::readWord(const uint16_t a)
 	return v;
 }
 
-uint8_t mmu::readByte(const uint16_t addr)
+uint8_t mmu::read_byte(const uint16_t addr)
 {
-	uint16_t v = readWord(addr);
+	uint16_t v = read_word(addr);
 
 	if (addr & 1)
 		return v >> 8;
@@ -175,7 +175,7 @@ uint8_t mmu::readByte(const uint16_t addr)
 	return v;
 }
 
-void mmu::writeWord(const uint16_t a, const uint16_t value)
+void mmu::write_word(const uint16_t a, const uint16_t value)
 {
 	// supervisor
 	if (a >= ADDR_PDR_SV_START && a < ADDR_PDR_SV_END)
@@ -194,7 +194,7 @@ void mmu::writeWord(const uint16_t a, const uint16_t value)
 		write_par(a, 3, value, wm_word);
 }
 
-void mmu::writeByte(const uint16_t a, const uint8_t value)
+void mmu::write_byte(const uint16_t a, const uint8_t value)
 {
 	// supervisor
 	if (a >= ADDR_PDR_SV_START && a < ADDR_PDR_SV_END)
