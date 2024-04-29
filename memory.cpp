@@ -4,7 +4,7 @@
 #if defined(ESP32)
 #include <Arduino.h>
 #endif
-#include <string.h>
+#include <cstring>
 
 #include "memory.h"
 

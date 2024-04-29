@@ -113,14 +113,14 @@ void tm_11::writeWord(const uint16_t addr, uint16_t v)
 				if (fread(xfer_buffer, 1, reclen, fh) != reclen)
 					DOLOG(info, true, "failed: %s", strerror(errno));
 				for(int i=0; i<reclen; i++)
-					m -> writeByte(registers[(TM_11_MTCMA - TM_11_BASE) / 2] + i, xfer_buffer[i]);
+					m->write_byte(registers[(TM_11_MTCMA - TM_11_BASE) / 2] + i, xfer_buffer[i]);
 				offset += reclen;
 
 				v = 128; // TODO set error if error
 			}
 			else if (func == 2) { // write
 				for(int i=0; i<reclen; i++)
-					xfer_buffer[i] = m -> readByte(registers[(TM_11_MTCMA - TM_11_BASE) / 2] + i);
+					xfer_buffer[i] = m->read_byte(registers[(TM_11_MTCMA - TM_11_BASE) / 2] + i);
 				fwrite(xfer_buffer, 1, reclen, fh);
 				offset += reclen;
 				v = 128; // TODO

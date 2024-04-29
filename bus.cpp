@@ -525,9 +525,9 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 
 	uint16_t temp   = 0;
 	if (word_mode == wm_byte)
-		temp = m->readByte(m_offset);
+		temp = m->read_byte(m_offset);
 	else
-		temp = m->readWord(m_offset);
+		temp = m->read_word(m_offset);
 
 	if (!peek_only) DOLOG(debug, false, "READ from %06o/%07o %c %c: %o (%s)", addr_in, m_offset, space == d_space ? 'D' : 'I', word_mode == wm_byte ? 'B' : 'W', temp, mode_selection == rm_prev ? "prev" : "cur");
 
@@ -1039,9 +1039,9 @@ write_rc_t bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint1
 	}
 
 	if (word_mode == wm_byte)
-		m->writeByte(m_offset, value);
+		m->write_byte(m_offset, value);
 	else
-		m->writeWord(m_offset, value);
+		m->write_word(m_offset, value);
 
 	return { false };
 }
@@ -1056,7 +1056,7 @@ void bus::writePhysical(const uint32_t a, const uint16_t value)
 		throw 12;
 	}
 	else {
-		m->writeWord(a, value);
+		m->write_word(a, value);
 	}
 }
 
@@ -1068,7 +1068,7 @@ uint16_t bus::readPhysical(const uint32_t a)
 		throw 13;
 	}
 
-	uint16_t value = m->readWord(a);
+	uint16_t value = m->read_word(a);
 
 	DOLOG(debug, false, "physicalREAD %06o from %o", value, a);
 
@@ -1092,7 +1092,7 @@ void bus::writeWord(const uint16_t a, const uint16_t value, const d_i_space_t s)
 
 uint8_t bus::readUnibusByte(const uint32_t a)
 {
-	uint8_t v = m->readByte(a);
+	uint8_t v = m->read_byte(a);
 	DOLOG(debug, false, "readUnibusByte[%08o]=%03o", a, v);
 	return v;
 }
@@ -1100,5 +1100,5 @@ uint8_t bus::readUnibusByte(const uint32_t a)
 void bus::writeUnibusByte(const uint32_t a, const uint8_t v)
 {
 	DOLOG(debug, false, "writeUnibusByte[%08o]=%03o", a, v);
-	m->writeByte(a, v);
+	m->write_byte(a, v);
 }
