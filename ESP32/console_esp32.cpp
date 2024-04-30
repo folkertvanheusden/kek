@@ -7,11 +7,10 @@
 
 #include "console_esp32.h"
 #include "cpu.h"
+#include "esp32.h"
 #include "error.h"
 #include "utils.h"
 
-
-#define NEOPIXELS_PIN	25
 
 console_esp32::console_esp32(std::atomic_uint32_t *const stop_event, std::vector<Stream *> & io_ports, const int t_width, const int t_height) :
 	console(stop_event, t_width, t_height),
@@ -62,7 +61,7 @@ void console_esp32::refresh_virtual_terminal()
 
 void console_esp32::panel_update_thread()
 {
-#if !defined(BUILD_FOR_RP2040)
+#if !defined(BUILD_FOR_RP2040) && defined(NEOPIXELS_PIN)
 	Serial.println(F("panel task started"));
 
 	cpu *const c = b->getCpu();

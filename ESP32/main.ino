@@ -323,7 +323,6 @@ void setup() {
 	rl02_dev->begin();
 	b->add_rl02(rl02_dev);
 
-
 	Serial.println(F("Init TTY"));
 	tty_ = new tty(cnsl, b);
 	Serial.println(F("Connect TTY to bus"));
