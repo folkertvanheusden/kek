@@ -2,7 +2,6 @@
 // Released under MIT license
 
 #include <cstring>
-#include <poll.h>
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
@@ -11,12 +10,14 @@
 #include "cpu.h"
 #include "dc11.h"
 #include "log.h"
+#include "utils.h"
 
 
 dc11::dc11(const int base_port, bus *const b):
 	base_port(base_port),
 	b(b)
 {
+	// TODO move to begin()
 	th = new std::thread(std::ref(*this));
 }
 
@@ -30,17 +31,35 @@ dc11::~dc11()
 	}
 }
 
+void dc11::trigger_interrupt(const int line_nr)
+{
+	b->getCpu()->queue_interrupt(4, 0300 + line_nr * 4);
+}
+
 void dc11::operator()()
 {
-	int fds[dc11_n_lines] = { };
+	set_thread_name("kek:DC11");
 
-	pollfd pfds[8] = { };
+	DOLOG(info, true, "DC11 thread started");
 
 	for(int i=0; i<dc11_n_lines; i++) {
+		// client session
+		pfds[dc11_n_lines + i].fd     = socket(AF_INET, SOCK_STREAM, 0);
+		pfds[dc11_n_lines + i].events = POLLIN;
+
 		// listen on port
+		int port = base_port + i + 1;
+
 		pfds[i].fd = socket(AF_INET, SOCK_STREAM, 0);
 
-		int port = base_port + i + 1;
+		int reuse_addr = 1;
+		if (setsockopt(pfds[i].fd, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse_addr, sizeof(reuse_addr)) == -1) {
+			close(pfds[i].fd);
+			pfds[i].fd = -1;
+
+			DOLOG(warning, true, "Cannot set reuseaddress for port %d (DC11)", port);
+			continue;
+		}
 
 	        sockaddr_in listen_addr;
 		memset(&listen_addr, 0, sizeof(listen_addr));
@@ -50,16 +69,21 @@ void dc11::operator()()
 
 		if (bind(pfds[i].fd, reinterpret_cast<struct sockaddr *>(&listen_addr), sizeof(listen_addr)) == -1) {
 			close(pfds[i].fd);
-			fds[i] = -1;
+			pfds[i].fd = -1;
 
 			DOLOG(warning, true, "Cannot bind to port %d (DC11)", port);
+			continue;
+		}
+
+		if (listen(pfds[i].fd, SOMAXCONN) == -1) {
+			close(pfds[i].fd);
+			pfds[i].fd = -1;
+
+			DOLOG(warning, true, "Cannot listen on port %d (DC11)", port);
+			continue;
 		}
 
 		pfds[i].events = POLLIN;
-
-		// client session
-		pfds[dc11_n_lines + i].fd     = socket(AF_INET, SOCK_STREAM, 0);
-		pfds[dc11_n_lines + i].events = POLLIN;
 	}
 
 	while(!stop_flag) {
@@ -107,14 +131,16 @@ void dc11::operator()()
 				have_data[line_nr].notify_all();
 
 				if (registers[line_nr * 4] & 64)  // interrupts enabled?
-					b->getCpu()->queue_interrupt(4, 0320 + line_nr * 4);
+					trigger_interrupt(line_nr);
 			}
 		}
 	}
 
+	DOLOG(info, true, "DC11 thread terminating");
+
 	for(int i=0; i<dc11_n_lines * 2; i++) {
-		if (fds[i] != -1)
-			close(fds[i]);
+		if (pfds[i].fd != -1)
+			close(pfds[i].fd);
 	}
 }
 
@@ -134,9 +160,25 @@ uint8_t dc11::read_byte(const uint16_t addr)
 
 uint16_t dc11::read_word(const uint16_t addr)
 {
-	const int reg   = (addr - DC11_BASE) / 2;
+	int      reg     = (addr - DC11_BASE) / 2;
+	int      line_nr = reg / 8;
 
-	uint16_t  vtemp = registers[reg];
+	uint16_t vtemp   = registers[reg];
+
+	if ((reg & 3) == 1) {  // read data register
+		std::unique_lock<std::mutex> lck(input_lock[line_nr]);
+
+		// get oldest byte in buffer
+		if (recv_buffers[line_nr].empty() == false) {
+			vtemp = *recv_buffers[line_nr].begin();
+
+			recv_buffers[line_nr].erase(recv_buffers[line_nr].begin());
+
+			// still data in buffer? generate interrupt
+			if (recv_buffers[line_nr].empty() == false && (registers[line_nr * 4] & 64))
+				trigger_interrupt(line_nr);
+		}
+	}
 
 	DOLOG(debug, false, "DC11: read register %06o (%d): %06o", addr, reg, vtemp);
 
@@ -161,9 +203,20 @@ void dc11::write_byte(const uint16_t addr, const uint8_t v)
 
 void dc11::write_word(const uint16_t addr, uint16_t v)
 {
-	const int reg = (addr - DC11_BASE) / 2;
+	int reg     = (addr - DC11_BASE) / 2;
+	int line_nr = reg / 8;
 
 	DOLOG(debug, false, "DC11: write register %06o (%d) to %o", addr, reg, v);
+
+	if ((reg & 3) == 3) {  // transmit buffer
+		char c = v;
+
+		// TODO handle failed transmit
+		(void)write(pfds[dc11_n_lines + line_nr].fd, &c, 1);
+
+		if (registers[line_nr * 4 + 2] & 64)
+			trigger_interrupt(line_nr);
+	}
 
 	registers[reg] = v;
 }

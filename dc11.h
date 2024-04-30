@@ -8,6 +8,11 @@
 #include <mutex>
 #include <thread>
 #include <vector>
+#if defined(ESP32)
+#include <lwip/sockets.h>
+#else
+#include <poll.h>
+#endif
 
 #include "gen.h"
 #include "bus.h"
@@ -31,10 +36,12 @@ private:
 	std::atomic_bool stop_flag        { false   };
 	std::thread     *th               { nullptr };
 
+	pollfd           pfds[dc11_n_lines * 2] {   };
 	std::vector<char> recv_buffers[dc11_n_lines];
         std::condition_variable have_data[dc11_n_lines];
         std::mutex        input_lock[dc11_n_lines];
 
+	void trigger_interrupt(const int line_nr);
 
 public:
 	dc11(const int base_port, bus *const b);
