@@ -868,7 +868,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 				if (parts.size() == 2)
 					b->set_memory_size(std::stoi(parts.at(1)));
 				else {
-					int n_pages = b->getRAM()->get_memory_size();
+					int n_pages = b->getRAM()->get_memory_size() / 8192;
 
 					cnsl->put_string_lf(format("Memory size: %u pages or %u kB (decimal)", n_pages, n_pages * 8192 / 1024));
 				}
