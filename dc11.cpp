@@ -107,6 +107,10 @@ void dc11::operator()()
 			}
 
 			pfds[client_i].fd = accept(pfds[i].fd, nullptr, nullptr);
+
+			registers[i * 4 + 0] |= 0160000;  // "ERROR", RING INDICATOR, CARRIER TRANSITION
+			if (is_rx_interrupt_enabled(i))
+				trigger_interrupt(i);
 		}
 
 		// receive data
@@ -175,23 +179,29 @@ uint16_t dc11::read_word(const uint16_t addr)
 {
 	int      reg     = (addr - DC11_BASE) / 2;
 	int      line_nr = reg / 4;
-
-	// emulate DTR, CTS & READY
-	registers[line_nr * 4 + 0] &= ~1;  // DTR: bit 0  [RCSR]
-	registers[line_nr * 4 + 0] &= ~4;  // CD : bit 2
-	registers[line_nr * 4 + 2] &= ~2;  // CTS: bit 1  [TSCR]
-	registers[line_nr * 4 + 2] &= ~128;  // READY: bit 7
-
-	if (pfds[line_nr + dc11_n_lines].fd != -1) {
-		registers[line_nr * 4 + 0] |= 1;
-		registers[line_nr * 4 + 0] |= 4;
-		registers[line_nr * 4 + 2] |= 2;
-		registers[line_nr * 4 + 2] |= 128;
-	}
+	int      sub_reg = reg & 3;
 
 	uint16_t vtemp   = registers[reg];
 
-	if ((reg & 3) == 1) {  // read data register
+	if (sub_reg == 0) {  // recive status
+		// emulate DTR, CTS & READY
+		registers[line_nr * 4 + 0] &= ~1;  // DTR: bit 0  [RCSR]
+		registers[line_nr * 4 + 0] &= ~4;  // CD : bit 2
+
+		if (pfds[line_nr + dc11_n_lines].fd != -1) {
+			printf("CARRIER detected\r\n");
+			registers[line_nr * 4 + 0] |= 1;
+			registers[line_nr * 4 + 0] |= 4;
+		}
+		else
+			printf("CARRIER *NOT* detected\r\n");
+
+		vtemp = registers[line_nr * 4 + 0];
+
+		// clear error(s)
+		registers[line_nr * 4 + 0] &= ~0160000;
+	}
+	else if (sub_reg == 1) {  // read data register
 		std::unique_lock<std::mutex> lck(input_lock[line_nr]);
 
 		// get oldest byte in buffer
@@ -213,6 +223,20 @@ uint16_t dc11::read_word(const uint16_t addr)
 					trigger_interrupt(line_nr);
 			}
 		}
+	}
+	else if (sub_reg == 2) {  // transmit status
+		registers[line_nr * 4 + 2] &= ~2;  // CTS: bit 1  [TSCR]
+		registers[line_nr * 4 + 2] &= ~128;  // READY: bit 7
+
+		if (pfds[line_nr + dc11_n_lines].fd != -1) {
+			printf("CARRIER detected\r\n");
+			registers[line_nr * 4 + 2] |= 2;
+			registers[line_nr * 4 + 2] |= 128;
+		}
+		else
+			printf("CARRIER *NOT* detected\r\n");
+
+		vtemp = registers[line_nr * 4 + 2];
 	}
 
 	DOLOG(debug, true, "DC11: read register %06o (line %d): %06o", addr, line_nr, vtemp);
