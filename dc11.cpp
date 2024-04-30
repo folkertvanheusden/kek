@@ -33,7 +33,6 @@ dc11::~dc11()
 
 void dc11::trigger_interrupt(const int line_nr)
 {
-	printf("Interrupt %d\r\n", line_nr);
 	b->getCpu()->queue_interrupt(5, 0300 + line_nr * 4);
 }
 
@@ -189,12 +188,9 @@ uint16_t dc11::read_word(const uint16_t addr)
 		registers[line_nr * 4 + 0] &= ~4;  // CD : bit 2
 
 		if (pfds[line_nr + dc11_n_lines].fd != -1) {
-			printf("CARRIER detected\r\n");
 			registers[line_nr * 4 + 0] |= 1;
 			registers[line_nr * 4 + 0] |= 4;
 		}
-		else
-			printf("CARRIER *NOT* detected\r\n");
 
 		vtemp = registers[line_nr * 4 + 0];
 
@@ -207,7 +203,6 @@ uint16_t dc11::read_word(const uint16_t addr)
 		// get oldest byte in buffer
 		if (recv_buffers[line_nr].empty() == false) {
 			vtemp = *recv_buffers[line_nr].begin();
-			printf("return: %d\n", vtemp);
 
 			// parity check
 			registers[line_nr * 4 + 0] &= ~(1 << 5);
@@ -229,18 +224,14 @@ uint16_t dc11::read_word(const uint16_t addr)
 		registers[line_nr * 4 + 2] &= ~128;  // READY: bit 7
 
 		if (pfds[line_nr + dc11_n_lines].fd != -1) {
-			printf("CARRIER detected\r\n");
 			registers[line_nr * 4 + 2] |= 2;
 			registers[line_nr * 4 + 2] |= 128;
 		}
-		else
-			printf("CARRIER *NOT* detected\r\n");
 
 		vtemp = registers[line_nr * 4 + 2];
 	}
 
 	DOLOG(debug, true, "DC11: read register %06o (line %d): %06o", addr, line_nr, vtemp);
-	printf("DC11: read register %06o (line %d): %06o\r\n", addr, line_nr, vtemp);
 
 	return vtemp;
 }
@@ -265,15 +256,21 @@ void dc11::write_word(const uint16_t addr, uint16_t v)
 {
 	int reg     = (addr - DC11_BASE) / 2;
 	int line_nr = reg / 4;
+	int sub_reg = reg & 3;
 
 	DOLOG(debug, true, "DC11: write register %06o (%d line_nr %d) to %06o", addr, reg, line_nr, v);
-	printf("DC11: write register %06o (%d line_nr %d) to %06o\r\n", addr, reg, line_nr, v);
 
-	if ((reg & 3) == 3) {  // transmit buffer
+	if (sub_reg == 3) {  // transmit buffer
 		char c = v & 127;
 
-		// TODO handle failed transmit
-		printf("%ld\r\n", write(pfds[dc11_n_lines + line_nr].fd, &c, 1));
+		if (write(pfds[dc11_n_lines + line_nr].fd, &c, 1) != 1) {
+			DOLOG(info, false, "DC11 line %d disconnected\n", line_nr + 1);
+
+			registers[line_nr * 4 + 0] |= 0140000;  // "ERROR", CARRIER TRANSITION
+
+			close(pfds[dc11_n_lines + line_nr].fd);
+			pfds[dc11_n_lines + line_nr].fd = -1;
+		}
 
 		if (is_tx_interrupt_enabled(line_nr))
 			trigger_interrupt(line_nr);
