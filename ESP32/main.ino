@@ -52,7 +52,7 @@ constexpr const char SERIAL_CFG_FILE[] = "/serial.json";
 
 #if defined(BUILD_FOR_RP2040)
 #define Serial_RS232 Serial1
-#else
+#elif defined(CONSOLE_SERIAL_RX)
 HardwareSerial       Serial_RS232(1);
 #endif
 
@@ -202,6 +202,7 @@ void recall_configuration(console *const cnsl)
 }
 #endif
 
+#if defined(CONSOLE_SERIAL_RX)
 void set_tty_serial_speed(console *const c, const uint32_t bps)
 {
 	Serial_RS232.begin(bps);
@@ -209,6 +210,7 @@ void set_tty_serial_speed(console *const c, const uint32_t bps)
 	if (save_serial_speed_configuration(bps) == false)
 		c->put_string_lf("Failed to store configuration file with serial settings");
 }
+#endif
 
 #if defined(ESP32)
 void heap_caps_alloc_failed_hook(size_t requested_size, uint32_t caps, const char *function_name)
@@ -296,14 +298,16 @@ void setup() {
 	Serial.print(bitrate);
 	Serial.println(F("bps"));
 
-#if !defined(BUILD_FOR_RP2040)
-	Serial_RS232.begin(bitrate, hwSerialConfig, 16, 17);
+#if !defined(BUILD_FOR_RP2040) && defined(CONSOLE_SERIAL_RX)
+	Serial_RS232.begin(bitrate, hwSerialConfig, CONSOLE_SERIAL_RX, CONSOLE_SERIAL_TX);
 	Serial_RS232.setHwFlowCtrlMode(0);
-#endif
 
 	Serial_RS232.println(F("\014Console enabled on TTY"));
 
 	std::vector<Stream *> serial_ports { &Serial_RS232, &Serial };
+#else
+	std::vector<Stream *> serial_ports { &Serial };
+#endif
 #if defined(SHA2017)
 	cnsl = new console_shabadge(&stop_event, serial_ports);
 #elif defined(ESP32) || defined(BUILD_FOR_RP2040)

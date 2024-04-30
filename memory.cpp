@@ -14,7 +14,7 @@ memory::memory(const uint32_t size): size(size)
 	Serial.print(F("Memory size (in bytes, decimal): "));
 	Serial.println(size);
 
-	if (size > 12 * 8192 && psramFound()) {
+	if (psramFound()) {
 		Serial.println(F("Using PSRAM"));
 
 		m = reinterpret_cast<uint8_t *>(ps_malloc(size));

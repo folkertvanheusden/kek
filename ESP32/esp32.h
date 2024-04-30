@@ -14,3 +14,6 @@
 #endif
 
 // #define NEOPIXELS_PIN 24
+
+// #define CONSOLE_SERIAL_RX 16
+// #define CONSOLE_SERIAL_TX 17
