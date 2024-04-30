@@ -199,6 +199,10 @@ uint16_t dc11::read_word(const uint16_t addr)
 			vtemp = *recv_buffers[line_nr].begin();
 			printf("return: %d\n", vtemp);
 
+			// parity check
+			registers[line_nr * 4 + 0] &= ~(1 << 5);
+			registers[line_nr * 4 + 0] |= parity(vtemp) << 5;
+
 			recv_buffers[line_nr].erase(recv_buffers[line_nr].begin());
 
 			// still data in buffer? generate interrupt
