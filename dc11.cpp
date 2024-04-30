@@ -131,7 +131,7 @@ void dc11::operator()()
 
 				registers[line_nr * 4 + 0] |= 128;  // DONE: bit 7
 
-				if (registers[line_nr * 4 + 0] & 64)  // interrupts enabled?
+				if (is_rx_interrupt_enabled(line_nr))
 					trigger_interrupt(line_nr);
 
 				have_data[line_nr].notify_all();
@@ -149,6 +149,16 @@ void dc11::operator()()
 
 void dc11::reset()
 {
+}
+
+bool dc11::is_rx_interrupt_enabled(const int line_nr)
+{
+	return !!(registers[line_nr * 4 + 0] & 64);
+}
+
+bool dc11::is_tx_interrupt_enabled(const int line_nr)
+{
+	return !!(registers[line_nr * 4 + 2] & 64);
 }
 
 uint8_t dc11::read_byte(const uint16_t addr)
@@ -192,10 +202,11 @@ uint16_t dc11::read_word(const uint16_t addr)
 			recv_buffers[line_nr].erase(recv_buffers[line_nr].begin());
 
 			// still data in buffer? generate interrupt
-			if (recv_buffers[line_nr].empty() == false && (registers[line_nr * 4] & 64)) {
+			if (recv_buffers[line_nr].empty() == false) {
 				registers[line_nr * 4 + 0] |= 128;  // DONE: bit 7
 
-				trigger_interrupt(line_nr);
+				if (is_rx_interrupt_enabled(line_nr))
+					trigger_interrupt(line_nr);
 			}
 		}
 	}
@@ -236,7 +247,7 @@ void dc11::write_word(const uint16_t addr, uint16_t v)
 		// TODO handle failed transmit
 		printf("%ld\r\n", write(pfds[dc11_n_lines + line_nr].fd, &c, 1));
 
-		if (registers[line_nr * 4 + 2] & 64)
+		if (is_tx_interrupt_enabled(line_nr))
 			trigger_interrupt(line_nr);
 	}
 

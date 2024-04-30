@@ -42,6 +42,8 @@ private:
         std::mutex        input_lock[dc11_n_lines];
 
 	void trigger_interrupt(const int line_nr);
+	bool is_rx_interrupt_enabled(const int line_nr);
+	bool is_tx_interrupt_enabled(const int line_nr);
 
 public:
 	dc11(const int base_port, bus *const b);
