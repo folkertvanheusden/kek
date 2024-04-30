@@ -167,18 +167,16 @@ uint16_t dc11::read_word(const uint16_t addr)
 	int      line_nr = reg / 4;
 
 	// emulate DTR, CTS & READY
-	for(int i=0; i<dc11_n_lines; i++) {
-		registers[i * 4 + 0] &= ~1;  // DTR: bit 0
-		registers[i * 4 + 0] &= ~4;  // CD : bit 2
-		registers[i * 4 + 2] &= ~2;  // CTS: bit 1
-		registers[i * 4 + 2] &= ~128;  // READY: bit 7
+	registers[line_nr * 4 + 0] &= ~1;  // DTR: bit 0  [RCSR]
+	registers[line_nr * 4 + 0] &= ~4;  // CD : bit 2
+	registers[line_nr * 4 + 2] &= ~2;  // CTS: bit 1  [TSCR]
+	registers[line_nr * 4 + 2] &= ~128;  // READY: bit 7
 
-		if (pfds[i + dc11_n_lines].fd != -1) {
-			registers[i * 4 + 0] |= 1;
-			registers[i * 4 + 0] |= 4;
-			registers[i * 4 + 2] |= 2;
-			registers[i * 4 + 2] |= 128;
-		}
+	if (pfds[line_nr + dc11_n_lines].fd != -1) {
+		registers[line_nr * 4 + 0] |= 1;
+		registers[line_nr * 4 + 0] |= 4;
+		registers[line_nr * 4 + 2] |= 2;
+		registers[line_nr * 4 + 2] |= 128;
 	}
 
 	uint16_t vtemp   = registers[reg];
@@ -202,8 +200,8 @@ uint16_t dc11::read_word(const uint16_t addr)
 		}
 	}
 
-	DOLOG(debug, true, "DC11: read register %06o (%d line %d): %06o", addr, reg, line_nr, vtemp);
-	printf("DC11: read register %06o (%d line %d): %06o\r\n", addr, reg, line_nr, vtemp);
+	DOLOG(debug, true, "DC11: read register %06o (line %d): %06o", addr, line_nr, vtemp);
+	printf("DC11: read register %06o (line %d): %06o\r\n", addr, line_nr, vtemp);
 
 	return vtemp;
 }
@@ -233,7 +231,7 @@ void dc11::write_word(const uint16_t addr, uint16_t v)
 	printf("DC11: write register %06o (%d line_nr %d) to %06o\r\n", addr, reg, line_nr, v);
 
 	if ((reg & 3) == 3) {  // transmit buffer
-		char c = v;
+		char c = v & 127;
 
 		// TODO handle failed transmit
 		printf("%ld\r\n", write(pfds[dc11_n_lines + line_nr].fd, &c, 1));

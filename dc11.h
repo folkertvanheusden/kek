@@ -32,7 +32,7 @@ class dc11
 private:
 	int              base_port        { 1100    };
 	bus             *const b          { nullptr };
-	uint16_t         registers[4 * dc11_n_lines] { };
+	uint16_t         registers[4 * dc11_n_lines] { 0 };
 	std::atomic_bool stop_flag        { false   };
 	std::thread     *th               { nullptr };
 
