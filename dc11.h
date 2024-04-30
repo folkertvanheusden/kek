@@ -8,11 +8,6 @@
 #include <mutex>
 #include <thread>
 #include <vector>
-#if defined(ESP32)
-#include <lwip/sockets.h>
-#else
-#include <poll.h>
-#endif
 
 #include "gen.h"
 #include "bus.h"
@@ -23,6 +18,7 @@
 #define DC11_END  (DC11_BASE + (4 * 4 + 1) * 2)  // 4 interfaces, + 2 to point after it
 
 class bus;
+struct pollfd;
 
 // 4 interfaces
 constexpr const int dc11_n_lines = 4;
@@ -36,7 +32,7 @@ private:
 	std::atomic_bool stop_flag        { false   };
 	std::thread     *th               { nullptr };
 
-	pollfd           pfds[dc11_n_lines * 2] {   };
+	pollfd           *pfds            { nullptr };
 	std::vector<char> recv_buffers[dc11_n_lines];
         std::condition_variable have_data[dc11_n_lines];
         std::mutex        input_lock[dc11_n_lines];

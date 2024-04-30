@@ -1,6 +1,11 @@
 // (C) 2024 by Folkert van Heusden
 // Released under MIT license
 
+#if defined(ESP32)
+#include <lwip/sockets.h>
+#else
+#include <poll.h>
+#endif
 #include <cstring>
 #include <unistd.h>
 #include <arpa/inet.h>
@@ -17,6 +22,8 @@ dc11::dc11(const int base_port, bus *const b):
 	base_port(base_port),
 	b(b)
 {
+	pfds = new pollfd[dc11_n_lines * 2]();
+
 	// TODO move to begin()
 	th = new std::thread(std::ref(*this));
 }
@@ -29,6 +36,8 @@ dc11::~dc11()
 		th->join();
 		delete th;
 	}
+
+	delete [] pfds;
 }
 
 void dc11::trigger_interrupt(const int line_nr)
@@ -117,16 +126,19 @@ void dc11::operator()()
 			if (pfds[i].revents != POLLIN)
 				continue;
 
+			int  line_nr = i - dc11_n_lines;
+
 			char buffer[32] { };
 			int rc = read(pfds[i].fd, buffer, sizeof buffer);
 			if (rc <= 0) {  // closed or error?
 				DOLOG(info, false, "Failed reading from port %d", i - dc11_n_lines + 1);
+
+				registers[line_nr * 4 + 0] |= 0140000;  // "ERROR", CARRIER TRANSITION
+
 				close(pfds[i].fd);
 				pfds[i].fd = -1;
 			}
 			else {
-				int line_nr = i - dc11_n_lines;
-
 				std::unique_lock<std::mutex> lck(input_lock[line_nr]);
 
 				for(int k=0; k<rc; k++)
@@ -134,11 +146,11 @@ void dc11::operator()()
 
 				registers[line_nr * 4 + 0] |= 128;  // DONE: bit 7
 
-				if (is_rx_interrupt_enabled(line_nr))
-					trigger_interrupt(line_nr);
-
 				have_data[line_nr].notify_all();
 			}
+
+			if (is_rx_interrupt_enabled(line_nr))
+				trigger_interrupt(line_nr);
 		}
 	}
 
@@ -258,10 +270,12 @@ void dc11::write_word(const uint16_t addr, uint16_t v)
 	int line_nr = reg / 4;
 	int sub_reg = reg & 3;
 
-	DOLOG(debug, true, "DC11: write register %06o (%d line_nr %d) to %06o", addr, reg, line_nr, v);
+	DOLOG(debug, false, "DC11: write register %06o (%d line_nr %d) to %06o", addr, reg, line_nr, v);
 
 	if (sub_reg == 3) {  // transmit buffer
 		char c = v & 127;
+
+		DOLOG(debug, false, "DC11: transmit %c on line %d", c > 32 && c < 127 ? c : ' ', line_nr);
 
 		if (write(pfds[dc11_n_lines + line_nr].fd, &c, 1) != 1) {
 			DOLOG(info, false, "DC11 line %d disconnected\n", line_nr + 1);
