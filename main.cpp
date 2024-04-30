@@ -582,7 +582,7 @@ int main(int argc, char *argv[])
 	cnsl->begin();
 
 	// TODO
-	dc11 *dc11_ = new dc11(b);
+	dc11 *dc11_ = new dc11(1100, b);
 	b->add_DC11(dc11_);
 
 	running = cnsl->get_running_flag();

@@ -3,7 +3,11 @@
 
 #pragma once
 #include <atomic>
+#include <condition_variable>
 #include <cstdint>
+#include <mutex>
+#include <thread>
+#include <vector>
 
 #include "gen.h"
 #include "bus.h"
@@ -15,16 +19,25 @@
 
 class bus;
 
+// 4 interfaces
+constexpr const int dc11_n_lines = 4;
+
 class dc11
 {
 private:
+	int              base_port        { 1100    };
 	bus             *const b          { nullptr };
-	// 4 interfaces
-	uint16_t         registers[4 * 4] {         };
+	uint16_t         registers[4 * dc11_n_lines] { };
 	std::atomic_bool stop_flag        { false   };
+	std::thread     *th               { nullptr };
+
+	std::vector<char> recv_buffers[dc11_n_lines];
+        std::condition_variable have_data[dc11_n_lines];
+        std::mutex        input_lock[dc11_n_lines];
+
 
 public:
-	dc11(bus *const b);
+	dc11(const int base_port, bus *const b);
 	virtual ~dc11();
 
 #if IS_POSIX
@@ -39,4 +52,6 @@ public:
 
 	void write_byte(const uint16_t addr, const uint8_t v);
 	void write_word(const uint16_t addr, uint16_t v);
+
+	void operator()();
 };
