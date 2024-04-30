@@ -32,6 +32,7 @@ private:
 	std::atomic_bool stop_flag        { false   };
 	std::thread     *th               { nullptr };
 
+	// not statically allocated because of compiling problems on arduino
 	pollfd           *pfds            { nullptr };
 	std::vector<char> recv_buffers[dc11_n_lines];
         std::condition_variable have_data[dc11_n_lines];
