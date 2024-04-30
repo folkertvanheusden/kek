@@ -193,6 +193,15 @@ void start_network(console *const c)
 
 	c->put_string_lf("");
 	c->put_string_lf(format("Local IP address: %s", WiFi.localIP().toString().c_str()));
+
+	static bool dc11_loaded = false;
+	if (!dc11_loaded) {
+		dc11_loaded = true;
+
+		Serial.println(F("* Adding DC11"));
+		dc11 *dc11_ = new dc11(1100, b);
+		b->add_DC11(dc11_);
+	}
 }
 
 void recall_configuration(console *const cnsl)
@@ -245,7 +254,6 @@ void setup() {
 	Serial.println(getCpuFrequencyMhz());
 #endif
 
-#if 1
 #if defined(BUILD_FOR_RP2040)
 	SPI.setRX(MISO);
 	SPI.setTX(MOSI);
@@ -258,7 +266,6 @@ void setup() {
 		Serial.println(F("Cannot initialize SD card"));
 	}
 #endif
-#endif
 
 #if defined(BUILD_FOR_RP2040)
 	LittleFSConfig cfg;
@@ -270,37 +277,40 @@ void setup() {
 		Serial.println(F("LittleFS.begin() failed"));
 #endif
 
+	Serial.println(F("* Init bus"));
+	b = new bus();
+
+	Serial.println(F("* Allocate memory"));
+	uint32_t n_pages = DEFAULT_N_PAGES;
+
 #if !defined(BUILD_FOR_RP2040)
 	Serial.print(F("Free RAM after init (decimal bytes): "));
 	Serial.println(ESP.getFreeHeap());
 
 	if (psramInit()) {
 		uint32_t free_psram = ESP.getFreePsram();
-		Serial.printf("Free PSRAM: %d decimal bytes (or %d pages (see 'ramsize' in the debugger))", free_psram, free_psram / 8192l);
+		n_pages    = min(free_psram / 8192, uint32_t(128));  // start size is 1 MB max.
+		Serial.printf("Free PSRAM: %d decimal bytes (or %d pages (see 'ramsize' in the debugger))", free_psram, n_pages);
 		Serial.println(F(""));
 	}
 #endif
 
-	Serial.println(F("Init bus"));
-	b = new bus();
+	Serial.printf("Allocating %d (decimal) pages", n_pages);
+	b->set_memory_size(n_pages);
+	Serial.println(F(""));
 
-	Serial.println(F("Allocate memory"));
-	b->set_memory_size(DEFAULT_N_PAGES);
-
-	Serial.println(F("Init CPU"));
+	Serial.println(F("* Init CPU"));
 	c = new cpu(b, &stop_event);
-
-	Serial.println(F("Connect CPU to BUS"));
 	b->add_cpu(c);
 
+#if !defined(BUILD_FOR_RP2040) && defined(CONSOLE_SERIAL_RX)
 	constexpr uint32_t hwSerialConfig = SERIAL_8N1;
 	uint32_t bitrate = load_serial_speed_configuration();
 
-	Serial.print(F("Init console, baudrate: "));
+	Serial.print(F("* Init console, baudrate: "));
 	Serial.print(bitrate);
 	Serial.println(F("bps"));
 
-#if !defined(BUILD_FOR_RP2040) && defined(CONSOLE_SERIAL_RX)
 	Serial_RS232.begin(bitrate, hwSerialConfig, CONSOLE_SERIAL_RX, CONSOLE_SERIAL_TX);
 	Serial_RS232.setHwFlowCtrlMode(0);
 
@@ -320,7 +330,7 @@ void setup() {
 
 	running = cnsl->get_running_flag();
 
-	Serial.println(F("Connect RK05 and RL02 devices to BUS"));
+	Serial.println(F("* Connect RK05 and RL02 devices to BUS"));
 	auto rk05_dev = new rk05(b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag());
 	rk05_dev->begin();
 	b->add_rk05(rk05_dev);
@@ -329,12 +339,11 @@ void setup() {
 	rl02_dev->begin();
 	b->add_rl02(rl02_dev);
 
-	Serial.println(F("Init TTY"));
+	Serial.println(F("* Adding TTY"));
 	tty_ = new tty(cnsl, b);
-	Serial.println(F("Connect TTY to bus"));
 	b->add_tty(tty_);
 
-#if !defined(BUILD_FOR_RP2040)  // FIXME: led ring
+#if !defined(BUILD_FOR_RP2040) && defined(NEOPIXELS_PIN)
 	Serial.println(F("Starting panel"));
 	xTaskCreate(&console_thread_wrapper_panel, "panel", 3072, cnsl, 1, nullptr);
 #endif
@@ -351,7 +360,7 @@ void setup() {
 
 	Serial.flush();
 
-	Serial.println(F("Starting I/O"));
+	Serial.println(F("* Starting console"));
 	cnsl->start_thread();
 
 	cnsl->put_string_lf("PDP-11/70 emulator, (C) Folkert van Heusden");
