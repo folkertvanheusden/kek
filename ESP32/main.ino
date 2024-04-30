@@ -125,9 +125,11 @@ void set_hostname()
 
 void configure_network(console *const c)
 {
+	WiFi.disconnect();
+
 	WiFi.persistent(true);
 	WiFi.setAutoReconnect(true);
-
+	WiFi.useStaticBuffers(true);
 	WiFi.mode(WIFI_STA);
 
 	c->put_string_lf("Scanning for wireless networks...");
@@ -159,7 +161,7 @@ void wait_network(console *const c)
 
 	int i = 0;
 
-	while (WiFi.waitForConnectResult() != WL_CONNECTED && i < timeout) {
+	while (WiFi.status() != WL_CONNECTED && i < timeout) {
 		c->put_string(".");
 
 		delay(1000 / 3);
@@ -184,7 +186,7 @@ void start_network(console *const c)
 	set_hostname();
 
 	WiFi.mode(WIFI_STA);
-
+	WiFi.useStaticBuffers(true);
 	WiFi.begin();
 
 	wait_network(c);
