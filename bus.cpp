@@ -638,9 +638,9 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 	uint32_t m_offset = a;
 
 	if (mmu_->is_enabled() || (is_write && (mmu_->getMMR0() & (1 << 8 /* maintenance check */)))) {
-		const uint8_t apf = a >> 13; // active page field
+		uint8_t  apf      = a >> 13; // active page field
 
-		bool          d   = space == d_space && mmu_->get_use_data_space(run_mode) ? space == d_space : false;
+		bool     d        = space == d_space && mmu_->get_use_data_space(run_mode) ? space == d_space : false;
 
 		uint16_t p_offset = a & 8191;  // page offset
 

@@ -52,7 +52,7 @@ constexpr const char SERIAL_CFG_FILE[] = "/serial.json";
 
 #if defined(BUILD_FOR_RP2040)
 #define Serial_RS232 Serial1
-#else
+#elif defined(CONSOLE_SERIAL_RX)
 HardwareSerial       Serial_RS232(1);
 #endif
 
@@ -125,9 +125,11 @@ void set_hostname()
 
 void configure_network(console *const c)
 {
+	WiFi.disconnect();
+
 	WiFi.persistent(true);
 	WiFi.setAutoReconnect(true);
-
+	WiFi.useStaticBuffers(true);
 	WiFi.mode(WIFI_STA);
 
 	c->put_string_lf("Scanning for wireless networks...");
@@ -159,7 +161,7 @@ void wait_network(console *const c)
 
 	int i = 0;
 
-	while (WiFi.waitForConnectResult() != WL_CONNECTED && i < timeout) {
+	while (WiFi.status() != WL_CONNECTED && i < timeout) {
 		c->put_string(".");
 
 		delay(1000 / 3);
@@ -184,7 +186,7 @@ void start_network(console *const c)
 	set_hostname();
 
 	WiFi.mode(WIFI_STA);
-
+	WiFi.useStaticBuffers(true);
 	WiFi.begin();
 
 	wait_network(c);
@@ -202,6 +204,7 @@ void recall_configuration(console *const cnsl)
 }
 #endif
 
+#if defined(CONSOLE_SERIAL_RX)
 void set_tty_serial_speed(console *const c, const uint32_t bps)
 {
 	Serial_RS232.begin(bps);
@@ -209,6 +212,7 @@ void set_tty_serial_speed(console *const c, const uint32_t bps)
 	if (save_serial_speed_configuration(bps) == false)
 		c->put_string_lf("Failed to store configuration file with serial settings");
 }
+#endif
 
 #if defined(ESP32)
 void heap_caps_alloc_failed_hook(size_t requested_size, uint32_t caps, const char *function_name)
@@ -267,9 +271,14 @@ void setup() {
 #endif
 
 #if !defined(BUILD_FOR_RP2040)
-	uint32_t free_heap = ESP.getFreeHeap();
-	Serial.printf("Free RAM before init: %d decimal bytes (or %d pages (value for the ramsize command in the debugger))", free_heap, std::min(int(free_heap / 8192l), DEFAULT_N_PAGES));
-	Serial.println(F(""));
+	Serial.print(F("Free RAM after init (decimal bytes): "));
+	Serial.println(ESP.getFreeHeap());
+
+	if (psramInit()) {
+		uint32_t free_psram = ESP.getFreePsram();
+		Serial.printf("Free PSRAM: %d decimal bytes (or %d pages (see 'ramsize' in the debugger))", free_psram, free_psram / 8192l);
+		Serial.println(F(""));
+	}
 #endif
 
 	Serial.println(F("Init bus"));
@@ -291,14 +300,16 @@ void setup() {
 	Serial.print(bitrate);
 	Serial.println(F("bps"));
 
-#if !defined(BUILD_FOR_RP2040)
-	Serial_RS232.begin(bitrate, hwSerialConfig, 16, 17);
+#if !defined(BUILD_FOR_RP2040) && defined(CONSOLE_SERIAL_RX)
+	Serial_RS232.begin(bitrate, hwSerialConfig, CONSOLE_SERIAL_RX, CONSOLE_SERIAL_TX);
 	Serial_RS232.setHwFlowCtrlMode(0);
-#endif
 
 	Serial_RS232.println(F("\014Console enabled on TTY"));
 
 	std::vector<Stream *> serial_ports { &Serial_RS232, &Serial };
+#else
+	std::vector<Stream *> serial_ports { &Serial };
+#endif
 #if defined(SHA2017)
 	cnsl = new console_shabadge(&stop_event, serial_ports);
 #elif defined(ESP32) || defined(BUILD_FOR_RP2040)
@@ -318,7 +329,6 @@ void setup() {
 	rl02_dev->begin();
 	b->add_rl02(rl02_dev);
 
-
 	Serial.println(F("Init TTY"));
 	tty_ = new tty(cnsl, b);
 	Serial.println(F("Connect TTY to bus"));
@@ -330,13 +340,9 @@ void setup() {
 #endif
 
 #if !defined(BUILD_FOR_RP2040)
-	Serial.print(F("Free RAM after init (decimal bytes): "));
-	Serial.println(ESP.getFreeHeap());
-
-	if (psramFound()) {
-		Serial.print(F("Free PSRAM: "));
-		Serial.println(ESP.getFreePsram());
-	}
+	uint32_t free_heap = ESP.getFreeHeap();
+	Serial.printf("Free RAM after init: %d decimal bytes", free_heap);
+	Serial.println(F(""));
 #endif
 
 #if !defined(SHA2017)

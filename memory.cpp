@@ -8,20 +8,30 @@
 
 #include "memory.h"
 
-
-memory::memory(const uint32_t size) : size(size)
+memory::memory(const uint32_t size): size(size)
 {
 #if defined(ESP32)
 	Serial.print(F("Memory size (in bytes, decimal): "));
 	Serial.println(size);
-#endif
 
-	m = new uint8_t[size]();
+	if (psramFound()) {
+		Serial.println(F("Using PSRAM"));
+
+		m = reinterpret_cast<uint8_t *>(ps_malloc(size));
+
+		reset();
+	}
+	else {
+		m = reinterpret_cast<uint8_t *>(calloc(1, size));
+	}
+#else
+	m = reinterpret_cast<uint8_t *>(calloc(1, size));
+#endif
 }
 
 memory::~memory()
 {
-	delete [] m;
+	free(m);
 }
 
 void memory::reset()

@@ -843,6 +843,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 				continue;
 			}
+#if defined(CONSOLE_SERIAL_RX)
 			else if (parts.at(0) == "serspd") {
 				if (parts.size() == 2) {
 					uint32_t speed = std::stoi(parts.at(1), nullptr, 10);
@@ -857,6 +858,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 				continue;
 			}
 #endif
+#endif
 			else if (cmd == "stats") {
 				show_run_statistics(cnsl, c);
 
@@ -866,7 +868,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 				if (parts.size() == 2)
 					b->set_memory_size(std::stoi(parts.at(1)));
 				else {
-					int n_pages = b->getRAM()->get_memory_size();
+					int n_pages = b->getRAM()->get_memory_size() / 8192;
 
 					cnsl->put_string_lf(format("Memory size: %u pages or %u kB (decimal)", n_pages, n_pages * 8192 / 1024));
 				}
@@ -1022,7 +1024,9 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 					"cfgnet        - configure network (e.g. WiFi)",
 					"startnet      - start network",
 					"chknet        - check network status",
+#if defined(CONSOLE_SERIAL_RX)
 					"serspd        - set serial speed in bps (8N1 are default)",
+#endif
 					"debug         - debugging info",
 #endif
 					"cfgdisk       - configure disk",

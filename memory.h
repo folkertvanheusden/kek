@@ -10,8 +10,8 @@
 class memory
 {
 private:
-	const uint32_t size { 0       };
-	uint8_t       *m    { nullptr };
+	const uint32_t size     { 0       };
+	uint8_t       *m        { nullptr };
 
 public:
 	memory(const uint32_t size);
