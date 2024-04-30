@@ -1389,7 +1389,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 				                addToMMR1(a);
 
 						// read from previous space
-						v = b->read(a.addr.value(), wm_word, rm_prev);
+						v = b->read(a.addr.value(), wm_word, rm_prev, false, word_mode == wm_byte ? d_space : i_space);
 					 }
 
 					 setPSW_flags_nzv(v, wm_word);
@@ -1415,6 +1415,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						b->mmudebug(a.addr.value());
 
 						a.mode_selection = rm_prev;
+						a.space   = word_mode == wm_byte ? d_space : i_space;
 						set_flags = putGAM(a, v);
 					 }
 
@@ -1612,14 +1613,14 @@ void cpu::pushStack(const uint16_t v)
 	else {
 		uint16_t a = addRegister(6, rm_cur, -2);
 
-		b->writeWord(a, v, d_space);
+		b->write_word(a, v, d_space);
 	}
 }
 
 uint16_t cpu::popStack()
 {
 	uint16_t a    = getRegister(6);
-	uint16_t temp = b->readWord(a, d_space);
+	uint16_t temp = b->read_word(a, d_space);
 
 	addRegister(6, rm_cur, 2);
 
@@ -1761,7 +1762,7 @@ bool cpu::misc_operations(const uint16_t instr)
 		setPC(getRegister(link_reg));
 
 		// POP link
-		uint16_t word_on_stack = b->readWord(getRegister(6), d_space);
+		uint16_t word_on_stack = b->read_word(getRegister(6), d_space);
 
 		setRegister(link_reg, word_on_stack);
 
@@ -1820,10 +1821,10 @@ void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 			// make sure the trap vector is retrieved from kernel space
 			psw &= 037777;  // mask off 14/15 to make it into kernel-space
 
-			setPC(b->readWord(vector + 0, d_space));
+			setPC(b->read_word(vector + 0, d_space));
 
 			// switch to kernel mode & update 'previous mode'
-			uint16_t new_psw = b->readWord(vector + 2, d_space) & 0147777;  // mask off old 'previous mode'
+			uint16_t new_psw = b->read_word(vector + 2, d_space) & 0147777;  // mask off old 'previous mode'
 			if (new_ipl != -1)
 				new_psw = (new_psw & ~0xe0) | (new_ipl << 5);
 			new_psw |= (before_psw >> 2) & 030000; // apply new 'previous mode'
@@ -2370,7 +2371,7 @@ void cpu::step()
 		if (!b->getMMU()->isMMR1Locked())
 			b->getMMU()->setMMR2(instruction_start);
 
-		uint16_t instr = b->readWord(instruction_start);
+		uint16_t instr = b->read_word(instruction_start);
 
 		addRegister(7, rm_cur, 2);
 

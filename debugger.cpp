@@ -724,7 +724,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 					uint16_t a = std::stoi(a_it->second, nullptr, 8);
 					uint8_t  v = std::stoi(v_it->second, nullptr, 8);
 
-					c->getBus()->writeByte(a, v);
+					c->getBus()->write_byte(a, v);
 
 					cnsl->put_string_lf(format("Set %06o to %03o", a, v));
 				}

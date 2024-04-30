@@ -33,9 +33,9 @@ void tm_11::reset()
 	offset = 0;
 }
 
-uint8_t tm_11::readByte(const uint16_t addr)
+uint8_t tm_11::read_byte(const uint16_t addr)
 {
-	uint16_t v = readWord(addr & ~1);
+	uint16_t v = read_word(addr & ~1);
 
 	if (addr & 1)
 		return v >> 8;
@@ -43,7 +43,7 @@ uint8_t tm_11::readByte(const uint16_t addr)
 	return v;
 }
 
-uint16_t tm_11::readWord(const uint16_t addr)
+uint16_t tm_11::read_word(const uint16_t addr)
 {
 	const int reg = (addr - TM_11_BASE) / 2;
 	uint16_t vtemp = registers[reg];
@@ -78,7 +78,7 @@ uint16_t tm_11::readWord(const uint16_t addr)
 	return vtemp;
 }
 
-void tm_11::writeByte(const uint16_t addr, const uint8_t v)
+void tm_11::write_byte(const uint16_t addr, const uint8_t v)
 {
 	uint16_t vtemp = registers[(addr - TM_11_BASE) / 2];
 
@@ -91,10 +91,10 @@ void tm_11::writeByte(const uint16_t addr, const uint8_t v)
 		vtemp |= v;
 	}
 
-	writeWord(addr, vtemp);
+	write_word(addr, vtemp);
 }
 
-void tm_11::writeWord(const uint16_t addr, uint16_t v)
+void tm_11::write_word(const uint16_t addr, uint16_t v)
 {
 	DOLOG(debug, false, "TM-11 write %o: %o", addr, v);
 
