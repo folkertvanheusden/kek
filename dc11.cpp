@@ -129,10 +129,12 @@ void dc11::operator()()
 				for(int k=0; k<rc; k++)
 					recv_buffers[line_nr].push_back(buffer[k]);
 
-				have_data[line_nr].notify_all();
+				registers[line_nr * 4 + 0] |= 128;  // DONE: bit 7
 
-				if (registers[line_nr * 4] & 64)  // interrupts enabled?
+				if (registers[line_nr * 4 + 0] & 64)  // interrupts enabled?
 					trigger_interrupt(line_nr);
+
+				have_data[line_nr].notify_all();
 			}
 		}
 
@@ -185,12 +187,16 @@ uint16_t dc11::read_word(const uint16_t addr)
 		// get oldest byte in buffer
 		if (recv_buffers[line_nr].empty() == false) {
 			vtemp = *recv_buffers[line_nr].begin();
+			printf("return: %d\n", vtemp);
 
 			recv_buffers[line_nr].erase(recv_buffers[line_nr].begin());
 
 			// still data in buffer? generate interrupt
-			if (recv_buffers[line_nr].empty() == false && (registers[line_nr * 4] & 64))
+			if (recv_buffers[line_nr].empty() == false && (registers[line_nr * 4] & 64)) {
+				registers[line_nr * 4 + 0] |= 128;  // DONE: bit 7
+
 				trigger_interrupt(line_nr);
+			}
 		}
 	}
 
