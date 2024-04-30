@@ -33,7 +33,8 @@ dc11::~dc11()
 
 void dc11::trigger_interrupt(const int line_nr)
 {
-	b->getCpu()->queue_interrupt(4, 0300 + line_nr * 4);
+	printf("Interrupt %d\r\n", line_nr);
+	b->getCpu()->queue_interrupt(5, 0300 + line_nr * 4);
 }
 
 void dc11::operator()()
@@ -116,7 +117,7 @@ void dc11::operator()()
 			char buffer[32] { };
 			int rc = read(pfds[i].fd, buffer, sizeof buffer);
 			if (rc <= 0) {  // closed or error?
-				DOLOG(info, false, "Failed reading on port %d", base_port + i + 1);
+				DOLOG(info, false, "Failed reading on port %d", i - dc11_n_lines + 1);
 				close(pfds[i].fd);
 				pfds[i].fd = -1;
 			}
@@ -132,6 +133,19 @@ void dc11::operator()()
 
 				if (registers[line_nr * 4] & 64)  // interrupts enabled?
 					trigger_interrupt(line_nr);
+			}
+		}
+
+		// emulate DTR, CTS & READY
+		for(int i=0; i<dc11_n_lines; i++) {
+			registers[i * 4 + 0] &= ~1;  // DTR: bit 0
+			registers[i * 4 + 2] &= ~2;  // CTS: bit 1
+			registers[i * 4 + 2] &= ~128;  // READY: bit 7
+
+			if (pfds[i + dc11_n_lines].fd != -1) {
+				registers[i * 4 + 0] |= 1;
+				registers[i * 4 + 2] |= 2;
+				registers[i * 4 + 2] |= 128;
 			}
 		}
 	}
@@ -161,7 +175,7 @@ uint8_t dc11::read_byte(const uint16_t addr)
 uint16_t dc11::read_word(const uint16_t addr)
 {
 	int      reg     = (addr - DC11_BASE) / 2;
-	int      line_nr = reg / 8;
+	int      line_nr = reg / 4;
 
 	uint16_t vtemp   = registers[reg];
 
@@ -180,7 +194,8 @@ uint16_t dc11::read_word(const uint16_t addr)
 		}
 	}
 
-	DOLOG(debug, false, "DC11: read register %06o (%d): %06o", addr, reg, vtemp);
+	DOLOG(debug, true, "DC11: read register %06o (%d): %06o", addr, reg, vtemp);
+	printf("DC11: read register %06o (%d): %06o\r\n", addr, reg, vtemp);
 
 	return vtemp;
 }
@@ -204,15 +219,16 @@ void dc11::write_byte(const uint16_t addr, const uint8_t v)
 void dc11::write_word(const uint16_t addr, uint16_t v)
 {
 	int reg     = (addr - DC11_BASE) / 2;
-	int line_nr = reg / 8;
+	int line_nr = reg / 4;
 
-	DOLOG(debug, false, "DC11: write register %06o (%d) to %o", addr, reg, v);
+	DOLOG(debug, true, "DC11: write register %06o (%d) to %06o", addr, reg, v);
+	printf("DC11: write register %06o (%d) to %06o\r\n", addr, reg, v);
 
 	if ((reg & 3) == 3) {  // transmit buffer
 		char c = v;
 
 		// TODO handle failed transmit
-		(void)write(pfds[dc11_n_lines + line_nr].fd, &c, 1);
+		printf("%ld\r\n", write(pfds[dc11_n_lines + line_nr].fd, &c, 1));
 
 		if (registers[line_nr * 4 + 2] & 64)
 			trigger_interrupt(line_nr);
