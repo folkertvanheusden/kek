@@ -523,7 +523,7 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 		throw 1;
 	}
 
-	uint16_t temp   = 0;
+	uint16_t temp = 0;
 	if (word_mode == wm_byte)
 		temp = m->read_byte(m_offset);
 	else
@@ -639,7 +639,7 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 	if (mmu_->is_enabled() || (is_write && (mmu_->getMMR0() & (1 << 8 /* maintenance check */)))) {
 		uint8_t  apf      = a >> 13; // active page field
 
-		bool     d        = space == d_space && mmu_->get_use_data_space(run_mode) ? space == d_space : false;
+		bool     d        = space == d_space && mmu_->get_use_data_space(run_mode);
 
 		uint16_t p_offset = a & 8191;  // page offset
 
@@ -786,8 +786,7 @@ write_rc_t bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint1
 	const uint8_t apf      = addr_in >> 13; // active page field
 
 	bool          is_data  = space == d_space;
-
-	bool          d        = is_data && mmu_->get_use_data_space(run_mode) ? is_data : false;
+	bool          d        = is_data && mmu_->get_use_data_space(run_mode);
 
 	if (mmu_->is_enabled() && (addr_in & 1) == 0 /* TODO remove this? */ && addr_in != ADDR_MMR0)
 		mmu_->set_page_written_to(run_mode, d, apf);
