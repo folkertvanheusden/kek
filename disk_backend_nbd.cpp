@@ -153,8 +153,10 @@ bool disk_backend_nbd::connect(const bool retry)
 			DOLOG(warning, true, "disk_backend_nbd::connect: magic invalid");
 		}
 
-		if (fd != -1)
+		if (fd != -1) {
 			DOLOG(info, false, "NBD size: %u", NTOHLL(nbd_hello.size));
+			set_nodelay(fd);
+		}
 	}
 	while(fd == -1 && retry);
 
