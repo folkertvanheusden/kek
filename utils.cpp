@@ -6,7 +6,11 @@
 #if defined(ESP32) || defined(BUILD_FOR_RP2040)
 #include <Arduino.h>
 #include "rp2040.h"
+#else
+#include <netinet/in.h>
+#include <netinet/tcp.h>
 #endif
+#include <sys/socket.h>
 
 #include <errno.h>
 #include <pthread.h>
@@ -22,6 +26,8 @@
 #if defined(_WIN32)
 #include "win32.h"
 #endif
+
+#include "log.h"
 
 
 void setBit(uint16_t & v, const int bit, const bool vb)
@@ -235,4 +241,15 @@ void update_word(uint16_t *const w, const bool msb, const uint8_t v)
 		(*w) &= 0xff00;
 		(*w) |= v;
 	}
+}
+
+void set_nodelay(const int fd)
+{
+        int flags = 1;
+#if defined(__FreeBSD__) || defined(ESP32)
+        if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (void *)&flags, sizeof(flags)) == -1)
+#else
+        if (setsockopt(fd, SOL_TCP, TCP_NODELAY, (void *)&flags, sizeof(flags)) == -1)
+#endif
+                DOLOG(warning, true, "Cannot disable nagle algorithm");
 }
