@@ -1415,8 +1415,8 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						b->mmudebug(a.addr.value());
 
 						a.mode_selection = rm_prev;
-						a.space   = word_mode == wm_byte ? d_space : i_space;
-						set_flags = putGAM(a, v);
+						a.space          = word_mode == wm_byte ? d_space : i_space;
+						set_flags        = putGAM(a, v);
 					 }
 
 					 if (set_flags)

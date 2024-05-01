@@ -70,6 +70,8 @@ void dc11::operator()()
 			continue;
 		}
 
+		set_nodelay(pfds[i].fd);
+
 	        sockaddr_in listen_addr;
 		memset(&listen_addr, 0, sizeof(listen_addr));
 		listen_addr.sin_family      = AF_INET;
@@ -115,6 +117,7 @@ void dc11::operator()()
 			}
 
 			pfds[client_i].fd = accept(pfds[i].fd, nullptr, nullptr);
+			set_nodelay(pfds[client_i].fd);
 
 			registers[i * 4 + 0] |= 0160000;  // "ERROR", RING INDICATOR, CARRIER TRANSITION
 			if (is_rx_interrupt_enabled(i))
