@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <string>
 
+#include "bus.h"
 #include "device.h"
 
 #define TM_11_MTS	0172520	// status register
@@ -24,18 +25,19 @@ class memory;
 class tm_11 : public device
 {
 private:
-	std::string     file;
 	memory   *const m                  { nullptr };
 	uint16_t        registers[6]       { 0       };
 	uint8_t         xfer_buffer[65536];
 	int             offset             { 0       };
 	FILE           *fh                 { nullptr };
+	std::string     tape_file;
 
 public:
-	tm_11(const std::string & file, memory *const m);
+	tm_11(bus *const b);
 	virtual ~tm_11();
 
-	void begin();
+	void load(const std::string & file);
+	void unload();
 
 	void reset() override;
 

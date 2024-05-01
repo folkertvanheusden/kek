@@ -585,6 +585,9 @@ int main(int argc, char *argv[])
 	dc11 *dc11_ = new dc11(1100, b);
 	b->add_DC11(dc11_);
 
+	tm_11 *tm_11_ = new tm_11(b);
+	b->add_tm11(tm_11_);
+
 	running = cnsl->get_running_flag();
 
 	std::atomic_bool interrupt_emulation { false };

@@ -10,18 +10,35 @@
 #include "memory.h"
 #include "utils.h"
 
-tm_11::tm_11(const std::string & file, memory *const m): file(file), m(m)
+tm_11::tm_11(bus *const b): m(b->getRAM())
 {
 }
 
 tm_11::~tm_11()
 {
-	fclose(fh);
+	if (fh)
+		fclose(fh);
 }
 
-void tm_11::begin()
+void tm_11::unload()
 {
+	if (fh) {
+		fclose(fh);
+		fh = nullptr;
+	}
+
+	tape_file.clear();
+
+	reset();
+}
+
+void tm_11::load(const std::string & file)
+{
+	if (fh)
+		fclose(fh);
+
 	fh = fopen(file.c_str(), "rb");
+	tape_file = file;
 
 	reset();
 }
