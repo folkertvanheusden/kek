@@ -641,39 +641,64 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 			    }
 
 		case 0b100: { // BIC/BICB Bit Clear Word/Byte
-				    gam_rc_t g_src  = getGAM(src_mode, src_reg, word_mode, rm_cur);
+				  gam_rc_t g_src  = getGAM(src_mode, src_reg, word_mode, rm_cur);
 
-				    auto     g_dst  = getGAM(dst_mode, dst_reg, word_mode, rm_cur);
+				  if (dst_mode == 0) {
+					  addToMMR1(g_src);  // keep here because of order of updates
 
-				    addToMMR1(g_dst);
-				    addToMMR1(g_src);
+					  uint16_t v      = getRegister(dst_reg);  // need the full word
+					  uint16_t result = v & ~g_src.value.value();
 
-				    uint16_t result = g_dst.value.value() & ~g_src.value.value();
+					  setRegister(dst_reg, result);
 
-				    if (put_result(g_dst, result))
-					    setPSW_flags_nzv(result, word_mode);
+					  setPSW_flags_nzv(result, word_mode);
+				  }
+				  else {
+					  auto     g_dst  = getGAM(dst_mode, dst_reg, word_mode, rm_cur);
 
-				    return true;
+					  addToMMR1(g_dst);
+					  addToMMR1(g_src);
+
+					  uint16_t result = g_dst.value.value() & ~g_src.value.value();
+
+					  if (put_result(g_dst, result))
+						  setPSW_flags_nzv(result, word_mode);
+				  }
+
+				  return true;
 			    }
 
 		case 0b101: { // BIS/BISB Bit Set Word/Byte
-				    // TODO: retain MSB for register operations?
-				    gam_rc_t g_src  = getGAM(src_mode, src_reg, word_mode, rm_cur);
+				  gam_rc_t g_src  = getGAM(src_mode, src_reg, word_mode, rm_cur);
 
-				    auto     g_dst  = getGAM(dst_mode, dst_reg, word_mode, rm_cur);
+				  if (dst_mode == 0) {
+					  addToMMR1(g_src);  // keep here because of order of updates
 
-				    addToMMR1(g_dst);
-				    addToMMR1(g_src);
+					  uint16_t v      = getRegister(dst_reg);  // need the full word
+					  uint16_t result = v | g_src.value.value();
 
-				    uint16_t result = g_dst.value.value() | g_src.value.value();
+					  setRegister(dst_reg, result);
 
-				    if (put_result(g_dst, result)) {
-					    setPSW_n(SIGN(result, word_mode));
-					    setPSW_z(IS_0(result, word_mode));
-					    setPSW_v(false);
-				    }
+					  setPSW_n(SIGN(result, word_mode));
+					  setPSW_z(IS_0(result, word_mode));
+					  setPSW_v(false);
+				  }
+				  else {
+					  auto     g_dst  = getGAM(dst_mode, dst_reg, word_mode, rm_cur);
 
-				    return true;
+					  addToMMR1(g_dst);
+					  addToMMR1(g_src);
+
+					  uint16_t result = g_dst.value.value() | g_src.value.value();
+
+					  if (put_result(g_dst, result)) {
+						  setPSW_n(SIGN(result, word_mode));
+						  setPSW_z(IS_0(result, word_mode));
+						  setPSW_v(false);
+					  }
+				  }
+
+				  return true;
 			    }
 
 		case 0b110: { // ADD/SUB Add/Subtract Word
