@@ -49,6 +49,7 @@ class console;
 class cpu;
 class kw11_l;
 class memory;
+class tm_11;
 class tty;
 
 typedef enum { T_PROCEED, T_ABORT_4, T_TRAP_250 } trap_action_t;
@@ -121,6 +122,7 @@ public:
 	mmu    *getMMU()    { return mmu_;    }
 	rk05   *getRK05()   { return rk05_;   }
 	rl02   *getRL02()   { return rl02_;   }
+	tm_11  *getTM11()   { return tm11;    }
 
 	uint16_t read    (const uint16_t a, const word_mode_t word_mode, const rm_selection_t mode_selection, const bool peek_only=false, const d_i_space_t s = i_space);
 	uint16_t read_byte(const uint16_t a) { return read(a, wm_byte, rm_cur); }
