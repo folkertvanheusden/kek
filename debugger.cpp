@@ -600,12 +600,16 @@ void serialize_state(console *const cnsl, const bus *const b, const std::string 
 }
 #endif
 
-void tm11_load_tape(console *const cnsl, bus *const b)
+void tm11_load_tape(console *const cnsl, bus *const b, const std::optional<std::string> & file)
 {
-	auto file = select_host_file(cnsl);
-
 	if (file.has_value())
 		b->getTM11()->load(file.value());
+	else {
+		auto sel_file = select_host_file(cnsl);
+
+		if (sel_file.has_value())
+			b->getTM11()->load(sel_file.value());
+	}
 }
 
 void tm11_unload_tape(bus *const b)
@@ -982,8 +986,11 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 				continue;
 			}
-			else if (cmd == "lt") {
-				tm11_load_tape(cnsl, b);
+			else if (parts[0] == "lt") {
+				if (parts.size() == 2)
+					tm11_load_tape(cnsl, b, parts[1]);
+				else
+					tm11_load_tape(cnsl, b, { });
 
 				continue;
 			}
