@@ -245,11 +245,11 @@ void update_word(uint16_t *const w, const bool msb, const uint8_t v)
 
 void set_nodelay(const int fd)
 {
-	int flags = 1;
+        int flags = 1;
 #if defined(__FreeBSD__) || defined(ESP32)
-	if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (void *)&flags, sizeof(flags)) == -1)
+        if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (void *)&flags, sizeof(flags)) == -1)
 #else
-	if (setsockopt(fd, SOL_TCP, TCP_NODELAY, (void *)&flags, sizeof(flags)) == -1)
+        if (setsockopt(fd, SOL_TCP, TCP_NODELAY, (void *)&flags, sizeof(flags)) == -1)
 #endif
-		DOLOG(warning, true, "Cannot disable nagle algorithm");
+                DOLOG(warning, true, "Cannot disable nagle algorithm");
 }
