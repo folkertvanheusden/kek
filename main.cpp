@@ -69,6 +69,7 @@ int run_cpu_validation(const std::string & filename)
 		// create environment
 		event = 0;
 		bus *b = new bus();
+		b->set_memory_size(DEFAULT_N_PAGES * 8192l);
 		cpu *c = new cpu(b, &event);
 		b->add_cpu(c);
 
