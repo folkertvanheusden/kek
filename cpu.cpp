@@ -539,11 +539,15 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t wo
 			break;
 	}
 
+	assert(g.value < 256 || word_mode == wm_word);
+
 	return g;
 }
 
 bool cpu::putGAM(const gam_rc_t & g, const uint16_t value)
 {
+	assert(value < 256 || g.word_mode == wm_word);
+
 	if (g.addr.has_value()) {
 		auto rc = b->write(g.addr.value(), g.word_mode, value, g.mode_selection, g.space);
 
