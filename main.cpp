@@ -70,6 +70,7 @@ int run_cpu_validation(const std::string & filename)
 		// create environment
 		event = 0;
 		bus *b = new bus();
+		b->set_memory_size(DEFAULT_N_PAGES * 8192l);
 		cpu *c = new cpu(b, &event);
 		b->add_cpu(c);
 
@@ -584,6 +585,9 @@ int main(int argc, char *argv[])
 	// TODO
 	dc11 *dc11_ = new dc11(1100, b);
 	b->add_DC11(dc11_);
+
+	tm_11 *tm_11_ = new tm_11(b);
+	b->add_tm11(tm_11_);
 
 	running = cnsl->get_running_flag();
 

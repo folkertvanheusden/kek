@@ -50,18 +50,8 @@ class console;
 class cpu;
 class kw11_l;
 class memory;
+class tm_11;
 class tty;
-
-typedef enum { T_PROCEED, T_ABORT_4, T_TRAP_250 } trap_action_t;
-
-typedef struct {
-	uint16_t virtual_address;
-	uint8_t  apf;  // active page field
-	uint32_t physical_instruction;
-	bool     physical_instruction_is_psw;
-	uint32_t physical_data;
-	bool     physical_data_is_psw;
-} memory_addresses_t;
 
 typedef struct {
 	bool is_psw;
@@ -105,8 +95,6 @@ public:
 
 	void set_memory_size(const int n_pages);
 
-	void mmudebug(const uint16_t a);
-
 	void add_ram   (memory *const m      );
 	void add_cpu   (cpu    *const c      );
 	void add_mmu   (mmu    *const mmu_   );
@@ -125,31 +113,20 @@ public:
 	rk05   *getRK05()   { return rk05_;   }
 	rl02   *getRL02()   { return rl02_;   }
 	dc11   *getDC11()   { return dc11_;   }
+	tm_11  *getTM11()   { return tm11;    }
 
-	uint16_t read    (const uint16_t a, const word_mode_t word_mode, const rm_selection_t mode_selection, const bool peek_only=false, const d_i_space_t s = i_space);
+	uint16_t read(const uint16_t a, const word_mode_t word_mode, const rm_selection_t mode_selection, const bool peek_only=false, const d_i_space_t s = i_space);
 	uint16_t read_byte(const uint16_t a) { return read(a, wm_byte, rm_cur); }
 	uint16_t read_word(const uint16_t a, const d_i_space_t s = i_space);
 	uint16_t peekWord(const uint16_t a);
-
 	uint8_t  readUnibusByte(const uint32_t a);
-	void     writeUnibusByte(const uint32_t a, const uint8_t value);
-
-	write_rc_t write    (const uint16_t a, const word_mode_t word_mode, uint16_t value, const rm_selection_t mode_selection, const d_i_space_t s = i_space);
-	void       write_byte(const uint16_t a, const uint8_t value) { write(a, wm_byte, value, rm_cur); }
-	void       write_word(const uint16_t a, const uint16_t value, const d_i_space_t s = i_space);
-
 	uint16_t readPhysical(const uint32_t a);
+
+	write_rc_t write(const uint16_t a, const word_mode_t word_mode, uint16_t value, const rm_selection_t mode_selection, const d_i_space_t s = i_space);
+	void     writeUnibusByte(const uint32_t a, const uint8_t value);
+	void     write_byte(const uint16_t a, const uint8_t value) { write(a, wm_byte, value, rm_cur); }
+	void     write_word(const uint16_t a, const uint16_t value, const d_i_space_t s = i_space);
 	void     writePhysical(const uint32_t a, const uint16_t value);
 
-	void     check_odd_addressing(const uint16_t a, const int run_mode, const d_i_space_t space, const bool is_write);
-	void     trap_odd(const uint16_t a);
-
-	uint32_t get_io_base() const { return mmu_->getMMR0() & 1 ? (mmu_->getMMR3() & 16 ? 017760000 : 0760000) : 0160000; }
 	bool     is_psw(const uint16_t addr, const int run_mode, const d_i_space_t space) const;
-
-	std::pair<trap_action_t, int> get_trap_action(const int run_mode, const bool d, const int apf, const bool is_write);
-	uint32_t calculate_physical_address(const int run_mode, const uint16_t a, const bool trap_on_failure, const bool is_write, const bool peek_only, const d_i_space_t space);
-
-	memory_addresses_t calculate_physical_address(const int run_mode, const uint16_t a) const;
-	void check_address(const bool trap_on_failure, const bool is_write, const memory_addresses_t & addr, const word_mode_t word_mode, const bool is_data, const int run_mode);
 };

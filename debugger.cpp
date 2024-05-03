@@ -76,35 +76,8 @@ std::optional<disk_backend *> select_nbd_server(console *const cnsl)
 }
 #endif
 
-// disk image files
-std::optional<disk_backend *> select_disk_file(console *const c)
+std::optional<std::string> select_host_file(console *const c)
 {
-#if IS_POSIX
-	c->put_string_lf("Files in current directory: ");
-#else
-	c->put_string_lf(format("MISO: %d", int(MISO)));
-	c->put_string_lf(format("MOSI: %d", int(MOSI)));
-	c->put_string_lf(format("SCK : %d", int(SCK )));
-	c->put_string_lf(format("SS  : %d", int(SS  )));
-
-	c->put_string_lf("Files on SD-card:");
-
-#if defined(SHA2017)
-	if (!SD.begin(21, SD_SCK_MHZ(10)))
-		SD.initErrorHalt();
-#elif !defined(BUILD_FOR_RP2040)
-	if (!SD.begin(SS, SD_SCK_MHZ(15))) {
-		auto err = SD.sdErrorCode();
-		if (err)
-			c->put_string_lf(format("SDerror: 0x%x, data: 0x%x", err, SD.sdErrorData()));
-		else
-			c->put_string_lf("Failed to initialize SD card");
-
-		return { };
-	}
-#endif
-#endif
-
 	for(;;) {
 #if defined(linux)
 		DIR *dir = opendir(".");
@@ -164,26 +137,64 @@ std::optional<disk_backend *> select_disk_file(console *const c)
 			fh.close();
 #endif
 
-		if (can_open_file) {
-#if IS_POSIX
-			disk_backend *temp = new disk_backend_file(selected_file);
-#else
-			disk_backend *temp = new disk_backend_esp32(selected_file);
-#endif
-
-			if (!temp->begin(false)) {
-				c->put_string("Cannot use: ");
-				c->put_string_lf(selected_file.c_str());
-
-				delete temp;
-
-				continue;
-			}
-
-			return { temp };
-		}
+		if (can_open_file)
+			return selected_file;
 
 		c->put_string_lf("open failed");
+	}
+}
+
+// disk image files
+std::optional<disk_backend *> select_disk_file(console *const c)
+{
+#if IS_POSIX
+	c->put_string_lf("Files in current directory: ");
+#else
+	c->put_string_lf(format("MISO: %d", int(MISO)));
+	c->put_string_lf(format("MOSI: %d", int(MOSI)));
+	c->put_string_lf(format("SCK : %d", int(SCK )));
+	c->put_string_lf(format("SS  : %d", int(SS  )));
+
+	c->put_string_lf("Files on SD-card:");
+
+#if defined(SHA2017)
+	if (!SD.begin(21, SD_SCK_MHZ(10)))
+		SD.initErrorHalt();
+#elif !defined(BUILD_FOR_RP2040)
+	if (!SD.begin(SS, SD_SCK_MHZ(15))) {
+		auto err = SD.sdErrorCode();
+		if (err)
+			c->put_string_lf(format("SDerror: 0x%x, data: 0x%x", err, SD.sdErrorData()));
+		else
+			c->put_string_lf("Failed to initialize SD card");
+
+		return { };
+	}
+#endif
+#endif
+
+	for(;;) {
+		auto selected_file = select_host_file(c);
+
+		if (selected_file.has_value() == false)
+			break;
+
+#if IS_POSIX
+		disk_backend *temp = new disk_backend_file(selected_file.value());
+#else
+		disk_backend *temp = new disk_backend_esp32(selected_file.value());
+#endif
+
+		if (!temp->begin(false)) {
+			c->put_string("Cannot use: ");
+			c->put_string_lf(selected_file.value().c_str());
+
+			delete temp;
+
+			continue;
+		}
+
+		return { temp };
 	}
 
 	return { };
@@ -235,7 +246,6 @@ std::optional<disk_backend *> select_disk_backend(console *const cnsl)
 
 void configure_disk(bus *const b, console *const cnsl)
 {
-	// TODO tape
 	int type_ch = wait_for_key("1. RK05, 2. RL02, 9. abort", cnsl, { '1', '2', '3', '9' });
 
 	bootloader_t bl = BL_NONE;
@@ -488,7 +498,7 @@ void mmu_resolve(console *const cnsl, bus *const b, const uint16_t va)
 	int  run_mode = b->getCpu()->getPSW_runmode();
 	cnsl->put_string_lf(format("Run mode: %d, use data space: %d", run_mode, b->getMMU()->get_use_data_space(run_mode)));
 
-	auto data     = b->calculate_physical_address(run_mode, va);
+	auto data     = b->getMMU()->calculate_physical_address(run_mode, va);
 
 	uint16_t page_offset = va & 8191;
 	cnsl->put_string_lf(format("Active page field: %d, page offset: %o (%d)", data.apf, page_offset, page_offset));
@@ -511,8 +521,8 @@ void mmu_resolve(console *const cnsl, bus *const b, const uint16_t va)
 	}
 
 	for(int i=0; i<2; i++) {
-		auto ta_i = b->get_trap_action(run_mode, false, data.apf, i);
-		auto ta_d = b->get_trap_action(run_mode, true,  data.apf, i);
+		auto ta_i = b->getMMU()->get_trap_action(run_mode, false, data.apf, i);
+		auto ta_d = b->getMMU()->get_trap_action(run_mode, true,  data.apf, i);
 
 		cnsl->put_string_lf(format("Instruction action: %s (%s)", trap_action_to_str(ta_i.first), i ? "write" : "read"));
 		cnsl->put_string_lf(format("Data action       : %s (%s)", trap_action_to_str(ta_d.first), i ? "write" : "read"));
@@ -589,6 +599,23 @@ void serialize_state(console *const cnsl, const bus *const b, const std::string 
 	cnsl->put_string_lf(format("Serialize to %s: %s", filename.c_str(), ok ? "OK" : "failed"));
 }
 #endif
+
+void tm11_load_tape(console *const cnsl, bus *const b, const std::optional<std::string> & file)
+{
+	if (file.has_value())
+		b->getTM11()->load(file.value());
+	else {
+		auto sel_file = select_host_file(cnsl);
+
+		if (sel_file.has_value())
+			b->getTM11()->load(sel_file.value());
+	}
+}
+
+void tm11_unload_tape(bus *const b)
+{
+	b->getTM11()->unload();
+}
 
 void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const stop_event, const bool tracing_in)
 {
@@ -959,6 +986,19 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 				continue;
 			}
+			else if (parts[0] == "lt") {
+				if (parts.size() == 2)
+					tm11_load_tape(cnsl, b, parts[1]);
+				else
+					tm11_load_tape(cnsl, b, { });
+
+				continue;
+			}
+			else if (cmd == "ult") {
+				tm11_unload_tape(b);
+
+				continue;
+			}
 			else if (cmd == "dp") {
 				cnsl->stop_panel_thread();
 
@@ -1012,6 +1052,8 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 					"setmem        - set memory (a=) to value (v=), both in octal, one byte",
 					"toggle        - set switch (s=, 0...15 (decimal)) of the front panel to state (t=, 0 or 1)",
 					"cls           - clear screen",
+					"lt            - load tape (parameter is filename)",
+					"ult           - unload tape",
 					"stats         - show run statistics",
 					"ramsize       - set ram size (page count (8 kB))",
 					"bl            - set bootload (rl02 or rk05)",

@@ -6,10 +6,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "breakpoint.h"
+#include "bus.h"
 #include "cpu.h"
 #include "gen.h"
 #include "log.h"
 #include "utils.h"
+
 
 #define SIGN(x, wm) ((wm) == wm_byte ? (x) & 0x80 : (x) & 0x8000)
 
@@ -539,11 +542,15 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t wo
 			break;
 	}
 
+	assert(g.value < 256 || word_mode == wm_word);
+
 	return g;
 }
 
 bool cpu::putGAM(const gam_rc_t & g, const uint16_t value)
 {
+	assert(value < 256 || g.word_mode == wm_word);
+
 	if (g.addr.has_value()) {
 		auto rc = b->write(g.addr.value(), g.word_mode, value, g.mode_selection, g.space);
 
@@ -1386,7 +1393,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					 }
 					 else {
 						 auto     a   = getGAM(dst_mode, dst_reg, word_mode, rm_cur);
-					          addToMMR1(a);
+					         addToMMR1(a);
 						 uint16_t vl  = a.value.value();
 						 uint16_t v   = (vl << 1) & (word_mode == wm_byte ? 0xff : 0xffff);
 
@@ -1437,7 +1444,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						auto a = getGAMAddress(dst_mode, dst_reg, wm_word);
 						addToMMR1(a);
 
-						b->mmudebug(a.addr.value());
+						b->getMMU()->mmudebug(a.addr.value());
 
 						a.mode_selection = rm_prev;
 						a.space          = word_mode == wm_byte ? d_space : i_space;

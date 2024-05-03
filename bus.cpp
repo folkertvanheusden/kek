@@ -25,7 +25,6 @@
 bus::bus()
 {
 	mmu_ = new mmu();
-	mmu_->begin();
 
 	kw11_l_ = new kw11_l(this);
 
@@ -82,9 +81,10 @@ bus *bus::deserialize(const json_t *const j, console *const cnsl, std::atomic_ui
 
 	json_t *temp = nullptr;
 
+	memory *m = nullptr;
 	temp = json_object_get(j, "memory");
 	if (temp) {
-		memory *m = memory::deserialize(temp);
+		m = memory::deserialize(temp);
 		b->add_ram(m);
 	}
 
@@ -102,7 +102,7 @@ bus *bus::deserialize(const json_t *const j, console *const cnsl, std::atomic_ui
 
 	temp = json_object_get(j, "mmu");
 	if (temp) {
-		mmu *mmu_ = mmu::deserialize(temp);
+		mmu *mmu_ = mmu::deserialize(temp, m);
 		b->add_mmu(mmu_);
 	}
 
@@ -136,6 +136,8 @@ void bus::set_memory_size(const int n_pages)
 
 	delete m;
 	m = new memory(n_bytes);
+
+	mmu_->begin(m);
 
 	DOLOG(info, false, "Memory is now %u kB in size", n_bytes / 1024);
 }
@@ -172,6 +174,8 @@ void bus::add_ram(memory *const m)
 {
 	delete this->m;
 	this->m = m;
+
+	mmu_->begin(m);
 }
 
 void bus::add_mmu(mmu *const mmu_)
@@ -222,25 +226,13 @@ void bus::init()
 	mmu_->setMMR3(0);
 }
 
-void bus::trap_odd(const uint16_t a)
-{
-	uint16_t temp = mmu_->getMMR0();
-
-	temp &= ~(7 << 1);
-	temp |= (a >> 13) << 1;
-
-	mmu_->setMMR0(temp);
-
-	c->trap(004);  // invalid access
-}
-
 uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm_selection_t mode_selection, const bool peek_only, const d_i_space_t space)
 {
 	int  run_mode     = mode_selection == rm_cur ? c->getPSW_runmode() : c->getPSW_prev_runmode();
 
-	uint32_t m_offset = calculate_physical_address(run_mode, addr_in, !peek_only, false, peek_only, space);
+	uint32_t m_offset = mmu_->calculate_physical_address(c, run_mode, addr_in, !peek_only, false, peek_only, space);
 
-	uint32_t io_base  = get_io_base();
+	uint32_t io_base  = mmu_->get_io_base();
 	bool     is_io    = m_offset >= io_base;
 
 	if (is_io) {
@@ -280,9 +272,9 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 		///^ registers ^///
 
 		if (!peek_only) {
-			if ((a & 1) && word_mode == wm_word) {
+			if ((a & 1) && word_mode == wm_word) [[unlikely]] {
 				DOLOG(debug, false, "READ-I/O odd address %06o UNHANDLED", a);
-				trap_odd(a);
+				mmu_->trap_if_odd(addr_in, run_mode, space, false);
 				throw 0;
 				return 0;
 			}
@@ -498,7 +490,7 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 		}
 
 		if (!peek_only) {
-			DOLOG(debug, false, "READ-I/O UNHANDLED read %08o (%c), (base: %o)", m_offset, word_mode == wm_byte ? 'B' : ' ', get_io_base());
+			DOLOG(debug, false, "READ-I/O UNHANDLED read %08o (%c), (base: %o)", m_offset, word_mode == wm_byte ? 'B' : ' ', mmu_->get_io_base());
 
 			c->trap(004);  // no such i/o
 			throw 1;
@@ -508,8 +500,8 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 	}
 
 	if (peek_only == false && word_mode == wm_word && (addr_in & 1)) {
-		if (!peek_only) DOLOG(debug, false, "READ from %06o - odd address!", addr_in);
-		trap_odd(addr_in);
+		DOLOG(debug, false, "READ from %06o - odd address!", addr_in);
+		mmu_->trap_if_odd(addr_in, run_mode, space, false);
 		throw 2;
 		return 0;
 	}
@@ -535,53 +527,9 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 	return temp;
 }
 
-void bus::check_odd_addressing(const uint16_t a, const int run_mode, const d_i_space_t space, const bool is_write)
-{
-	if (a & 1) {
-		if (is_write)
-			mmu_->set_page_trapped(run_mode, space == d_space, a >> 13);
-
-		trap_odd(a);
-
-		throw 4;
-	}
-}
-
-memory_addresses_t bus::calculate_physical_address(const int run_mode, const uint16_t a) const
-{
-	const uint8_t apf = a >> 13; // active page field
-
-	if (mmu_->is_enabled() == false) {
-		bool is_psw = a == ADDR_PSW;
-		return { a, apf, a, is_psw, a, is_psw };
-	}
-
-	uint32_t physical_instruction = mmu_->get_physical_memory_offset(run_mode, 0, apf);
-	uint32_t physical_data        = mmu_->get_physical_memory_offset(run_mode, 1, apf);
-
-	uint16_t p_offset = a & 8191;  // page offset
-
-	physical_instruction += p_offset;
-	physical_data        += p_offset;
-
-	if ((mmu_->getMMR3() & 16) == 0) {  // offset is 18bit
-		physical_instruction &= 0x3ffff;
-		physical_data        &= 0x3ffff;
-	}
-
-	if (mmu_->get_use_data_space(run_mode) == false)
-		physical_data = physical_instruction;
-
-	uint32_t io_base                     = get_io_base();
-	bool     physical_instruction_is_psw = (physical_instruction - io_base + 0160000) == ADDR_PSW;
-	bool     physical_data_is_psw        = (physical_data        - io_base + 0160000) == ADDR_PSW;
-
-	return { a, apf, physical_instruction, physical_instruction_is_psw, physical_data, physical_data_is_psw };
-}
-
 bool bus::is_psw(const uint16_t addr, const int run_mode, const d_i_space_t space) const
 {
-	auto meta = calculate_physical_address(run_mode, addr);
+	auto meta = mmu_->calculate_physical_address(run_mode, addr);
 
 	if (space == d_space && meta.physical_data_is_psw)
 		return true;
@@ -590,194 +538,6 @@ bool bus::is_psw(const uint16_t addr, const int run_mode, const d_i_space_t spac
 		return true;
 
 	return false;
-}
-
-void bus::mmudebug(const uint16_t a)
-{
-	for(int rm=0; rm<4; rm++) {
-		auto ma = calculate_physical_address(rm, a);
-
-		DOLOG(debug, false, "RM %d, a: %06o, apf: %d, PI: %08o (PSW: %d), PD: %08o (PSW: %d)", rm, ma.virtual_address, ma.apf, ma.physical_instruction, ma.physical_instruction_is_psw, ma.physical_data, ma.physical_data_is_psw);
-	}
-}
-
-std::pair<trap_action_t, int> bus::get_trap_action(const int run_mode, const bool d, const int apf, const bool is_write)
-{
-	const int access_control = mmu_->get_access_control(run_mode, d, apf);
-
-	trap_action_t trap_action = T_PROCEED;
-
-	if (access_control == 0)
-		trap_action = T_ABORT_4;
-	else if (access_control == 1)
-		trap_action = is_write ? T_ABORT_4 : T_TRAP_250;
-	else if (access_control == 2) {
-		if (is_write)
-			trap_action = T_ABORT_4;
-	}
-	else if (access_control == 3)
-		trap_action = T_ABORT_4;
-	else if (access_control == 4)
-		trap_action = T_TRAP_250;
-	else if (access_control == 5) {
-		if (is_write)
-			trap_action = T_TRAP_250;
-	}
-	else if (access_control == 6) {
-		// proceed
-	}
-	else if (access_control == 7) {
-		trap_action = T_ABORT_4;
-	}
-
-	return { trap_action, access_control };
-}
-
-uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, const bool trap_on_failure, const bool is_write, const bool peek_only, const d_i_space_t space)
-{
-	uint32_t m_offset = a;
-
-	if (mmu_->is_enabled() || (is_write && (mmu_->getMMR0() & (1 << 8 /* maintenance check */)))) {
-		uint8_t  apf      = a >> 13; // active page field
-
-		bool     d        = space == d_space && mmu_->get_use_data_space(run_mode);
-
-		uint16_t p_offset = a & 8191;  // page offset
-
-		m_offset  = mmu_->get_physical_memory_offset(run_mode, d, apf);
-
-		m_offset += p_offset;
-
-		if ((mmu_->getMMR3() & 16) == 0)  // off is 18bit
-			m_offset &= 0x3ffff;
-
-		uint32_t io_base  = get_io_base();
-		bool     is_io    = m_offset >= io_base;
-
-		if (trap_on_failure) [[unlikely]] {
-			{
-				auto rc = get_trap_action(run_mode, d, apf, is_write);
-				auto trap_action    = rc.first;
-				int  access_control = rc.second;
-
-				if (trap_action != T_PROCEED) {
-					if (is_write)
-						mmu_->set_page_trapped(run_mode, d, apf);
-
-					if (mmu_->is_locked() == false) {
-						uint16_t temp = mmu_->getMMR0();
-
-						temp &= ~((1l << 15) | (1 << 14) | (1 << 13) | (1 << 12) | (3 << 5) | (7 << 1) | (1 << 4));
-
-						if (is_write && access_control != 6)
-							temp |= 1 << 13;  // read-only
-								  //
-						if (access_control == 0 || access_control == 4)
-							temp |= 1l << 15;  // not resident
-						else
-							temp |= 1 << 13;  // read-only
-
-						temp |= run_mode << 5;  // TODO: kernel-mode or user-mode when a trap occurs in user-mode?
-
-						temp |= apf << 1; // add current page
-
-						temp |= d << 4;
-
-						mmu_->setMMR0(temp);
-
-						DOLOG(debug, false, "MMR0: %06o", temp);
-					}
-
-					if (trap_action == T_TRAP_250) {
-						DOLOG(debug, false, "Page access %d (for virtual address %06o): trap 0250", access_control, a);
-
-						c->trap(0250);  // trap
-
-						throw 5;
-					}
-					else {  // T_ABORT_4
-						DOLOG(debug, false, "Page access %d (for virtual address %06o): trap 004", access_control, a);
-
-						c->trap(004);  // abort
-
-						throw 5;
-					}
-				}
-			}
-
-			if (m_offset >= m->get_memory_size() && !is_io) [[unlikely]] {
-				DOLOG(debug, !peek_only, "bus::calculate_physical_address %o >= %o", m_offset, m->get_memory_size());
-				DOLOG(debug, false, "TRAP(04) (throw 6) on address %06o", a);
-
-				if (mmu_->is_locked() == false) {
-					uint16_t temp = mmu_->getMMR0();
-
-					temp &= 017777;
-					temp |= 1l << 15;  // non-resident
-
-					temp &= ~14;  // add current page
-					temp |= apf << 1;
-
-					temp &= ~(3 << 5);
-					temp |= run_mode << 5;
-
-					mmu_->setMMR0(temp);
-				}
-
-				if (is_write)
-					mmu_->set_page_trapped(run_mode, d, apf);
-
-				c->trap(04);
-
-				throw 6;
-			}
-
-			uint16_t pdr_len = mmu_->get_pdr_len(run_mode, d, apf);
-			uint16_t pdr_cmp = (a >> 6) & 127;
-
-			bool direction = mmu_->get_pdr_direction(run_mode, d, apf);
-
-			// DOLOG(debug, false, "p_offset %06o pdr_len %06o direction %d, run_mode %d, apf %d, pdr: %06o", p_offset, pdr_len, direction, run_mode, apf, pages[run_mode][d][apf].pdr);
-
-			if ((pdr_cmp > pdr_len && direction == false) || (pdr_cmp < pdr_len && direction == true)) {
-				DOLOG(debug, false, "bus::calculate_physical_address::p_offset %o versus %o direction %d", pdr_cmp, pdr_len, direction);
-				DOLOG(debug, false, "TRAP(0250) (throw 7) on address %06o", a);
-				c->trap(0250);  // invalid access
-
-				if (mmu_->is_locked() == false) {
-					uint16_t temp = mmu_->getMMR0();
-
-					temp &= 017777;
-					temp |= 1 << 14;  // length
-
-					temp &= ~14;  // add current page
-					temp |= apf << 1;
-
-					temp &= ~(3 << 5);
-					temp |= run_mode << 5;
-
-					temp &= ~(1 << 4);
-					temp |= d << 4;
-
-					mmu_->setMMR0(temp);
-				}
-
-				if (is_write)
-					mmu_->set_page_trapped(run_mode, d, apf);
-
-				throw 7;
-			}
-		}
-
-		DOLOG(debug, false, "virtual address %06o maps to physical address %08o (run_mode: %d, apf: %d, par: %08o, poff: %o, AC: %d, %s)", a, m_offset, run_mode, apf,
-				mmu_->get_physical_memory_offset(run_mode, d, apf),
-				p_offset, mmu_->get_access_control(run_mode, d, apf), d ? "D" : "I");
-	}
-	else {
-		// DOLOG(debug, false, "no MMU (read physical address %08o)", m_offset);
-	}
-
-	return m_offset;
 }
 
 write_rc_t bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t value, const rm_selection_t mode_selection, const d_i_space_t space)
@@ -792,9 +552,9 @@ write_rc_t bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint1
 	if (mmu_->is_enabled() && (addr_in & 1) == 0 /* TODO remove this? */ && addr_in != ADDR_MMR0)
 		mmu_->set_page_written_to(run_mode, d, apf);
 
-	uint32_t m_offset = calculate_physical_address(run_mode, addr_in, true, true, false, space);
+	uint32_t m_offset = mmu_->calculate_physical_address(c, run_mode, addr_in, true, true, false, space);
 
-	uint32_t io_base  = get_io_base();
+	uint32_t io_base  = mmu_->get_io_base();
 	bool     is_io    = m_offset >= io_base;
 
 	if (is_io) {
@@ -1015,12 +775,13 @@ write_rc_t bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint1
 
 		///////////
 
-		DOLOG(debug, false, "WRITE-I/O UNHANDLED %08o(%c): %06o (base: %o)", m_offset, word_mode == wm_byte ? 'B' : 'W', value, get_io_base());
+		DOLOG(debug, false, "WRITE-I/O UNHANDLED %08o(%c): %06o (base: %o)", m_offset, word_mode == wm_byte ? 'B' : 'W', value, mmu_->get_io_base());
 
-		if (word_mode == wm_word && (a & 1)) {
+		if (word_mode == wm_word && (a & 1)) [[unlikely]] {
 			DOLOG(debug, false, "WRITE-I/O to %08o (value: %06o) - odd address!", m_offset, value);
 
-			trap_odd(a);
+			mmu_->trap_if_odd(a, run_mode, space, true);
+
 			throw 8;
 		}
 
@@ -1029,10 +790,11 @@ write_rc_t bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint1
 		throw 9;
 	}
 
-	if (word_mode == wm_word && (addr_in & 1)) {
+	if (word_mode == wm_word && (addr_in & 1)) [[unlikely]] {
 		DOLOG(debug, false, "WRITE to %06o (value: %06o) - odd address!", addr_in, value);
 
-		trap_odd(addr_in);
+		mmu_->trap_if_odd(addr_in, run_mode, space, true);
+
 		throw 10;
 	}
 
