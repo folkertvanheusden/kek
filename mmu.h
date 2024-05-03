@@ -23,6 +23,15 @@
 
 
 typedef struct {
+	uint16_t virtual_address;
+	uint8_t  apf;  // active page field
+	uint32_t physical_instruction;
+	bool     physical_instruction_is_psw;
+	uint32_t physical_data;
+	bool     physical_data_is_psw;
+} memory_addresses_t;
+
+typedef struct {
 	uint16_t par;
 	uint16_t pdr;
 } page_t;
@@ -69,6 +78,8 @@ public:
 	int      get_pdr_direction  (const int run_mode, const bool d, const int apf) { return pages[run_mode][d][apf].pdr & 8; }
 	uint32_t get_physical_memory_offset(const int run_mode, const bool d, const int apf) const { return pages[run_mode][d][apf].par * 64; }
 	bool     get_use_data_space(const int run_mode) const;
+	memory_addresses_t calculate_physical_address(const int run_mode, const uint16_t a) const;
+	uint32_t get_io_base() const { return getMMR0() & 1 ? (getMMR3() & 16 ? 017760000 : 0760000) : 0160000; }
 
 	uint16_t getMMR0() const { return MMR0; }
 	uint16_t getMMR1() const { return MMR1; }

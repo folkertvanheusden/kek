@@ -1,6 +1,7 @@
 #include <cassert>
 #include <cstring>
 
+#include "bus.h"  // for (at least) ADDR_PSW
 #include "gen.h"
 #include "log.h"
 #include "mmu.h"
@@ -222,6 +223,38 @@ void mmu::trap_if_odd(const uint16_t a, const int run_mode, const d_i_space_t sp
 
 	MMR0 &= ~(7 << 1);
 	MMR0 |= page << 1;
+}
+
+memory_addresses_t mmu::calculate_physical_address(const int run_mode, const uint16_t a) const
+{
+	const uint8_t apf = a >> 13; // active page field
+
+	if (is_enabled() == false) {
+		bool is_psw = a == ADDR_PSW;
+		return { a, apf, a, is_psw, a, is_psw };
+	}
+
+	uint32_t physical_instruction = get_physical_memory_offset(run_mode, 0, apf);
+	uint32_t physical_data        = get_physical_memory_offset(run_mode, 1, apf);
+
+	uint16_t p_offset = a & 8191;  // page offset
+
+	physical_instruction += p_offset;
+	physical_data        += p_offset;
+
+	if ((getMMR3() & 16) == 0) {  // offset is 18bit
+		physical_instruction &= 0x3ffff;
+		physical_data        &= 0x3ffff;
+	}
+
+	if (get_use_data_space(run_mode) == false)
+		physical_data = physical_instruction;
+
+	uint32_t io_base                     = get_io_base();
+	bool     physical_instruction_is_psw = (physical_instruction - io_base + 0160000) == ADDR_PSW;
+	bool     physical_data_is_psw        = (physical_data        - io_base + 0160000) == ADDR_PSW;
+
+	return { a, apf, physical_instruction, physical_instruction_is_psw, physical_data, physical_data_is_psw };
 }
 
 #if IS_POSIX

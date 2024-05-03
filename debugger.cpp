@@ -498,7 +498,7 @@ void mmu_resolve(console *const cnsl, bus *const b, const uint16_t va)
 	int  run_mode = b->getCpu()->getPSW_runmode();
 	cnsl->put_string_lf(format("Run mode: %d, use data space: %d", run_mode, b->getMMU()->get_use_data_space(run_mode)));
 
-	auto data     = b->calculate_physical_address(run_mode, va);
+	auto data     = b->getMMU()->calculate_physical_address(run_mode, va);
 
 	uint16_t page_offset = va & 8191;
 	cnsl->put_string_lf(format("Active page field: %d, page offset: %o (%d)", data.apf, page_offset, page_offset));

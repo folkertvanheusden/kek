@@ -218,7 +218,7 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 
 	uint32_t m_offset = calculate_physical_address(run_mode, addr_in, !peek_only, false, peek_only, space);
 
-	uint32_t io_base  = get_io_base();
+	uint32_t io_base  = mmu_->get_io_base();
 	bool     is_io    = m_offset >= io_base;
 
 	if (is_io) {
@@ -485,7 +485,7 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 		}
 
 		if (!peek_only) {
-			DOLOG(debug, false, "READ-I/O UNHANDLED read %08o (%c), (base: %o)", m_offset, word_mode == wm_byte ? 'B' : ' ', get_io_base());
+			DOLOG(debug, false, "READ-I/O UNHANDLED read %08o (%c), (base: %o)", m_offset, word_mode == wm_byte ? 'B' : ' ', mmu_->get_io_base());
 
 			c->trap(004);  // no such i/o
 			throw 1;
@@ -522,41 +522,9 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 	return temp;
 }
 
-memory_addresses_t bus::calculate_physical_address(const int run_mode, const uint16_t a) const
-{
-	const uint8_t apf = a >> 13; // active page field
-
-	if (mmu_->is_enabled() == false) {
-		bool is_psw = a == ADDR_PSW;
-		return { a, apf, a, is_psw, a, is_psw };
-	}
-
-	uint32_t physical_instruction = mmu_->get_physical_memory_offset(run_mode, 0, apf);
-	uint32_t physical_data        = mmu_->get_physical_memory_offset(run_mode, 1, apf);
-
-	uint16_t p_offset = a & 8191;  // page offset
-
-	physical_instruction += p_offset;
-	physical_data        += p_offset;
-
-	if ((mmu_->getMMR3() & 16) == 0) {  // offset is 18bit
-		physical_instruction &= 0x3ffff;
-		physical_data        &= 0x3ffff;
-	}
-
-	if (mmu_->get_use_data_space(run_mode) == false)
-		physical_data = physical_instruction;
-
-	uint32_t io_base                     = get_io_base();
-	bool     physical_instruction_is_psw = (physical_instruction - io_base + 0160000) == ADDR_PSW;
-	bool     physical_data_is_psw        = (physical_data        - io_base + 0160000) == ADDR_PSW;
-
-	return { a, apf, physical_instruction, physical_instruction_is_psw, physical_data, physical_data_is_psw };
-}
-
 bool bus::is_psw(const uint16_t addr, const int run_mode, const d_i_space_t space) const
 {
-	auto meta = calculate_physical_address(run_mode, addr);
+	auto meta = mmu_->calculate_physical_address(run_mode, addr);
 
 	if (space == d_space && meta.physical_data_is_psw)
 		return true;
@@ -570,7 +538,7 @@ bool bus::is_psw(const uint16_t addr, const int run_mode, const d_i_space_t spac
 void bus::mmudebug(const uint16_t a)
 {
 	for(int rm=0; rm<4; rm++) {
-		auto ma = calculate_physical_address(rm, a);
+		auto ma = mmu_->calculate_physical_address(rm, a);
 
 		DOLOG(debug, false, "RM %d, a: %06o, apf: %d, PI: %08o (PSW: %d), PD: %08o (PSW: %d)", rm, ma.virtual_address, ma.apf, ma.physical_instruction, ma.physical_instruction_is_psw, ma.physical_data, ma.physical_data_is_psw);
 	}
@@ -626,7 +594,7 @@ uint32_t bus::calculate_physical_address(const int run_mode, const uint16_t a, c
 		if ((mmu_->getMMR3() & 16) == 0)  // off is 18bit
 			m_offset &= 0x3ffff;
 
-		uint32_t io_base  = get_io_base();
+		uint32_t io_base  = mmu_->get_io_base();
 		bool     is_io    = m_offset >= io_base;
 
 		if (trap_on_failure) [[unlikely]] {
@@ -769,7 +737,7 @@ write_rc_t bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint1
 
 	uint32_t m_offset = calculate_physical_address(run_mode, addr_in, true, true, false, space);
 
-	uint32_t io_base  = get_io_base();
+	uint32_t io_base  = mmu_->get_io_base();
 	bool     is_io    = m_offset >= io_base;
 
 	if (is_io) {
@@ -985,7 +953,7 @@ write_rc_t bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint1
 
 		///////////
 
-		DOLOG(debug, false, "WRITE-I/O UNHANDLED %08o(%c): %06o (base: %o)", m_offset, word_mode == wm_byte ? 'B' : 'W', value, get_io_base());
+		DOLOG(debug, false, "WRITE-I/O UNHANDLED %08o(%c): %06o (base: %o)", m_offset, word_mode == wm_byte ? 'B' : 'W', value, mmu_->get_io_base());
 
 		if (word_mode == wm_word && (a & 1)) [[unlikely]] {
 			DOLOG(debug, false, "WRITE-I/O to %08o (value: %06o) - odd address!", m_offset, value);

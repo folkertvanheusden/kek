@@ -55,15 +55,6 @@ class tty;
 typedef enum { T_PROCEED, T_ABORT_4, T_TRAP_250 } trap_action_t;
 
 typedef struct {
-	uint16_t virtual_address;
-	uint8_t  apf;  // active page field
-	uint32_t physical_instruction;
-	bool     physical_instruction_is_psw;
-	uint32_t physical_data;
-	bool     physical_data_is_psw;
-} memory_addresses_t;
-
-typedef struct {
 	bool is_psw;
 } write_rc_t;
 
@@ -141,12 +132,10 @@ public:
 
 	void     check_odd_addressing(const uint16_t a, const int run_mode, const d_i_space_t space, const bool is_write);
 
-	uint32_t get_io_base() const { return mmu_->getMMR0() & 1 ? (mmu_->getMMR3() & 16 ? 017760000 : 0760000) : 0160000; }
 	bool     is_psw(const uint16_t addr, const int run_mode, const d_i_space_t space) const;
 
 	std::pair<trap_action_t, int> get_trap_action(const int run_mode, const bool d, const int apf, const bool is_write);
 	uint32_t calculate_physical_address(const int run_mode, const uint16_t a, const bool trap_on_failure, const bool is_write, const bool peek_only, const d_i_space_t space);
 
-	memory_addresses_t calculate_physical_address(const int run_mode, const uint16_t a) const;
 	void check_address(const bool trap_on_failure, const bool is_write, const memory_addresses_t & addr, const word_mode_t word_mode, const bool is_data, const int run_mode);
 };
