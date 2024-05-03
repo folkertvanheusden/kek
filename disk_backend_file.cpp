@@ -62,7 +62,7 @@ bool disk_backend_file::read(const off_t offset_in, const size_t n, uint8_t *con
 {
 	DOLOG(debug, false, "disk_backend_file::read: read %zu bytes from offset %zu", n, offset_in);
 
-	assert((offset % sector_size) == 0);
+	assert((offset_in % sector_size) == 0);
 	assert((n % sector_size) == 0);
 
 	for(off_t o=0; o<off_t(n); o+=sector_size) {
