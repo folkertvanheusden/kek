@@ -135,6 +135,8 @@ void bus::set_memory_size(const int n_pages)
 	delete m;
 	m = new memory(n_bytes);
 
+	mmu_->begin(m);
+
 	DOLOG(info, false, "Memory is now %u kB in size", n_bytes / 1024);
 }
 
