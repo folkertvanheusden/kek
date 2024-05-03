@@ -22,6 +22,8 @@
 #define ADDR_PAR_U_END   0177700
 
 
+typedef enum { T_PROCEED, T_ABORT_4, T_TRAP_250 } trap_action_t;
+
 typedef struct {
 	uint16_t virtual_address;
 	uint8_t  apf;  // active page field
@@ -78,8 +80,10 @@ public:
 	int      get_pdr_direction  (const int run_mode, const bool d, const int apf) { return pages[run_mode][d][apf].pdr & 8; }
 	uint32_t get_physical_memory_offset(const int run_mode, const bool d, const int apf) const { return pages[run_mode][d][apf].par * 64; }
 	bool     get_use_data_space(const int run_mode) const;
-	memory_addresses_t calculate_physical_address(const int run_mode, const uint16_t a) const;
 	uint32_t get_io_base() const { return getMMR0() & 1 ? (getMMR3() & 16 ? 017760000 : 0760000) : 0160000; }
+
+	memory_addresses_t            calculate_physical_address(const int run_mode, const uint16_t a) const;
+	std::pair<trap_action_t, int> get_trap_action(const int run_mode, const bool d, const int apf, const bool is_write);
 
 	uint16_t getMMR0() const { return MMR0; }
 	uint16_t getMMR1() const { return MMR1; }

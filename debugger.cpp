@@ -521,8 +521,8 @@ void mmu_resolve(console *const cnsl, bus *const b, const uint16_t va)
 	}
 
 	for(int i=0; i<2; i++) {
-		auto ta_i = b->get_trap_action(run_mode, false, data.apf, i);
-		auto ta_d = b->get_trap_action(run_mode, true,  data.apf, i);
+		auto ta_i = b->getMMU()->get_trap_action(run_mode, false, data.apf, i);
+		auto ta_d = b->getMMU()->get_trap_action(run_mode, true,  data.apf, i);
 
 		cnsl->put_string_lf(format("Instruction action: %s (%s)", trap_action_to_str(ta_i.first), i ? "write" : "read"));
 		cnsl->put_string_lf(format("Data action       : %s (%s)", trap_action_to_str(ta_d.first), i ? "write" : "read"));

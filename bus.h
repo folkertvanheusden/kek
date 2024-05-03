@@ -52,8 +52,6 @@ class memory;
 class tm_11;
 class tty;
 
-typedef enum { T_PROCEED, T_ABORT_4, T_TRAP_250 } trap_action_t;
-
 typedef struct {
 	bool is_psw;
 } write_rc_t;
@@ -134,7 +132,6 @@ public:
 
 	bool     is_psw(const uint16_t addr, const int run_mode, const d_i_space_t space) const;
 
-	std::pair<trap_action_t, int> get_trap_action(const int run_mode, const bool d, const int apf, const bool is_write);
 	uint32_t calculate_physical_address(const int run_mode, const uint16_t a, const bool trap_on_failure, const bool is_write, const bool peek_only, const d_i_space_t space);
 
 	void check_address(const bool trap_on_failure, const bool is_write, const memory_addresses_t & addr, const word_mode_t word_mode, const bool is_data, const int run_mode);

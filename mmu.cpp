@@ -257,6 +257,38 @@ memory_addresses_t mmu::calculate_physical_address(const int run_mode, const uin
 	return { a, apf, physical_instruction, physical_instruction_is_psw, physical_data, physical_data_is_psw };
 }
 
+std::pair<trap_action_t, int> mmu::get_trap_action(const int run_mode, const bool d, const int apf, const bool is_write)
+{
+	const int     access_control = get_access_control(run_mode, d, apf);
+
+	trap_action_t trap_action    = T_PROCEED;
+
+	if (access_control == 0)
+		trap_action = T_ABORT_4;
+	else if (access_control == 1)
+		trap_action = is_write ? T_ABORT_4 : T_TRAP_250;
+	else if (access_control == 2) {
+		if (is_write)
+			trap_action = T_ABORT_4;
+	}
+	else if (access_control == 3)
+		trap_action = T_ABORT_4;
+	else if (access_control == 4)
+		trap_action = T_TRAP_250;
+	else if (access_control == 5) {
+		if (is_write)
+			trap_action = T_TRAP_250;
+	}
+	else if (access_control == 6) {
+		// proceed
+	}
+	else if (access_control == 7) {
+		trap_action = T_ABORT_4;
+	}
+
+	return { trap_action, access_control };
+}
+
 #if IS_POSIX
 void mmu::add_par_pdr(json_t *const target, const int run_mode, const bool is_d, const std::string & name) const
 {
