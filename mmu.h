@@ -3,8 +3,11 @@
 #include <cstdint>
 #include <string>
 
-#include "device.h"
 #include "gen.h"
+#include "cpu.h"
+#include "device.h"
+#include "memory.h"
+
 
 #define ADDR_PDR_SV_START 0172200
 #define ADDR_PDR_SV_END   0172240
@@ -52,6 +55,8 @@ private:
 	uint16_t PIR { 0 };
 	uint16_t CSR { 0 };
 
+	memory  *m { nullptr };
+
 #if IS_POSIX
 	void add_par_pdr(json_t *const target, const int run_mode, const bool is_d, const std::string & name) const;
 	void set_par_pdr(const json_t *const j_in, const int run_mode, const bool is_d, const std::string & name);
@@ -61,12 +66,14 @@ public:
 	mmu();
 	virtual ~mmu();
 
-	void     begin();
+	void     begin(memory *const m);
 
 #if IS_POSIX
 	json_t *serialize() const;
-	static mmu *deserialize(const json_t *const j);
+	static mmu *deserialize(const json_t *const j, memory *const m);
 #endif
+
+	void     mmudebug(const uint16_t a);
 
 	void     reset() override;
 
@@ -84,6 +91,7 @@ public:
 
 	memory_addresses_t            calculate_physical_address(const int run_mode, const uint16_t a) const;
 	std::pair<trap_action_t, int> get_trap_action(const int run_mode, const bool d, const int apf, const bool is_write);
+	uint32_t                      calculate_physical_address(cpu *const c, const int run_mode, const uint16_t a, const bool trap_on_failure, const bool is_write, const bool peek_only, const d_i_space_t space);
 
 	uint16_t getMMR0() const { return MMR0; }
 	uint16_t getMMR1() const { return MMR1; }

@@ -6,10 +6,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "breakpoint.h"
+#include "bus.h"
 #include "cpu.h"
 #include "gen.h"
 #include "log.h"
 #include "utils.h"
+
 
 #define SIGN(x, wm) ((wm) == wm_byte ? (x) & 0x80 : (x) & 0x8000)
 
@@ -1412,7 +1415,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						auto a = getGAMAddress(dst_mode, dst_reg, wm_word);
 						addToMMR1(a);
 
-						b->mmudebug(a.addr.value());
+						b->getMMU()->mmudebug(a.addr.value());
 
 						a.mode_selection = rm_prev;
 						a.space   = word_mode == wm_byte ? d_space : i_space;

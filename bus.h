@@ -93,8 +93,6 @@ public:
 
 	void set_memory_size(const int n_pages);
 
-	void mmudebug(const uint16_t a);
-
 	void add_ram   (memory *const m      );
 	void add_cpu   (cpu    *const c      );
 	void add_mmu   (mmu    *const mmu_   );
@@ -131,8 +129,6 @@ public:
 	void     check_odd_addressing(const uint16_t a, const int run_mode, const d_i_space_t space, const bool is_write);
 
 	bool     is_psw(const uint16_t addr, const int run_mode, const d_i_space_t space) const;
-
-	uint32_t calculate_physical_address(const int run_mode, const uint16_t a, const bool trap_on_failure, const bool is_write, const bool peek_only, const d_i_space_t space);
 
 	void check_address(const bool trap_on_failure, const bool is_write, const memory_addresses_t & addr, const word_mode_t word_mode, const bool is_data, const int run_mode);
 };

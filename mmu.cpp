@@ -16,8 +16,10 @@ mmu::~mmu()
 {
 }
 
-void mmu::begin()
+void mmu::begin(memory *const m)
 {
+	this->m = m;
+
 	reset();
 }
 
@@ -289,6 +291,162 @@ std::pair<trap_action_t, int> mmu::get_trap_action(const int run_mode, const boo
 	return { trap_action, access_control };
 }
 
+void mmu::mmudebug(const uint16_t a)
+{
+	for(int rm=0; rm<4; rm++) {
+		auto ma = calculate_physical_address(rm, a);
+
+		DOLOG(debug, false, "RM %d, a: %06o, apf: %d, PI: %08o (PSW: %d), PD: %08o (PSW: %d)", rm, ma.virtual_address, ma.apf, ma.physical_instruction, ma.physical_instruction_is_psw, ma.physical_data, ma.physical_data_is_psw);
+	}
+}
+
+uint32_t mmu::calculate_physical_address(cpu *const c, const int run_mode, const uint16_t a, const bool trap_on_failure, const bool is_write, const bool peek_only, const d_i_space_t space)
+{
+	uint32_t m_offset = a;
+
+	if (is_enabled() || (is_write && (getMMR0() & (1 << 8 /* maintenance check */)))) {
+		uint8_t  apf      = a >> 13; // active page field
+
+		bool     d        = space == d_space && get_use_data_space(run_mode);
+
+		uint16_t p_offset = a & 8191;  // page offset
+
+		m_offset  = get_physical_memory_offset(run_mode, d, apf);
+
+		m_offset += p_offset;
+
+		if ((getMMR3() & 16) == 0)  // off is 18bit
+			m_offset &= 0x3ffff;
+
+		uint32_t io_base  = get_io_base();
+		bool     is_io    = m_offset >= io_base;
+
+		if (trap_on_failure) [[unlikely]] {
+			{
+				auto rc = get_trap_action(run_mode, d, apf, is_write);
+				auto trap_action    = rc.first;
+				int  access_control = rc.second;
+
+				if (trap_action != T_PROCEED) {
+					if (is_write)
+						set_page_trapped(run_mode, d, apf);
+
+					if (is_locked() == false) {
+						uint16_t temp = getMMR0();
+
+						temp &= ~((1l << 15) | (1 << 14) | (1 << 13) | (1 << 12) | (3 << 5) | (7 << 1) | (1 << 4));
+
+						if (is_write && access_control != 6)
+							temp |= 1 << 13;  // read-only
+								  //
+						if (access_control == 0 || access_control == 4)
+							temp |= 1l << 15;  // not resident
+						else
+							temp |= 1 << 13;  // read-only
+
+						temp |= run_mode << 5;  // TODO: kernel-mode or user-mode when a trap occurs in user-mode?
+
+						temp |= apf << 1; // add current page
+
+						temp |= d << 4;
+
+						setMMR0(temp);
+
+						DOLOG(debug, false, "MMR0: %06o", temp);
+					}
+
+					if (trap_action == T_TRAP_250) {
+						DOLOG(debug, false, "Page access %d (for virtual address %06o): trap 0250", access_control, a);
+
+						c->trap(0250);  // trap
+
+						throw 5;
+					}
+					else {  // T_ABORT_4
+						DOLOG(debug, false, "Page access %d (for virtual address %06o): trap 004", access_control, a);
+
+						c->trap(004);  // abort
+
+						throw 5;
+					}
+				}
+			}
+
+			if (m_offset >= m->get_memory_size() && !is_io) [[unlikely]] {
+				DOLOG(debug, !peek_only, "mmu::calculate_physical_address %o >= %o", m_offset, m->get_memory_size());
+				DOLOG(debug, false, "TRAP(04) (throw 6) on address %06o", a);
+
+				if (is_locked() == false) {
+					uint16_t temp = getMMR0();
+
+					temp &= 017777;
+					temp |= 1l << 15;  // non-resident
+
+					temp &= ~14;  // add current page
+					temp |= apf << 1;
+
+					temp &= ~(3 << 5);
+					temp |= run_mode << 5;
+
+					setMMR0(temp);
+				}
+
+				if (is_write)
+					set_page_trapped(run_mode, d, apf);
+
+				c->trap(04);
+
+				throw 6;
+			}
+
+			uint16_t pdr_len = get_pdr_len(run_mode, d, apf);
+			uint16_t pdr_cmp = (a >> 6) & 127;
+
+			bool direction = get_pdr_direction(run_mode, d, apf);
+
+			// DOLOG(debug, false, "p_offset %06o pdr_len %06o direction %d, run_mode %d, apf %d, pdr: %06o", p_offset, pdr_len, direction, run_mode, apf, pages[run_mode][d][apf].pdr);
+
+			if ((pdr_cmp > pdr_len && direction == false) || (pdr_cmp < pdr_len && direction == true)) {
+				DOLOG(debug, false, "mmu::calculate_physical_address::p_offset %o versus %o direction %d", pdr_cmp, pdr_len, direction);
+				DOLOG(debug, false, "TRAP(0250) (throw 7) on address %06o", a);
+				c->trap(0250);  // invalid access
+
+				if (is_locked() == false) {
+					uint16_t temp = getMMR0();
+
+					temp &= 017777;
+					temp |= 1 << 14;  // length
+
+					temp &= ~14;  // add current page
+					temp |= apf << 1;
+
+					temp &= ~(3 << 5);
+					temp |= run_mode << 5;
+
+					temp &= ~(1 << 4);
+					temp |= d << 4;
+
+					setMMR0(temp);
+				}
+
+				if (is_write)
+					set_page_trapped(run_mode, d, apf);
+
+				throw 7;
+			}
+		}
+
+		DOLOG(debug, false, "virtual address %06o maps to physical address %08o (run_mode: %d, apf: %d, par: %08o, poff: %o, AC: %d, %s)", a, m_offset, run_mode, apf,
+				get_physical_memory_offset(run_mode, d, apf),
+				p_offset, get_access_control(run_mode, d, apf), d ? "D" : "I");
+	}
+	else {
+		// DOLOG(debug, false, "no MMU (read physical address %08o)", m_offset);
+	}
+
+	return m_offset;
+}
+
 #if IS_POSIX
 void mmu::add_par_pdr(json_t *const target, const int run_mode, const bool is_d, const std::string & name) const
 {
@@ -342,10 +500,10 @@ void mmu::set_par_pdr(const json_t *const j_in, const int run_mode, const bool i
 		pages[run_mode][is_d][i].pdr = json_integer_value(json_array_get(j_pdr, i));
 }
 
-mmu *mmu::deserialize(const json_t *const j)
+mmu *mmu::deserialize(const json_t *const j, memory *const mem)
 {
 	mmu *m = new mmu();
-	m->begin();
+	m->begin(mem);
 
 	for(int run_mode=0; run_mode<4; run_mode++) {
 		if (run_mode == 2)
