@@ -3,7 +3,8 @@
 
 #pragma once
 
-#include <assert.h>
+#include <atomic>
+#include <cassert>
 #include <condition_variable>
 #include <map>
 #include <mutex>
@@ -12,10 +13,11 @@
 #include <stdint.h>
 #include <vector>
 
-#include "breakpoint.h"
-#include "bus.h"
 #include "gen.h"
 
+
+class breakpoint;
+class bus;
 
 constexpr const int initial_trap_delay   = 8;
 
