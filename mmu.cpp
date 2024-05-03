@@ -213,6 +213,17 @@ void mmu::write_byte(const uint16_t a, const uint8_t value)
 		write_par(a, 3, value, wm_byte);
 }
 
+void mmu::trap_if_odd(const uint16_t a, const int run_mode, const d_i_space_t space, const bool is_write)
+{
+	int page = a >> 13;
+
+	if (is_write)
+		set_page_trapped(run_mode, space == d_space, page);
+
+	MMR0 &= ~(7 << 1);
+	MMR0 |= page << 1;
+}
+
 #if IS_POSIX
 void mmu::add_par_pdr(json_t *const target, const int run_mode, const bool is_d, const std::string & name) const
 {

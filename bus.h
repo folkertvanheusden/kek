@@ -140,7 +140,6 @@ public:
 	void     writePhysical(const uint32_t a, const uint16_t value);
 
 	void     check_odd_addressing(const uint16_t a, const int run_mode, const d_i_space_t space, const bool is_write);
-	void     trap_odd(const uint16_t a);
 
 	uint32_t get_io_base() const { return mmu_->getMMR0() & 1 ? (mmu_->getMMR3() & 16 ? 017760000 : 0760000) : 0160000; }
 	bool     is_psw(const uint16_t addr, const int run_mode, const d_i_space_t space) const;
