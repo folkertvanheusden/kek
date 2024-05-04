@@ -617,10 +617,9 @@ void tm11_unload_tape(bus *const b)
 	b->getTM11()->unload();
 }
 
-void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const stop_event, const bool tracing_in)
+void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const stop_event)
 {
 	int32_t trace_start_addr = -1;
-	bool    tracing          = tracing_in;
 	int     n_single_step    = 1;
 	bool    turbo            = false;
 	std::optional<int> t_rl;  // trace runlevel
@@ -759,9 +758,9 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 				continue;
 			}
 			else if (parts[0] == "trace" || parts[0] == "t") {
-				tracing = !tracing;
+				settrace(!gettrace());
 
-				cnsl->put_string_lf(format("Tracing set to %s", tracing ? "ON" : "OFF"));
+				cnsl->put_string_lf(format("Tracing set to %s", gettrace() ? "ON" : "OFF"));
 
 				continue;
 			}
@@ -1100,12 +1099,12 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 				while(*stop_event == EVENT_NONE) {
 					if (!single_step)
-						DOLOG(debug, false, "---");
+						TRACE("---");
 
 					if (trace_start_addr != -1 && c->getPC() == trace_start_addr)
-						tracing = true;
+						settrace(true);
 
-					if ((tracing || single_step) && (t_rl.has_value() == false || t_rl.value() == c->getPSW_runmode()))
+					if ((gettrace() || single_step) && (t_rl.has_value() == false || t_rl.value() == c->getPSW_runmode()))
 						disassemble(c, single_step ? cnsl : nullptr, c->getPC(), false);
 
 					auto bp_result = c->check_breakpoint();
@@ -1138,7 +1137,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 	}
 }
 
-void run_bic(console *const cnsl, bus *const b, std::atomic_uint32_t *const stop_event, const bool tracing, const uint16_t start_addr)
+void run_bic(console *const cnsl, bus *const b, std::atomic_uint32_t *const stop_event, const uint16_t start_addr)
 {
 	cpu *const c = b->getCpu();
 
@@ -1147,7 +1146,7 @@ void run_bic(console *const cnsl, bus *const b, std::atomic_uint32_t *const stop
 	*cnsl->get_running_flag() = true;
 
 	while(*stop_event == EVENT_NONE) {
-		if (tracing)
+		if (gettrace())
 			disassemble(c, nullptr, c->getPC(), false);
 
 		c->step();

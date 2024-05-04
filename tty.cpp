@@ -118,7 +118,7 @@ uint16_t tty::read_word(const uint16_t addr)
 	xSemaphoreGive(chars_lock);
 #endif
 
-	DOLOG(debug, false, "PDP11TTY read addr %o (%s): %d, 7bit: %d", addr, regnames[reg], vtemp, vtemp & 127);
+	TRACE("PDP11TTY read addr %o (%s): %d, 7bit: %d", addr, regnames[reg], vtemp, vtemp & 127);
 
 	registers[reg] = vtemp;
 
@@ -175,12 +175,12 @@ void tty::write_word(const uint16_t addr, uint16_t v)
 {
 	const int reg = (addr - PDP11TTY_BASE) / 2;
 
-	DOLOG(debug, false, "PDP11TTY write %o (%s): %o", addr, regnames[reg], v);
+	TRACE("PDP11TTY write %o (%s): %o", addr, regnames[reg], v);
 
 	if (addr == PDP11TTY_TPB) {
 		char ch = v & 127;
 
-		DOLOG(debug, false, "PDP11TTY print '%c'", ch);
+		TRACE("PDP11TTY print '%c'", ch);
 
 		c->put_char(ch);
 
@@ -190,7 +190,7 @@ void tty::write_word(const uint16_t addr, uint16_t v)
 			b->getCpu()->queue_interrupt(4, 064);
 	}
 
-	DOLOG(debug, false, "set register %o to %o", addr, v);
+	TRACE("set register %o to %o", addr, v);
 	registers[(addr - PDP11TTY_BASE) / 2] = v;
 }
 

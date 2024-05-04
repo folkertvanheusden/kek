@@ -80,7 +80,7 @@ uint16_t rk05::read_word(const uint16_t addr)
 	if (addr == RK05_CS)
 		setBit(registers[reg], 0, false); // clear go
 
-	DOLOG(debug, false, "RK05 read %s/%o: %06o", reg[regnames], addr, vtemp);
+	TRACE("RK05 read %s/%o: %06o", reg[regnames], addr, vtemp);
 
 	return vtemp;
 }
@@ -138,12 +138,12 @@ void rk05::write_word(const uint16_t addr, const uint16_t v)
 			registers[(RK05_CS - RK05_BASE) / 2] &= ~(1 << 13); // reset search complete
 
 			if (func == 0) { // controller reset
-				DOLOG(debug, false, "RK05 invoke %d (controller reset)", func);
+				TRACE("RK05 invoke %d (controller reset)", func);
 			}
 			else if (func == 1) { // write
 				*disk_write_acitivity = true;
 
-				DOLOG(debug, false, "RK05 drive %d position sec %d surf %d cyl %d, reclen %zo, WRITE to %o, mem: %o", device, sector, surface, cylinder, reclen, diskoffb, memoff);
+				TRACE("RK05 drive %d position sec %d surf %d cyl %d, reclen %zo, WRITE to %o, mem: %o", device, sector, surface, cylinder, reclen, diskoffb, memoff);
 
 				uint32_t  work_reclen   = reclen;
 				uint32_t  work_memoff   = memoff;
@@ -164,7 +164,7 @@ void rk05::write_word(const uint16_t addr, const uint16_t v)
 					work_diskoffb += cur;
 
 					if (v & 2048)
-						DOLOG(debug, false, "RK05 inhibit BA increase");
+						TRACE("RK05 inhibit BA increase");
 					else
 						update_bus_address(cur);
 
@@ -184,7 +184,7 @@ void rk05::write_word(const uint16_t addr, const uint16_t v)
 			else if (func == 2) { // read
 				*disk_read_acitivity = true;
 
-				DOLOG(debug, false, "RK05 drive %d position sec %d surf %d cyl %d, reclen %zo, READ from %o, mem: %o", device, sector, surface, cylinder, reclen, diskoffb, memoff);
+				TRACE("RK05 drive %d position sec %d surf %d cyl %d, reclen %zo, READ from %o, mem: %o", device, sector, surface, cylinder, reclen, diskoffb, memoff);
 
 				uint32_t temp_diskoffb = diskoffb;
 
@@ -224,15 +224,15 @@ void rk05::write_word(const uint16_t addr, const uint16_t v)
 				*disk_read_acitivity = false;
 			}
 			else if (func == 4) {
-				DOLOG(debug, false, "RK05 invoke %d (seek) to %o", func, diskoffb);
+				TRACE("RK05 invoke %d (seek) to %o", func, diskoffb);
 
 				registers[(RK05_CS - RK05_BASE) / 2] |= 1 << 13; // search complete
 			}
 			else if (func == 7) {
-				DOLOG(debug, false, "RK05 invoke %d (write lock)", func);
+				TRACE("RK05 invoke %d (write lock)", func);
 			}
 			else {
-				DOLOG(debug, false, "RK05 command %d UNHANDLED", func);
+				TRACE("RK05 command %d UNHANDLED", func);
 			}
 
 			registers[(RK05_WC - RK05_BASE) / 2] = 0;

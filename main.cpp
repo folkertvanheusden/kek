@@ -337,7 +337,6 @@ int main(int argc, char *argv[])
 	std::vector<disk_backend *> rl02_files;
 
 	bool run_debugger = false;
-	bool tracing      = false;
 
 	bool          enable_bootloader = false;
 	bootloader_t  bootloader        = BL_NONE;
@@ -417,7 +416,7 @@ int main(int argc, char *argv[])
 				break;
 
 			case 't':
-				tracing      = true;
+				settrace(true);
 				break;
 
 			case 'n':
@@ -634,9 +633,9 @@ int main(int argc, char *argv[])
 	b->getKW11_L()->begin(cnsl);
 
 	if (is_bic)
-		run_bic(cnsl, b, &event, tracing, bic_start.value());
+		run_bic(cnsl, b, &event, bic_start.value());
 	else if (run_debugger || (bootloader == BL_NONE && test.empty() && tape.empty()))
-		debugger(cnsl, b, &event, tracing);
+		debugger(cnsl, b, &event);
 	else {
 		b->getCpu()->emulation_start();  // for statistics
 

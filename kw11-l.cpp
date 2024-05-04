@@ -66,7 +66,7 @@ void kw11_l::operator()()
 {
 	set_thread_name("kek:kw-11l");
 
-	DOLOG(debug, true, "Starting KW11-L thread");
+	TRACE("Starting KW11-L thread");
 
 	while(!stop_flag) {
 		if (*cnsl->get_running_flag()) {
@@ -83,13 +83,13 @@ void kw11_l::operator()()
 		}
 	}
 
-	DOLOG(debug, true, "KW11-L thread terminating");
+	TRACE("KW11-L thread terminating");
 }
 
 uint16_t kw11_l::read_word(const uint16_t a)
 {
 	if (a != ADDR_LFC) {
-		DOLOG(debug, true, "KW11-L read_word not for us (%06o)", a);
+		TRACE("KW11-L read_word not for us (%06o)", a);
 		return 0;
 	}
 
@@ -111,7 +111,7 @@ uint16_t kw11_l::read_word(const uint16_t a)
 void kw11_l::write_word(const uint16_t a, const uint16_t value)
 {
 	if (a != ADDR_LFC) {
-		DOLOG(debug, true, "KW11-L write_word not for us (%06o to %06o)", value, a);
+		TRACE("KW11-L write_word not for us (%06o to %06o)", value, a);
 		return;
 	}
 
@@ -121,7 +121,7 @@ void kw11_l::write_word(const uint16_t a, const uint16_t value)
 	std::unique_lock<std::mutex> lck(lf_csr_lock);
 #endif
 
-	DOLOG(debug, false, "WRITE-I/O set line frequency clock/status register: %06o", value);
+	TRACE("WRITE-I/O set line frequency clock/status register: %06o", value);
 	lf_csr = value;
 #if defined(BUILD_FOR_RP2040)
 	xSemaphoreGive(lf_csr_lock);

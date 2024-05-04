@@ -18,6 +18,8 @@ void setloguid(const int uid, const int gid);
 void send_syslog(const int ll, const std::string & what);
 void closelog();
 void dolog(const log_level_t ll, const char *fmt, ...);
+void settrace(const bool on);
+bool gettrace();
 
 #ifdef TURBO
 #define DOLOG(ll, always, fmt, ...) do { } while(0)
@@ -37,4 +39,15 @@ void dolog(const log_level_t ll, const char *fmt, ...);
 		dolog(ll, fmt, ##__VA_ARGS__);				\
 	} while(0)
 #endif
+#endif
+
+#ifdef TURBO
+#define TRACE(fmt, ...) do { } while(0)
+#else
+#define TRACE(fmt, ...) do {			\
+	extern bool log_trace_enabled;		\
+	if (log_trace_enabled) {		\
+		dolog(debug, fmt, ##__VA_ARGS__);	\
+	}					\
+} while(0)
 #endif

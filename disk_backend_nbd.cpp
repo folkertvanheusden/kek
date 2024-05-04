@@ -165,7 +165,7 @@ bool disk_backend_nbd::connect(const bool retry)
 
 bool disk_backend_nbd::read(const off_t offset_in, const size_t n, uint8_t *const target, const size_t sector_size)
 {
-	DOLOG(debug, false, "disk_backend_nbd::read: read %zu bytes from offset %zu", n, offset_in);
+	TRACE("disk_backend_nbd::read: read %zu bytes from offset %zu", n, offset_in);
 
 	if (n == 0)
 		return true;
@@ -256,7 +256,7 @@ bool disk_backend_nbd::read(const off_t offset_in, const size_t n, uint8_t *cons
 
 bool disk_backend_nbd::write(const off_t offset, const size_t n, const uint8_t *const from, const size_t sector_size)
 {
-	DOLOG(debug, false, "disk_backend_nbd::write: write %zu bytes to offset %zu", n, offset);
+	TRACE("disk_backend_nbd::write: write %zu bytes to offset %zu", n, offset);
 
 	if (n == 0)
 		return true;
