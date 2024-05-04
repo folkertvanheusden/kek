@@ -18,6 +18,8 @@
 #include "utils.h"
 
 
+const char *const dc11_register_names[] { "RCSR", "RBUF", "TSCR", "TBUF" };
+
 dc11::dc11(const int base_port, bus *const b):
 	base_port(base_port),
 	b(b)
@@ -40,9 +42,9 @@ dc11::~dc11()
 	delete [] pfds;
 }
 
-void dc11::trigger_interrupt(const int line_nr)
+void dc11::trigger_interrupt(const int line_nr, const bool is_tx)
 {
-	b->getCpu()->queue_interrupt(5, 0300 + line_nr * 4);
+	b->getCpu()->queue_interrupt(5, 0300 + line_nr * 010 + 4 * is_tx);
 }
 
 void dc11::operator()()
@@ -117,6 +119,7 @@ void dc11::operator()()
 			}
 
 			pfds[client_i].fd = accept(pfds[i].fd, nullptr, nullptr);
+
 			if (pfds[client_i].fd != -1) {
 				set_nodelay(pfds[client_i].fd);
 
@@ -124,7 +127,7 @@ void dc11::operator()()
 
 				registers[i * 4 + 0] |= 0160000;  // "ERROR", RING INDICATOR, CARRIER TRANSITION
 				if (is_rx_interrupt_enabled(i))
-					trigger_interrupt(i);
+					trigger_interrupt(i, false);
 			}
 		}
 
@@ -153,12 +156,10 @@ void dc11::operator()()
 					recv_buffers[line_nr].push_back(buffer[k]);
 
 				registers[line_nr * 4 + 0] |= 128;  // DONE: bit 7
-
-				have_data[line_nr].notify_all();
 			}
 
 			if (is_rx_interrupt_enabled(line_nr))
-				trigger_interrupt(line_nr);
+				trigger_interrupt(line_nr, false);
 		}
 	}
 
@@ -237,7 +238,7 @@ uint16_t dc11::read_word(const uint16_t addr)
 				registers[line_nr * 4 + 0] |= 128;  // DONE: bit 7
 
 				if (is_rx_interrupt_enabled(line_nr))
-					trigger_interrupt(line_nr);
+					trigger_interrupt(line_nr, false);
 			}
 		}
 	}
@@ -253,7 +254,7 @@ uint16_t dc11::read_word(const uint16_t addr)
 		vtemp = registers[line_nr * 4 + 2];
 	}
 
-	TRACE("DC11: read register %06o (%d line %d): %06o", addr, sub_reg, line_nr, vtemp);
+	TRACE("DC11: read register %06o (\"%s\", %d line %d): %06o", addr, dc11_register_names[sub_reg], sub_reg, line_nr, vtemp);
 
 	return vtemp;
 }
@@ -282,7 +283,7 @@ void dc11::write_word(const uint16_t addr, uint16_t v)
 
 	std::unique_lock<std::mutex> lck(input_lock[line_nr]);
 
-	TRACE("DC11: write register %06o (%d line_nr %d) to %06o", addr, sub_reg, line_nr, v);
+	TRACE("DC11: write register %06o (\"%s\", %d line_nr %d) to %06o", addr, dc11_register_names[sub_reg], sub_reg, line_nr, v);
 
 	if (sub_reg == 3) {  // transmit buffer
 		char c = v & 127;  // strip parity
@@ -304,7 +305,7 @@ void dc11::write_word(const uint16_t addr, uint16_t v)
 		}
 
 		if (is_tx_interrupt_enabled(line_nr))
-			trigger_interrupt(line_nr);
+			trigger_interrupt(line_nr, true);
 	}
 
 	registers[reg] = v;

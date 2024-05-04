@@ -35,10 +35,9 @@ private:
 	// not statically allocated because of compiling problems on arduino
 	pollfd           *pfds            { nullptr };
 	std::vector<char> recv_buffers[dc11_n_lines];
-        std::condition_variable have_data[dc11_n_lines];
         std::mutex        input_lock[dc11_n_lines];
 
-	void trigger_interrupt(const int line_nr);
+	void trigger_interrupt(const int line_nr, const bool is_tx);
 	bool is_rx_interrupt_enabled(const int line_nr);
 	bool is_tx_interrupt_enabled(const int line_nr);
 
