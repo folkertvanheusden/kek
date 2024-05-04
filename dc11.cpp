@@ -249,7 +249,7 @@ uint16_t dc11::read_word(const uint16_t addr)
 		vtemp = registers[line_nr * 4 + 2];
 	}
 
-	DOLOG(debug, true, "DC11: read register %06o (line %d): %06o", addr, line_nr, vtemp);
+	TRACE("DC11: read register %06o (line %d): %06o", addr, line_nr, vtemp);
 
 	return vtemp;
 }
@@ -278,12 +278,12 @@ void dc11::write_word(const uint16_t addr, uint16_t v)
 
 	std::unique_lock<std::mutex> lck(input_lock[line_nr]);
 
-	DOLOG(debug, false, "DC11: write register %06o (%d line_nr %d) to %06o", addr, reg, line_nr, v);
+	TRACE("DC11: write register %06o (%d line_nr %d) to %06o", addr, reg, line_nr, v);
 
 	if (sub_reg == 3) {  // transmit buffer
 		char c = v & 127;
 
-		DOLOG(debug, false, "DC11: transmit %c on line %d", c > 32 && c < 127 ? c : ' ', line_nr);
+		TRACE("DC11: transmit %c on line %d", c > 32 && c < 127 ? c : ' ', line_nr);
 
 		int fd = pfds[dc11_n_lines + line_nr].fd;
 
