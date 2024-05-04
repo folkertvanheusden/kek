@@ -1,6 +1,6 @@
 KEK
 ---
-Kek is a DEC PDP-11 (11/70) emulator capable of running UNIX-v6.
+Kek is a DEC PDP-11 (11/70) emulator capable of running UNIX-v7.
 
 To build for e.g. linux:
 
@@ -21,11 +21,14 @@ To build for e.g. windows:
     make
 
 
-To run a disk image:
+To run an RK05 disk image:
 
     ./kek -R filename.rk -b 2> /dev/null
 
-Kek emulates an RK05.
+
+To run an RL02 disk image:
+
+    ./kek -r filename.rk -b 2> /dev/null
 
 
 To run a tape image:
@@ -52,6 +55,7 @@ Wiring of SDCARD (or use disk-images exported via NBD over wifi using nbdkit (be
 Wiring of the MAX232 connection:
 * TX  : 17
 * RX  : 16
+Note that you need to use different pins for the MAX232 connection when you want to use the PSRAM of the ESP32.
 
 
 Raspberry PI PICO / RP2040
