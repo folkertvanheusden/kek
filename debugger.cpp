@@ -1098,14 +1098,15 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 				reset_cpu = false;
 
 				while(*stop_event == EVENT_NONE) {
-					if (!single_step)
-						TRACE("---");
-
 					if (trace_start_addr != -1 && c->getPC() == trace_start_addr)
 						settrace(true);
 
-					if ((gettrace() || single_step) && (t_rl.has_value() == false || t_rl.value() == c->getPSW_runmode()))
+					if ((gettrace() || single_step) && (t_rl.has_value() == false || t_rl.value() == c->getPSW_runmode())) {
+						if (!single_step)
+							TRACE("---");
+
 						disassemble(c, single_step ? cnsl : nullptr, c->getPC(), false);
+					}
 
 					auto bp_result = c->check_breakpoint();
 					if (bp_result.has_value() && !single_step) {
