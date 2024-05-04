@@ -20,17 +20,18 @@
 #endif
 
 
-static const char *logfile          = strdup("/tmp/kek.log");
-static sockaddr_in syslog_ip_addr   = { };
-static bool        is_file          = true;
-log_level_t        log_level_file   = warning;
-log_level_t        log_level_screen = warning;
-static FILE       *log_fh           = nullptr;
-static int         lf_uid           = -1;
-static int         lf_gid           = -1;
-static bool        l_timestamp      = true;
+static const char *logfile           = strdup("/tmp/kek.log");
+static sockaddr_in syslog_ip_addr    = { };
+static bool        is_file           = true;
+log_level_t        log_level_file    = warning;
+log_level_t        log_level_screen  = warning;
+static FILE       *log_fh            = nullptr;
+static int         lf_uid            = -1;
+static int         lf_gid            = -1;
+static bool        l_timestamp       = true;
 static thread_local int   log_buffer_size = 128;
-static thread_local char *log_buffer      = reinterpret_cast<char *>(malloc(log_buffer_size));
+static thread_local char *log_buffer = reinterpret_cast<char *>(malloc(log_buffer_size));
+bool               log_trace_enabled = false;
 
 #if defined(ESP32)
 int gettid()
@@ -38,6 +39,16 @@ int gettid()
 	return 0;
 }
 #endif
+
+void settrace(const bool on)
+{
+	log_trace_enabled = on;
+}
+
+bool gettrace()
+{
+	return log_trace_enabled;
+}
 
 void setlogfile(const char *const lf, const log_level_t ll_file, const log_level_t ll_screen, const bool timestamp)
 {

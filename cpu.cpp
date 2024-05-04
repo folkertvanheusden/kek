@@ -371,7 +371,7 @@ bool cpu::execute_any_pending_interrupt()
 	if (trap_delay.has_value()) {
 		trap_delay.value()--;
 
-		DOLOG(debug, false, "Delayed trap: %d instructions left", trap_delay.value());
+		TRACE("Delayed trap: %d instructions left", trap_delay.value());
 
 		if (trap_delay.value() > 0)
 			return false;
@@ -409,7 +409,7 @@ bool cpu::execute_any_pending_interrupt()
 
 			interrupts->second.erase(vector);
 
-			DOLOG(debug, false, "Invoking interrupt vector %o (IPL %d, current: %d)", v, i, current_level);
+			TRACE("Invoking interrupt vector %o (IPL %d, current: %d)", v, i, current_level);
 
 			trap(v, i, true);
 
@@ -458,7 +458,7 @@ void cpu::queue_interrupt(const uint8_t level, const uint8_t vector)
 
 	any_queued_interrupts = true;
 
-	DOLOG(debug, false, "Queueing interrupt vector %o (IPL %d, current: %d), n: %zu", vector, level, getPSW_spl(), it->second.size());
+	TRACE("Queueing interrupt vector %o (IPL %d, current: %d), n: %zu", vector, level, getPSW_spl(), it->second.size());
 }
 
 void cpu::addToMMR1(const gam_rc_t & g)
@@ -838,7 +838,7 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 			        addToMMR1(g_dst);
 				uint16_t shift = g_dst.value.value() & 077;
 
-				DOLOG(debug, true, "shift %06o with %d", R, shift);
+				TRACE("shift %06o with %d", R, shift);
 
 				bool     sign  = SIGN(R, wm_word);
 
@@ -1638,7 +1638,7 @@ bool cpu::condition_code_operations(const uint16_t instr)
 void cpu::pushStack(const uint16_t v)
 {
 	if (getRegister(6) == stackLimitRegister) {
-		DOLOG(debug, false, "stackLimitRegister reached %06o while pushing %06o", stackLimitRegister, v);
+		TRACE("stackLimitRegister reached %06o while pushing %06o", stackLimitRegister, v);
 
 		trap(04, 7);
 	}
@@ -1687,7 +1687,7 @@ bool cpu::misc_operations(const uint16_t instr)
 				wait_time += end - start;  // used for MIPS calculation
 			}
 
-			DOLOG(debug, false, "WAIT returned");
+			TRACE("WAIT returned");
 
 			return true;
 
@@ -1811,7 +1811,7 @@ bool cpu::misc_operations(const uint16_t instr)
 // 'is_interrupt' is not correct naming; it is true for mmu faults and interrupts
 void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 {
-	DOLOG(debug, false, "*** CPU::TRAP %o, new-ipl: %d, is-interrupt: %d, run mode: %d ***", vector, new_ipl, is_interrupt, getPSW_runmode());
+	TRACE("*** CPU::TRAP %o, new-ipl: %d, is-interrupt: %d, run mode: %d ***", vector, new_ipl, is_interrupt, getPSW_runmode());
 
 	uint16_t before_psw = 0;
 	uint16_t before_pc  = 0;
@@ -1825,7 +1825,7 @@ void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 			bool kernel_mode = !(psw >> 14);
 
 			if (processing_trap_depth >= 2) {
-				DOLOG(debug, false, "Trap depth %d", processing_trap_depth);
+				TRACE("Trap depth %d", processing_trap_depth);
 
 				if (processing_trap_depth >= 3) {
 					*event = EVENT_HALT;
@@ -1879,10 +1879,10 @@ void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 
 			// if we reach this point then the trap was processed without causing
 			// another trap
-			DOLOG(debug, false, "Trapping to %06o with PSW %06o", pc, psw);
+			TRACE("Trapping to %06o with PSW %06o", pc, psw);
 		}
 		catch(const int exception) {
-			DOLOG(debug, false, "trap during execution of trap (%d)", exception);
+			TRACE("trap during execution of trap (%d)", exception);
 
 			setPSW(before_psw, false);
 		}
@@ -2419,12 +2419,12 @@ void cpu::step()
 		if (misc_operations(instr))
 			return;
 
-		DOLOG(warning, true, "UNHANDLED instruction %06o @ %06o", instr, instruction_start);
+		DOLOG(warning, false, "UNHANDLED instruction %06o @ %06o", instr, instruction_start);
 
 		trap(010);  // floating point nog niet geimplementeerd
 	}
 	catch(const int exception_nr) {
-		DOLOG(debug, false, "bus-trap during execution of command (%d)", exception_nr);
+		TRACE("bus-trap during execution of command (%d)", exception_nr);
 	}
 }
 

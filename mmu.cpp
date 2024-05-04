@@ -130,7 +130,7 @@ void mmu::write_pdr(const uint32_t a, const int run_mode, const uint16_t value, 
 
 	pages[run_mode][is_d][page].pdr &= ~(32768 + 128 /*A*/ + 64 /*W*/ + 32 + 16);  // set bit 4, 5 & 15 to 0 as they are unused and A/W are set to 0 by writes
 
-	DOLOG(debug, false, "mmu WRITE-I/O PDR run-mode %d: %c for %d: %o [%d]", run_mode, is_d ? 'D' : 'I', page, value, word_mode);
+	TRACE("mmu WRITE-I/O PDR run-mode %d: %c for %d: %o [%d]", run_mode, is_d ? 'D' : 'I', page, value, word_mode);
 }
 
 void mmu::write_par(const uint32_t a, const int run_mode, const uint16_t value, const word_mode_t word_mode)
@@ -145,7 +145,7 @@ void mmu::write_par(const uint32_t a, const int run_mode, const uint16_t value, 
 
 	pages[run_mode][is_d][page].pdr &= ~(128 /*A*/ + 64 /*W*/);  // reset PDR A/W when PAR is written to
 
-	DOLOG(debug, false, "mmu WRITE-I/O PAR run-mode %d: %c for %d: %o (%07o)", run_mode, is_d ? 'D' : 'I', page, word_mode == wm_byte ? value & 0xff : value, pages[run_mode][is_d][page].par * 64);
+	TRACE("mmu WRITE-I/O PAR run-mode %d: %c for %d: %o (%07o)", run_mode, is_d ? 'D' : 'I', page, word_mode == wm_byte ? value & 0xff : value, pages[run_mode][is_d][page].par * 64);
 }
 
 uint16_t mmu::read_word(const uint16_t a)
@@ -296,7 +296,7 @@ void mmu::mmudebug(const uint16_t a)
 	for(int rm=0; rm<4; rm++) {
 		auto ma = calculate_physical_address(rm, a);
 
-		DOLOG(debug, false, "RM %d, a: %06o, apf: %d, PI: %08o (PSW: %d), PD: %08o (PSW: %d)", rm, ma.virtual_address, ma.apf, ma.physical_instruction, ma.physical_instruction_is_psw, ma.physical_data, ma.physical_data_is_psw);
+		TRACE("RM %d, a: %06o, apf: %d, PI: %08o (PSW: %d), PD: %08o (PSW: %d)", rm, ma.virtual_address, ma.apf, ma.physical_instruction, ma.physical_instruction_is_psw, ma.physical_data, ma.physical_data_is_psw);
 	}
 }
 
@@ -352,18 +352,18 @@ uint32_t mmu::calculate_physical_address(cpu *const c, const int run_mode, const
 
 						setMMR0(temp);
 
-						DOLOG(debug, false, "MMR0: %06o", temp);
+						TRACE("MMR0: %06o", temp);
 					}
 
 					if (trap_action == T_TRAP_250) {
-						DOLOG(debug, false, "Page access %d (for virtual address %06o): trap 0250", access_control, a);
+						TRACE("Page access %d (for virtual address %06o): trap 0250", access_control, a);
 
 						c->trap(0250);  // trap
 
 						throw 5;
 					}
 					else {  // T_ABORT_4
-						DOLOG(debug, false, "Page access %d (for virtual address %06o): trap 004", access_control, a);
+						TRACE("Page access %d (for virtual address %06o): trap 004", access_control, a);
 
 						c->trap(004);  // abort
 
@@ -373,8 +373,9 @@ uint32_t mmu::calculate_physical_address(cpu *const c, const int run_mode, const
 			}
 
 			if (m_offset >= m->get_memory_size() && !is_io) [[unlikely]] {
-				DOLOG(debug, !peek_only, "mmu::calculate_physical_address %o >= %o", m_offset, m->get_memory_size());
-				DOLOG(debug, false, "TRAP(04) (throw 6) on address %06o", a);
+				if (!peek_only)
+					TRACE("mmu::calculate_physical_address %o >= %o", m_offset, m->get_memory_size());
+				TRACE("TRAP(04) (throw 6) on address %06o", a);
 
 				if (is_locked() == false) {
 					uint16_t temp = getMMR0();
@@ -404,11 +405,11 @@ uint32_t mmu::calculate_physical_address(cpu *const c, const int run_mode, const
 
 			bool direction = get_pdr_direction(run_mode, d, apf);
 
-			// DOLOG(debug, false, "p_offset %06o pdr_len %06o direction %d, run_mode %d, apf %d, pdr: %06o", p_offset, pdr_len, direction, run_mode, apf, pages[run_mode][d][apf].pdr);
+			// TRACE("p_offset %06o pdr_len %06o direction %d, run_mode %d, apf %d, pdr: %06o", p_offset, pdr_len, direction, run_mode, apf, pages[run_mode][d][apf].pdr);
 
 			if ((pdr_cmp > pdr_len && direction == false) || (pdr_cmp < pdr_len && direction == true)) [[unlikely]] {
-				DOLOG(debug, false, "mmu::calculate_physical_address::p_offset %o versus %o direction %d", pdr_cmp, pdr_len, direction);
-				DOLOG(debug, false, "TRAP(0250) (throw 7) on address %06o", a);
+				TRACE("mmu::calculate_physical_address::p_offset %o versus %o direction %d", pdr_cmp, pdr_len, direction);
+				TRACE("TRAP(0250) (throw 7) on address %06o", a);
 				c->trap(0250);  // invalid access
 
 				if (is_locked() == false) {
@@ -436,12 +437,12 @@ uint32_t mmu::calculate_physical_address(cpu *const c, const int run_mode, const
 			}
 		}
 
-		DOLOG(debug, false, "virtual address %06o maps to physical address %08o (run_mode: %d, apf: %d, par: %08o, poff: %o, AC: %d, %s)", a, m_offset, run_mode, apf,
+		TRACE("virtual address %06o maps to physical address %08o (run_mode: %d, apf: %d, par: %08o, poff: %o, AC: %d, %s)", a, m_offset, run_mode, apf,
 				get_physical_memory_offset(run_mode, d, apf),
 				p_offset, get_access_control(run_mode, d, apf), d ? "D" : "I");
 	}
 	else {
-		// DOLOG(debug, false, "no MMU (read physical address %08o)", m_offset);
+		// TRACE("no MMU (read physical address %08o)", m_offset);
 	}
 
 	return m_offset;

@@ -191,7 +191,7 @@ std::optional<uint16_t> load_tape(bus *const b, const std::string & file)
 		}
 
 #if !defined(ESP32)
-		DOLOG(debug, false, "%ld] reading %d (dec) bytes to %o (oct)", ftell(fh), count - 6, p);
+		TRACE("%ld] reading %d (dec) bytes to %o (oct)", ftell(fh), count - 6, p);
 #endif
 
 		for(int i=0; i<count - 6; i++) {

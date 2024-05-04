@@ -60,7 +60,7 @@ bool disk_backend_file::begin(const bool snapshots)
 
 bool disk_backend_file::read(const off_t offset_in, const size_t n, uint8_t *const target, const size_t sector_size)
 {
-	DOLOG(debug, false, "disk_backend_file::read: read %zu bytes from offset %zu", n, offset_in);
+	TRACE("disk_backend_file::read: read %zu bytes from offset %zu", n, offset_in);
 
 	assert((offset_in % sector_size) == 0);
 	assert((n % sector_size) == 0);
@@ -95,7 +95,7 @@ bool disk_backend_file::read(const off_t offset_in, const size_t n, uint8_t *con
 
 bool disk_backend_file::write(const off_t offset, const size_t n, const uint8_t *const from, const size_t sector_size)
 {
-	DOLOG(debug, false, "disk_backend_file::write: write %zu bytes to offset %zu", n, offset);
+	TRACE("disk_backend_file::write: write %zu bytes to offset %zu", n, offset);
 
 	if (store_mem_range_in_overlay(offset, n, from, sector_size))
 		return true;
