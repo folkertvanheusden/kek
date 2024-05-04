@@ -8,6 +8,7 @@
 #include "bus.h"
 #include "gen.h"
 #include "cpu.h"
+#include "dc11.h"
 #include "kw11-l.h"
 #include "log.h"
 #include "memory.h"
@@ -40,6 +41,7 @@ bus::~bus()
 	delete tty_;
 	delete mmu_;
 	delete m;
+	delete dc11_;
 }
 
 #if IS_POSIX
@@ -68,7 +70,7 @@ json_t *bus::serialize() const
 	if (rk05_)
 		json_object_set(j_out, "rk05", rk05_->serialize());
 
-	// TODO: tm11
+	// TODO: tm11, dc11
 
 	return j_out;
 }
@@ -122,7 +124,7 @@ bus *bus::deserialize(const json_t *const j, console *const cnsl, std::atomic_ui
 		b->add_rk05(rk05_);
 	}
 
-	// TODO: tm11
+	// TODO: tm11, dc11
 
 	return b;
 }
@@ -158,6 +160,8 @@ void bus::reset()
 		tty_->reset();
 	if (kw11_l_)
 		kw11_l_->reset();
+	if (dc11_)
+		dc11_->reset();
 }
 
 void bus::add_KW11_L(kw11_l *const kw11_l_)
@@ -207,7 +211,13 @@ void bus::add_rl02(rl02 *const rl02_)
 void bus::add_tty(tty *const tty_)
 {
 	delete this->tty_;
-	this->tty_  = tty_;
+	this->tty_ = tty_;
+}
+
+void bus::add_DC11(dc11 *const dc11_)
+{
+	delete this->dc11_;
+	this->dc11_ = dc11_;
 }
 
 void bus::init()
@@ -449,29 +459,20 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 			}
 		}
 
-		if (tm11 && a >= TM_11_BASE && a < TM_11_END && !peek_only) {
-			TRACE("READ-I/O TM11 register %d", (a - TM_11_BASE) / 2);
-
+		if (tm11 && a >= TM_11_BASE && a < TM_11_END && !peek_only)
 			return word_mode == wm_byte ? tm11->read_byte(a) : tm11->read_word(a);
-		}
 
-		if (rk05_ && a >= RK05_BASE && a < RK05_END && !peek_only) {
-			TRACE("READ-I/O RK05 register %d", (a - RK05_BASE) / 2);
-
+		if (rk05_ && a >= RK05_BASE && a < RK05_END && !peek_only)
 			return word_mode == wm_byte ? rk05_->read_byte(a) : rk05_->read_word(a);
-		}
 
-		if (rl02_ && a >= RL02_BASE && a < RL02_END && !peek_only) {
-			TRACE("READ-I/O RL02 register %d", (a - RL02_BASE) / 2);
-
+		if (rl02_ && a >= RL02_BASE && a < RL02_END && !peek_only)
 			return word_mode == wm_byte ? rl02_->read_byte(a) : rl02_->read_word(a);
-		}
 
-		if (tty_ && a >= PDP11TTY_BASE && a < PDP11TTY_END && !peek_only) {
-			TRACE("READ-I/O TTY register %d", (a - PDP11TTY_BASE) / 2);
-
+		if (tty_ && a >= PDP11TTY_BASE && a < PDP11TTY_END && !peek_only)
 			return word_mode == wm_byte ? tty_->read_byte(a) : tty_->read_word(a);
-		}
+
+		if (dc11_ && a >= DC11_BASE && a < DC11_END && !peek_only)
+			return word_mode == wm_byte ? dc11_->read_byte(a) : dc11_->read_word(a);
 
 		// LO size register field must be all 1s, so subtract 1
 		uint32_t system_size = m->get_memory_size() / 64 - 1;
@@ -721,6 +722,11 @@ write_rc_t bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint1
 		if (tty_ && a >= PDP11TTY_BASE && a < PDP11TTY_END) {
 			TRACE("WRITE-I/O TTY register %d: %06o", (a - PDP11TTY_BASE) / 2, value);
 			word_mode == wm_byte ? tty_->write_byte(a, value) : tty_->write_word(a, value);
+			return { false };
+		}
+
+		if (dc11_ && a >= DC11_BASE && a < DC11_END) {
+			word_mode == wm_byte ? dc11_->write_byte(a, value) : dc11_->write_word(a, value);
 			return { false };
 		}
 
