@@ -119,6 +119,8 @@ void dc11::operator()()
 			pfds[client_i].fd = accept(pfds[i].fd, nullptr, nullptr);
 			set_nodelay(pfds[client_i].fd);
 
+			std::unique_lock<std::mutex> lck(input_lock[i]);
+
 			registers[i * 4 + 0] |= 0160000;  // "ERROR", RING INDICATOR, CARRIER TRANSITION
 			if (is_rx_interrupt_enabled(i))
 				trigger_interrupt(i);
@@ -129,10 +131,10 @@ void dc11::operator()()
 			if (pfds[i].revents != POLLIN)
 				continue;
 
-			int  line_nr = i - dc11_n_lines;
-
 			char buffer[32] { };
 			int rc = read(pfds[i].fd, buffer, sizeof buffer);
+
+			int  line_nr = i - dc11_n_lines;
 
 			std::unique_lock<std::mutex> lck(input_lock[line_nr]);
 
