@@ -101,6 +101,13 @@ Click on the following picture to see it running (opens a youtube link):
 
 
 
-Released under MIT license.
+thanks
+------
+
+Thanks a lot to Neil Webber for his help and for his python PDP emulator (which allowed me to compare disassembly of runs).
+Neil's emulator can be found at https://github.com/outofmbufs/python-pdp11-emulator
+
+
+Kek is released under MIT license.
 
 Folkert van Heusden
