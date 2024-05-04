@@ -117,13 +117,15 @@ void dc11::operator()()
 			}
 
 			pfds[client_i].fd = accept(pfds[i].fd, nullptr, nullptr);
-			set_nodelay(pfds[client_i].fd);
+			if (pfds[client_i].fd != -1) {
+				set_nodelay(pfds[client_i].fd);
 
-			std::unique_lock<std::mutex> lck(input_lock[i]);
+				std::unique_lock<std::mutex> lck(input_lock[i]);
 
-			registers[i * 4 + 0] |= 0160000;  // "ERROR", RING INDICATOR, CARRIER TRANSITION
-			if (is_rx_interrupt_enabled(i))
-				trigger_interrupt(i);
+				registers[i * 4 + 0] |= 0160000;  // "ERROR", RING INDICATOR, CARRIER TRANSITION
+				if (is_rx_interrupt_enabled(i))
+					trigger_interrupt(i);
+			}
 		}
 
 		// receive data
