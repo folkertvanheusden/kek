@@ -197,7 +197,7 @@ uint16_t dc11::read_word(const uint16_t addr)
 
 	uint16_t vtemp   = registers[reg];
 
-	if (sub_reg == 0) {  // recive status
+	if (sub_reg == 0) {  // receive status
 		// emulate DTR, CTS & READY
 		registers[line_nr * 4 + 0] &= ~1;  // DTR: bit 0  [RCSR]
 		registers[line_nr * 4 + 0] &= ~4;  // CD : bit 2
@@ -280,12 +280,14 @@ void dc11::write_word(const uint16_t addr, uint16_t v)
 
 		DOLOG(debug, false, "DC11: transmit %c on line %d", c > 32 && c < 127 ? c : ' ', line_nr);
 
-		if (write(pfds[dc11_n_lines + line_nr].fd, &c, 1) != 1) {
+		int fd = pfds[dc11_n_lines + line_nr].fd;
+
+		if (fd != -1 && write(fd, &c, 1) != 1) {
 			DOLOG(info, false, "DC11 line %d disconnected\n", line_nr + 1);
 
 			registers[line_nr * 4 + 0] |= 0140000;  // "ERROR", CARRIER TRANSITION
 
-			close(pfds[dc11_n_lines + line_nr].fd);
+			close(fd);
 			pfds[dc11_n_lines + line_nr].fd = -1;
 		}
 
