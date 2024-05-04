@@ -282,7 +282,7 @@ bool disk_backend_nbd::write(const off_t offset, const size_t n, const uint8_t *
 		} nbd_request { };
 
 		nbd_request.magic  = ntohl(0x25609513);
-		nbd_request.type   = 1;  // WRITE
+		nbd_request.type   = htonl(1);  // WRITE
 		nbd_request.offset = HTONLL(uint64_t(offset));
 		nbd_request.length = htonl(n);
 
