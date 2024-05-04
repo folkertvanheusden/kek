@@ -220,6 +220,8 @@ uint16_t dc11::read_word(const uint16_t addr)
 		registers[line_nr * 4 + 0] &= ~0160000;
 	}
 	else if (sub_reg == 1) {  // read data register
+		TRACE("DC11: %zu characters in buffer for line %d", recv_buffers[line_nr].size(), line_nr);
+
 		// get oldest byte in buffer
 		if (recv_buffers[line_nr].empty() == false) {
 			vtemp = *recv_buffers[line_nr].begin();
@@ -283,9 +285,12 @@ void dc11::write_word(const uint16_t addr, uint16_t v)
 	TRACE("DC11: write register %06o (%d line_nr %d) to %06o", addr, sub_reg, line_nr, v);
 
 	if (sub_reg == 3) {  // transmit buffer
-		char c = v & 127;
+		char c = v & 127;  // strip parity
 
-		TRACE("DC11: transmit %c on line %d", c > 32 && c < 127 ? c : ' ', line_nr);
+		if (c <= 32 || c >= 127)
+			TRACE("DC11: transmit [%d] on line %d", c, line_nr);
+		else
+			TRACE("DC11: transmit %c on line %d", c, line_nr);
 
 		int fd = pfds[dc11_n_lines + line_nr].fd;
 
