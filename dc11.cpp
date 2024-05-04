@@ -133,6 +133,9 @@ void dc11::operator()()
 
 			char buffer[32] { };
 			int rc = read(pfds[i].fd, buffer, sizeof buffer);
+
+			std::unique_lock<std::mutex> lck(input_lock[line_nr]);
+
 			if (rc <= 0) {  // closed or error?
 				DOLOG(info, false, "Failed reading from port %d", i - dc11_n_lines + 1);
 
@@ -142,8 +145,6 @@ void dc11::operator()()
 				pfds[i].fd = -1;
 			}
 			else {
-				std::unique_lock<std::mutex> lck(input_lock[line_nr]);
-
 				for(int k=0; k<rc; k++)
 					recv_buffers[line_nr].push_back(buffer[k]);
 
@@ -195,6 +196,8 @@ uint16_t dc11::read_word(const uint16_t addr)
 	int      line_nr = reg / 4;
 	int      sub_reg = reg & 3;
 
+	std::unique_lock<std::mutex> lck(input_lock[line_nr]);
+
 	uint16_t vtemp   = registers[reg];
 
 	if (sub_reg == 0) {  // receive status
@@ -213,8 +216,6 @@ uint16_t dc11::read_word(const uint16_t addr)
 		registers[line_nr * 4 + 0] &= ~0160000;
 	}
 	else if (sub_reg == 1) {  // read data register
-		std::unique_lock<std::mutex> lck(input_lock[line_nr]);
-
 		// get oldest byte in buffer
 		if (recv_buffers[line_nr].empty() == false) {
 			vtemp = *recv_buffers[line_nr].begin();
@@ -272,6 +273,8 @@ void dc11::write_word(const uint16_t addr, uint16_t v)
 	int reg     = (addr - DC11_BASE) / 2;
 	int line_nr = reg / 4;
 	int sub_reg = reg & 3;
+
+	std::unique_lock<std::mutex> lck(input_lock[line_nr]);
 
 	DOLOG(debug, false, "DC11: write register %06o (%d line_nr %d) to %06o", addr, reg, line_nr, v);
 
