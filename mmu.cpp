@@ -321,13 +321,13 @@ uint32_t mmu::calculate_physical_address(cpu *const c, const int run_mode, const
 		uint32_t io_base  = get_io_base();
 		bool     is_io    = m_offset >= io_base;
 
-		if (trap_on_failure) [[unlikely]] {
+		if (trap_on_failure) {
 			{
 				auto rc = get_trap_action(run_mode, d, apf, is_write);
 				auto trap_action    = rc.first;
 				int  access_control = rc.second;
 
-				if (trap_action != T_PROCEED) {
+				if (trap_action != T_PROCEED) [[unlikely]] {
 					if (is_write)
 						set_page_trapped(run_mode, d, apf);
 
@@ -406,7 +406,7 @@ uint32_t mmu::calculate_physical_address(cpu *const c, const int run_mode, const
 
 			// DOLOG(debug, false, "p_offset %06o pdr_len %06o direction %d, run_mode %d, apf %d, pdr: %06o", p_offset, pdr_len, direction, run_mode, apf, pages[run_mode][d][apf].pdr);
 
-			if ((pdr_cmp > pdr_len && direction == false) || (pdr_cmp < pdr_len && direction == true)) {
+			if ((pdr_cmp > pdr_len && direction == false) || (pdr_cmp < pdr_len && direction == true)) [[unlikely]] {
 				DOLOG(debug, false, "mmu::calculate_physical_address::p_offset %o versus %o direction %d", pdr_cmp, pdr_len, direction);
 				DOLOG(debug, false, "TRAP(0250) (throw 7) on address %06o", a);
 				c->trap(0250);  // invalid access
