@@ -36,6 +36,9 @@ To run a tape image:
     ./kek -T filename.bin -b 2> /dev/null
 
 
+When you run UNIX 7, you can (if your system has enough RAM - use an ESP32 with 1 MB PSRAM or more) run multi-user via the DC-11 emulation.
+
+
 ESP32
 -----
 The ESP32 version needs platformio to be build.
