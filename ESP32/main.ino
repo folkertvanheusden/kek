@@ -368,7 +368,7 @@ void setup() {
 
 void loop()
 {
-	debugger(cnsl, b, &stop_event, false);
+	debugger(cnsl, b, &stop_event);
 
 	c->reset();
 }
