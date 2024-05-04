@@ -1042,7 +1042,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 					"debug         - enable CPU debug mode",
 					"bt            - show backtrace - need to enable debug first",
 					"strace        - start tracing from address - invoke without address to disable",
-					"trl           - set trace run-level, empty for all",
+					"trl           - set trace run-level (0...3), empty for all",
 					"regdump       - dump register contents",
 					"mmudump       - dump MMU settings (PARs/PDRs)",
 					"mmures        - resolve a virtual address",
