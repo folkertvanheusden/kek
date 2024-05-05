@@ -121,7 +121,13 @@ bool save_serial_speed_configuration(const uint32_t bps)
 #if !defined(BUILD_FOR_RP2040)
 void set_hostname()
 {
-	WiFi.setHostname("PDP-11");
+        uint64_t mac    = ESP.getEfuseMac();
+        uint8_t *chipid = reinterpret_cast<uint8_t *>(&mac);
+
+	char name[32];
+        snprintf(name, sizeof name, "PDP11-%02x%02x%02x%02x", chipid[2], chipid[3], chipid[4], chipid[5]);
+
+	WiFi.setHostname(name);
 }
 
 void configure_network(console *const c)
@@ -149,6 +155,8 @@ void configure_network(console *const c)
 		c->put_string_lf("Invalid SSID/PSK: should not contain '|'");
 		return;
 	}
+
+	c->put_string_lf(format("Connecting to SSID \"%s\"", parts.at(0).c_str()));
 
 	if (parts.size() == 1)
 		WiFi.begin(parts.at(0).c_str());
@@ -184,8 +192,6 @@ void check_network(console *const c)
 
 void start_network(console *const c)
 {
-	set_hostname();
-
 	WiFi.mode(WIFI_STA);
 	WiFi.useStaticBuffers(true);
 	WiFi.begin();
@@ -248,6 +254,9 @@ void setup() {
 
 #if defined(ESP32)
 	heap_caps_register_failed_alloc_callback(heap_caps_alloc_failed_hook);
+#endif
+#if defined(ESP32)
+	set_hostname();
 #endif
 
 #if !defined(BUILD_FOR_RP2040)
