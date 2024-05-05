@@ -290,7 +290,7 @@ void setup() {
 
 	if (psramInit()) {
 		uint32_t free_psram = ESP.getFreePsram();
-		n_pages    = min(free_psram / 8192, uint32_t(128));  // start size is 1 MB max.
+		n_pages    = min(free_psram / 8192, uint32_t(256));  // start size is 2 MB max (with 1 MB, UNIX 7 behaves strangely)
 		Serial.printf("Free PSRAM: %d decimal bytes (or %d pages (see 'ramsize' in the debugger))", free_psram, n_pages);
 		Serial.println(F(""));
 	}
