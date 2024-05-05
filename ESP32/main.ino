@@ -41,6 +41,7 @@
 #include "esp32.h"
 #endif
 #include "gen.h"
+#include "kw11-l.h"
 #include "loaders.h"
 #include "memory.h"
 #include "tty.h"
@@ -342,6 +343,9 @@ void setup() {
 	Serial.println(F("* Adding TTY"));
 	tty_ = new tty(cnsl, b);
 	b->add_tty(tty_);
+
+	Serial.println(F("* Starting KW11-L"));
+	b->getKW11_L()->begin(cnsl);
 
 #if !defined(SHA2017)
 	pinMode(LED_BUILTIN, OUTPUT);
