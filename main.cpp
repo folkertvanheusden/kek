@@ -4,7 +4,9 @@
 #include <assert.h>
 #include <atomic>
 #include <cinttypes>
+#if !defined(_WIN32)
 #include <jansson.h>
+#endif
 #include <signal.h>
 #include <stdlib.h>
 #include <string>
@@ -53,7 +55,6 @@ void sw_handler(int s)
 		event = EVENT_TERMINATE;
 	}
 }
-#endif
 
 int run_cpu_validation(const std::string & filename)
 {
@@ -262,6 +263,7 @@ int run_cpu_validation(const std::string & filename)
 
 	return 0;
 }
+#endif
 
 void get_metrics(cpu *const c)
 {
@@ -493,8 +495,10 @@ int main(int argc, char *argv[])
 
 	setlogfile(logfile, ll_file, ll_screen, timestamp);
 
+#if !defined(_WIN32)
 	if (validate_json.empty() == false)
 		return run_cpu_validation(validate_json);
+#endif
 
 	DOLOG(info, true, "PDP11 emulator, by Folkert van Heusden");
 
@@ -551,6 +555,7 @@ int main(int argc, char *argv[])
 		if (enable_bootloader)
 			set_boot_loader(b, bootloader);
 	}
+#if IS_POSIX
 	else {
 		FILE *fh = fopen(deserialize.c_str(), "r");
 		if (!fh)
@@ -568,9 +573,9 @@ int main(int argc, char *argv[])
 
 		json_decref(j);
 
-		DOLOG(warning, true, "DO NOT FORGET TO DELETE AND NOT TO RE-USE THE STATE FILE (\"%s\")! (unless updated)", deserialize.c_str());
 		myusleep(251000);
 	}
+#endif
 
 	if (b->getTty() == nullptr) {
 		tty *tty_ = new tty(cnsl, b);

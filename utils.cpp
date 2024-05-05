@@ -6,11 +6,15 @@
 #if defined(ESP32) || defined(BUILD_FOR_RP2040)
 #include <Arduino.h>
 #include "rp2040.h"
+#include <sys/socket.h>
+#elif defined(_WIN32)
+#include <ws2tcpip.h>
+#include <winsock2.h>
 #else
 #include <netinet/in.h>
 #include <netinet/tcp.h>
-#endif
 #include <sys/socket.h>
+#endif
 
 #include <errno.h>
 #include <pthread.h>
@@ -175,7 +179,7 @@ void set_thread_name(std::string name)
 
 std::string get_thread_name()
 {
-#if IS_POSIX
+#if IS_POSIX || defined(_WIN32)
 	char buffer[16 + 1] { };
 	pthread_getname_np(pthread_self(), buffer, sizeof buffer);
 
@@ -246,10 +250,10 @@ void update_word(uint16_t *const w, const bool msb, const uint8_t v)
 void set_nodelay(const int fd)
 {
         int flags = 1;
-#if defined(__FreeBSD__) || defined(ESP32)
-        if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (void *)&flags, sizeof(flags)) == -1)
+#if defined(__FreeBSD__) || defined(ESP32) || defined(_WIN32)
+        if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<char *>(&flags), sizeof(flags)) == -1)
 #else
-        if (setsockopt(fd, SOL_TCP, TCP_NODELAY, (void *)&flags, sizeof(flags)) == -1)
+        if (setsockopt(fd, SOL_TCP, TCP_NODELAY, reinterpret_cast<void *>(&flags), sizeof(flags)) == -1)
 #endif
                 DOLOG(warning, true, "Cannot disable nagle algorithm");
 }

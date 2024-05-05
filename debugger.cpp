@@ -3,14 +3,16 @@
 
 #include <optional>
 #include "gen.h"
-#if IS_POSIX
+#if IS_POSIX || defined(_WIN32)
 #include <dirent.h>
-#include <jansson.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #else
 #include <Arduino.h>
 #include <LittleFS.h>
+#endif
+#if IS_POSIX
+#include <jansson.h>
 #endif
 
 #include "breakpoint_parser.h"
@@ -18,7 +20,7 @@
 #include "console.h"
 #include "cpu.h"
 #include "disk_backend.h"
-#if IS_POSIX
+#if IS_POSIX || defined(_WIN32)
 #include "disk_backend_file.h"
 #else
 #include "disk_backend_esp32.h"
@@ -45,7 +47,7 @@ void start_network(console *const cnsl);
 void set_tty_serial_speed(console *const c, const uint32_t bps);
 #endif
 
-#if !defined(BUILD_FOR_RP2040) && !defined(linux)
+#if !defined(BUILD_FOR_RP2040) && !defined(linux) && !defined(_WIN32)
 extern SdFs SD;
 #endif
 
@@ -111,6 +113,7 @@ std::optional<std::string> select_host_file(console *const c)
 
 			entry.close();
 		}
+#elif defined(_WIN32)
 #else
 		SD.ls("/", LS_DATE | LS_SIZE | LS_R);
 #endif
@@ -127,9 +130,9 @@ std::optional<std::string> select_host_file(console *const c)
 
 		bool can_open_file = false;
 
-#if IS_POSIX
+#if IS_POSIX || defined(_WIN32)
 		struct stat st { };
-		can_open_file = stat(selected_file.c_str(), &st) == 0;
+		can_open_file = ::stat(selected_file.c_str(), &st) == 0;
 #else
 		File32 fh;
 		can_open_file = fh.open(selected_file.c_str(), O_RDWR);
@@ -147,7 +150,7 @@ std::optional<std::string> select_host_file(console *const c)
 // disk image files
 std::optional<disk_backend *> select_disk_file(console *const c)
 {
-#if IS_POSIX
+#if IS_POSIX || defined(_WIN32)
 	c->put_string_lf("Files in current directory: ");
 #else
 	c->put_string_lf(format("MISO: %d", int(MISO)));
@@ -179,7 +182,7 @@ std::optional<disk_backend *> select_disk_file(console *const c)
 		if (selected_file.has_value() == false)
 			break;
 
-#if IS_POSIX
+#if IS_POSIX || defined(_WIN32)
 		disk_backend *temp = new disk_backend_file(selected_file.value());
 #else
 		disk_backend *temp = new disk_backend_esp32(selected_file.value());

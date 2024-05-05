@@ -8,6 +8,13 @@
 #include <mutex>
 #include <thread>
 #include <vector>
+#if defined(_WIN32)
+#include <ws2tcpip.h>
+#include <winsock2.h>
+#else
+#define SOCKET int
+#define INVALID_SOCKET -1
+#endif
 
 #include "gen.h"
 #include "bus.h"
@@ -33,7 +40,11 @@ private:
 	std::thread     *th               { nullptr };
 
 	// not statically allocated because of compiling problems on arduino
+#if defined(_WIN32)
+	WSAPOLLFD        *pfds            { nullptr };
+#else
 	pollfd           *pfds            { nullptr };
+#endif
 	std::vector<char> recv_buffers[dc11_n_lines];
         std::mutex        input_lock[dc11_n_lines];
 

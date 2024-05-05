@@ -45,7 +45,9 @@ disk_backend_file *disk_backend_file::deserialize(const json_t *const j)
 
 bool disk_backend_file::begin(const bool snapshots)
 {
+#if IS_POSIX
 	use_overlay = snapshots;
+#endif
 
 	fd = open(filename.c_str(), O_RDWR);
 
@@ -97,8 +99,10 @@ bool disk_backend_file::write(const off_t offset, const size_t n, const uint8_t 
 {
 	TRACE("disk_backend_file::write: write %zu bytes to offset %zu", n, offset);
 
+#if IS_POSIX
 	if (store_mem_range_in_overlay(offset, n, from, sector_size))
 		return true;
+#endif
 
 #if defined(_WIN32) // hope for the best
 	if (lseek(fd, offset, SEEK_SET) == -1)

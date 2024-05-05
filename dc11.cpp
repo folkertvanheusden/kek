@@ -3,13 +3,18 @@
 
 #if defined(ESP32)
 #include <lwip/sockets.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#elif defined(_WIN32)
+#include <ws2tcpip.h>
+#include <winsock2.h>
 #else
 #include <poll.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
 #endif
 #include <cstring>
 #include <unistd.h>
-#include <arpa/inet.h>
-#include <sys/socket.h>
 
 #include "bus.h"
 #include "cpu.h"
@@ -24,7 +29,11 @@ dc11::dc11(const int base_port, bus *const b):
 	base_port(base_port),
 	b(b)
 {
+#if defined(_WIN32)
+	pfds = new WSAPOLLFD[dc11_n_lines * 2]();
+#else
 	pfds = new pollfd[dc11_n_lines * 2]();
+#endif
 
 	// TODO move to begin()
 	th = new std::thread(std::ref(*this));
@@ -55,7 +64,7 @@ void dc11::operator()()
 
 	for(int i=0; i<dc11_n_lines; i++) {
 		// client session
-		pfds[dc11_n_lines + i].fd     = -1;
+		pfds[dc11_n_lines + i].fd     = INVALID_SOCKET;
 		pfds[dc11_n_lines + i].events = POLLIN;
 
 		// listen on port
@@ -66,7 +75,7 @@ void dc11::operator()()
 		int reuse_addr = 1;
 		if (setsockopt(pfds[i].fd, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse_addr, sizeof(reuse_addr)) == -1) {
 			close(pfds[i].fd);
-			pfds[i].fd = -1;
+			pfds[i].fd = INVALID_SOCKET;
 
 			DOLOG(warning, true, "Cannot set reuseaddress for port %d (DC11)", port);
 			continue;
@@ -82,7 +91,7 @@ void dc11::operator()()
 
 		if (bind(pfds[i].fd, reinterpret_cast<struct sockaddr *>(&listen_addr), sizeof(listen_addr)) == -1) {
 			close(pfds[i].fd);
-			pfds[i].fd = -1;
+			pfds[i].fd = INVALID_SOCKET;
 
 			DOLOG(warning, true, "Cannot bind to port %d (DC11)", port);
 			continue;
@@ -90,7 +99,7 @@ void dc11::operator()()
 
 		if (listen(pfds[i].fd, SOMAXCONN) == -1) {
 			close(pfds[i].fd);
-			pfds[i].fd = -1;
+			pfds[i].fd = INVALID_SOCKET;
 
 			DOLOG(warning, true, "Cannot listen on port %d (DC11)", port);
 			continue;
@@ -100,7 +109,11 @@ void dc11::operator()()
 	}
 
 	while(!stop_flag) {
+#if defined(_WIN32)
+		int rc = WSAPoll(pfds, dc11_n_lines * 2, 100);
+#else
 		int rc = poll(pfds, dc11_n_lines * 2, 100);
+#endif
 		if (rc == 0)
 			continue;
 
@@ -113,14 +126,14 @@ void dc11::operator()()
 
 			// disconnect any existing client session
 			// yes, one can ddos with this
-			if (pfds[client_i].fd != -1) {
+			if (pfds[client_i].fd != INVALID_SOCKET) {
 				close(pfds[client_i].fd);
 				DOLOG(info, false, "Restarting session for port %d", base_port + i + 1);
 			}
 
 			pfds[client_i].fd = accept(pfds[i].fd, nullptr, nullptr);
 
-			if (pfds[client_i].fd != -1) {
+			if (pfds[client_i].fd != INVALID_SOCKET) {
 				set_nodelay(pfds[client_i].fd);
 
 				std::unique_lock<std::mutex> lck(input_lock[i]);
@@ -149,7 +162,7 @@ void dc11::operator()()
 				registers[line_nr * 4 + 0] |= 0140000;  // "ERROR", CARRIER TRANSITION
 
 				close(pfds[i].fd);
-				pfds[i].fd = -1;
+				pfds[i].fd = INVALID_SOCKET;
 			}
 			else {
 				for(int k=0; k<rc; k++)
@@ -166,7 +179,7 @@ void dc11::operator()()
 	DOLOG(info, true, "DC11 thread terminating");
 
 	for(int i=0; i<dc11_n_lines * 2; i++) {
-		if (pfds[i].fd != -1)
+		if (pfds[i].fd != INVALID_SOCKET)
 			close(pfds[i].fd);
 	}
 }
@@ -210,7 +223,7 @@ uint16_t dc11::read_word(const uint16_t addr)
 		registers[line_nr * 4 + 0] &= ~1;  // DTR: bit 0  [RCSR]
 		registers[line_nr * 4 + 0] &= ~4;  // CD : bit 2
 
-		if (pfds[line_nr + dc11_n_lines].fd != -1) {
+		if (pfds[line_nr + dc11_n_lines].fd != INVALID_SOCKET) {
 			registers[line_nr * 4 + 0] |= 1;
 			registers[line_nr * 4 + 0] |= 4;
 		}
@@ -246,7 +259,7 @@ uint16_t dc11::read_word(const uint16_t addr)
 		registers[line_nr * 4 + 2] &= ~2;  // CTS: bit 1  [TSCR]
 		registers[line_nr * 4 + 2] &= ~128;  // READY: bit 7
 
-		if (pfds[line_nr + dc11_n_lines].fd != -1) {
+		if (pfds[line_nr + dc11_n_lines].fd != INVALID_SOCKET) {
 			registers[line_nr * 4 + 2] |= 2;
 			registers[line_nr * 4 + 2] |= 128;
 		}
@@ -293,15 +306,15 @@ void dc11::write_word(const uint16_t addr, uint16_t v)
 		else
 			TRACE("DC11: transmit %c on line %d", c, line_nr);
 
-		int fd = pfds[dc11_n_lines + line_nr].fd;
+		SOCKET fd = pfds[dc11_n_lines + line_nr].fd;
 
-		if (fd != -1 && write(fd, &c, 1) != 1) {
+		if (fd != INVALID_SOCKET && write(fd, &c, 1) != 1) {
 			DOLOG(info, false, "DC11 line %d disconnected\n", line_nr + 1);
 
 			registers[line_nr * 4 + 0] |= 0140000;  // "ERROR", CARRIER TRANSITION
 
 			close(fd);
-			pfds[dc11_n_lines + line_nr].fd = -1;
+			pfds[dc11_n_lines + line_nr].fd = INVALID_SOCKET;
 		}
 
 		if (is_tx_interrupt_enabled(line_nr))

@@ -7,9 +7,14 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#if defined(_WIN32)
+#include <ws2tcpip.h>
+#include <winsock2.h>
+#else
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#endif
 #include <sys/types.h>
 
 #include "error.h"
@@ -72,7 +77,7 @@ void setlogfile(const char *const lf, const log_level_t ll_file, const log_level
 bool setloghost(const char *const host, const log_level_t ll)
 {
 	syslog_ip_addr.sin_family = AF_INET;
-	bool ok = inet_aton(host, &syslog_ip_addr.sin_addr) == 1;
+	bool ok = inet_pton(AF_INET, host, &syslog_ip_addr.sin_addr) == 1;
 	syslog_ip_addr.sin_port   = htons(514);
 
 	is_file        = false;
