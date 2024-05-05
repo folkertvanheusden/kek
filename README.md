@@ -55,6 +55,9 @@ Wiring of SDCARD (or use disk-images exported via NBD over wifi using nbdkit (be
 * SS  : 5
 * and of course connect VCC/GND of the SD-card
 
+Heart beat LED:
+* pin 25
+
 Wiring of the MAX232 connection:
 * TX  : 17
 * RX  : 16
