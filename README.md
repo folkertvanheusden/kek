@@ -99,18 +99,10 @@ Maybe you can undo that, but I have not tried that.
 After this, you can connect a serial terminal to /dev/ttyUSB0 at 115k2 bps.
 
 
+more info
+---------
 
-pictures
---------
-
-![(running on a regular ESP32 connected to a VT510 terminal)](images/KEK-ESP32-VT510.jpg)
-
-![(running on a SHA2017-badge)](images/KEK-sha2017badge.jpg)
-
-Click on the following picture to see it running (opens a youtube link):
-
-[![running on a Linux laptop](images/KEK-linux-frame.jpg)](https://youtu.be/MPaGmVli8NA)
-
+For more info: https://vanheusden.com/emulation/PDP-11/kek/
 
 
 thanks
