@@ -38,6 +38,7 @@ To run a tape image:
 
 When you run UNIX 7, you can (if your system has enough RAM - use an ESP32 with 2 MB PSRAM or more) run multi-user via the DC-11 emulation.
 Note that UNIX 7 starts in single user mode first; press ctrl+d to switch to multi user (recognizable by the login-prompt).
+Also make sure to configure networking ('startnet') to be able to connect (using telnet) to the DC-11 ports (TCP port 1101 upto and including 1104).
 
 
 ESP32
