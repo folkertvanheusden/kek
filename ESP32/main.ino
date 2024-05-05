@@ -289,10 +289,14 @@ void setup() {
 	Serial.println(ESP.getFreeHeap());
 
 	if (psramInit()) {
+		constexpr const uint32_t leave_unallocated = 32768;
+
 		uint32_t free_psram = ESP.getFreePsram();
-		n_pages    = min(free_psram / 8192, uint32_t(256));  // start size is 2 MB max (with 1 MB, UNIX 7 behaves strangely)
-		Serial.printf("Free PSRAM: %d decimal bytes (or %d pages (see 'ramsize' in the debugger))", free_psram, n_pages);
-		Serial.println(F(""));
+		if (free_psram > leave_unallocated) {
+			n_pages = min((free_psram - leave_unallocated) / 8192, uint32_t(256));  // start size is 2 MB max (with 1 MB, UNIX 7 behaves strangely)
+			Serial.printf("Free PSRAM: %d decimal bytes (or %d pages (see 'ramsize' in the debugger))", free_psram, n_pages);
+			Serial.println(F(""));
+		}
 	}
 #endif
 
