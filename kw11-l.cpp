@@ -75,8 +75,12 @@ void kw11_l::operator()()
 			if (get_lf_crs() & 64)
 				b->getCpu()->queue_interrupt(6, 0100);
 
-			// TODO: dependant on cpu cycles processed
+			// TODO: depending on cpu cycles processed
+#if defined(ESP32)
+			myusleep(1000000 / 20);  // 50ms
+#else
 			myusleep(1000000 / 50);  // 20ms
+#endif
 		}
 		else {
 			myusleep(1000000 / 10);  // 100ms
