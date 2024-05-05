@@ -61,11 +61,11 @@ void console_esp32::refresh_virtual_terminal()
 
 void console_esp32::panel_update_thread()
 {
-#if !defined(BUILD_FOR_RP2040) && defined(NEOPIXELS_PIN)
 	Serial.println(F("panel task started"));
 
 	cpu *const c = b->getCpu();
 
+#if !defined(BUILD_FOR_RP2040) && defined(NEOPIXELS_PIN)
 	constexpr const uint8_t n_leds = 60;
 	Adafruit_NeoPixel pixels(n_leds, NEOPIXELS_PIN, NEO_RGBW);
 	pixels.begin();
@@ -142,7 +142,22 @@ void console_esp32::panel_update_thread()
 
 	pixels.clear();
 	pixels.show();
+#elif defined(HEARTBEAT_PIN)
+	uint64_t prev_count = 0;
+	bool     led_state  = true;
+
+	while(!stop_panel) {
+		vTaskDelay(333 / portTICK_PERIOD_MS);
+
+		uint64_t current_count = c->get_instructions_executed_count();
+		if (prev_count != current_count) {
+			prev_count = current_count;
+
+			digitalWrite(HEARTBEAT_PIN, led_state ? HIGH : LOW);
+			led_state = !led_state;
+		}
+	}
+#endif
 
 	Serial.println(F("panel task terminating"));
-#endif
 }

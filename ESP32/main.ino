@@ -343,7 +343,14 @@ void setup() {
 	tty_ = new tty(cnsl, b);
 	b->add_tty(tty_);
 
-#if !defined(BUILD_FOR_RP2040) && defined(NEOPIXELS_PIN)
+#if !defined(SHA2017)
+	pinMode(LED_BUILTIN, OUTPUT);
+#endif
+#if defined(HEARTBEAT_PIN)
+	pinMode(HEARTBEAT_PIN, OUTPUT);
+#endif
+
+#if !defined(BUILD_FOR_RP2040) && (defined(NEOPIXELS_PIN) || defined(HEARTBEAT_PIN))
 	Serial.println(F("Starting panel"));
 	xTaskCreate(&console_thread_wrapper_panel, "panel", 3072, cnsl, 1, nullptr);
 #endif
@@ -352,10 +359,6 @@ void setup() {
 	uint32_t free_heap = ESP.getFreeHeap();
 	Serial.printf("Free RAM after init: %d decimal bytes", free_heap);
 	Serial.println(F(""));
-#endif
-
-#if !defined(SHA2017)
-	pinMode(LED_BUILTIN, OUTPUT);
 #endif
 
 	Serial.flush();
