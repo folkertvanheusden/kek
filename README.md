@@ -36,7 +36,8 @@ To run a tape image:
     ./kek -T filename.bin -b 2> /dev/null
 
 
-When you run UNIX 7, you can (if your system has enough RAM - use an ESP32 with 1 MB PSRAM or more) run multi-user via the DC-11 emulation.
+When you run UNIX 7, you can (if your system has enough RAM - use an ESP32 with 2 MB PSRAM or more) run multi-user via the DC-11 emulation.
+Note that UNIX 7 starts in single user mode first; press ctrl+d to switch to multi user (recognizable by the login-prompt).
 
 
 ESP32
