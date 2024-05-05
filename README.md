@@ -47,6 +47,7 @@ The ESP32 version needs platformio to be build.
 
     cd ESP32
     pio run -t upload
+    pio run -t uploadfs
 
 That should build & upload it to a connected ESP32.
 
