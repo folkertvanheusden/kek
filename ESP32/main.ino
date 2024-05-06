@@ -47,6 +47,7 @@
 #include "tty.h"
 #include "utils.h"
 #include "version.h"
+#include "FvHNTP/FvHNTP.h"
 
 
 constexpr const char SERIAL_CFG_FILE[] = "/serial.json";
@@ -70,9 +71,11 @@ SdFs     SD;
 
 std::atomic_uint32_t stop_event      { EVENT_NONE };
 
-std::atomic_bool    *running         { nullptr };
+std::atomic_bool    *running         { nullptr    };
 
-bool                 trace_output    { false };
+bool                 trace_output    { false      };
+
+ntp                 *ntp_            { nullptr    };
 
 void console_thread_wrapper_panel(void *const c)
 {
@@ -208,6 +211,12 @@ void start_network(console *const c)
 		Serial.println(F("* Adding DC11"));
 		dc11 *dc11_ = new dc11(1100, b);
 		b->add_DC11(dc11_);
+
+		Serial.println(F("* Starting (NTP-) clock"));
+		ntp_ = new ntp("188.212.113.203");
+		ntp_->begin();
+
+		set_clock_reference(ntp_);
 	}
 }
 

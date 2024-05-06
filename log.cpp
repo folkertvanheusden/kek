@@ -37,11 +37,21 @@ static bool        l_timestamp       = true;
 static thread_local int   log_buffer_size = 128;
 static thread_local char *log_buffer = reinterpret_cast<char *>(malloc(log_buffer_size));
 bool               log_trace_enabled = false;
+#if defined(ESP32)
+static ntp        *ntp_clock         = nullptr;
+#endif
 
 #if defined(ESP32)
 int gettid()
 {
 	return 0;
+}
+#endif
+
+#if defined(ESP32)
+void set_clock_reference(ntp *const ntp_)
+{
+	ntp_clock = ntp_;
 }
 #endif
 
@@ -153,8 +163,18 @@ void dolog(const log_level_t ll, const char *fmt, ...)
 	}
 
 	if (l_timestamp) {
-		uint64_t now = get_us();
-		time_t t_now = now / 1000000;
+#if defined(ESP32)
+		uint64_t now   = 0;
+
+		if (ntp_clock) {
+			auto temp = ntp_clock->get_unix_epoch_ms();
+			if (temp.has_value())
+				now = temp.value() * 1000;
+		}
+#else
+		uint64_t now   = get_us();
+#endif
+		time_t   t_now = now / 1000000;
 
 		tm tm { 0 };
 #if defined(_WIN32)
@@ -212,7 +232,9 @@ log_level_t parse_ll(const std::string & str)
 	if (str == "none")
 		return none;
 
+#if !defined(ESP32)
 	error_exit(false, "Log level \"%s\" not understood", str.c_str());
+#endif
 
 	return debug;
 }

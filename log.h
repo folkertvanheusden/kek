@@ -6,6 +6,9 @@
 #include <string>
 
 #include "config.h"
+#if defined(ESP32)
+#include "FvHNTP/FvHNTP.h"
+#endif
 
 
 typedef enum { ll_emerg = 0, ll_alert, ll_critical, ll_error, warning, notice, info, debug, none } log_level_t;  // TODO ll_ prefix
@@ -20,6 +23,9 @@ void closelog();
 void dolog(const log_level_t ll, const char *fmt, ...);
 void settrace(const bool on);
 bool gettrace();
+#if defined(ESP32)
+void set_clock_reference(ntp *const ntp_);
+#endif
 
 #ifdef TURBO
 #define DOLOG(ll, always, fmt, ...) do { } while(0)
