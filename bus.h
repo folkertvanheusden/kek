@@ -28,7 +28,6 @@
 #define ADDR_LFC  0177546  // line frequency
 #define ADDR_MAINT 0177750
 #define ADDR_CONSW 0177570
-#define ADDR_KW11P 0172540
 #define ADDR_LP11CSR 0177514  // printer
 
 #define ADDR_PSW      0177776

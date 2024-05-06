@@ -298,12 +298,6 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 			return temp;
 		}
 
-		if (a == ADDR_KW11P) { // KW11P programmable clock
-			uint16_t temp = 128;
-			if (!peek_only) TRACE("READ-I/O programmable clock: %o", temp);
-			return temp;
-		}
-
 		if (a == ADDR_PIR || a == ADDR_PIR + 1) { // PIR
 			uint16_t temp = 0;
 
