@@ -851,12 +851,6 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 				continue;
 			}
 #if defined(ESP32)
-			else if (cmd == "debug") {
-				if (heap_caps_check_integrity_all(true) == false)
-					cnsl->put_string_lf("HEAP corruption!");
-
-				continue;
-			}
 			else if (cmd == "cfgnet") {
 				configure_network(cnsl);
 
@@ -1071,7 +1065,6 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 #if defined(CONSOLE_SERIAL_RX)
 					"serspd        - set serial speed in bps (8N1 are default)",
 #endif
-					"debug         - debugging info",
 #endif
 					"cfgdisk       - configure disk",
 					nullptr
