@@ -150,13 +150,13 @@ void dc11::operator()()
 				continue;
 
 			char buffer[32] { };
-			int rc = read(pfds[i].fd, buffer, sizeof buffer);
+			int rc_read = read(pfds[i].fd, buffer, sizeof buffer);
 
 			int  line_nr = i - dc11_n_lines;
 
 			std::unique_lock<std::mutex> lck(input_lock[line_nr]);
 
-			if (rc <= 0) {  // closed or error?
+			if (rc_read <= 0) {  // closed or error?
 				DOLOG(info, false, "Failed reading from port %d", i - dc11_n_lines + 1);
 
 				registers[line_nr * 4 + 0] |= 0140000;  // "ERROR", CARRIER TRANSITION
@@ -165,7 +165,7 @@ void dc11::operator()()
 				pfds[i].fd = INVALID_SOCKET;
 			}
 			else {
-				for(int k=0; k<rc; k++)
+				for(int k=0; k<rc_read; k++)
 					recv_buffers[line_nr].push_back(buffer[k]);
 
 				registers[line_nr * 4 + 0] |= 128;  // DONE: bit 7
