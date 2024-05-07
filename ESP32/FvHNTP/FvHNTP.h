@@ -17,8 +17,8 @@ private:
 	std::mutex       lock;
 	std::string      server;
 	std::thread     *th           { nullptr };
-	uint32_t         millis_at_ts { 0       };
-	uint64_t         ntp_at_ts    { 0       };  // milliseconds!
+	uint32_t         micros_at_ts { 0       };
+	uint64_t         ntp_at_ts    { 0       };  // us!
 
 public:
 	ntp(const std::string & upstream_server);
@@ -26,7 +26,7 @@ public:
 
 	void begin();
 
-	std::optional<uint64_t> get_unix_epoch_ms();
+	std::optional<uint64_t> get_unix_epoch_us();
 
 	void operator()();
 };
