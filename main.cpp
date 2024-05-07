@@ -508,12 +508,17 @@ int main(int argc, char *argv[])
 
 	start_disk_devices(rl02_files, disk_snapshots);
 
-#if !defined(_WIN32)
-	if (withUI)
+#if defined(_WIN32)
+	cnsl = new console_posix(&event);
+#else
+	if (withUI) {
 		cnsl = new console_ncurses(&event);
-	else
-#endif
+		set_terminal(cnsl);
+	}
+	else {
 		cnsl = new console_posix(&event);
+	}
+#endif
 
 	bus *b = nullptr;
 

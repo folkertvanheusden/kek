@@ -17,6 +17,7 @@
 #endif
 #include <sys/types.h>
 
+#include "console.h"
 #include "error.h"
 #include "log.h"
 #include "utils.h"
@@ -40,6 +41,7 @@ bool               log_trace_enabled = false;
 #if defined(ESP32)
 static ntp        *ntp_clock         = nullptr;
 #endif
+static console    *log_cnsl          = nullptr;
 
 #if defined(ESP32)
 int gettid()
@@ -54,6 +56,11 @@ void set_clock_reference(ntp *const ntp_)
 	ntp_clock = ntp_;
 }
 #endif
+
+void set_terminal(console *const cnsl)
+{
+	log_cnsl = cnsl;
+}
 
 void settrace(const bool on)
 {
@@ -198,8 +205,15 @@ void dolog(const log_level_t ll, const char *fmt, ...)
 			fprintf(log_fh, "%s%s\n", ts_str, log_buffer);
 #endif
 
-		if (ll <= log_level_screen)
-			printf("%s%s\r\n", ts_str, log_buffer);
+		if (ll <= log_level_screen) {
+			if (log_cnsl) {
+				log_cnsl->put_string(ts_str);
+				log_cnsl->put_string_lf(log_buffer);
+			}
+			else {
+				printf("%s%s\r\n", ts_str, log_buffer);
+			}
+		}
 	}
 	else {
 		if (ll <= log_level_file && is_file == false)
@@ -209,8 +223,12 @@ void dolog(const log_level_t ll, const char *fmt, ...)
 			fprintf(log_fh, "%s\n", log_buffer);
 #endif
 
-		if (ll <= log_level_screen)
-			printf("%s\r\n", log_buffer);
+		if (ll <= log_level_screen) {
+			if (log_cnsl)
+				log_cnsl->put_string_lf(log_buffer);
+			else
+				printf("%s\r\n", log_buffer);
+		}
 	}
 #endif
 }
