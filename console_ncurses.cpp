@@ -239,8 +239,14 @@ void console_ncurses::refresh_virtual_terminal()
 
 	wclear(w_main->win);
 
-	for(int row=0; row<t_height; row++)
-		mvwprintw(w_main->win, row + 1, 0, "%s", std::string(screen_buffer[row], t_width).c_str());
+	int offset = 0;
+
+	for(int row=0; row<t_height; row++) {
+		for(int col=0; col<t_width; col++, offset++) {
+			if (screen_buffer[offset])
+				mvwprintw(w_main->win, row + 1, col, "%c", screen_buffer[offset]);
+		}
+	}
 
 	mydoupdate();
 }
