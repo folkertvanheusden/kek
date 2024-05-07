@@ -182,7 +182,7 @@ std::string console::read_line(const std::string & prompt)
 	put_string(prompt);
 	put_string(">");
 
-	if (edit_lines_hist.empty() == false)
+	while(edit_lines_hist.size() >= n_edit_lines_hist)
 		edit_lines_hist.erase(edit_lines_hist.begin());
 
 	while(edit_lines_hist.size() < n_edit_lines_hist)
@@ -266,6 +266,9 @@ std::string console::read_line(const std::string & prompt)
 	}
 
 	put_string_lf("");
+
+	if (line_nr != edit_lines_hist.size() - 1)
+		edit_lines_hist.push_back(edit_lines_hist.at(line_nr));
 
 	return edit_lines_hist.at(line_nr);
 }
