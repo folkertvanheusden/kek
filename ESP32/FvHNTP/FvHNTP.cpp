@@ -107,7 +107,6 @@ void ntp::operator()()
 				auto     t_t4 = get_unix_epoch_ms();
 
 				std::unique_lock<std::mutex> lck(lock);
-				millis_at_ts = now;
 
 				s = 60;
 
@@ -117,17 +116,24 @@ void ntp::operator()()
 					int64_t t3     = get_ms_from_ntp(packet_in.transmit_timestamp_secs,   packet_in.transmit_timestamp_fraq  );
 					int64_t t4     = t_t4.value() + NTP_EPOCH * 1000;
 
-					auto    offset = ((t2 - t1) + (t3 - t4)) / (2 * 1000);
+					auto    offset = ((t2 - t1) + (t3 - t4)) / 2;
 
-					if (millis_at_ts > offset)
-						millis_at_ts -= offset;
+					// TODO handle millis wrap
+					if (offset > 0) {
+						if (offset < millis_at_ts)
+							millis_at_ts -= offset;
+						else {
+							millis_at_ts = 0;
+							s            = 4;
+						}
+					}
 					else {
-						millis_at_ts = 0;
-						s            = 4;
+						millis_at_ts -= offset;
 					}
 				}
 				else {
-					ntp_at_ts = get_ms_from_ntp(packet_in.transmit_timestamp_secs, packet_in.transmit_timestamp_fraq);
+					ntp_at_ts    = get_ms_from_ntp(packet_in.transmit_timestamp_secs, packet_in.transmit_timestamp_fraq);
+					millis_at_ts = now;
 				}
 			}
 		}
