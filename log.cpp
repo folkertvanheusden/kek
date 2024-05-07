@@ -167,9 +167,9 @@ void dolog(const log_level_t ll, const char *fmt, ...)
 		uint64_t now   = 0;
 
 		if (ntp_clock) {
-			auto temp = ntp_clock->get_unix_epoch_ms();
+			auto temp = ntp_clock->get_unix_epoch_us();
 			if (temp.has_value())
-				now = temp.value() * 1000;
+				now = temp.value();
 		}
 #else
 		uint64_t now   = get_us();
