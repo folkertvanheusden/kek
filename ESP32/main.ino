@@ -212,6 +212,20 @@ void start_network(console *const c)
 		dc11 *dc11_ = new dc11(1100, b);
 		b->add_DC11(dc11_);
 
+#if !defined(BUILD_FOR_RP2040) && defined(CONSOLE_SERIAL_RX)
+		constexpr uint32_t hwSerialConfig = SERIAL_8N1;
+		uint32_t bitrate = load_serial_speed_configuration();
+
+		Serial.print(F("* Init TTY (on DC11), baudrate: "));
+		Serial.print(bitrate);
+		Serial.println(F("bps"));
+
+		Serial_RS232.begin(bitrate, hwSerialConfig, CONSOLE_SERIAL_RX, CONSOLE_SERIAL_TX);
+		Serial_RS232.setHwFlowCtrlMode(0);
+
+		dc11_->set_serial(&Serial_RS232);
+#endif
+
 		Serial.println(F("* Starting (NTP-) clock"));
 		ntp_ = new ntp("188.212.113.203");
 		ntp_->begin();
@@ -326,23 +340,7 @@ void setup() {
 	c = new cpu(b, &stop_event);
 	b->add_cpu(c);
 
-#if !defined(BUILD_FOR_RP2040) && defined(CONSOLE_SERIAL_RX)
-	constexpr uint32_t hwSerialConfig = SERIAL_8N1;
-	uint32_t bitrate = load_serial_speed_configuration();
-
-	Serial.print(F("* Init console, baudrate: "));
-	Serial.print(bitrate);
-	Serial.println(F("bps"));
-
-	Serial_RS232.begin(bitrate, hwSerialConfig, CONSOLE_SERIAL_RX, CONSOLE_SERIAL_TX);
-	Serial_RS232.setHwFlowCtrlMode(0);
-
-	Serial_RS232.println(F("\014Console enabled on TTY"));
-
-	std::vector<Stream *> serial_ports { &Serial_RS232, &Serial };
-#else
 	std::vector<Stream *> serial_ports { &Serial };
-#endif
 #if defined(SHA2017)
 	cnsl = new console_shabadge(&stop_event, serial_ports);
 #elif defined(ESP32) || defined(BUILD_FOR_RP2040)

@@ -51,6 +51,7 @@ private:
 #if defined(ESP32)
 	Stream           *s                { nullptr };
 	std::thread      *serial_th        { nullptr };
+	bool              serial_enabled   { false   };
 #endif
 
 	void trigger_interrupt(const int line_nr, const bool is_tx);

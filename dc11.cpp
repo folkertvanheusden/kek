@@ -222,12 +222,23 @@ void dc11::serial_handler()
 			continue;
 
 		// 3 is reserved for a serial port
-		recv_buffers[3].push_back(s->read());
+		constexpr const int serial_line = 3;
 
-		registers[3 * 4 + 0] |= 128;  // DONE: bit 7
+		std::unique_lock<std::mutex> lck(input_lock[serial_line]);
 
-		if (is_rx_interrupt_enabled(3))
-			trigger_interrupt(3, false);
+		if (serial_enabled == false) {
+			serial_enabled = true;
+
+			// first key press enables the port
+			registers[serial_line * 4 + 0] |= 0160000;  // "ERROR", RING INDICATOR, CARRIER TRANSITION
+		}
+
+		recv_buffers[serial_line].push_back(s->read());
+
+		registers[serial_line * 4 + 0] |= 128;  // DONE: bit 7
+
+		if (is_rx_interrupt_enabled(serial_line))
+			trigger_interrupt(serial_line, false);
 	}
 }
 #endif
