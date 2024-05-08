@@ -110,7 +110,7 @@ void console_esp32::panel_update_thread()
 			int      run_mode      = current_PSW >> 14;
 
 			uint16_t current_PC    = c->getPC();
-			uint32_t full_addr     = b->calculate_physical_address(run_mode, current_PC, false, false, true, i_space);
+			uint32_t full_addr     = b->getMMU()->calculate_physical_address(c, run_mode, current_PC, false, false, true, i_space);
 
 			uint16_t current_instr = b->read_word(current_PC);
 
