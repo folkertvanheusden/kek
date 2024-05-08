@@ -2,9 +2,6 @@
 // Released under MIT license
 
 #pragma once
-#if defined(ESP32)
-#include <Arduino.h>
-#endif
 #include <atomic>
 #include <condition_variable>
 #include <cstdint>
@@ -27,6 +24,7 @@
 #define DC11_BASE DC11_RCSR
 #define DC11_END  (DC11_BASE + (4 * 4 + 1) * 2)  // 4 interfaces, + 2 to point behind it
 
+class Stream;
 class bus;
 struct pollfd;
 
@@ -36,22 +34,23 @@ constexpr const int dc11_n_lines = 4;
 class dc11
 {
 private:
-	int              base_port        { 1100    };
-	bus             *const b          { nullptr };
-	uint16_t         registers[4 * dc11_n_lines] { 0 };
-	std::atomic_bool stop_flag        { false   };
-	std::thread     *th               { nullptr };
+	int               base_port        { 1100    };
+	bus              *const b          { nullptr };
+	uint16_t          registers[4 * dc11_n_lines] { 0 };
+	std::atomic_bool  stop_flag        { false   };
+	std::thread      *th               { nullptr };
 
 	// not statically allocated because of compiling problems on arduino
 #if defined(_WIN32)
-	WSAPOLLFD        *pfds            { nullptr };
+	WSAPOLLFD        *pfds             { nullptr };
 #else
-	pollfd           *pfds            { nullptr };
+	pollfd           *pfds             { nullptr };
 #endif
 	std::vector<char> recv_buffers[dc11_n_lines];
         std::mutex        input_lock[dc11_n_lines];
 #if defined(ESP32)
-	Stream           *s               { nullptr };
+	Stream           *s                { nullptr };
+	std::thread      *serial_th        { nullptr };
 #endif
 
 	void trigger_interrupt(const int line_nr, const bool is_tx);
@@ -70,6 +69,7 @@ public:
 	void reset();
 #if defined(ESP32)
 	void set_serial(Stream *const s);
+	void serial_handler();
 #endif
 
 	uint8_t  read_byte(const uint16_t addr);

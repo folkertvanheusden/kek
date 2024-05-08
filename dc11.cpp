@@ -2,6 +2,9 @@
 // Released under MIT license
 
 #if defined(ESP32)
+#include <Arduino.h>
+#endif
+#if defined(ESP32)
 #include <lwip/sockets.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
@@ -49,6 +52,13 @@ dc11::~dc11()
 	}
 
 	delete [] pfds;
+
+#if defined(ESP32)
+	if (serial_th) {
+		serial_th->join();
+		delete serial_th;
+	}
+#endif
 }
 
 void dc11::trigger_interrupt(const int line_nr, const bool is_tx)
@@ -63,13 +73,15 @@ void dc11::operator()()
 	DOLOG(info, true, "DC11 thread started");
 
 	for(int i=0; i<dc11_n_lines; i++) {
-#if defined(ESP32)
-		if (i == 3)  // uggly hack
-			break;
-#endif
 		// client session
 		pfds[dc11_n_lines + i].fd     = INVALID_SOCKET;
 		pfds[dc11_n_lines + i].events = POLLIN;
+#if defined(ESP32)
+		if (i == 3) {  // prevent accept() on this socket
+			pfds[i].fd = INVALID_SOCKET;
+			continue;
+		}
+#endif
 
 		// listen on port
 		int port = base_port + i + 1;
@@ -187,6 +199,38 @@ void dc11::operator()()
 			close(pfds[i].fd);
 	}
 }
+
+#if defined(ESP32)
+void dc11::set_serial(Stream *const s)
+{
+	if (serial_th) {
+		DOLOG(info, true, "DC11: serial port already configured");
+		return;
+	}
+
+	this->s = s;
+
+	serial_th = new std::thread(&dc11::serial_handler, this);
+}
+
+void dc11::serial_handler()
+{
+	while(!stop_flag) {
+		yield();
+
+		if (s->available() == 0)
+			continue;
+
+		// 3 is reserved for a serial port
+		recv_buffers[3].push_back(s->read());
+
+		registers[3 * 4 + 0] |= 128;  // DONE: bit 7
+
+		if (is_rx_interrupt_enabled(3))
+			trigger_interrupt(3, false);
+	}
+}
+#endif
 
 void dc11::reset()
 {
@@ -310,6 +354,13 @@ void dc11::write_word(const uint16_t addr, const uint16_t v)
 		else
 			TRACE("DC11: transmit %c on line %d", c, line_nr);
 
+#if defined(ESP32)
+		if (line_nr == 3) {
+			if (s != nullptr)
+				s->write(c);
+			return;
+		}
+#endif
 		SOCKET fd = pfds[dc11_n_lines + line_nr].fd;
 
 		if (fd != INVALID_SOCKET && write(fd, &c, 1) != 1) {
