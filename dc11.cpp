@@ -63,6 +63,10 @@ void dc11::operator()()
 	DOLOG(info, true, "DC11 thread started");
 
 	for(int i=0; i<dc11_n_lines; i++) {
+#if defined(ESP32)
+		if (i == 3)  // uggly hack
+			break;
+#endif
 		// client session
 		pfds[dc11_n_lines + i].fd     = INVALID_SOCKET;
 		pfds[dc11_n_lines + i].events = POLLIN;

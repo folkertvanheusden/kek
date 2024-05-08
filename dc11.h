@@ -2,6 +2,9 @@
 // Released under MIT license
 
 #pragma once
+#if defined(ESP32)
+#include <Arduino.h>
+#endif
 #include <atomic>
 #include <condition_variable>
 #include <cstdint>
@@ -47,6 +50,9 @@ private:
 #endif
 	std::vector<char> recv_buffers[dc11_n_lines];
         std::mutex        input_lock[dc11_n_lines];
+#if defined(ESP32)
+	Stream           *s               { nullptr };
+#endif
 
 	void trigger_interrupt(const int line_nr, const bool is_tx);
 	bool is_rx_interrupt_enabled(const int line_nr);
@@ -62,6 +68,9 @@ public:
 #endif
 
 	void reset();
+#if defined(ESP32)
+	void set_serial(Stream *const s);
+#endif
 
 	uint8_t  read_byte(const uint16_t addr);
 	uint16_t read_word(const uint16_t addr);
