@@ -28,6 +28,41 @@
 
 const char *const dc11_register_names[] { "RCSR", "RBUF", "TSCR", "TBUF" };
 
+bool setup_telnet_session(const int fd)
+{
+	uint8_t dont_auth[]        = { 0xff, 0xf4, 0x25 };
+	uint8_t suppress_goahead[] = { 0xff, 0xfb, 0x03 };
+	uint8_t dont_linemode[]    = { 0xff, 0xfe, 0x22 };
+	uint8_t dont_new_env[]     = { 0xff, 0xfe, 0x27 };
+	uint8_t will_echo[]        = { 0xff, 0xfb, 0x01 };
+	uint8_t dont_echo[]        = { 0xff, 0xfe, 0x01 };
+	uint8_t noecho[]           = { 0xff, 0xfd, 0x2d };
+	uint8_t charset[]          = { 0xff, 0xfb, 0x01 };
+
+	if (write(fd, dont_auth, sizeof dont_auth) != sizeof dont_auth)
+		return false;
+
+	if (write(fd, suppress_goahead, sizeof suppress_goahead) != sizeof suppress_goahead)
+		return false;
+
+	if (write(fd, dont_linemode, sizeof dont_linemode) != sizeof dont_linemode)
+		return false;
+
+	if (write(fd, dont_new_env, sizeof dont_new_env) != sizeof dont_new_env)
+		return false;
+
+	if (write(fd, will_echo, sizeof will_echo) != sizeof will_echo)
+		return false;
+
+	if (write(fd, dont_echo, sizeof dont_echo) != sizeof dont_echo)
+		return false;
+
+	if (write(fd, noecho, sizeof noecho) != sizeof noecho)
+		return false;
+
+	return true;
+}
+
 dc11::dc11(const int base_port, bus *const b):
 	base_port(base_port),
 	b(b)
@@ -149,6 +184,11 @@ void dc11::operator()()
 
 			pfds[client_i].fd = accept(pfds[i].fd, nullptr, nullptr);
 
+			if (setup_telnet_session(pfds[client_i].fd) == false) {
+				close(pfds[client_i].fd);
+				pfds[client_i].fd = INVALID_SOCKET;
+			}
+
 			if (pfds[client_i].fd != INVALID_SOCKET) {
 				set_nodelay(pfds[client_i].fd);
 
@@ -209,6 +249,7 @@ void dc11::set_serial(Stream *const s)
 	}
 
 	this->s = s;
+	s->write("Press enter to connect");
 
 	serial_th = new std::thread(&dc11::serial_handler, this);
 }
