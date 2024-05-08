@@ -288,7 +288,7 @@ void dc11::write_byte(const uint16_t addr, const uint8_t v)
 	write_word(addr, vtemp);
 }
 
-void dc11::write_word(const uint16_t addr, uint16_t v)
+void dc11::write_word(const uint16_t addr, const uint16_t v)
 {
 	int reg     = (addr - DC11_BASE) / 2;
 	int line_nr = reg / 4;
