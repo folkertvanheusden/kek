@@ -54,8 +54,8 @@ constexpr const char SERIAL_CFG_FILE[] = "/serial.json";
 
 #if defined(BUILD_FOR_RP2040)
 #define Serial_RS232 Serial1
-#elif defined(CONSOLE_SERIAL_RX)
-HardwareSerial       Serial_RS232(1);
+#elif defined(TTY_SERIAL_RX)
+HardwareSerial       Serial_RS232(2);
 #endif
 
 bus     *b    = nullptr;
@@ -212,7 +212,7 @@ void start_network(console *const c)
 		dc11 *dc11_ = new dc11(1100, b);
 		b->add_DC11(dc11_);
 
-#if !defined(BUILD_FOR_RP2040) && defined(CONSOLE_SERIAL_RX)
+#if !defined(BUILD_FOR_RP2040) && defined(TTY_SERIAL_RX)
 		constexpr uint32_t hwSerialConfig = SERIAL_8N1;
 		uint32_t bitrate = load_serial_speed_configuration();
 
@@ -220,7 +220,7 @@ void start_network(console *const c)
 		Serial.print(bitrate);
 		Serial.println(F("bps"));
 
-		Serial_RS232.begin(bitrate, hwSerialConfig, CONSOLE_SERIAL_RX, CONSOLE_SERIAL_TX);
+		Serial_RS232.begin(bitrate, hwSerialConfig, TTY_SERIAL_RX, TTY_SERIAL_TX);
 		Serial_RS232.setHwFlowCtrlMode(0);
 
 		dc11_->set_serial(&Serial_RS232);
@@ -243,7 +243,7 @@ void recall_configuration(console *const cnsl)
 }
 #endif
 
-#if defined(CONSOLE_SERIAL_RX)
+#if defined(TTY_SERIAL_RX)
 void set_tty_serial_speed(console *const c, const uint32_t bps)
 {
 	Serial_RS232.begin(bps);
