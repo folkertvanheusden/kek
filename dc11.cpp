@@ -312,6 +312,8 @@ void dc11::set_serial(const int bitrate, const std::string & device)
 		return;  // TODO error handling
 	}
 
+	serial_thread_running = true;
+
 	// from https://stackoverflow.com/questions/6947413/how-to-open-read-and-write-from-serial-port-in-c
 	termios tty { };
         if (tcgetattr(serial_fd, &tty) == -1) {
