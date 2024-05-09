@@ -987,6 +987,19 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 				continue;
 			}
+			else if (parts[0] == "bic" && parts.size() == 2) {
+				auto rc = load_tape(b, parts[1].c_str());
+				if (rc.has_value()) {
+					c->setPC(rc.value());
+
+					cnsl->put_string_lf("BIC/LDA file loaded");
+				}
+				else {
+					cnsl->put_string_lf("BIC/LDA failed to load");
+				}
+
+				continue;
+			}
 			else if (parts[0] == "lt") {
 				if (parts.size() == 2)
 					tm11_load_tape(cnsl, b, parts[1]);
@@ -1053,6 +1066,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 					"setmem        - set memory (a=) to value (v=), both in octal, one byte",
 					"toggle        - set switch (s=, 0...15 (decimal)) of the front panel to state (t=, 0 or 1)",
 					"cls           - clear screen",
+					"bic           - run BIC/LDA file",
 					"lt            - load tape (parameter is filename)",
 					"ult           - unload tape",
 					"stats         - show run statistics",
