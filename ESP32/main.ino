@@ -211,20 +211,21 @@ void start_network(console *const c)
 
 		Serial.println(F("* Adding DC11"));
 		dc11 *dc11_ = new dc11(1100, b);
-		b->add_DC11(dc11_);
 
 #if !defined(BUILD_FOR_RP2040) && defined(TTY_SERIAL_RX)
 		constexpr uint32_t hwSerialConfig = SERIAL_8N1;
-		uint32_t bitrate = load_serial_speed_configuration();
+		uint32_t           bitrate        = load_serial_speed_configuration();
 
 		Serial.printf("* Init TTY (on DC11), baudrate: %d bps, RX: %d, TX: %d", bitrate, TTY_SERIAL_RX, TTY_SERIAL_TX);
 		Serial.println(F(""));
 
 		Serial_RS232.begin(bitrate, hwSerialConfig, TTY_SERIAL_RX, TTY_SERIAL_TX);
 		Serial_RS232.setHwFlowCtrlMode(0);
+		Serial_RS232.println(F("Go!"));
 
 		dc11_->set_serial(&Serial_RS232);
 #endif
+		b->add_DC11(dc11_);
 
 		Serial.println(F("* Starting (NTP-) clock"));
 		ntp_ = new ntp("188.212.113.203");

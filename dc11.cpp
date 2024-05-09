@@ -248,6 +248,7 @@ void dc11::set_serial(Stream *const s)
 		return;
 	}
 
+	std::unique_lock<std::mutex> lck(s_lock);
 	this->s = s;
 	s->write("Press enter to connect");
 
@@ -259,8 +260,15 @@ void dc11::serial_handler()
 	while(!stop_flag) {
 		yield();
 
-		if (s->available() == 0)
-			continue;
+		char c = 0;
+
+		{
+			std::unique_lock<std::mutex> lck(s_lock);
+			if (s->available() == 0)
+				continue;
+
+			c = s->read();
+		}
 
 		// 3 is reserved for a serial port
 		constexpr const int serial_line = 3;
@@ -274,7 +282,7 @@ void dc11::serial_handler()
 			registers[serial_line * 4 + 0] |= 0160000;  // "ERROR", RING INDICATOR, CARRIER TRANSITION
 		}
 
-		recv_buffers[serial_line].push_back(s->read());
+		recv_buffers[serial_line].push_back(c);
 
 		registers[serial_line * 4 + 0] |= 128;  // DONE: bit 7
 
@@ -408,8 +416,11 @@ void dc11::write_word(const uint16_t addr, const uint16_t v)
 
 #if defined(ESP32)
 		if (line_nr == 3) {
-			if (s != nullptr)
+			if (s != nullptr) {
+				std::unique_lock<std::mutex> lck(s_lock);
+
 				s->write(c);
+			}
 
 			if (is_tx_interrupt_enabled(line_nr))
 				trigger_interrupt(line_nr, true);

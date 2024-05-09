@@ -49,6 +49,7 @@ private:
 	std::vector<char> recv_buffers[dc11_n_lines];
         std::mutex        input_lock[dc11_n_lines];
 #if defined(ESP32)
+	std::mutex        s_lock;
 	Stream           *s                { nullptr };
 	std::thread      *serial_th        { nullptr };
 	bool              serial_enabled   { false   };
