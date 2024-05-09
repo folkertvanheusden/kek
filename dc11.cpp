@@ -398,8 +398,10 @@ void dc11::serial_handler()
 
 		std::unique_lock<std::mutex> lck(input_lock[serial_line]);
 
-		if (serial_enabled == false) {
-			TRACE("DC-11: enabling serial connection");
+		recv_buffers[serial_line].push_back(c);
+
+		if (serial_enabled == false && is_rx_interrupt_enabled(serial_line)) {
+			DOLOG(debug, false, "DC-11: enabling serial connection");
 
 			serial_enabled = true;
 
@@ -411,8 +413,6 @@ void dc11::serial_handler()
 
 			registers[serial_line * 4 + 0] |= 128;  // DONE: bit 7
 		}
-
-		recv_buffers[serial_line].push_back(c);
 
 		if (is_rx_interrupt_enabled(serial_line))
 			trigger_interrupt(serial_line, false);
