@@ -257,6 +257,8 @@ void dc11::set_serial(const int bitrate, const int rx, const int tx)
 		return;
 	}
 
+	Serial.printf("Tick period: %d\r\n", portTICK_PERIOD_MS);
+
 	serial_thread_running = true;
 
 	// Configure UART parameters
@@ -291,8 +293,10 @@ void dc11::serial_handler()
 
 		size_t n_available = 0;
 		ESP_ERROR_CHECK(uart_get_buffered_data_len(ESP32_UART, &n_available));
-		if (n_available == 0)
+		if (n_available == 0) {
+			vTaskDelay(4 / portTICK_PERIOD_MS);
 			continue;
+		}
 
 		char c = 0;
 		if (uart_read_bytes(ESP32_UART, &c, 1, 100) == 0)
