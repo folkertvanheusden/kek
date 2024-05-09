@@ -118,6 +118,12 @@ void ls_l(console *const cnsl)
 {
 	start_disk(cnsl);
 
+#if IS_POSIX || defined(_WIN32)
+	cnsl->put_string_lf("Files in current directory: ");
+#else
+	cnsl->put_string_lf("Files on SD-card:");
+#endif
+
 #if defined(linux)
 	DIR *dir = opendir(".");
 	if (!dir) {
@@ -194,12 +200,6 @@ std::optional<std::string> select_host_file(console *const cnsl)
 std::optional<disk_backend *> select_disk_file(console *const cnsl)
 {
 	start_disk(cnsl);
-
-#if IS_POSIX || defined(_WIN32)
-	cnsl->put_string_lf("Files in current directory: ");
-#else
-	cnsl->put_string_lf("Files on SD-card:");
-#endif
 
 	for(;;) {
 		auto selected_file = select_host_file(cnsl);
