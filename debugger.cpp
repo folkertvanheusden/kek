@@ -155,8 +155,6 @@ void ls_l(console *const cnsl)
 std::optional<std::string> select_host_file(console *const cnsl)
 {
 	for(;;) {
-		ls_l(cnsl);
-
 		cnsl->flush_input();
 
 		std::string selected_file = cnsl->read_line("Enter filename (or empty to abort): ");
@@ -183,6 +181,8 @@ std::optional<std::string> select_host_file(console *const cnsl)
 			return selected_file;
 
 		cnsl->put_string_lf("open failed");
+
+		ls_l(cnsl);
 	}
 }
 
