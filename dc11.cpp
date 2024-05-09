@@ -410,6 +410,9 @@ void dc11::write_word(const uint16_t addr, const uint16_t v)
 		if (line_nr == 3) {
 			if (s != nullptr)
 				s->write(c);
+
+			if (is_tx_interrupt_enabled(line_nr))
+				trigger_interrupt(line_nr, true);
 			return;
 		}
 #endif
