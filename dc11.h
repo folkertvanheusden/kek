@@ -49,9 +49,7 @@ private:
 	std::vector<char> recv_buffers[dc11_n_lines];
         std::mutex        input_lock[dc11_n_lines];
 #if defined(ESP32)
-	std::mutex        s_lock;
-	Stream           *s                { nullptr };
-	std::thread      *serial_th        { nullptr };
+	std::atomic_bool  serial_thread_running { false };
 	bool              serial_enabled   { false   };
 #endif
 
@@ -70,7 +68,7 @@ public:
 
 	void reset();
 #if defined(ESP32)
-	void set_serial(Stream *const s);
+	void set_serial(const int bitrate, const int rx, const int tx);
 	void serial_handler();
 #endif
 

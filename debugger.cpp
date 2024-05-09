@@ -43,8 +43,6 @@
 void configure_network(console *const cnsl);
 void check_network(console *const cnsl);
 void start_network(console *const cnsl);
-
-void set_tty_serial_speed(console *const c, const uint32_t bps);
 #endif
 
 #if !defined(BUILD_FOR_RP2040) && !defined(linux) && !defined(_WIN32)
@@ -891,21 +889,6 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 				continue;
 			}
-#if defined(CONSOLE_SERIAL_RX)
-			else if (parts.at(0) == "serspd") {
-				if (parts.size() == 2) {
-					uint32_t speed = std::stoi(parts.at(1), nullptr, 10);
-					set_tty_serial_speed(cnsl, speed);
-
-					cnsl->put_string_lf(format("Set baudrate to %d", speed));
-				}
-				else {
-					cnsl->put_string_lf("serspd requires an (decimal) parameter");
-				}
-
-				continue;
-			}
-#endif
 #endif
 			else if (cmd == "stats") {
 				show_run_statistics(cnsl, c);
@@ -1112,9 +1095,6 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 					"cfgnet        - configure network (e.g. WiFi)",
 					"startnet      - start network",
 					"chknet        - check network status",
-#if defined(CONSOLE_SERIAL_RX)
-					"serspd x      - set serial speed in bps (8N1 are default)",
-#endif
 #endif
 					"cfgdisk       - configure disk",
 					"log ...       - log a message to the logfile",

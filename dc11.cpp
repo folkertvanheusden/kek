@@ -8,6 +8,7 @@
 #include <lwip/sockets.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
+#include <driver/uart.h>
 #elif defined(_WIN32)
 #include <ws2tcpip.h>
 #include <winsock2.h>
@@ -25,6 +26,8 @@
 #include "log.h"
 #include "utils.h"
 
+
+#define ESP32_UART UART_NUM_1
 
 const char *const dc11_register_names[] { "RCSR", "RBUF", "TSCR", "TBUF" };
 
@@ -89,10 +92,7 @@ dc11::~dc11()
 	delete [] pfds;
 
 #if defined(ESP32)
-	if (serial_th) {
-		serial_th->join();
-		delete serial_th;
-	}
+	// won't work due to freertos thread
 #endif
 }
 
@@ -241,18 +241,47 @@ void dc11::operator()()
 }
 
 #if defined(ESP32)
-void dc11::set_serial(Stream *const s)
+void dc11_thread_wrapper_serial_handler(void *const c)
 {
-	if (serial_th) {
+        dc11 *const d = reinterpret_cast<dc11 *>(c);
+
+        d->serial_handler();
+
+        vTaskSuspend(nullptr);
+}
+
+void dc11::set_serial(const int bitrate, const int rx, const int tx)
+{
+	if (serial_thread_running) {
 		DOLOG(info, true, "DC11: serial port already configured");
 		return;
 	}
 
-	std::unique_lock<std::mutex> lck(s_lock);
-	this->s = s;
-	s->write("Press enter to connect");
+	serial_thread_running = true;
 
-	serial_th = new std::thread(&dc11::serial_handler, this);
+	// Configure UART parameters
+	static uart_config_t uart_config = {
+		.baud_rate = bitrate,
+		.data_bits = UART_DATA_8_BITS,
+		.parity    = UART_PARITY_DISABLE,
+		.stop_bits = UART_STOP_BITS_1,
+		.flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
+		.rx_flow_ctrl_thresh = 122,
+	};
+	ESP_ERROR_CHECK(uart_param_config(ESP32_UART, &uart_config));
+
+	ESP_ERROR_CHECK(uart_set_pin(ESP32_UART, tx, rx, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
+
+	// Setup UART buffered IO with event queue
+	const int uart_buffer_size = 1024 * 2;
+	static QueueHandle_t uart_queue;
+	// Install UART driver using an event queue here
+	ESP_ERROR_CHECK(uart_driver_install(ESP32_UART, uart_buffer_size, uart_buffer_size, 10, &uart_queue, 0));
+
+	const char msg[] = "Press enter to connect\r\n";
+	uart_write_bytes(ESP32_UART, msg, sizeof(msg) - 1);
+
+	xTaskCreate(&dc11_thread_wrapper_serial_handler, "dc11_tty", 3072, this, 1, nullptr);
 }
 
 void dc11::serial_handler()
@@ -260,15 +289,14 @@ void dc11::serial_handler()
 	while(!stop_flag) {
 		yield();
 
+		size_t n_available = 0;
+		ESP_ERROR_CHECK(uart_get_buffered_data_len(ESP32_UART, &n_available));
+		if (n_available == 0)
+			continue;
+
 		char c = 0;
-
-		{
-			std::unique_lock<std::mutex> lck(s_lock);
-			if (s->available() == 0)
-				continue;
-
-			c = s->read();
-		}
+		if (uart_read_bytes(ESP32_UART, &c, 1, 100) == 0)
+			continue;
 
 		// 3 is reserved for a serial port
 		constexpr const int serial_line = 3;
@@ -416,11 +444,8 @@ void dc11::write_word(const uint16_t addr, const uint16_t v)
 
 #if defined(ESP32)
 		if (line_nr == 3) {
-			if (s != nullptr) {
-				std::unique_lock<std::mutex> lck(s_lock);
-
-				s->write(c);
-			}
+			if (serial_thread_running)
+				uart_write_bytes(ESP32_UART, &c, 1);
 
 			if (is_tx_interrupt_enabled(line_nr))
 				trigger_interrupt(line_nr, true);
