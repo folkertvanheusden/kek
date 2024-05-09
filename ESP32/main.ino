@@ -217,9 +217,8 @@ void start_network(console *const c)
 		constexpr uint32_t hwSerialConfig = SERIAL_8N1;
 		uint32_t bitrate = load_serial_speed_configuration();
 
-		Serial.print(F("* Init TTY (on DC11), baudrate: "));
-		Serial.print(bitrate);
-		Serial.println(F("bps"));
+		Serial.printf("* Init TTY (on DC11), baudrate: %d bps, RX: %d, TX: %d", bitrate, TTY_SERIAL_RX, TTY_SERIAL_TX);
+		Serial.println(F(""));
 
 		Serial_RS232.begin(bitrate, hwSerialConfig, TTY_SERIAL_RX, TTY_SERIAL_TX);
 		Serial_RS232.setHwFlowCtrlMode(0);
