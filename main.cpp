@@ -329,6 +329,7 @@ void help()
 	printf("-X       do not include timestamp in logging\n");
 	printf("-J x     run validation suite x against the CPU emulation\n");
 	printf("-M       log metrics\n");
+	printf("-1 x     use x as device for DC-11\n");
 }
 
 int main(int argc, char *argv[])
@@ -368,13 +369,19 @@ int main(int argc, char *argv[])
 
 	std::string  deserialize;
 
+	std::optional<std::string> dc11_device;
+
 	int  opt          = -1;
-	while((opt = getopt(argc, argv, "hD:MT:Br:R:p:ndtL:bl:s:Q:N:J:XS:P")) != -1)
+	while((opt = getopt(argc, argv, "hD:MT:Br:R:p:ndtL:bl:s:Q:N:J:XS:P1:")) != -1)
 	{
 		switch(opt) {
 			case 'h':
 				help();
 				return 1;
+
+			case '1':
+				dc11_device = optarg;
+				break;
 
 			case 'D':
 				deserialize = optarg;
@@ -593,6 +600,8 @@ int main(int argc, char *argv[])
 
 	// TODO
 	dc11 *dc11_ = new dc11(1100, b);
+	if (dc11_device.has_value())
+		dc11_->set_serial(115200, dc11_device.value());
 	b->add_DC11(dc11_);
 
 	tm_11 *tm_11_ = new tm_11(b);

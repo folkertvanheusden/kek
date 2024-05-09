@@ -1,6 +1,7 @@
 // (C) 2024 by Folkert van Heusden
 // Released under MIT license
 
+#include "gen.h"
 #if defined(ESP32)
 #include <Arduino.h>
 #endif
@@ -16,6 +17,11 @@
 #include <poll.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
+#endif
+#if IS_POSIX
+#include <fcntl.h>
+#include <termios.h>
+#include <thread>
 #endif
 #include <cstring>
 #include <unistd.h>
@@ -40,7 +46,7 @@ bool setup_telnet_session(const int fd)
 	uint8_t will_echo[]        = { 0xff, 0xfb, 0x01 };
 	uint8_t dont_echo[]        = { 0xff, 0xfe, 0x01 };
 	uint8_t noecho[]           = { 0xff, 0xfd, 0x2d };
-	uint8_t charset[]          = { 0xff, 0xfb, 0x01 };
+	// uint8_t charset[]          = { 0xff, 0xfb, 0x01 };
 
 	if (write(fd, dont_auth, sizeof dont_auth) != sizeof dont_auth)
 		return false;
@@ -93,6 +99,13 @@ dc11::~dc11()
 
 #if defined(ESP32)
 	// won't work due to freertos thread
+#elif IS_POSIX
+	close(serial_fd);
+
+	if (serial_th) {
+		serial_th->join();
+		delete serial_th;
+	}
 #endif
 }
 
@@ -285,10 +298,59 @@ void dc11::set_serial(const int bitrate, const int rx, const int tx)
 
 	xTaskCreate(&dc11_thread_wrapper_serial_handler, "dc11_tty", 3072, this, 1, nullptr);
 }
+#elif IS_POSIX
+void dc11::set_serial(const int bitrate, const std::string & device)
+{
+	serial_fd = open(device.c_str(), O_RDWR);
+	if (serial_fd == -1)
+		return;  // TODO error handling
+
+	// from https://stackoverflow.com/questions/6947413/how-to-open-read-and-write-from-serial-port-in-c
+	termios tty { };
+        if (tcgetattr(serial_fd, &tty) == -1) {
+		close(serial_fd);
+                return;
+	}
+
+        cfsetospeed(&tty, bitrate);
+        cfsetispeed(&tty, bitrate);
+
+        tty.c_cflag = (tty.c_cflag & ~CSIZE) | CS8;     // 8-bit chars
+        // disable IGNBRK for mismatched speed tests; otherwise receive break
+        // as \000 chars
+        tty.c_iflag &= ~IGNBRK;         // disable break processing
+        tty.c_lflag = 0;                // no signaling chars, no echo,
+                                        // no canonical processing
+        tty.c_oflag = 0;                // no remapping, no delays
+        tty.c_cc[VMIN]  = 0;            // read doesn't block
+        tty.c_cc[VTIME] = 5;            // 0.5 seconds read timeout
+
+        tty.c_iflag &= ~(IXON | IXOFF | IXANY); // shut off xon/xoff ctrl
+
+        tty.c_cflag |= (CLOCAL | CREAD);// ignore modem controls,
+                                        // enable reading
+        tty.c_cflag &= ~(PARENB | PARODD);      // shut off parity
+        tty.c_cflag &= ~CSTOPB;
+        tty.c_cflag &= ~CRTSCTS;
+
+        if (tcsetattr(serial_fd, TCSANOW, &tty) == -1) {
+		close(serial_fd);
+		return;
+	}
+
+	serial_th = new std::thread(&dc11::serial_handler, this);
+}
+#endif
 
 void dc11::serial_handler()
 {
+#if IS_POSIX
+	pollfd fds[] { { serial_fd, POLLIN, 0 } };
+#endif
+
 	while(!stop_flag) {
+		char c = 0;
+#if defined(ESP32)
 		yield();
 
 		size_t n_available = 0;
@@ -298,9 +360,19 @@ void dc11::serial_handler()
 			continue;
 		}
 
-		char c = 0;
 		if (uart_read_bytes(ESP32_UART, &c, 1, 100) == 0)
 			continue;
+#elif IS_POSIX
+		int rc_poll = poll(fds, 1, 100);
+		if (rc_poll == -1)
+			break;
+		if (rc_poll == 0)
+			continue;
+
+		int rc_read = read(serial_fd, &c, 1);
+		if (rc_read <= 0)
+			break;
+#endif
 
 		// 3 is reserved for a serial port
 		constexpr const int serial_line = 3;
@@ -322,7 +394,6 @@ void dc11::serial_handler()
 			trigger_interrupt(serial_line, false);
 	}
 }
-#endif
 
 void dc11::reset()
 {
@@ -446,16 +517,21 @@ void dc11::write_word(const uint16_t addr, const uint16_t v)
 		else
 			TRACE("DC11: transmit %c on line %d", c, line_nr);
 
-#if defined(ESP32)
 		if (line_nr == 3) {
-			if (serial_thread_running)
+			if (serial_thread_running) {
+#if defined(ESP32)
 				uart_write_bytes(ESP32_UART, &c, 1);
+#elif IS_POSIX
+				if (write(serial_fd, &c, 1) != 1) {
+					// TODO error handling
+				}
+#endif
+			}
 
 			if (is_tx_interrupt_enabled(line_nr))
 				trigger_interrupt(line_nr, true);
 			return;
 		}
-#endif
 		SOCKET fd = pfds[dc11_n_lines + line_nr].fd;
 
 		if (fd != INVALID_SOCKET && write(fd, &c, 1) != 1) {

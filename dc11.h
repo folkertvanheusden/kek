@@ -48,9 +48,11 @@ private:
 #endif
 	std::vector<char> recv_buffers[dc11_n_lines];
         std::mutex        input_lock[dc11_n_lines];
-#if defined(ESP32)
 	std::atomic_bool  serial_thread_running { false };
 	bool              serial_enabled   { false   };
+#if IS_POSIX
+	std::thread      *serial_th        { nullptr };
+	int               serial_fd        { -1      };
 #endif
 
 	void trigger_interrupt(const int line_nr, const bool is_tx);
@@ -69,6 +71,9 @@ public:
 	void reset();
 #if defined(ESP32)
 	void set_serial(const int bitrate, const int rx, const int tx);
+	void serial_handler();
+#elif IS_POSIX
+	void set_serial(const int bitrate, const std::string & device_name);
 	void serial_handler();
 #endif
 
