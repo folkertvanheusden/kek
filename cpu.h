@@ -133,6 +133,8 @@ public:
 	uint64_t get_instructions_executed_count() const;
 	uint64_t get_wait_time() const { return wait_time; }
 	std::tuple<double, double, uint64_t, uint32_t, double> get_mips_rel_speed(const std::optional<uint64_t> & instruction_count, const std::optional<uint64_t> & t_diff_1s) const;
+	// how many ms would've really passed when executing `instruction_count` instructions
+	uint32_t get_effective_run_time(const uint64_t instruction_count) const;
 
 	bool get_debug() const { return debug_mode; }
 	void set_debug(const bool d) { debug_mode = d; stacktrace.clear(); }

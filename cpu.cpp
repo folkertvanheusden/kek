@@ -18,6 +18,12 @@
 
 #define IS_0(x, wm) ((wm) == wm_byte ? ((x) & 0xff) == 0 : (x) == 0)
 
+// see https://retrocomputing.stackexchange.com/questions/6960/what-was-the-clock-speed-and-ips-for-the-original-pdp-11
+constexpr const double pdp11_clock_cycle = 150;  // ns, for the 11/70
+constexpr const double pdp11_MHz = 1000.0 / pdp11_clock_cycle;
+constexpr const double pdp11_avg_cycles_per_instruction = (1 + 5) / 2.0;
+constexpr const double pdp11_estimated_mips = pdp11_MHz / pdp11_avg_cycles_per_instruction;
+
 cpu::cpu(bus *const b, std::atomic_uint32_t *const event) : b(b), event(event)
 {
 	reset();
@@ -97,13 +103,13 @@ std::tuple<double, double, uint64_t, uint32_t, double> cpu::get_mips_rel_speed(c
 
         double mips = t_diff ? instr_count / double(t_diff) : 0;
 
-        // see https://retrocomputing.stackexchange.com/questions/6960/what-was-the-clock-speed-and-ips-for-the-original-pdp-11
-        constexpr double pdp11_clock_cycle = 150;  // ns, for the 11/70
-        constexpr double pdp11_MHz = 1000.0 / pdp11_clock_cycle;
-        constexpr double pdp11_avg_cycles_per_instruction = (1 + 5) / 2.0;
-        constexpr double pdp11_estimated_mips = pdp11_MHz / pdp11_avg_cycles_per_instruction;
-
 	return { mips, mips * 100 / pdp11_estimated_mips, instr_count, t_diff, wait_time };
+}
+
+uint32_t cpu::get_effective_run_time(const uint64_t instruction_count) const
+{
+	// division is to go from ns to ms
+	return instruction_count * pdp11_clock_cycle / 1000000l;
 }
 
 void cpu::add_to_stack_trace(const uint16_t p)

@@ -68,22 +68,26 @@ void kw11_l::operator()()
 
 	TRACE("Starting KW11-L thread");
 
+	uint64_t prev_cycle_count = b->getCpu()->get_instructions_executed_count();
+
 	while(!stop_flag) {
 		if (*cnsl->get_running_flag()) {
-			set_lf_crs_b7();
- 
-			if (get_lf_crs() & 64)
-				b->getCpu()->queue_interrupt(6, 0100);
+			myusleep(1000000 / 100);  // 100 Hz
 
-			// TODO: depending on cpu cycles processed
-#if defined(ESP32)
-			myusleep(1000000 / 20);  // 50ms
-#else
-			myusleep(1000000 / 50);  // 20ms
-#endif
+			uint64_t current_cycle_count = b->getCpu()->get_instructions_executed_count();
+			uint32_t took_ms = b->getCpu()->get_effective_run_time(current_cycle_count - prev_cycle_count);
+
+			if (took_ms >= 1000 / 50) {
+				set_lf_crs_b7();
+
+				if (get_lf_crs() & 64)
+					b->getCpu()->queue_interrupt(6, 0100);
+
+				prev_cycle_count = current_cycle_count;
+			}
 		}
 		else {
-			myusleep(1000000 / 10);  // 100ms
+			myusleep(1000000 / 10);  // 10 Hz
 		}
 	}
 
