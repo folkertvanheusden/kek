@@ -80,6 +80,9 @@ std::optional<disk_backend *> select_nbd_server(console *const cnsl)
 
 void start_disk(console *const cnsl)
 {
+#if IS_POSIX
+	return;
+#else
 	static bool disk_started = false;
 	if (disk_started)
 		return;
@@ -108,6 +111,7 @@ void start_disk(console *const cnsl)
 			cnsl->put_string_lf("Failed to initialize SD card");
 	}
 #endif
+#endif
 }
 
 void ls_l(console *const cnsl)
@@ -118,7 +122,7 @@ void ls_l(console *const cnsl)
 	DIR *dir = opendir(".");
 	if (!dir) {
 		cnsl->put_string_lf("Cannot access directory");
-		return { };
+		return;
 	}
 
 	dirent *dr = nullptr;
