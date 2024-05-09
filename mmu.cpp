@@ -48,6 +48,11 @@ uint16_t mmu::read_par(const uint32_t a, const int run_mode)
 	return t;
 }
 
+void mmu::setMMR0_as_is(uint16_t value)
+{
+	MMR0 = value;
+}
+
 void mmu::setMMR0(uint16_t value)
 {
 	value &= ~(3 << 10);  // bit 10 & 11 always read as 0
@@ -350,7 +355,7 @@ uint32_t mmu::calculate_physical_address(cpu *const c, const int run_mode, const
 
 						temp |= d << 4;
 
-						setMMR0(temp);
+						setMMR0_as_is(temp);
 
 						TRACE("MMR0: %06o", temp);
 					}
@@ -389,7 +394,7 @@ uint32_t mmu::calculate_physical_address(cpu *const c, const int run_mode, const
 					temp &= ~(3 << 5);
 					temp |= run_mode << 5;
 
-					setMMR0(temp);
+					setMMR0_as_is(temp);
 				}
 
 				if (is_write)
@@ -427,7 +432,7 @@ uint32_t mmu::calculate_physical_address(cpu *const c, const int run_mode, const
 					temp &= ~(1 << 4);
 					temp |= d << 4;
 
-					setMMR0(temp);
+					setMMR0_as_is(temp);
 				}
 
 				if (is_write)
