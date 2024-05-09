@@ -44,6 +44,7 @@
 #include "kw11-l.h"
 #include "loaders.h"
 #include "memory.h"
+#include "tm-11.h"
 #include "tty.h"
 #include "utils.h"
 #include "version.h"
@@ -365,6 +366,9 @@ void setup() {
 	Serial.println(F("* Adding TTY"));
 	tty_ = new tty(cnsl, b);
 	b->add_tty(tty_);
+
+	Serial.println(F("* Adding TM-11"));
+	b->add_tm11(new tm_11(b));
 
 	Serial.println(F("* Starting KW11-L"));
 	b->getKW11_L()->begin(cnsl);
