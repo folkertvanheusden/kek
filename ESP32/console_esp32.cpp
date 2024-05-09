@@ -67,7 +67,11 @@ void console_esp32::panel_update_thread()
 
 #if !defined(BUILD_FOR_RP2040) && defined(NEOPIXELS_PIN)
 	constexpr const uint8_t n_leds = 60;
+#if defined(RGBW_PIXELS)
 	Adafruit_NeoPixel pixels(n_leds, NEOPIXELS_PIN, NEO_RGBW);
+#else
+	Adafruit_NeoPixel pixels(n_leds, NEOPIXELS_PIN, NEO_RGB);
+#endif
 	pixels.begin();
 
 	pixels.clear();
