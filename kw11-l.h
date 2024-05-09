@@ -28,6 +28,8 @@ private:
 	uint8_t  get_lf_crs();
 	void     set_lf_crs_b7();
 
+	void     do_interrupt();
+
 public:
 	kw11_l(bus *const b);
 	virtual ~kw11_l();
