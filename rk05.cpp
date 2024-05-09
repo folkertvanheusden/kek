@@ -62,17 +62,17 @@ uint16_t rk05::read_word(const uint16_t addr)
 
 	if (addr == RK05_DS) {		// 0177400
 		setBit(registers[reg], 11, true); // disk on-line
-		setBit(registers[reg], 8, true); // sector ok
-		setBit(registers[reg], 7, true); // drive ready
-		setBit(registers[reg], 6, true); // seek ready
-		setBit(registers[reg], 4, true); // heads in position
+		setBit(registers[reg],  8, true); // sector ok
+		setBit(registers[reg],  7, true); // drive ready
+		setBit(registers[reg],  6, true); // seek ready
+		setBit(registers[reg],  4, true); // heads in position
 	}
 	else if (addr == RK05_ERROR)	// 0177402
 		registers[reg] = 0;
 	else if (addr == RK05_CS) {	// 0177404
 		setBit(registers[reg], 15, false); // clear error
 		setBit(registers[reg], 14, false); // clear hard error
-		setBit(registers[reg], 7, true); // controller ready
+		setBit(registers[reg],  7, true); // controller ready
 	}
 
 	uint16_t vtemp = registers[reg];
@@ -139,45 +139,56 @@ void rk05::write_word(const uint16_t addr, const uint16_t v)
 
 			if (func == 0) { // controller reset
 				TRACE("RK05 invoke %d (controller reset)", func);
+				registers[(RK05_ERROR - RK05_BASE) / 2] = 0;
 			}
 			else if (func == 1) { // write
 				*disk_write_acitivity = true;
 
 				TRACE("RK05 drive %d position sec %d surf %d cyl %d, reclen %zo, WRITE to %o, mem: %o", device, sector, surface, cylinder, reclen, diskoffb, memoff);
 
-				uint32_t  work_reclen   = reclen;
-				uint32_t  work_memoff   = memoff;
-				uint32_t  work_diskoffb = diskoffb;
+				if (device >= fhs.size()) {
+					registers[(RK05_ERROR - RK05_BASE) / 2] |= 128;  // non existing disk
+					registers[(RK05_CS - RK05_BASE) / 2] |= 3 << 14;  // an error occured
+				}
+				else {
+					uint32_t  work_reclen   = reclen;
+					uint32_t  work_memoff   = memoff;
+					uint32_t  work_diskoffb = diskoffb;
 
-				assert(sizeof(xfer_buffer) == 512);
+					assert(sizeof(xfer_buffer) == 512);
 
-				while(work_reclen > 0) {
-					uint32_t cur = std::min(uint32_t(sizeof xfer_buffer), work_reclen);
-					work_reclen -= cur;
+					while(work_reclen > 0) {
+						uint32_t cur = std::min(uint32_t(sizeof xfer_buffer), work_reclen);
+						work_reclen -= cur;
 
-					for(size_t i=0; i<cur; i++)
-						xfer_buffer[i] = b->readUnibusByte(work_memoff++);
+						for(size_t i=0; i<cur; i++)
+							xfer_buffer[i] = b->readUnibusByte(work_memoff++);
 
-					if (!fhs.at(device)->write(work_diskoffb, cur, xfer_buffer, 512))
-						DOLOG(ll_error, true, "RK05(%d) write error %s to %u len %u", device, strerror(errno), work_diskoffb, cur);
+						if (!fhs.at(device)->write(work_diskoffb, cur, xfer_buffer, 512)) {
+							DOLOG(ll_error, true, "RK05(%d) write error %s to %u len %u", device, strerror(errno), work_diskoffb, cur);
+							registers[(RK05_ERROR - RK05_BASE) / 2] |= 32;  // non existing sector
+							registers[(RK05_CS - RK05_BASE) / 2] |= 3 << 14;  // an error occured
+							break;
+						}
 
-					work_diskoffb += cur;
+						work_diskoffb += cur;
 
-					if (v & 2048)
-						TRACE("RK05 inhibit BA increase");
-					else
-						update_bus_address(cur);
+						if (v & 2048)
+							TRACE("RK05 inhibit BA increase");
+						else
+							update_bus_address(cur);
 
-					if (++sector >= 12) {
-						sector = 0;
-						if (++surface >= 2) {
-							surface = 0;
-							cylinder++;
+						if (++sector >= 12) {
+							sector = 0;
+							if (++surface >= 2) {
+								surface = 0;
+								cylinder++;
+							}
 						}
 					}
-				}
 
-				registers[(RK05_DA - RK05_BASE) / 2] = sector | (surface << 4) | (cylinder << 5);
+					registers[(RK05_DA - RK05_BASE) / 2] = sector | (surface << 4) | (cylinder << 5);
+				}
 
 				*disk_write_acitivity = false;
 			}
@@ -186,40 +197,48 @@ void rk05::write_word(const uint16_t addr, const uint16_t v)
 
 				TRACE("RK05 drive %d position sec %d surf %d cyl %d, reclen %zo, READ from %o, mem: %o", device, sector, surface, cylinder, reclen, diskoffb, memoff);
 
-				uint32_t temp_diskoffb = diskoffb;
+				if (device >= fhs.size()) {
+					registers[(RK05_ERROR - RK05_BASE) / 2] |= 128;  // non existing disk
+					registers[(RK05_CS - RK05_BASE) / 2] |= 3 << 14;  // an error occured
+				}
+				else {
+					uint32_t temp_diskoffb = diskoffb;
 
-				uint32_t temp_reclen   = reclen;
-				uint32_t p             = memoff;
-				while(temp_reclen > 0) {
-					uint32_t cur = std::min(uint32_t(sizeof xfer_buffer), temp_reclen);
+					uint32_t temp_reclen   = reclen;
+					uint32_t p             = memoff;
+					while(temp_reclen > 0) {
+						uint32_t cur = std::min(uint32_t(sizeof xfer_buffer), temp_reclen);
 
-					if (!fhs.at(device)->read(temp_diskoffb, cur, xfer_buffer, 512)) {
-						DOLOG(ll_error, true, "RK05 read error %s from %u len %u", strerror(errno), temp_diskoffb, cur);
-						break;
-					}
+						if (!fhs.at(device)->read(temp_diskoffb, cur, xfer_buffer, 512)) {
+							DOLOG(ll_error, true, "RK05 read error %s from %u len %u", strerror(errno), temp_diskoffb, cur);
+							registers[(RK05_ERROR - RK05_BASE) / 2] |= 32;  // non existing sector
+							registers[(RK05_CS - RK05_BASE) / 2] |= 3 << 14;  // an error occured
+							break;
+						}
 
-					temp_diskoffb += cur;
+						temp_diskoffb += cur;
 
-					for(uint32_t i=0; i<cur; i++) {
-						b->writeUnibusByte(p++, xfer_buffer[i]);
+						for(uint32_t i=0; i<cur; i++) {
+							b->writeUnibusByte(p++, xfer_buffer[i]);
 
-						if ((v & 2048) == 0)
-							update_bus_address(2);
-					}
+							if ((v & 2048) == 0)
+								update_bus_address(2);
+						}
 
-					temp_reclen -= cur;
+						temp_reclen -= cur;
 
-					if (++sector >= 12) {
-						sector = 0;
+						if (++sector >= 12) {
+							sector = 0;
 
-						if (++surface >= 2) {
-							surface = 0;
-							cylinder++;
+							if (++surface >= 2) {
+								surface = 0;
+								cylinder++;
+							}
 						}
 					}
-				}
 
-				registers[(RK05_DA - RK05_BASE) / 2] = sector | (surface << 4) | (cylinder << 5);
+					registers[(RK05_DA - RK05_BASE) / 2] = sector | (surface << 4) | (cylinder << 5);
+				}
 
 				*disk_read_acitivity = false;
 			}
