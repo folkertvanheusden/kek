@@ -19,6 +19,7 @@
 #include <sys/socket.h>
 #endif
 #if IS_POSIX
+#include <errno.h>
 #include <fcntl.h>
 #include <termios.h>
 #include <thread>
@@ -88,6 +89,8 @@ dc11::dc11(const int base_port, bus *const b):
 
 dc11::~dc11()
 {
+	DOLOG(debug, false, "DC11 closing");
+
 	stop_flag = true;
 
 	if (th) {
@@ -111,6 +114,8 @@ dc11::~dc11()
 
 void dc11::trigger_interrupt(const int line_nr, const bool is_tx)
 {
+	TRACE("DC11: interrupt for line %d, %s", line_nr, is_tx ? "TX" : "RX");
+
 	b->getCpu()->queue_interrupt(5, 0300 + line_nr * 010 + 4 * is_tx);
 }
 
@@ -302,12 +307,15 @@ void dc11::set_serial(const int bitrate, const int rx, const int tx)
 void dc11::set_serial(const int bitrate, const std::string & device)
 {
 	serial_fd = open(device.c_str(), O_RDWR);
-	if (serial_fd == -1)
+	if (serial_fd == -1) {
+		DOLOG(warning, false, "DC11 failed to access %s: %s", device.c_str(), strerror(errno));
 		return;  // TODO error handling
+	}
 
 	// from https://stackoverflow.com/questions/6947413/how-to-open-read-and-write-from-serial-port-in-c
 	termios tty { };
         if (tcgetattr(serial_fd, &tty) == -1) {
+		DOLOG(warning, false, "DC11 tcgetattr failed: %s", strerror(errno));
 		close(serial_fd);
                 return;
 	}
@@ -334,6 +342,7 @@ void dc11::set_serial(const int bitrate, const std::string & device)
         tty.c_cflag &= ~CRTSCTS;
 
         if (tcsetattr(serial_fd, TCSANOW, &tty) == -1) {
+		DOLOG(warning, false, "DC11 tcsetattr failed: %s", strerror(errno));
 		close(serial_fd);
 		return;
 	}
@@ -344,8 +353,12 @@ void dc11::set_serial(const int bitrate, const std::string & device)
 
 void dc11::serial_handler()
 {
+	set_thread_name("kek:dc11-serial");
+
+	TRACE("DC11: serial handler thread started");
+
 #if IS_POSIX
-	pollfd fds[] { { serial_fd, POLLIN, 0 } };
+	pollfd fds[] = { { serial_fd, POLLIN, 0 } };
 #endif
 
 	while(!stop_flag) {
@@ -364,14 +377,18 @@ void dc11::serial_handler()
 			continue;
 #elif IS_POSIX
 		int rc_poll = poll(fds, 1, 100);
-		if (rc_poll == -1)
+		if (rc_poll == -1) {
+			DOLOG(warning, false, "DC11 poll failed: %s", strerror(errno));
 			break;
+		}
 		if (rc_poll == 0)
 			continue;
 
 		int rc_read = read(serial_fd, &c, 1);
-		if (rc_read <= 0)
+		if (rc_read <= 0) {
+			DOLOG(warning, false, "DC11 read on %d failed: %s", serial_fd, strerror(errno));
 			break;
+		}
 #endif
 
 		// 3 is reserved for a serial port
@@ -380,19 +397,26 @@ void dc11::serial_handler()
 		std::unique_lock<std::mutex> lck(input_lock[serial_line]);
 
 		if (serial_enabled == false) {
+			TRACE("DC-11: enabling serial connection");
+
 			serial_enabled = true;
 
 			// first key press enables the port
 			registers[serial_line * 4 + 0] |= 0160000;  // "ERROR", RING INDICATOR, CARRIER TRANSITION
 		}
+		else {
+			TRACE("DC-11: key %d pressed", c);
+
+			registers[serial_line * 4 + 0] |= 128;  // DONE: bit 7
+		}
 
 		recv_buffers[serial_line].push_back(c);
-
-		registers[serial_line * 4 + 0] |= 128;  // DONE: bit 7
 
 		if (is_rx_interrupt_enabled(serial_line))
 			trigger_interrupt(serial_line, false);
 	}
+
+	TRACE("DC11: serial handler thread terminating");
 }
 
 void dc11::reset()
@@ -523,9 +547,13 @@ void dc11::write_word(const uint16_t addr, const uint16_t v)
 				uart_write_bytes(ESP32_UART, &c, 1);
 #elif IS_POSIX
 				if (write(serial_fd, &c, 1) != 1) {
+					DOLOG(warning, false, "DC11 failed to send %d to (fd %d) serial port: %s", c, serial_fd, strerror(errno));
 					// TODO error handling
 				}
 #endif
+			}
+			else {
+				TRACE("DC11 serial line 4 not connected yet output %d", c);
 			}
 
 			if (is_tx_interrupt_enabled(line_nr))
@@ -539,6 +567,7 @@ void dc11::write_word(const uint16_t addr, const uint16_t v)
 
 			registers[line_nr * 4 + 0] |= 0140000;  // "ERROR", CARRIER TRANSITION
 
+			assert(fd != serial_fd);
 			close(fd);
 			pfds[dc11_n_lines + line_nr].fd = INVALID_SOCKET;
 		}
