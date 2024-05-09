@@ -109,7 +109,7 @@ std::tuple<double, double, uint64_t, uint32_t, double> cpu::get_mips_rel_speed(c
 uint32_t cpu::get_effective_run_time(const uint64_t instruction_count) const
 {
 	// division is to go from ns to ms
-	return instruction_count * pdp11_clock_cycle / 1000000l;
+	return instruction_count * pdp11_avg_cycles_per_instruction * pdp11_clock_cycle / 1000000l;
 }
 
 void cpu::add_to_stack_trace(const uint16_t p)
