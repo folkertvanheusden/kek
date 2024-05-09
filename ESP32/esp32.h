@@ -15,8 +15,8 @@
 
 // #define NEOPIXELS_PIN 24
 
-// #define HEARTBEAT_PIN LED_BUILTIN
-#define HEARTBEAT_PIN 25
+#define HEARTBEAT_PIN LED_BUILTIN
+// #define HEARTBEAT_PIN 25
 
 // #define TTY_SERIAL_RX 16
 // #define TTY_SERIAL_TX 17
