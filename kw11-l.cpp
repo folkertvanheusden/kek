@@ -78,6 +78,7 @@ void kw11_l::operator()()
 
 	uint64_t prev_cycle_count          = b->getCpu()->get_instructions_executed_count();
 	uint64_t interval_prev_cycle_count = prev_cycle_count;
+	auto     prev_tick                 = get_ms();
 
 	while(!stop_flag) {
 		if (*cnsl->get_running_flag()) {
@@ -85,11 +86,17 @@ void kw11_l::operator()()
 
 			uint64_t current_cycle_count = b->getCpu()->get_instructions_executed_count();
 			uint32_t took_ms = b->getCpu()->get_effective_run_time(current_cycle_count - prev_cycle_count);
+			auto     now     = get_ms();
 
-			if (took_ms >= 1000 / 50 || current_cycle_count - interval_prev_cycle_count == 0) {
+			// - 50 Hz depending on instrution count
+			// - nothing executed in interval
+			// - 10 Hz minimum
+			if (took_ms >= 1000 / 50 || current_cycle_count - interval_prev_cycle_count == 0 || now - prev_tick >= 100) {
 				do_interrupt();
 
 				prev_cycle_count = current_cycle_count;
+
+				prev_tick        = now;
 			}
 
 			interval_prev_cycle_count = current_cycle_count;
