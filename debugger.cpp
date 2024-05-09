@@ -78,55 +78,102 @@ std::optional<disk_backend *> select_nbd_server(console *const cnsl)
 }
 #endif
 
-std::optional<std::string> select_host_file(console *const c)
+void start_disk(console *const cnsl)
 {
-	for(;;) {
-#if defined(linux)
-		DIR *dir = opendir(".");
-		if (!dir) {
-			c->put_string_lf("Cannot access directory");
-			return { };
-		}
-
-		dirent *dr = nullptr;
-		while((dr = readdir(dir))) {
-			struct stat st { };
-
-			if (stat(dr->d_name, &st) == 0)
-				c->put_string_lf(format("%s\t\t%ld", dr->d_name, st.st_size));
-		}
-
-		closedir(dir);
-#elif defined(BUILD_FOR_RP2040)
-		File root = SD.open("/");
-
-		for(;;) {
-			auto entry = root.openNextFile();
-			if (!entry)
-				break;
-
-			if (!entry.isDirectory()) {
-				c->put_string(entry.name());
-				c->put_string("\t\t");
-				c->put_string_lf(format("%ld", entry.size()));
-			}
-
-			entry.close();
-		}
-#elif defined(_WIN32)
+#if IS_POSIX
+	return;
 #else
-		SD.ls("/", LS_DATE | LS_SIZE | LS_R);
+	static bool disk_started = false;
+	if (disk_started)
+		return;
+
+#if defined(ESP32)
+	cnsl->put_string_lf(format("MISO: %d", int(MISO)));
+	cnsl->put_string_lf(format("MOSI: %d", int(MOSI)));
+	cnsl->put_string_lf(format("SCK : %d", int(SCK )));
+	cnsl->put_string_lf(format("SS  : %d", int(SS  )));
+
 #endif
 
-		c->flush_input();
+#if defined(SHA2017)
+	if (SD.begin(21, SD_SCK_MHZ(10)))
+		disk_started = true;
+	else
+		SD.initErrorHalt();
+#elif !defined(BUILD_FOR_RP2040)
+	if (SD.begin(SS, SD_SCK_MHZ(15)))
+		disk_started = true;
+	else {
+		auto err = SD.sdErrorCode();
+		if (err)
+			cnsl->put_string_lf(format("SDerror: 0x%x, data: 0x%x", err, SD.sdErrorData()));
+		else
+			cnsl->put_string_lf("Failed to initialize SD card");
+	}
+#endif
+#endif
+}
 
-		std::string selected_file = c->read_line("Enter filename (or empty to abort): ");
+void ls_l(console *const cnsl)
+{
+	start_disk(cnsl);
+
+#if IS_POSIX || defined(_WIN32)
+	cnsl->put_string_lf("Files in current directory: ");
+#else
+	cnsl->put_string_lf("Files on SD-card:");
+#endif
+
+#if defined(linux)
+	DIR *dir = opendir(".");
+	if (!dir) {
+		cnsl->put_string_lf("Cannot access directory");
+		return;
+	}
+
+	dirent *dr = nullptr;
+	while((dr = readdir(dir))) {
+		struct stat st { };
+
+		if (stat(dr->d_name, &st) == 0)
+			cnsl->put_string_lf(format("%s\t\t%ld", dr->d_name, st.st_size));
+	}
+
+	closedir(dir);
+#elif defined(BUILD_FOR_RP2040)
+	File root = SD.open("/");
+
+	for(;;) {
+		auto entry = root.openNextFile();
+		if (!entry)
+			break;
+
+		if (!entry.isDirectory()) {
+			cnsl->put_string(entry.name());
+			cnsl->put_string("\t\t");
+			cnsl->put_string_lf(format("%ld", entry.size()));
+		}
+
+		entry.close();
+	}
+#elif defined(_WIN32)
+#else
+	SD.ls("/", LS_DATE | LS_SIZE | LS_R);
+#endif
+}
+
+std::optional<std::string> select_host_file(console *const cnsl)
+{
+	for(;;) {
+		cnsl->flush_input();
+
+		std::string selected_file = cnsl->read_line("Enter filename (or empty to abort): ");
 
 		if (selected_file.empty())
 			return { };
 
-		c->put_string("Opening file: ");
-		c->put_string_lf(selected_file.c_str());
+		cnsl->put_string("Opening file: ");
+		cnsl->put_string_lf(selected_file.c_str());
 
 		bool can_open_file = false;
 
@@ -143,41 +190,19 @@ std::optional<std::string> select_host_file(console *const c)
 		if (can_open_file)
 			return selected_file;
 
-		c->put_string_lf("open failed");
+		cnsl->put_string_lf("open failed");
+
+		ls_l(cnsl);
 	}
 }
 
 // disk image files
-std::optional<disk_backend *> select_disk_file(console *const c)
+std::optional<disk_backend *> select_disk_file(console *const cnsl)
 {
-#if IS_POSIX || defined(_WIN32)
-	c->put_string_lf("Files in current directory: ");
-#else
-	c->put_string_lf(format("MISO: %d", int(MISO)));
-	c->put_string_lf(format("MOSI: %d", int(MOSI)));
-	c->put_string_lf(format("SCK : %d", int(SCK )));
-	c->put_string_lf(format("SS  : %d", int(SS  )));
-
-	c->put_string_lf("Files on SD-card:");
-
-#if defined(SHA2017)
-	if (!SD.begin(21, SD_SCK_MHZ(10)))
-		SD.initErrorHalt();
-#elif !defined(BUILD_FOR_RP2040)
-	if (!SD.begin(SS, SD_SCK_MHZ(15))) {
-		auto err = SD.sdErrorCode();
-		if (err)
-			c->put_string_lf(format("SDerror: 0x%x, data: 0x%x", err, SD.sdErrorData()));
-		else
-			c->put_string_lf("Failed to initialize SD card");
-
-		return { };
-	}
-#endif
-#endif
+	start_disk(cnsl);
 
 	for(;;) {
-		auto selected_file = select_host_file(c);
+		auto selected_file = select_host_file(cnsl);
 
 		if (selected_file.has_value() == false)
 			break;
@@ -189,8 +214,8 @@ std::optional<disk_backend *> select_disk_file(console *const c)
 #endif
 
 		if (!temp->begin(false)) {
-			c->put_string("Cannot use: ");
-			c->put_string_lf(selected_file.value().c_str());
+			cnsl->put_string("Cannot use: ");
+			cnsl->put_string_lf(selected_file.value().c_str());
 
 			delete temp;
 
@@ -987,11 +1012,29 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 				continue;
 			}
+			else if (parts[0] == "bic" && parts.size() == 2) {
+				auto rc = load_tape(b, parts[1].c_str());
+				if (rc.has_value()) {
+					c->setPC(rc.value());
+
+					cnsl->put_string_lf("BIC/LDA file loaded");
+				}
+				else {
+					cnsl->put_string_lf("BIC/LDA failed to load");
+				}
+
+				continue;
+			}
 			else if (parts[0] == "lt") {
 				if (parts.size() == 2)
 					tm11_load_tape(cnsl, b, parts[1]);
 				else
 					tm11_load_tape(cnsl, b, { });
+
+				continue;
+			}
+			else if (cmd == "dir" || cmd == "ls") {
+				ls_l(cnsl);
 
 				continue;
 			}
@@ -1038,28 +1081,30 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 					"                follows v/p (virtual/physical), all octal values, mmr0-3 and psw are",
 					"                registers",
 					"trace/t       - toggle tracing",
-					"setll         - set loglevel: terminal,file",
-					"setsl         - set syslog target: requires a hostname and a loglevel",
+					"setll x,y     - set loglevel: terminal,file",
+					"setsl x,y     - set syslog target: requires a hostname and a loglevel",
 					"turbo         - toggle turbo mode (cannot be interrupted)",
 					"debug         - enable CPU debug mode",
 					"bt            - show backtrace - need to enable debug first",
-					"strace        - start tracing from address - invoke without address to disable",
-					"trl           - set trace run-level (0...3), empty for all",
+					"strace x      - start tracing from address - invoke without address to disable",
+					"trl x         - set trace run-level (0...3), empty for all",
 					"regdump       - dump register contents",
 					"mmudump       - dump MMU settings (PARs/PDRs)",
-					"mmures        - resolve a virtual address",
+					"mmures x      - resolve a virtual address",
 					"qi            - show queued interrupts",
-					"setpc         - set PC to value",
-					"setmem        - set memory (a=) to value (v=), both in octal, one byte",
-					"toggle        - set switch (s=, 0...15 (decimal)) of the front panel to state (t=, 0 or 1)",
+					"setpc x       - set PC to value",
+					"setmem ...    - set memory (a=) to value (v=), both in octal, one byte",
+					"toggle ...    - set switch (s=, 0...15 (decimal)) of the front panel to state (t=, 0 or 1)",
 					"cls           - clear screen",
-					"lt            - load tape (parameter is filename)",
+					"dir           - list files",
+					"bic x         - run BIC/LDA file",
+					"lt x          - load tape (parameter is filename)",
 					"ult           - unload tape",
 					"stats         - show run statistics",
-					"ramsize       - set ram size (page count (8 kB))",
-					"bl            - set bootload (rl02 or rk05)",
+					"ramsize x     - set ram size (page count (8 kB), decimal)",
+					"bl            - set bootloader (rl02 or rk05)",
 #if IS_POSIX
-					"ser           - serialize state to a file",
+					"ser x         - serialize state to a file",
 //					"dser          - deserialize state from a file",
 #endif
 					"dp            - disable panel",
@@ -1068,11 +1113,11 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 					"startnet      - start network",
 					"chknet        - check network status",
 #if defined(CONSOLE_SERIAL_RX)
-					"serspd        - set serial speed in bps (8N1 are default)",
+					"serspd x      - set serial speed in bps (8N1 are default)",
 #endif
 #endif
 					"cfgdisk       - configure disk",
-					"log           - log a message to the logfile",
+					"log ...       - log a message to the logfile",
 					nullptr
 				};
 

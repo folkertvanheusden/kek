@@ -99,6 +99,7 @@ public:
 	uint16_t getMMR3() const { return MMR3; }
 	uint16_t getMMR(int nr) const { const uint16_t *const mmrs[] { &MMR0, &MMR1, &MMR2, &MMR3 }; return *mmrs[nr]; }
 
+	void     setMMR0_as_is(uint16_t value);
 	void     setMMR0(const uint16_t value);
 	void     setMMR1(const uint16_t value);
 	void     setMMR2(const uint16_t value);

@@ -62,28 +62,40 @@ void kw11_l::reset()
 	lf_csr = 0;
 }
 
+void kw11_l::do_interrupt()
+{
+	set_lf_crs_b7();
+
+	if (get_lf_crs() & 64)
+		b->getCpu()->queue_interrupt(6, 0100);
+}
+
 void kw11_l::operator()()
 {
 	set_thread_name("kek:kw-11l");
 
 	TRACE("Starting KW11-L thread");
 
+	uint64_t prev_cycle_count          = b->getCpu()->get_instructions_executed_count();
+	uint64_t interval_prev_cycle_count = prev_cycle_count;
+
 	while(!stop_flag) {
 		if (*cnsl->get_running_flag()) {
-			set_lf_crs_b7();
- 
-			if (get_lf_crs() & 64)
-				b->getCpu()->queue_interrupt(6, 0100);
+			myusleep(1000000 / 100);  // 100 Hz
 
-			// TODO: depending on cpu cycles processed
-#if defined(ESP32)
-			myusleep(1000000 / 20);  // 50ms
-#else
-			myusleep(1000000 / 50);  // 20ms
-#endif
+			uint64_t current_cycle_count = b->getCpu()->get_instructions_executed_count();
+			uint32_t took_ms = b->getCpu()->get_effective_run_time(current_cycle_count - prev_cycle_count);
+
+			if (took_ms >= 1000 / 50 || current_cycle_count - interval_prev_cycle_count == 0) {
+				do_interrupt();
+
+				prev_cycle_count = current_cycle_count;
+			}
+
+			interval_prev_cycle_count = current_cycle_count;
 		}
 		else {
-			myusleep(1000000 / 10);  // 100ms
+			myusleep(1000000 / 10);  // 10 Hz
 		}
 	}
 
