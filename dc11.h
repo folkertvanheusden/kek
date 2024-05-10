@@ -16,6 +16,7 @@
 #define INVALID_SOCKET -1
 #endif
 
+#include "device.h"
 #include "gen.h"
 #include "bus.h"
 #include "log.h"
@@ -31,7 +32,7 @@ struct pollfd;
 // 4 interfaces
 constexpr const int dc11_n_lines = 4;
 
-class dc11
+class dc11: public device
 {
 private:
 	int               base_port        { 1100    };
