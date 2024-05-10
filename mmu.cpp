@@ -270,27 +270,35 @@ std::pair<trap_action_t, int> mmu::get_trap_action(const int run_mode, const boo
 
 	trap_action_t trap_action    = T_PROCEED;
 
-	if (access_control == 0)
-		trap_action = T_ABORT_4;
-	else if (access_control == 1)
-		trap_action = is_write ? T_ABORT_4 : T_TRAP_250;
-	else if (access_control == 2) {
-		if (is_write)
+	switch(access_control) {
+		case 0:
 			trap_action = T_ABORT_4;
-	}
-	else if (access_control == 3)
-		trap_action = T_ABORT_4;
-	else if (access_control == 4)
-		trap_action = T_TRAP_250;
-	else if (access_control == 5) {
-		if (is_write)
+			break;
+		case 1:
+			trap_action = is_write ? T_ABORT_4 : T_TRAP_250;
+			break;
+
+		case 2:
+			if (is_write)
+				trap_action = T_ABORT_4;
+			break;
+		case 3:
+			trap_action = T_ABORT_4;
+			break;
+		case 4:
 			trap_action = T_TRAP_250;
-	}
-	else if (access_control == 6) {
-		// proceed
-	}
-	else if (access_control == 7) {
-		trap_action = T_ABORT_4;
+			break;
+		case 5:
+			if (is_write)
+				trap_action = T_TRAP_250;
+			break;
+		case 6:
+			// proceed
+			break;
+
+		case 7:
+			trap_action = T_ABORT_4;
+			break;
 	}
 
 	return { trap_action, access_control };
