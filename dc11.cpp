@@ -132,12 +132,10 @@ void dc11::operator()()
 		// client session
 		pfds[dc11_n_lines + i].fd     = INVALID_SOCKET;
 		pfds[dc11_n_lines + i].events = POLLIN;
-#if defined(ESP32)
 		if (i == serial_line) {  // prevent accept() on this socket
 			pfds[i].fd = INVALID_SOCKET;
 			continue;
 		}
-#endif
 
 		// listen on port
 		int port = base_port + i + 1;
