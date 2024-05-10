@@ -458,7 +458,7 @@ uint16_t dc11::read_word(const uint16_t addr)
 		registers[line_nr * 4 + 0] &= ~1;  // DTR: bit 0  [RCSR]
 		registers[line_nr * 4 + 0] &= ~4;  // CD : bit 2
 
-		if (pfds[line_nr + dc11_n_lines].fd != INVALID_SOCKET) {
+		if (pfds[line_nr + dc11_n_lines].fd != INVALID_SOCKET || line_nr == serial_line) {
 			registers[line_nr * 4 + 0] |= 1;
 			registers[line_nr * 4 + 0] |= 4;
 		}
@@ -494,7 +494,7 @@ uint16_t dc11::read_word(const uint16_t addr)
 		registers[line_nr * 4 + 2] &= ~2;  // CTS: bit 1  [TSCR]
 		registers[line_nr * 4 + 2] &= ~128;  // READY: bit 7
 
-		if (pfds[line_nr + dc11_n_lines].fd != INVALID_SOCKET) {
+		if (pfds[line_nr + dc11_n_lines].fd != INVALID_SOCKET || line_nr == serial_line) {
 			registers[line_nr * 4 + 2] |= 2;
 			registers[line_nr * 4 + 2] |= 128;
 		}
