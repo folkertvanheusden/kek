@@ -36,6 +36,9 @@
 
 #define ESP32_UART UART_NUM_1
 
+// this line is reserved for a serial port
+constexpr const int serial_line = 0;
+
 const char *const dc11_register_names[] { "RCSR", "RBUF", "TSCR", "TBUF" };
 
 bool setup_telnet_session(const int fd)
@@ -130,7 +133,7 @@ void dc11::operator()()
 		pfds[dc11_n_lines + i].fd     = INVALID_SOCKET;
 		pfds[dc11_n_lines + i].events = POLLIN;
 #if defined(ESP32)
-		if (i == 3) {  // prevent accept() on this socket
+		if (i == serial_line) {  // prevent accept() on this socket
 			pfds[i].fd = INVALID_SOCKET;
 			continue;
 		}
@@ -393,15 +396,12 @@ void dc11::serial_handler()
 		}
 #endif
 
-		// 3 is reserved for a serial port
-		constexpr const int serial_line = 3;
-
 		std::unique_lock<std::mutex> lck(input_lock[serial_line]);
 
 		recv_buffers[serial_line].push_back(c);
 
 		if (serial_enabled == false && is_rx_interrupt_enabled(serial_line)) {
-			DOLOG(debug, false, "DC-11: enabling serial connection");
+			DOLOG(debug, false, "DC11: enabling serial connection");
 
 			serial_enabled = true;
 
@@ -409,7 +409,7 @@ void dc11::serial_handler()
 			registers[serial_line * 4 + 0] |= 0160000;  // "ERROR", RING INDICATOR, CARRIER TRANSITION
 		}
 		else {
-			TRACE("DC-11: key %d pressed", c);
+			TRACE("DC11: key %d pressed", c);
 
 			registers[serial_line * 4 + 0] |= 128;  // DONE: bit 7
 		}
@@ -543,7 +543,7 @@ void dc11::write_word(const uint16_t addr, const uint16_t v)
 		else
 			TRACE("DC11: transmit %c on line %d", c, line_nr);
 
-		if (line_nr == 3) {
+		if (line_nr == serial_line) {
 			if (serial_thread_running) {
 #if defined(ESP32)
 				uart_write_bytes(ESP32_UART, &c, 1);
