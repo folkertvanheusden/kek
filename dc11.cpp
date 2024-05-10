@@ -131,11 +131,11 @@ void dc11::operator()()
 	for(int i=0; i<dc11_n_lines; i++) {
 		// client session
 		pfds[dc11_n_lines + i].fd     = INVALID_SOCKET;
-		pfds[dc11_n_lines + i].events = POLLIN;
 		if (i == serial_line) {  // prevent accept() on this socket
 			pfds[i].fd = INVALID_SOCKET;
 			continue;
 		}
+		pfds[dc11_n_lines + i].events = POLLIN;
 
 		// listen on port
 		int port = base_port + i + 1;
@@ -553,13 +553,14 @@ void dc11::write_word(const uint16_t addr, const uint16_t v)
 #endif
 			}
 			else {
-				TRACE("DC11 serial line 4 not connected yet output %d", c);
+				TRACE("DC11 serial line 4 not connected, yet output %d", c);
 			}
 
 			if (is_tx_interrupt_enabled(line_nr))
 				trigger_interrupt(line_nr, true);
 			return;
 		}
+
 		SOCKET fd = pfds[dc11_n_lines + line_nr].fd;
 
 		if (fd != INVALID_SOCKET && write(fd, &c, 1) != 1) {
