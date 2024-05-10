@@ -62,6 +62,10 @@ private:
 	void set_par_pdr(const json_t *const j_in, const int run_mode, const bool is_d, const std::string & name);
 #endif
 
+	void verify_page_access (cpu *const c, const uint16_t virt_addr, const int run_mode, const bool d, const int apf, const bool is_write);
+	void verify_access_valid(cpu *const c, const uint32_t m_offset,  const int run_mode, const bool d, const int apf, const bool is_io, const bool is_write);
+	void verify_page_length (cpu *const c, const uint16_t virt_addr, const int run_mode, const bool d, const int apf, const bool is_write);
+
 public:
 	mmu();
 	virtual ~mmu();
@@ -94,7 +98,7 @@ public:
 
 	memory_addresses_t            calculate_physical_address(const int run_mode, const uint16_t a) const;
 	std::pair<trap_action_t, int> get_trap_action(const int run_mode, const bool d, const int apf, const bool is_write);
-	uint32_t                      calculate_physical_address(cpu *const c, const int run_mode, const uint16_t a, const bool trap_on_failure, const bool is_write, const bool peek_only, const d_i_space_t space);
+	uint32_t                      calculate_physical_address(cpu *const c, const int run_mode, const uint16_t a, const bool trap_on_failure, const bool is_write, const d_i_space_t space);
 
 	uint16_t getMMR0() const { return MMR0; }
 	uint16_t getMMR1() const { return MMR1; }

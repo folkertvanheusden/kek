@@ -237,7 +237,7 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 {
 	int  run_mode     = mode_selection == rm_cur ? c->getPSW_runmode() : c->getPSW_prev_runmode();
 
-	uint32_t m_offset = mmu_->calculate_physical_address(c, run_mode, addr_in, !peek_only, false, peek_only, space);
+	uint32_t m_offset = mmu_->calculate_physical_address(c, run_mode, addr_in, !peek_only, false, space);
 
 	uint32_t io_base  = mmu_->get_io_base();
 	bool     is_io    = m_offset >= io_base;
@@ -553,7 +553,7 @@ write_rc_t bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint1
 	if (mmu_->is_enabled() && (addr_in & 1) == 0 /* TODO remove this? */ && addr_in != ADDR_MMR0)
 		mmu_->set_page_written_to(run_mode, d, apf);
 
-	uint32_t m_offset = mmu_->calculate_physical_address(c, run_mode, addr_in, true, true, false, space);
+	uint32_t m_offset = mmu_->calculate_physical_address(c, run_mode, addr_in, true, true, space);
 
 	uint32_t io_base  = mmu_->get_io_base();
 	bool     is_io    = m_offset >= io_base;
