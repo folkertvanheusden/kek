@@ -376,9 +376,7 @@ uint32_t mmu::calculate_physical_address(cpu *const c, const int run_mode, const
 
 		if (trap_on_failure) {
 			{
-				auto rc = get_trap_action(run_mode, d, apf, is_write);
-				auto trap_action    = rc.first;
-				int  access_control = rc.second;
+				const auto [ trap_action, access_control ] = get_trap_action(run_mode, d, apf, is_write);
 
 				if (trap_action != T_PROCEED) [[unlikely]] {
 					if (is_write)
