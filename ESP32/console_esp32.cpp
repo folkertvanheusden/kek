@@ -32,7 +32,6 @@ int console_esp32::wait_for_char_ll(const short timeout)
 				return port->read();
 		}
 
-//		delay(10);
 		vTaskDelay(10 / portTICK_PERIOD_MS);
 	}
 

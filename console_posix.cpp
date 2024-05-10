@@ -22,7 +22,7 @@ console_posix::console_posix(std::atomic_uint32_t *const stop_event): console(st
 	if (tcgetattr(STDIN_FILENO, &org_tty_opts) == -1)
 		error_exit(true, "console_posix: tcgetattr failed");
 
-	struct termios tty_opts_raw { 0 };
+	struct termios tty_opts_raw { };
 	cfmakeraw(&tty_opts_raw);
 
 	if (tcsetattr(STDIN_FILENO, TCSANOW, &tty_opts_raw) == -1)

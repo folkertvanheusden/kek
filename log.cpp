@@ -183,7 +183,7 @@ void dolog(const log_level_t ll, const char *fmt, ...)
 #endif
 		time_t   t_now = now / 1000000;
 
-		tm tm { 0 };
+		tm tm { };
 #if defined(_WIN32)
 		tm = *localtime(&t_now);
 #else

@@ -12,7 +12,7 @@ class console_posix : public console
 {
 private:
 #if !defined(_WIN32)
-	struct termios org_tty_opts { 0 };
+	struct termios org_tty_opts { };
 #endif
 
 protected:

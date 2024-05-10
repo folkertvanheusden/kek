@@ -261,7 +261,7 @@ void set_nodelay(const int fd)
 
 std::string get_endpoint_name(const int fd)
 {
-	sockaddr_in addr { 0 };
+	sockaddr_in addr { };
 	socklen_t   addr_len = sizeof addr;
 
 	if (getpeername(fd, reinterpret_cast<sockaddr *>(&addr), &addr_len) == -1)

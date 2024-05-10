@@ -93,7 +93,7 @@ bool disk_backend_nbd::connect(const bool retry)
 		// LOOP until connected, logging message, exponential backoff?
 		addrinfo *res     = nullptr;
 
-		addrinfo hints { 0 };
+		addrinfo hints { };
 		hints.ai_family   = AF_INET;
 		hints.ai_socktype = SOCK_STREAM;
 
