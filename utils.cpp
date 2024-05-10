@@ -6,13 +6,12 @@
 #if defined(ESP32) || defined(BUILD_FOR_RP2040)
 #include <Arduino.h>
 #include "rp2040.h"
-#include <netdb.h>
 #include <sys/socket.h>
 #elif defined(_WIN32)
 #include <ws2tcpip.h>
 #include <winsock2.h>
 #else
-#include <netdb.h>
+#include <arpa/inet.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <sys/socket.h>
