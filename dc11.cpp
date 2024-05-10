@@ -37,7 +37,7 @@
 #define ESP32_UART UART_NUM_1
 
 // this line is reserved for a serial port
-constexpr const int serial_line = 0;
+constexpr const int serial_line = 3;
 
 const char *const dc11_register_names[] { "RCSR", "RBUF", "TSCR", "TBUF" };
 
