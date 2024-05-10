@@ -77,6 +77,9 @@ public:
 
 	void     reset() override;
 
+	void     dump_par_pdr(console *const cnsl, const int run_mode, const bool d, const std::string & name, const int state, const std::optional<int> & selection) const;
+	void     show_state(console *const cnsl) const override;
+
 	bool     is_enabled() const { return MMR0 & 1; }
 	bool     is_locked()  const { return !!(MMR0 & 0160000); }
 

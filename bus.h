@@ -9,6 +9,7 @@
 #include <stdio.h>
 
 #include "gen.h"
+#include "device.h"
 #include "dc11.h"
 #include "mmu.h"
 #include "rk05.h"
@@ -56,7 +57,7 @@ typedef struct {
 	bool is_psw;
 } write_rc_t;
 
-class bus
+class bus: public device
 {
 private:
 	cpu     *c       { nullptr };
@@ -85,6 +86,8 @@ public:
 
 	void reset();
 	void init();  // invoked by 'RESET' command
+
+	void show_state(console *const cnsl) const override;
 
 	void set_console_switches(const uint16_t new_state) { console_switches = new_state; }
 	void set_console_switch(const int bit, const bool state) { console_switches &= ~(1 << bit); console_switches |= state << bit; }
@@ -115,16 +118,18 @@ public:
 	tm_11  *getTM11()   { return tm11;    }
 
 	uint16_t read(const uint16_t a, const word_mode_t word_mode, const rm_selection_t mode_selection, const bool peek_only=false, const d_i_space_t s = i_space);
-	uint16_t read_byte(const uint16_t a) { return read(a, wm_byte, rm_cur); }
-	uint16_t read_word(const uint16_t a, const d_i_space_t s = i_space);
+	uint8_t  read_byte(const uint16_t a) override { return read(a, wm_byte, rm_cur); }
+	uint16_t read_word(const uint16_t a, const d_i_space_t s);
+	uint16_t read_word(const uint16_t a) override { return read_word(a, i_space); }
 	uint16_t peekWord(const uint16_t a);
 	uint8_t  readUnibusByte(const uint32_t a);
 	uint16_t readPhysical(const uint32_t a);
 
 	write_rc_t write(const uint16_t a, const word_mode_t word_mode, uint16_t value, const rm_selection_t mode_selection, const d_i_space_t s = i_space);
 	void     writeUnibusByte(const uint32_t a, const uint8_t value);
-	void     write_byte(const uint16_t a, const uint8_t value) { write(a, wm_byte, value, rm_cur); }
-	void     write_word(const uint16_t a, const uint16_t value, const d_i_space_t s = i_space);
+	void     write_byte(const uint16_t a, const uint8_t value) override { write(a, wm_byte, value, rm_cur); }
+	void     write_word(const uint16_t a, const uint16_t value, const d_i_space_t s);
+	void     write_word(const uint16_t a, const uint16_t value) override { write_word(a, value, i_space); }
 	void     writePhysical(const uint32_t a, const uint16_t value);
 
 	bool     is_psw(const uint16_t addr, const int run_mode, const d_i_space_t space) const;

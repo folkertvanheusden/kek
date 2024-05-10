@@ -60,6 +60,18 @@ void rl02::reset()
 	sector = 0;
 }
 
+void rl02::show_state(console *const cnsl) const
+{
+	cnsl->put_string_lf(format("CSR: %06o", registers[0]));
+	cnsl->put_string_lf(format("BAR: %06o", registers[1]));
+	cnsl->put_string_lf(format("DAR: %06o", registers[2]));
+	cnsl->put_string_lf(format("MPR: %06o / %06o / %06o", mpr[0], mpr[1], mpr[2]));
+
+	cnsl->put_string_lf(format("track : %d", track ));
+	cnsl->put_string_lf(format("head  : %d", head  ));
+	cnsl->put_string_lf(format("sector: %d", sector));
+}
+
 #if IS_POSIX
 json_t *rl02::serialize() const
 {

@@ -1,4 +1,4 @@
-// (C) 2018-2023 by Folkert van Heusden
+// (C) 2018-2024 by Folkert van Heusden
 // Released under MIT license
 
 #pragma once
@@ -6,15 +6,16 @@
 #include <atomic>
 #include <condition_variable>
 #include <optional>
+#include <string>
 #include <thread>
 #include <vector>
-
-#include "bus.h"
 
 #if defined(_WIN32)
 #include "win32.h"
 #endif
 
+
+class bus;
 
 class console
 {

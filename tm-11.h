@@ -41,6 +41,8 @@ public:
 
 	void reset() override;
 
+	void show_state(console *const cnsl) const override;
+
 	uint8_t  read_byte(const uint16_t addr) override;
 	uint16_t read_word(const uint16_t addr) override;
 

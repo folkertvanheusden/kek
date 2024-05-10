@@ -30,6 +30,46 @@ void mmu::reset()
 	CPUERR = MMR0 = MMR1 = MMR2 = MMR3 = PIR = CSR = 0;
 }
 
+void mmu::dump_par_pdr(console *const cnsl, const int run_mode, const bool d, const std::string & name, const int state, const std::optional<int> & selection) const
+{
+	if (state == 0 || state == 2)
+		cnsl->put_string_lf(name);
+	else
+		cnsl->put_string_lf(format("%s DISABLED", name.c_str()));
+
+	cnsl->put_string_lf("   PAR             PDR    LEN");
+
+	for(int i=0; i<8; i++) {
+		if (selection.has_value() && i != selection.value())
+			continue;
+		uint16_t par_value = pages[run_mode][d][i].par;
+		uint16_t pdr_value = pages[run_mode][d][i].pdr;
+
+		uint16_t pdr_len   = (((pdr_value >> 8) & 127) + 1) * 64;
+
+		cnsl->put_string_lf(format("%d] %06o %08o %06o %04o D%d A%d", i, par_value, par_value * 64, pdr_value, pdr_len, !!(pdr_value & 8), pdr_value & 7));
+	}
+}
+
+void mmu::show_state(console *const cnsl) const
+{
+	cnsl->put_string_lf(MMR0 & 1 ? "MMU enabled" : "MMU NOT enabled");
+
+	cnsl->put_string_lf(format("MMR0: %06o", MMR0));
+	cnsl->put_string_lf(format("MMR1: %06o", MMR1));
+	cnsl->put_string_lf(format("MMR2: %06o", MMR2));
+	cnsl->put_string_lf(format("MMR3: %06o", MMR3));
+
+	dump_par_pdr(cnsl, 1, false, "supervisor i-space", 0,                  { });
+	dump_par_pdr(cnsl, 1, true,  "supervisor d-space", 1 + (!!(MMR3 & 2)), { });
+
+	dump_par_pdr(cnsl, 0, false, "kernel i-space",     0,                  { });
+	dump_par_pdr(cnsl, 0, true,  "kernel d-space",     1 + (!!(MMR3 & 2)), { });
+
+	dump_par_pdr(cnsl, 3, false, "user i-space",       0,                  { });
+	dump_par_pdr(cnsl, 3, true,  "user d-space",       1 + (!!(MMR3 & 2)), { });
+}
+
 uint16_t mmu::read_pdr(const uint32_t a, const int run_mode)
 {
 	int      page = (a >> 1) & 7;

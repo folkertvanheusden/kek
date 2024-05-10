@@ -11,6 +11,7 @@
 #include <ws2tcpip.h>
 #include <winsock2.h>
 #else
+#include <netdb.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <sys/socket.h>
@@ -256,4 +257,19 @@ void set_nodelay(const int fd)
         if (setsockopt(fd, SOL_TCP, TCP_NODELAY, reinterpret_cast<void *>(&flags), sizeof(flags)) == -1)
 #endif
                 DOLOG(warning, true, "Cannot disable nagle algorithm");
+}
+
+std::string get_endpoint_name(const int fd)
+{
+	char host[64] { "?" };
+	char serv[32] { "?" };
+	sockaddr_in6 addr { 0 };
+	socklen_t    addr_len = sizeof addr;
+
+	if (getpeername(fd, reinterpret_cast<sockaddr *>(&addr), &addr_len) == -1)
+		return format("FAILED TO FIND NAME OF %d: %s", fd, strerror(errno));
+
+	getnameinfo(reinterpret_cast<sockaddr *>(&addr), addr_len, host, sizeof(host), serv, sizeof(serv), NI_NUMERICHOST | NI_NUMERICSERV);
+
+	return std::string(host) + "." + std::string(serv);
 }

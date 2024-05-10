@@ -53,6 +53,8 @@ public:
 	void begin() override;
 	void reset() override;
 
+	void show_state(console *const cnsl) const override;
+
 #if IS_POSIX
 	json_t *serialize() const;
 	static rl02 *deserialize(const json_t *const j, bus *const b);

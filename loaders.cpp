@@ -138,8 +138,8 @@ void set_boot_loader(bus *const b, const bootloader_t which)
 		bl = rl02_code;
 	}
 
-	for(int i=0; i<size; i++)
-		b->write_word(offset + i * 2, bl[i]);
+	for(uint16_t i=0; i<size; i++)
+		b->write_word(uint16_t(offset + i * 2), bl[i]);
 
 	c->setRegister(7, start);
 }

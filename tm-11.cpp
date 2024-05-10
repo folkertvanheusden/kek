@@ -43,6 +43,18 @@ void tm_11::load(const std::string & file)
 	reset();
 }
 
+void tm_11::show_state(console *const cnsl) const
+{
+	cnsl->put_string_lf(format("MTS   : %06o", registers[0]));
+	cnsl->put_string_lf(format("MTC   : %06o", registers[1]));
+	cnsl->put_string_lf(format("MTBRC : %06o", registers[2]));
+	cnsl->put_string_lf(format("MTCMA : %06o", registers[3]));
+	cnsl->put_string_lf(format("MTD   : %06o", registers[4]));
+	cnsl->put_string_lf(format("MTRD  : %06o", registers[5]));
+	cnsl->put_string_lf(format("offset: %d",   offset      ));
+	cnsl->put_string_lf(format("tape file: %s", tape_file.c_str()));
+}
+
 void tm_11::reset()
 {
 	memset(registers,   0x00, sizeof registers  );

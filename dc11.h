@@ -48,7 +48,7 @@ private:
 	pollfd           *pfds             { nullptr };
 #endif
 	std::vector<char> recv_buffers[dc11_n_lines];
-        std::mutex        input_lock[dc11_n_lines];
+        mutable std::mutex input_lock[dc11_n_lines];
 	std::atomic_bool  serial_thread_running { false };
 	bool              serial_enabled   { false   };
 #if IS_POSIX
@@ -57,8 +57,8 @@ private:
 #endif
 
 	void trigger_interrupt(const int line_nr, const bool is_tx);
-	bool is_rx_interrupt_enabled(const int line_nr);
-	bool is_tx_interrupt_enabled(const int line_nr);
+	bool is_rx_interrupt_enabled(const int line_nr) const;
+	bool is_tx_interrupt_enabled(const int line_nr) const;
 
 public:
 	dc11(const int base_port, bus *const b);
@@ -70,6 +70,9 @@ public:
 #endif
 
 	void reset();
+
+	void show_state(console *const cnsl) const override;
+
 #if defined(ESP32)
 	void set_serial(const int bitrate, const int rx, const int tx);
 	void serial_handler();

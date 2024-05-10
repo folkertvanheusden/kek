@@ -130,6 +130,13 @@ bus *bus::deserialize(const json_t *const j, console *const cnsl, std::atomic_ui
 }
 #endif
 
+void bus::show_state(console *const cnsl) const
+{
+	cnsl->put_string_lf(format("Microprogram break register: %06o", microprogram_break_register));
+	cnsl->put_string_lf(format("Console switches: %06o", console_switches));
+	cnsl->put_string_lf(format("Console LEDs: %06o", console_leds));
+}
+
 void bus::set_memory_size(const int n_pages)
 {
 	uint32_t n_bytes = n_pages * 8192l;

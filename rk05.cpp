@@ -46,6 +46,17 @@ void rk05::reset()
 	memset(registers, 0x00, sizeof registers);
 }
 
+void rk05::show_state(console *const cnsl) const
+{
+	cnsl->put_string_lf(format("DS     : %06o", registers[0]));
+	cnsl->put_string_lf(format("ERROR  : %06o", registers[1]));
+	cnsl->put_string_lf(format("CS     : %06o", registers[2]));
+	cnsl->put_string_lf(format("WC     : %06o", registers[3]));
+	cnsl->put_string_lf(format("BA     : %06o", registers[4]));
+	cnsl->put_string_lf(format("DA     : %06o", registers[5]));
+	cnsl->put_string_lf(format("DATABUF: %06o", registers[6]));
+}
+
 uint8_t rk05::read_byte(const uint16_t addr)
 {
 	uint16_t v = read_word(addr & ~1);

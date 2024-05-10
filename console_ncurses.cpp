@@ -1,4 +1,4 @@
-// (C) 2018-2023 by Folkert van Heusden
+// (C) 2018-2024 by Folkert van Heusden
 // Released under MIT license
 
 #include <poll.h>
@@ -6,6 +6,7 @@
 #include <ncurses.h>
 #include <unistd.h>
 
+#include "bus.h"
 #include "console_ncurses.h"
 #include "cpu.h"
 #include "error.h"

@@ -115,6 +115,28 @@ dc11::~dc11()
 #endif
 }
 
+void dc11::show_state(console *const cnsl) const
+{
+	for(int i=0; i<4; i++) {
+		cnsl->put_string_lf(format("* LINE %d", i + 1));
+
+		if (i == serial_line) {
+			cnsl->put_string_lf(format(" Serial thread running: %s", serial_thread_running ? "true": "false" ));
+			cnsl->put_string_lf(format(" Serial enabled: %s", serial_enabled ? "true": "false" ));
+		}
+		else {
+			if (pfds[dc11_n_lines + i].fd != INVALID_SOCKET)
+				cnsl->put_string_lf(" Connected to: " + get_endpoint_name(pfds[dc11_n_lines + i].fd));
+		}
+
+		std::unique_lock<std::mutex> lck(input_lock[i]);
+		cnsl->put_string_lf(format(" Characters in buffer: %zu", recv_buffers[i].size()));
+
+		cnsl->put_string_lf(format(" RX interrupt enabled: %s", is_rx_interrupt_enabled(i) ? "true": "false" ));
+		cnsl->put_string_lf(format(" TX interrupt enabled: %s", is_tx_interrupt_enabled(i) ? "true": "false" ));
+	}
+}
+
 void dc11::trigger_interrupt(const int line_nr, const bool is_tx)
 {
 	TRACE("DC11: interrupt for line %d, %s", line_nr, is_tx ? "TX" : "RX");
@@ -423,12 +445,12 @@ void dc11::reset()
 {
 }
 
-bool dc11::is_rx_interrupt_enabled(const int line_nr)
+bool dc11::is_rx_interrupt_enabled(const int line_nr) const
 {
 	return !!(registers[line_nr * 4 + 0] & 64);
 }
 
-bool dc11::is_tx_interrupt_enabled(const int line_nr)
+bool dc11::is_tx_interrupt_enabled(const int line_nr) const
 {
 	return !!(registers[line_nr * 4 + 2] & 64);
 }

@@ -1,4 +1,4 @@
-// (C) 2018-2023 by Folkert van Heusden
+// (C) 2018-2024 by Folkert van Heusden
 // Released under MIT license
 
 #include <stdint.h>
@@ -27,3 +27,4 @@ ssize_t READ(int fd, char *whereto, size_t len);
 void update_word(uint16_t *const w, const bool msb, const uint8_t v);
 
 void set_nodelay(const int fd);
+std::string get_endpoint_name(const int fd);
