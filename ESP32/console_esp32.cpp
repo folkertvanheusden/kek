@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#include "bus.h"
 #include "console_esp32.h"
 #include "cpu.h"
 #include "esp32.h"

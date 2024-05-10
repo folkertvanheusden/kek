@@ -6,6 +6,7 @@
 #if defined(ESP32) || defined(BUILD_FOR_RP2040)
 #include <Arduino.h>
 #include "rp2040.h"
+#include <netdb.h>
 #include <sys/socket.h>
 #elif defined(_WIN32)
 #include <ws2tcpip.h>
@@ -261,15 +262,11 @@ void set_nodelay(const int fd)
 
 std::string get_endpoint_name(const int fd)
 {
-	char host[64] { "?" };
-	char serv[32] { "?" };
-	sockaddr_in6 addr { 0 };
-	socklen_t    addr_len = sizeof addr;
+	sockaddr_in addr { 0 };
+	socklen_t   addr_len = sizeof addr;
 
 	if (getpeername(fd, reinterpret_cast<sockaddr *>(&addr), &addr_len) == -1)
 		return format("FAILED TO FIND NAME OF %d: %s", fd, strerror(errno));
 
-	getnameinfo(reinterpret_cast<sockaddr *>(&addr), addr_len, host, sizeof(host), serv, sizeof(serv), NI_NUMERICHOST | NI_NUMERICSERV);
-
-	return std::string(host) + "." + std::string(serv);
+	return std::string(inet_ntoa(addr.sin_addr)) + "." + format("%d", ntohs(addr.sin_port));
 }
