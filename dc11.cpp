@@ -567,8 +567,9 @@ void dc11::write_word(const uint16_t addr, const uint16_t v)
 			DOLOG(info, false, "DC11 line %d disconnected\n", line_nr + 1);
 
 			registers[line_nr * 4 + 0] |= 0140000;  // "ERROR", CARRIER TRANSITION
-
+#if IS_POSIX
 			assert(fd != serial_fd);
+#endif
 			close(fd);
 			pfds[dc11_n_lines + line_nr].fd = INVALID_SOCKET;
 		}
