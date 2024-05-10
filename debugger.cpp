@@ -26,6 +26,7 @@
 #include "disk_backend_esp32.h"
 #endif
 #include "disk_backend_nbd.h"
+#include "kw11-l.h"
 #include "loaders.h"
 #include "log.h"
 #include "memory.h"
@@ -730,6 +731,8 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 					b->getDC11()->show_state(cnsl);
 				else if (parts[1] == "tm11")
 					b->getTM11()->show_state(cnsl);
+				else if (parts[1] == "kw11l")
+					b->getKW11_L()->show_state(cnsl);
 				else
 					cnsl->put_string_lf(format("Device \"%s\" is not known", parts[1].c_str()));
 
@@ -1012,7 +1015,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 					"strace x      - start tracing from address - invoke without address to disable",
 					"trl x         - set trace run-level (0...3), empty for all",
 					"regdump       - dump register contents",
-					"state x       - dump state of a device: rl02, rk05, mmu, tm11 or dc11",
+					"state x       - dump state of a device: rl02, rk05, mmu, tm11, kw11l or dc11",
 					"mmures x      - resolve a virtual address",
 					"qi            - show queued interrupts",
 					"setpc x       - set PC to value",

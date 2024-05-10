@@ -33,6 +33,7 @@ add_executable(
   cpu.cpp
   dc11.cpp
   debugger.cpp
+  device.cpp
   disk_backend.cpp
   disk_backend_file.cpp
   disk_backend_nbd.cpp
@@ -84,6 +85,7 @@ add_executable(
   cpu.cpp
   dc11.cpp
   debugger.cpp
+  device.cpp
   disk_backend.cpp
   disk_backend_file.cpp
   disk_backend_nbd.cpp

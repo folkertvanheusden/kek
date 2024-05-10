@@ -6,10 +6,11 @@
 
 #include "bus.h"
 #include "console.h"
+#include "device.h"
 #include "gen.h"
 
 
-class kw11_l
+class kw11_l: public device
 {
 private:
 	bus         *const b          { nullptr };
@@ -36,6 +37,8 @@ public:
 
 	void     reset();
 
+	void     show_state(console *const cnsl) const override;
+
 #if IS_POSIX
 	json_t *serialize();
 	static kw11_l *deserialize(const json_t *const j, bus *const b, console *const cnsl);
@@ -45,5 +48,7 @@ public:
 	void     operator()();
 
 	uint16_t read_word (const uint16_t a);
+
+	void     write_byte(const uint16_t addr, const uint8_t v);
 	void     write_word(const uint16_t a, const uint16_t v);
 };

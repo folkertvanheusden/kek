@@ -42,6 +42,11 @@ kw11_l::~kw11_l()
 #endif
 }
 
+void kw11_l::show_state(console *const cnsl) const
+{
+	cnsl->put_string_lf(format("CSR: %06o", lf_csr));
+}
+
 void kw11_l::begin(console *const cnsl)
 {
 	this->cnsl = cnsl;
@@ -129,6 +134,27 @@ uint16_t kw11_l::read_word(const uint16_t a)
 #endif
 
 	return temp;
+}
+
+void kw11_l::write_byte(const uint16_t addr, const uint8_t value)
+{
+	if (addr != ADDR_LFC) {
+		TRACE("KW11-L write_byte not for us (%06o to %06o)", value, addr);
+		return;
+	}
+
+	uint16_t vtemp = lf_csr;
+	
+	if (addr & 1) {
+		vtemp &= ~0xff00;
+		vtemp |= value << 8;
+	}
+	else {
+		vtemp &= ~0x00ff;
+		vtemp |= value;
+	}
+
+	write_word(addr, vtemp);
 }
 
 void kw11_l::write_word(const uint16_t a, const uint16_t value)
