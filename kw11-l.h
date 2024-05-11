@@ -24,6 +24,9 @@ private:
 #endif
 	uint16_t           lf_csr     { 0       };
 
+	int64_t            t_diff_sum { 0       };
+	uint64_t           n_t_diff   { 0       };
+
 	std::atomic_bool   stop_flag  { false   };
 
 	uint8_t  get_lf_crs();

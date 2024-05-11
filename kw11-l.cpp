@@ -45,6 +45,9 @@ kw11_l::~kw11_l()
 void kw11_l::show_state(console *const cnsl) const
 {
 	cnsl->put_string_lf(format("CSR: %06o", lf_csr));
+
+	if (n_t_diff)
+		cnsl->put_string_lf(format("Average tick interrupt interval: %.3f ms", double(t_diff_sum) / n_t_diff));
 }
 
 void kw11_l::begin(console *const cnsl)
@@ -96,10 +99,14 @@ void kw11_l::operator()()
 			// - 50 Hz depending on instrution count
 			// - nothing executed in interval
 			// - 10 Hz minimum
-			if (took_ms >= 1000 / 50 || current_cycle_count - interval_prev_cycle_count == 0 || now - prev_tick >= 100) {
+			auto t_diff = now - prev_tick;
+			if (took_ms >= 1000 / 50 || current_cycle_count - interval_prev_cycle_count == 0 || t_diff >= 100) {
 				do_interrupt();
 
 				prev_cycle_count = current_cycle_count;
+
+				t_diff_sum      += t_diff;
+				n_t_diff++;
 
 				prev_tick        = now;
 			}
