@@ -94,22 +94,23 @@ void start_disk(console *const cnsl)
 
 #endif
 
-#if defined(SHA2017)
+#if defined(ESP32_WT_ETH01)
+	if (SD.begin(SdioConfig(FIFO_SDIO)))
+		disk_started = true;
+#elif defined(SHA2017)
 	if (SD.begin(21, SD_SCK_MHZ(10)))
 		disk_started = true;
-	else
-		SD.initErrorHalt();
 #elif !defined(BUILD_FOR_RP2040)
 	if (SD.begin(SS, SD_SCK_MHZ(15)))
 		disk_started = true;
-	else {
+#endif
+	if (!disk_started) {
 		auto err = SD.sdErrorCode();
 		if (err)
 			cnsl->put_string_lf(format("SDerror: 0x%x, data: 0x%x", err, SD.sdErrorData()));
 		else
 			cnsl->put_string_lf("Failed to initialize SD card");
 	}
-#endif
 #endif
 }
 
