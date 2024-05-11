@@ -137,6 +137,31 @@ void dc11::show_state(console *const cnsl) const
 	}
 }
 
+void dc11::test_serial(const std::string & txt) const
+{
+	for(int i=0; i<dc11_n_lines; i++) {
+		if (i == serial_line) {
+			DOLOG(info, false, "DC11 serial test line %d", i);
+
+#if defined(ESP32)
+			uart_write_bytes(ESP32_UART, txt.c_str(), txt.size());
+#elif IS_POSIX
+			if (write(serial_fd, txt.c_str(), txt.size()) != txt.size())
+				DOLOG(warning, false, "DC11 failed to send test string to line %d", i);
+#endif
+		}
+		else if (pfds[dc11_n_lines + i].fd != INVALID_SOCKET) {
+			DOLOG(info, false, "DC11 socket line %d", i);
+
+			if (write(pfds[dc11_n_lines + i].fd, txt.c_str(), txt.size()) != txt.size())
+				DOLOG(warning, false, "DC11 failed to send test string to line %d", i);
+		}
+		else {
+			DOLOG(info, false, "DC11 line %d not connected", i);
+		}
+	}
+}
+
 void dc11::trigger_interrupt(const int line_nr, const bool is_tx)
 {
 	TRACE("DC11: interrupt for line %d, %s", line_nr, is_tx ? "TX" : "RX");

@@ -73,6 +73,8 @@ public:
 
 	void show_state(console *const cnsl) const override;
 
+	void test_serial(const std::string & txt) const;
+
 #if defined(ESP32)
 	void set_serial(const int bitrate, const int rx, const int tx);
 	void serial_handler();
