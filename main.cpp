@@ -602,7 +602,7 @@ int main(int argc, char *argv[])
 	dc11 *dc11_ = new dc11(1100, b);
 	if (dc11_device.has_value()) {
 		DOLOG(info, false, "Configuring DC11 device for serial port on %s", dc11_device.value().c_str());
-		dc11_->set_serial(115200, dc11_device.value());
+		dc11_->set_serial(38400, dc11_device.value());
 	}
 	b->add_DC11(dc11_);
 

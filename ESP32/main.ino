@@ -212,12 +212,12 @@ void start_network(console *const c)
 		Serial.printf("* Init TTY (on DC11), baudrate: %d bps, RX: %d, TX: %d", bitrate, TTY_SERIAL_RX, TTY_SERIAL_TX);
 		Serial.println(F(""));
 
-		dc11_->set_serial(bitrate, TTY_SERIAL_RX, TTY_SERIAL_TX);
+		dc11_->set_serial(38400 /* bitrate TODO */, TTY_SERIAL_RX, TTY_SERIAL_TX);
 #endif
 		b->add_DC11(dc11_);
 
 		Serial.println(F("* Starting (NTP-) clock"));
-		ntp_ = new ntp("188.212.113.203");
+		ntp_ = new ntp("188.212.113.203");  // TODO configurable
 		ntp_->begin();
 
 		set_clock_reference(ntp_);
