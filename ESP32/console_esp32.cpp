@@ -24,6 +24,11 @@ console_esp32::~console_esp32()
 	stop_thread();
 }
 
+void console_esp32::set_panel_mode(const panel_mode_t pm)
+{
+	panel_mode = pm;
+}
+
 int console_esp32::wait_for_char_ll(const short timeout)
 {
 	for(short i=0; i<timeout / 10; i++) {
@@ -112,27 +117,34 @@ void console_esp32::panel_update_thread()
 			// note that these are approximately as there's no mutex on the emulation
 			uint16_t current_PSW   = c->getPSW();
 			int      run_mode      = current_PSW >> 14;
-
-			uint16_t current_PC    = c->getPC();
-			uint32_t full_addr     = b->getMMU()->calculate_physical_address(c, run_mode, current_PC, false, false, i_space);
-
-			uint16_t current_instr = b->read_word(current_PC);
-
 			uint32_t led_color     = run_mode_led_color[run_mode];
 
-			for(uint8_t b=0; b<22; b++)
-				pixels.setPixelColor(b, full_addr & (1 << b) ? led_color : 0);
+			uint16_t current_PC    = c->getPC();
 
-			for(uint8_t b=0; b<16; b++)
-				pixels.setPixelColor(b + 22, current_PSW & (1l << b) ? magenta : 0);
+			if (pm == PM_BITS) {
+				uint32_t full_addr     = b->getMMU()->calculate_physical_address(c, run_mode, current_PC, false, false, i_space);
 
-			for(uint8_t b=0; b<16; b++)
-				pixels.setPixelColor(b + 38, current_instr & (1l << b) ? red : 0);
+				uint16_t current_instr = b->read_word(current_PC);
 
-			pixels.setPixelColor(54, running_flag             ? white : 0);
+				for(uint8_t b=0; b<22; b++)
+					pixels.setPixelColor(b, full_addr & (1 << b) ? led_color : 0);
 
-			pixels.setPixelColor(55, disk_read_activity_flag  ? blue  : 0);
-			pixels.setPixelColor(56, disk_write_activity_flag ? blue  : 0);
+				for(uint8_t b=0; b<16; b++)
+					pixels.setPixelColor(b + 22, current_PSW & (1l << b) ? magenta : 0);
+
+				for(uint8_t b=0; b<16; b++)
+					pixels.setPixelColor(b + 38, current_instr & (1l << b) ? red : 0);
+
+				pixels.setPixelColor(54, running_flag             ? white : 0);
+
+				pixels.setPixelColor(55, disk_read_activity_flag  ? blue  : 0);
+				pixels.setPixelColor(56, disk_write_activity_flag ? blue  : 0);
+			}
+			else {
+				pixels.clear();
+
+				pixels.setPixelColor(current_PC * n_pixels / 65536, led_color);
+			}
 
 			pixels.show();
 		}

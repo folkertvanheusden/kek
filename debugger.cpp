@@ -37,6 +37,7 @@
 #if defined(ESP32) || defined(BUILD_FOR_RP2040)
 #if defined(ESP32)
 #include "esp32.h"
+#include "console_esp32.h"
 #elif defined(BUILD_FOR_RP2040)
 #include "rp2040.h"
 #endif
@@ -833,6 +834,11 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 				continue;
 			}
+			else if (parts[0] == "pm" && parts.size() == 2) {
+				reinterpret_cast<console_esp32 *>(cnsl)->set_panel_mode(parts[1] == "bits" ? console_esp32::PM_BITS : console_esp32::PM_POINTER);
+
+				continue;
+			}
 #endif
 			else if (cmd == "stats") {
 				show_run_statistics(cnsl, c);
@@ -1044,6 +1050,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 					"cfgnet        - configure network (e.g. WiFi)",
 					"startnet      - start network",
 					"chknet        - check network status",
+					"pm x          - panel mode (bits or address)",
 #endif
 					"testdc11      - test DC11",
 					"cfgdisk       - configure disk",
