@@ -146,14 +146,14 @@ void dc11::test_serial(const std::string & txt) const
 #if defined(ESP32)
 			uart_write_bytes(ESP32_UART, txt.c_str(), txt.size());
 #elif IS_POSIX
-			if (write(serial_fd, txt.c_str(), txt.size()) != txt.size())
+			if (write(serial_fd, txt.c_str(), txt.size()) != ssize_t(txt.size()))
 				DOLOG(warning, false, "DC11 failed to send test string to line %d", i);
 #endif
 		}
 		else if (pfds[dc11_n_lines + i].fd != INVALID_SOCKET) {
 			DOLOG(info, false, "DC11 socket line %d", i);
 
-			if (write(pfds[dc11_n_lines + i].fd, txt.c_str(), txt.size()) != txt.size())
+			if (write(pfds[dc11_n_lines + i].fd, txt.c_str(), txt.size()) != ssize_t(txt.size()))
 				DOLOG(warning, false, "DC11 failed to send test string to line %d", i);
 		}
 		else {
