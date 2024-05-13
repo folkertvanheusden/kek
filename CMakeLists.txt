@@ -122,3 +122,10 @@ target_link_libraries(kek-win32 Threads::Threads)
 
 target_link_libraries(kek-win32 ws2_32)
 endif ()
+
+add_subdirectory(arduinojson)
+target_link_libraries(kek ArduinoJson)
+
+if (WIN32)
+target_link_libraries(kek-win32 ArduinoJson)
+endif ()

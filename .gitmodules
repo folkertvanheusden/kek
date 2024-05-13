@@ -1,3 +1,6 @@
 [submodule "ESP32/SHAdisplay"]
 	path = ESP32/SHAdisplay
 	url = https://github.com/krzychb/esp-epaper-29-dke
+[submodule "arduinojson"]
+	path = arduinojson
+	url = https://github.com/bblanchon/ArduinoJson.git
