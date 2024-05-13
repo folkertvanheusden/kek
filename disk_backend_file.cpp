@@ -21,8 +21,7 @@ disk_backend_file::~disk_backend_file()
 	close(fd);
 }
 
-#if IS_POSIX
-json_t *disk_backend_file::serialize() const
+JsonDocument disk_backend_file::serialize() const
 {
 	json_t *j = json_object();
 
@@ -39,9 +38,9 @@ json_t *disk_backend_file::serialize() const
 disk_backend_file *disk_backend_file::deserialize(const json_t *const j)
 {
 	// TODO verify checksum of backend
+	// TODO overlay
 	return new disk_backend_file(json_string_value(json_object_get(j, "filename")));
 }
-#endif
 
 bool disk_backend_file::begin(const bool snapshots)
 {

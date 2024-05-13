@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <ArduinoJson.h>
 #include <atomic>
 #include <cassert>
 #include <condition_variable>
@@ -115,8 +116,8 @@ public:
 	~cpu();
 
 #if IS_POSIX
-	json_t *serialize();
-	static cpu *deserialize(const json_t *const j, bus *const b, std::atomic_uint32_t *const event);
+	JsonDocument serialize();
+	static cpu *deserialize(const JsonDocument j, bus *const b, std::atomic_uint32_t *const event);
 #endif
 
 	std::optional<std::string> check_breakpoint();

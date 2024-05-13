@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <ArduinoJson.h>
 #include <assert.h>
 #include <mutex>
 #include <stdint.h>
@@ -80,8 +81,8 @@ public:
 	~bus();
 
 #if IS_POSIX
-	json_t *serialize() const;
-	static bus *deserialize(const json_t *const j, console *const cnsl, std::atomic_uint32_t *const event);
+	JsonDocument serialize() const;
+	static bus *deserialize(const JsonDocument j, console *const cnsl, std::atomic_uint32_t *const event);
 #endif
 
 	void reset();

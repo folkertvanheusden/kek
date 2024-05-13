@@ -1,6 +1,7 @@
 // (C) 2018-2024 by Folkert van Heusden
 // Released under MIT license
 
+#include <ArduinoJson.h>
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
@@ -44,91 +45,68 @@ bus::~bus()
 	delete dc11_;
 }
 
-#if IS_POSIX
-json_t *bus::serialize() const
+JsonDocument bus::serialize() const
 {
-	json_t *j_out = json_object();
+	JsonDocument j_out;
 
 	if (m)
-		json_object_set(j_out, "memory", m->serialize());
+		j_out["memory"] = m->serialize();
 
 	if (kw11_l_)
-		json_object_set(j_out, "kw11-l", kw11_l_->serialize());
+		j_out["kw11-l"] = kw11_l_->serialize();
 
 	if (tty_)
-		json_object_set(j_out, "tty", tty_->serialize());
+		j_out["tty"] = tty_->serialize();
 
 	if (mmu_)
-		json_object_set(j_out, "mmu", mmu_->serialize());
+		j_out["mmu"] = mmu_->serialize();
 
 	if (c)
-		json_object_set(j_out, "cpu", c->serialize());
+		j_out["cpu"] = c->serialize();
 
 	if (rl02_)
-		json_object_set(j_out, "rl02", rl02_->serialize());
+		j_out["rl02"] = rl02_->serialize();
 
 	if (rk05_)
-		json_object_set(j_out, "rk05", rk05_->serialize());
+		j_out["rk05"] = rk05_->serialize();
 
 	// TODO: tm11, dc11
 
 	return j_out;
 }
 
-bus *bus::deserialize(const json_t *const j, console *const cnsl, std::atomic_uint32_t *const event)
+bus *bus::deserialize(const JsonDocument j, console *const cnsl, std::atomic_uint32_t *const event)
 {
 	bus *b = new bus();
 
-	json_t *temp = nullptr;
-
 	memory *m = nullptr;
-	temp = json_object_get(j, "memory");
-	if (temp) {
-		m = memory::deserialize(temp);
+	if (j.containsKey("memory")) {
+		m = memory::deserialize(j["memory"]);
 		b->add_ram(m);
 	}
 
-	temp = json_object_get(j, "kw11-l");
-	if (temp) {
-		kw11_l *kw11_l_ = kw11_l::deserialize(temp, b, cnsl);
-		b->add_KW11_L(kw11_l_);
-	}
+	if (j.containsKey("kw11-l"))
+		b->add_KW11_L(kw11_l::deserialize(j["kw11-l"], b, cnsl));
 
-	temp = json_object_get(j, "tty");
-	if (temp) {
-		tty *tty_ = tty::deserialize(temp, b, cnsl);
-		b->add_tty(tty_);
-	}
+	if (j.containsKey("tty"))
+		b->add_tty(tty::deserialize(j["tty"], b, cnsl));
 
-	temp = json_object_get(j, "mmu");
-	if (temp) {
-		mmu *mmu_ = mmu::deserialize(temp, m);
-		b->add_mmu(mmu_);
-	}
+	if (j.containsKey("mmu"))
+		b->add_mmu(mmu::deserialize(j["mmu"], m));
 
-	temp = json_object_get(j, "cpu");
-	if (temp) {
-		cpu *cpu_ = cpu::deserialize(temp, b, event);
-		b->add_cpu(cpu_);
-	}
+	if (j.containsKey("cpu"))
+		b->add_cpu(cpu::deserialize(j["cpu"], b, event));
 
-	temp = json_object_get(j, "rl02");
-	if (temp) {
-		rl02 *rl02_ = rl02::deserialize(temp, b);
-		b->add_rl02(rl02_);
-	}
+	if (j.containsKey("rl02"))
+		b->add_rl02(rl02::deserialize(j["rl02"], b));
 
-	temp = json_object_get(j, "rk05");
-	if (temp) {
-		rk05 *rk05_ = rk05::deserialize(temp, b);
-		b->add_rk05(rk05_);
-	}
+	if (j.containsKey("rk05"))
+		b->add_rk05(rk05::deserialize(j["rk05"], b));
 
 	// TODO: tm11, dc11
 
 	return b;
 }
-#endif
 
 void bus::show_state(console *const cnsl) const
 {
