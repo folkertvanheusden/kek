@@ -5,7 +5,7 @@
 
 #include <string>
 
-#include "config.h"
+#include "gen.h"
 #if defined(ESP32)
 #include "FvHNTP/FvHNTP.h"
 #endif

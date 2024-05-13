@@ -57,17 +57,14 @@ std::optional<disk_backend *> select_nbd_server(console *const cnsl)
 	cnsl->flush_input();
 
 	std::string hostname = cnsl->read_line("Enter hostname (or empty to abort): ");
-
 	if (hostname.empty())
 		return { };
 
 	std::string port_str = cnsl->read_line("Enter port number (or empty to abort): ");
-
 	if (port_str.empty())
 		return { };
 
 	disk_backend *d = new disk_backend_nbd(hostname, atoi(port_str.c_str()));
-
 	if (d->begin(false) == false) {
 		cnsl->put_string_lf("Cannot initialize NBD client");
 		delete d;
