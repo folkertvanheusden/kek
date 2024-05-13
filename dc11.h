@@ -69,7 +69,7 @@ public:
 //	static tty *deserialize(const json_t *const j, bus *const b, console *const cnsl);
 #endif
 
-	void reset();
+	void reset() override;
 
 	void show_state(console *const cnsl) const override;
 
@@ -83,11 +83,11 @@ public:
 	void serial_handler();
 #endif
 
-	uint8_t  read_byte(const uint16_t addr);
-	uint16_t read_word(const uint16_t addr);
+	uint8_t  read_byte(const uint16_t addr) override;
+	uint16_t read_word(const uint16_t addr) override;
 
-	void write_byte(const uint16_t addr, const uint8_t v);
-	void write_word(const uint16_t addr, const uint16_t v);
+	void write_byte(const uint16_t addr, const uint8_t  v) override;
+	void write_word(const uint16_t addr, const uint16_t v) override;
 
 	void operator()();
 };

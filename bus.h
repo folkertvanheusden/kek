@@ -84,7 +84,7 @@ public:
 	static bus *deserialize(const json_t *const j, console *const cnsl, std::atomic_uint32_t *const event);
 #endif
 
-	void reset();
+	void reset() override;
 	void init();  // invoked by 'RESET' command
 
 	void show_state(console *const cnsl) const override;
