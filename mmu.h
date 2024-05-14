@@ -1,5 +1,6 @@
 #pragma once
 
+#include <ArduinoJson.h>
 #include <cstdint>
 #include <string>
 
@@ -57,10 +58,8 @@ private:
 
 	memory  *m { nullptr };
 
-#if IS_POSIX
-	void add_par_pdr(json_t *const target, const int run_mode, const bool is_d, const std::string & name) const;
-	void set_par_pdr(const json_t *const j_in, const int run_mode, const bool is_d, const std::string & name);
-#endif
+	JsonDocument add_par_pdr(const int run_mode, const bool is_d) const;
+	void set_par_pdr(const JsonDocument j_in, const int run_mode, const bool is_d);
 
 	void verify_page_access (cpu *const c, const uint16_t virt_addr, const int run_mode, const bool d, const int apf, const bool is_write);
 	void verify_access_valid(cpu *const c, const uint32_t m_offset,  const int run_mode, const bool d, const int apf, const bool is_io, const bool is_write);
@@ -72,10 +71,8 @@ public:
 
 	void     begin(memory *const m);
 
-#if IS_POSIX
-	json_t *serialize() const;
-	static mmu *deserialize(const json_t *const j, memory *const m);
-#endif
+	JsonDocument serialize() const;
+	static mmu *deserialize(const JsonDocument j, memory *const m);
 
 	void     mmudebug(const uint16_t a);
 

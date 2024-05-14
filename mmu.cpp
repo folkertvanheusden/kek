@@ -504,60 +504,60 @@ uint32_t mmu::calculate_physical_address(cpu *const c, const int run_mode, const
 	return m_offset;
 }
 
-#if IS_POSIX
-void mmu::add_par_pdr(json_t *const target, const int run_mode, const bool is_d, const std::string & name) const
+JsonDocument mmu::add_par_pdr(const int run_mode, const bool is_d) const
 {
-	json_t *j = json_object();
+	JsonDocument j;
 
-	json_t *ja_par = json_array();
+	JsonArray ja_par;
 	for(int i=0; i<8; i++)
-		json_array_append(ja_par, json_integer(pages[run_mode][is_d][i].par));
-	json_object_set(j, "par", ja_par);
+		ja_par.add(pages[run_mode][is_d][i].par);
+	j["par"] = ja_par;
 
-	json_t *ja_pdr = json_array();
+	JsonArray ja_pdr;
 	for(int i=0; i<8; i++)
-		json_array_append(ja_pdr, json_integer(pages[run_mode][is_d][i].pdr));
-	json_object_set(j, "pdr", ja_pdr);
+		ja_pdr.add(pages[run_mode][is_d][i].pdr);
+	j["pdr"] = ja_pdr;
 
-	json_object_set(target, name.c_str(), j);
+	return j;
 }
 
-json_t *mmu::serialize() const
+JsonDocument mmu::serialize() const
 {
-	json_t *j = json_object();
+	JsonDocument j;
 
 	for(int run_mode=0; run_mode<4; run_mode++) {
 		if (run_mode == 2)
 			continue;
 
 		for(int is_d=0; is_d<2; is_d++)
-			add_par_pdr(j, run_mode, is_d, format("runmode_%d_d_%d", run_mode, is_d));
+			j[format("runmode_%d_d_%d", run_mode, is_d)] = add_par_pdr(run_mode, is_d);
 	}
 
-        json_object_set(j, "MMR0", json_integer(MMR0));
-        json_object_set(j, "MMR1", json_integer(MMR1));
-        json_object_set(j, "MMR2", json_integer(MMR2));
-        json_object_set(j, "MMR3", json_integer(MMR3));
-        json_object_set(j, "CPUERR", json_integer(CPUERR));
-        json_object_set(j, "PIR", json_integer(PIR));
-        json_object_set(j, "CSR", json_integer(CSR));
+        j["MMR0"]   = MMR0;
+        j["MMR1"]   = MMR1;
+        j["MMR2"]   = MMR2;
+        j["MMR3"]   = MMR3;
+        j["CPUERR"] = CPUERR;
+        j["PIR"]    = PIR;
+        j["CSR"]    = CSR;
 
 	return j;
 }
 
-void mmu::set_par_pdr(const json_t *const j_in, const int run_mode, const bool is_d, const std::string & name)
+void mmu::set_par_pdr(const JsonDocument j_in, const int run_mode, const bool is_d)
 {
-	json_t *j = json_object_get(j_in, name.c_str());
+	JsonDocument j_par = j_in["par"];
+	int          i_par = 0;
+	for(auto & v: j_par)
+		pages[run_mode][is_d][i++].par = v;
 
-	json_t *j_par = json_object_get(j, "par");
-	for(int i=0; i<8; i++)
-		pages[run_mode][is_d][i].par = json_integer_value(json_array_get(j_par, i));
-	json_t *j_pdr = json_object_get(j, "pdr");
-	for(int i=0; i<8; i++)
-		pages[run_mode][is_d][i].pdr = json_integer_value(json_array_get(j_pdr, i));
+	JsonDocument j_pdr = j_in["pdr"];
+	int          i_pdr = 0;
+	for(auto & v: j_pdr)
+		pages[run_mode][is_d][i++].pdr = v;
 }
 
-mmu *mmu::deserialize(const json_t *const j, memory *const mem)
+mmu *mmu::deserialize(const JsonDocument j, memory *const mem)
 {
 	mmu *m = new mmu();
 	m->begin(mem);
@@ -567,17 +567,16 @@ mmu *mmu::deserialize(const json_t *const j, memory *const mem)
 			continue;
 
 		for(int is_d=0; is_d<2; is_d++)
-			m->set_par_pdr(j, run_mode, is_d, format("runmode_%d_d_%d", run_mode, is_d));
+			m->set_par_pdr(j[format("runmode_%d_d_%d", run_mode, is_d)], run_mode, is_d);
 	}
 
-        m->MMR0   = json_integer_value(json_object_get(j, "MMR0"));
-        m->MMR1   = json_integer_value(json_object_get(j, "MMR1"));
-        m->MMR2   = json_integer_value(json_object_get(j, "MMR2"));
-        m->MMR3   = json_integer_value(json_object_get(j, "MMR3"));
-        m->CPUERR = json_integer_value(json_object_get(j, "CPUERR"));
-        m->PIR    = json_integer_value(json_object_get(j, "PIR"));
-        m->CSR    = json_integer_value(json_object_get(j, "CSR"));
+        m->MMR0   = j["MMR0"];
+        m->MMR1   = j["MMR1"];
+        m->MMR2   = j["MMR2"];
+        m->MMR3   = j["MMR3"];
+        m->CPUERR = j["CPUERR"];
+        m->PIR    = j["PIR"];
+        m->CSR    = j["CSR"];
 
 	return m;
 }
-#endif
