@@ -23,6 +23,9 @@ public:
 	disk_backend_esp32(const std::string & filename);
 	virtual ~disk_backend_esp32();
 
+	JsonVariant serialize() const override;
+	static disk_backend_esp32 *deserialize(const JsonVariantConst j);
+
 	std::string get_identifier() const { return filename; }
 
 	bool begin(const bool dummy) override;

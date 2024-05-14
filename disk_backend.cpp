@@ -5,10 +5,13 @@
 
 #include "disk_backend.h"
 #include "gen.h"
+#include "utils.h"
 #if IS_POSIX
 #include "disk_backend_file.h"
-#include "disk_backend_nbd.h"
+#else
+#include "disk_backend_esp32.h"
 #endif
+#include "disk_backend_nbd.h"
 
 
 disk_backend::disk_backend()
@@ -96,11 +99,16 @@ disk_backend *disk_backend::deserialize(const JsonVariantConst j)
 
 	disk_backend *d    = nullptr;
 
-	if (type == "file")
-		d = disk_backend_file::deserialize(j);
-
-	else if (type == "nbd")
+	if (type == "nbd")
 		d = disk_backend_nbd::deserialize(j);
+
+#if IS_POSIX
+	else if (type == "file")
+		d = disk_backend_file::deserialize(j);
+#else
+	else if (type == "esp32")
+		d = disk_backend_esp32::deserialize(j);
+#endif
 
 	// should not be triggered
 	assert(d);

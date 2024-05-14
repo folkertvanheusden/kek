@@ -24,6 +24,27 @@ disk_backend_esp32::~disk_backend_esp32()
 	delete fh;
 }
 
+JsonVariant disk_backend_esp32::serialize() const
+{
+	JsonVariant j;
+
+	j["disk-backend-type"] = "esp32";
+
+        j["overlay"] = serialize_overlay();
+
+        // TODO store checksum of backend
+
+        j["filename"] = filename;
+
+	return j;
+}
+
+disk_backend_esp32 *disk_backend_esp32::deserialize(const JsonVariantConst j)
+{
+	// TODO verify checksum of backend
+	return new disk_backend_esp32(j["file"].as<std::string>());
+}
+
 void disk_backend_esp32::emit_error()
 {
 	DOLOG(ll_error, true, "SdFat error: %d/%d", sd.sdErrorCode(), sd.sdErrorData());

@@ -80,10 +80,8 @@ public:
 	bus();
 	~bus();
 
-#if IS_POSIX
-	JsonDocument serialize() const;
+	JsonVariant serialize() const;
 	static bus *deserialize(const JsonDocument j, console *const cnsl, std::atomic_uint32_t *const event);
-#endif
 
 	void reset() override;
 	void init();  // invoked by 'RESET' command

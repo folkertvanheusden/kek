@@ -45,9 +45,9 @@ bus::~bus()
 	delete dc11_;
 }
 
-JsonDocument bus::serialize() const
+JsonVariant bus::serialize() const
 {
-	JsonDocument j_out;
+	JsonVariant j_out;
 
 	if (m)
 		j_out["memory"] = m->serialize();
