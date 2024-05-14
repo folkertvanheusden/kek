@@ -534,26 +534,35 @@ void show_queued_interrupts(console *const cnsl, cpu *const c)
 	}
 }
 
-#if IS_POSIX
+struct state_writer {
+	FILE *fh = nullptr;
+
+	size_t write(uint8_t c) {
+		return fputc(c, fh) == EOF ? 0 : 1;
+	}
+
+	size_t write(const uint8_t *buffer, size_t length) {
+		return fwrite(buffer, 1, length, fh);
+	}
+};
+
 void serialize_state(console *const cnsl, const bus *const b, const std::string & filename)
 {
-	json_t *j = b->serialize();
+	JsonDocument j = b->serialize();
 
 	bool ok = false;
 
 	FILE *fh = fopen(filename.c_str(), "w");
 	if (fh) {
-		if (json_dumpf(j, fh, JSON_INDENT(4)) == 0)
-			ok = true;
-
+		state_writer ws { fh };
+		serializeJson(j, ws);
 		fclose(fh);
-	}
 
-	json_decref(j);
+		ok = true;
+	}
 
 	cnsl->put_string_lf(format("Serialize to %s: %s", filename.c_str(), ok ? "OK" : "failed"));
 }
-#endif
 
 void tm11_load_tape(console *const cnsl, bus *const b, const std::optional<std::string> & file)
 {
