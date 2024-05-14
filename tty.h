@@ -53,7 +53,7 @@ public:
 	virtual ~tty();
 
 	JsonVariant serialize();
-	static tty *deserialize(const JsonVariant j, bus *const b, console *const cnsl);
+	static tty *deserialize(const JsonVariantConst j, bus *const b, console *const cnsl);
 
 	void reset();
 

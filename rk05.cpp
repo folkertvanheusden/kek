@@ -296,12 +296,12 @@ JsonVariant rk05::serialize() const
 	return j;
 }
 
-rk05 *rk05::deserialize(const JsonVariant j, bus *const b)
+rk05 *rk05::deserialize(const JsonVariantConst j, bus *const b)
 {
 	rk05 *r = new rk05(b, nullptr, nullptr);
 	r->begin();
 
-	for(auto j_backend: j["backends"].as<JsonArray>())
+	for(auto j_backend: j["backends"].as<JsonArrayConst>())
 		r->access_disk_backends()->push_back(disk_backend::deserialize(j_backend));
 
 	for(int regnr=0; regnr<7; regnr++)

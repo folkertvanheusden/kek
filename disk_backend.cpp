@@ -74,23 +74,23 @@ JsonVariant disk_backend::serialize_overlay() const
 	return out;
 }
 
-void disk_backend::deserialize_overlay(const JsonVariant j)
+void disk_backend::deserialize_overlay(const JsonVariantConst j)
 {
 	if (j.containsKey("overlay") == false)
 		return; // we can have state-dumps without overlay
 
-	for(auto kv : j.as<JsonObject>()) {
+	for(auto kv : j.as<JsonObjectConst>()) {
 		uint32_t id = std::atoi(kv.key().c_str());
 
 		std::vector<uint8_t> data;
-		for(auto v: kv.value().as<JsonArray>())
+		for(auto v: kv.value().as<JsonArrayConst>())
 			data.push_back(v);
 
 		store_object_in_overlay(id, data);
 	}
 }
 
-disk_backend *disk_backend::deserialize(const JsonVariant j)
+disk_backend *disk_backend::deserialize(const JsonVariantConst j)
 {
 	std::string   type = j["disk-backend-type"];
 

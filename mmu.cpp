@@ -544,20 +544,20 @@ JsonVariant mmu::serialize() const
 	return j;
 }
 
-void mmu::set_par_pdr(const JsonVariant j_in, const int run_mode, const bool is_d)
+void mmu::set_par_pdr(const JsonVariantConst j_in, const int run_mode, const bool is_d)
 {
-	JsonArray j_par = j_in["par"];
+	JsonArrayConst j_par = j_in["par"];
 	int       i_par = 0;
 	for(auto v: j_par)
 		pages[run_mode][is_d][i_par++].par = v;
 
-	JsonArray j_pdr = j_in["pdr"];
+	JsonArrayConst j_pdr = j_in["pdr"];
 	int       i_pdr = 0;
 	for(auto v: j_pdr)
 		pages[run_mode][is_d][i_pdr++].pdr = v;
 }
 
-mmu *mmu::deserialize(const JsonVariant j, memory *const mem)
+mmu *mmu::deserialize(const JsonVariantConst j, memory *const mem)
 {
 	mmu *m = new mmu();
 	m->begin(mem);
@@ -567,7 +567,7 @@ mmu *mmu::deserialize(const JsonVariant j, memory *const mem)
 			continue;
 
 		for(int is_d=0; is_d<2; is_d++)
-			m->set_par_pdr(j[format("runmode_%d_d_%d", run_mode, is_d)].as<JsonVariant>(), run_mode, is_d);
+			m->set_par_pdr(j[format("runmode_%d_d_%d", run_mode, is_d)].as<JsonVariantConst>(), run_mode, is_d);
 	}
 
         m->MMR0   = j["MMR0"];

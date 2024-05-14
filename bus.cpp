@@ -81,27 +81,27 @@ bus *bus::deserialize(const JsonDocument j, console *const cnsl, std::atomic_uin
 
 	memory *m = nullptr;
 	if (j.containsKey("memory")) {
-		m = memory::deserialize(j["memory"].as<JsonVariant>());
+		m = memory::deserialize(j["memory"]);
 		b->add_ram(m);
 	}
 
 	if (j.containsKey("kw11-l"))
-		b->add_KW11_L(kw11_l::deserialize(j["kw11-l"].as<JsonVariant>(), b, cnsl));
+		b->add_KW11_L(kw11_l::deserialize(j["kw11-l"], b, cnsl));
 
 	if (j.containsKey("tty"))
-		b->add_tty(tty::deserialize(j["tty"].as<JsonVariant>(), b, cnsl));
+		b->add_tty(tty::deserialize(j["tty"], b, cnsl));
 
 	if (j.containsKey("mmu"))
-		b->add_mmu(mmu::deserialize(j["mmu"].as<JsonVariant>(), m));
+		b->add_mmu(mmu::deserialize(j["mmu"], m));
 
 	if (j.containsKey("cpu"))
-		b->add_cpu(cpu::deserialize(j["cpu"].as<JsonVariant>(), b, event));
+		b->add_cpu(cpu::deserialize(j["cpu"], b, event));
 
 	if (j.containsKey("rl02"))
-		b->add_rl02(rl02::deserialize(j["rl02"].as<JsonVariant>(), b));
+		b->add_rl02(rl02::deserialize(j["rl02"], b));
 
 	if (j.containsKey("rk05"))
-		b->add_rk05(rk05::deserialize(j["rk05"].as<JsonVariant>(), b));
+		b->add_rk05(rk05::deserialize(j["rk05"], b));
 
 	// TODO: tm11, dc11
 

@@ -54,12 +54,12 @@ JsonVariant memory::serialize() const
 	return j;
 }
 
-memory *memory::deserialize(const JsonVariant j)
+memory *memory::deserialize(const JsonVariantConst j)
 {
 	size_t  size = j["size"];
 	memory *m    = new memory(size);
 
-	JsonArray ja = j["contents"].as<JsonArray>();
+	JsonArrayConst ja = j["contents"].as<JsonArrayConst>();
 	uint32_t  i  = 0;
 	for(auto v: ja)
 		m->m[i++] = v;

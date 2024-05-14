@@ -59,7 +59,7 @@ private:
 	memory  *m { nullptr };
 
 	JsonVariant add_par_pdr(const int run_mode, const bool is_d) const;
-	void set_par_pdr(const JsonVariant j_in, const int run_mode, const bool is_d);
+	void set_par_pdr(const JsonVariantConst j_in, const int run_mode, const bool is_d);
 
 	void verify_page_access (cpu *const c, const uint16_t virt_addr, const int run_mode, const bool d, const int apf, const bool is_write);
 	void verify_access_valid(cpu *const c, const uint32_t m_offset,  const int run_mode, const bool d, const int apf, const bool is_io, const bool is_write);
@@ -72,7 +72,7 @@ public:
 	void     begin(memory *const m);
 
 	JsonVariant serialize() const;
-	static mmu *deserialize(const JsonVariant j, memory *const m);
+	static mmu *deserialize(const JsonVariantConst j, memory *const m);
 
 	void     mmudebug(const uint16_t a);
 

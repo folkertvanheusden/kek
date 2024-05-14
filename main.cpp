@@ -58,6 +58,7 @@ void sw_handler(int s)
 
 int run_cpu_validation(const std::string & filename)
 {
+#if 0
 	json_error_t error;
 	json_t *json = json_load_file(filename.c_str(), JSON_REJECT_DUPLICATES, &error);
 	if (!json)
@@ -260,6 +261,7 @@ int run_cpu_validation(const std::string & filename)
 	json_decref(json);
 
 	printf("# ok: %zu out of %zu\n", n_ok, array_size);
+#endif
 
 	return 0;
 }

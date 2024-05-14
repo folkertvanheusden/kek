@@ -23,7 +23,7 @@ public:
 	virtual ~disk_backend_nbd();
 
 	JsonVariant serialize() const override;
-	static disk_backend_nbd *deserialize(const JsonVariant j);
+	static disk_backend_nbd *deserialize(const JsonVariantConst j);
 
 	std::string get_identifier() const override { return format("%s:%d", host.c_str(), port); }
 

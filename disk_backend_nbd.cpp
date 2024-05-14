@@ -63,7 +63,7 @@ JsonVariant disk_backend_nbd::serialize() const
 	return j;
 }
 
-disk_backend_nbd *disk_backend_nbd::deserialize(const JsonVariant j)
+disk_backend_nbd *disk_backend_nbd::deserialize(const JsonVariantConst j)
 {
 	// TODO verify checksum of backend
 	return new disk_backend_nbd(j["host"], j["port"]);

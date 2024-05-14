@@ -225,7 +225,7 @@ JsonVariant kw11_l::serialize()
 	return j;
 }
 
-kw11_l *kw11_l::deserialize(const JsonVariant j, bus *const b, console *const cnsl)
+kw11_l *kw11_l::deserialize(const JsonVariantConst j, bus *const b, console *const cnsl)
 {
 	uint16_t CSR = j["CSR"];
 

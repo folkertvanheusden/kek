@@ -94,12 +94,12 @@ JsonVariant rl02::serialize() const
 	return j;
 }
 
-rl02 *rl02::deserialize(const JsonVariant j, bus *const b)
+rl02 *rl02::deserialize(const JsonVariantConst j, bus *const b)
 {
 	rl02 *r = new rl02(b, nullptr, nullptr);
 	r->begin();
 
-	JsonArray j_backends = j["backends"];
+	JsonArrayConst j_backends = j["backends"];
 	for(auto v: j_backends)
 		r->access_disk_backends()->push_back(disk_backend::deserialize(v));
 

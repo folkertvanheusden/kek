@@ -44,7 +44,7 @@ public:
 	void     show_state(console *const cnsl) const override;
 
 	JsonVariant serialize();
-	static kw11_l *deserialize(const JsonVariant j, bus *const b, console *const cnsl);
+	static kw11_l *deserialize(const JsonVariantConst j, bus *const b, console *const cnsl);
 
 	void     begin(console *const cnsl);
 	void     operator()();

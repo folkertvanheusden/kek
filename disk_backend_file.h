@@ -19,7 +19,7 @@ public:
 	virtual ~disk_backend_file();
 
 	JsonVariant serialize() const override;
-	static disk_backend_file *deserialize(const JsonVariant j);
+	static disk_backend_file *deserialize(const JsonVariantConst j);
 
 	std::string get_identifier() const override { return filename; }
 

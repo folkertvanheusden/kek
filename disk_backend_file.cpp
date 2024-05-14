@@ -36,7 +36,7 @@ JsonVariant disk_backend_file::serialize() const
 	return j;
 }
 
-disk_backend_file *disk_backend_file::deserialize(const JsonVariant j)
+disk_backend_file *disk_backend_file::deserialize(const JsonVariantConst j)
 {
 	// TODO verify checksum of backend
 	// TODO overlay

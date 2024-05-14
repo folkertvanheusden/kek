@@ -2477,7 +2477,7 @@ JsonVariant cpu::serialize()
 	return j;
 }
 
-cpu *cpu::deserialize(const JsonVariant j, bus *const b, std::atomic_uint32_t *const event)
+cpu *cpu::deserialize(const JsonVariantConst j, bus *const b, std::atomic_uint32_t *const event)
 {
 	cpu *c = new cpu(b, event);
 

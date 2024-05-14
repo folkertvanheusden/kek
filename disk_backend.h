@@ -26,14 +26,14 @@ protected:
 	std::optional<std::vector<uint8_t> > get_from_overlay(const off_t offset, const size_t sector_size);
 
 	JsonVariant serialize_overlay() const;
-	void deserialize_overlay(const JsonVariant j);
+	void deserialize_overlay(const JsonVariantConst j);
 
 public:
 	disk_backend();
 	virtual ~disk_backend();
 
 	virtual JsonVariant serialize() const = 0;
-	static disk_backend *deserialize(const JsonVariant j);
+	static disk_backend *deserialize(const JsonVariantConst j);
 
 	virtual std::string get_identifier() const = 0;
 

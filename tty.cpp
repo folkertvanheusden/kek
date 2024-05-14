@@ -211,16 +211,16 @@ JsonVariant tty::serialize()
 	return j;
 }
 
-tty *tty::deserialize(const JsonVariant j, bus *const b, console *const cnsl)
+tty *tty::deserialize(const JsonVariantConst j, bus *const b, console *const cnsl)
 {
 	tty       *out   = new tty(cnsl, b);
 
-	JsonArray ja_reg = j["registers"];
+	JsonArrayConst ja_reg = j["registers"];
 	int       i_reg  = 0;
 	for(auto v: ja_reg)
 		out->registers[i_reg++] = v;
 
-	JsonArray ja_buf = j["input-buffer"];
+	JsonArrayConst ja_buf = j["input-buffer"];
 	for(auto v: ja_buf)
 		out->chars.push_back(v.as<signed char>());
 
