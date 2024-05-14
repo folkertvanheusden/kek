@@ -115,10 +115,8 @@ public:
 	explicit cpu(bus *const b, std::atomic_uint32_t *const event);
 	~cpu();
 
-#if IS_POSIX
 	JsonDocument serialize();
 	static cpu *deserialize(const JsonDocument j, bus *const b, std::atomic_uint32_t *const event);
-#endif
 
 	std::optional<std::string> check_breakpoint();
 	int set_breakpoint(breakpoint *const bp);
