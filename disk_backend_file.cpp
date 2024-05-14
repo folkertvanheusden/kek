@@ -23,23 +23,24 @@ disk_backend_file::~disk_backend_file()
 
 JsonDocument disk_backend_file::serialize() const
 {
-	json_t *j = json_object();
+	JsonDocument j;
 
-	json_object_set(j, "disk-backend-type", json_string("file"));
+	j["disk-backend-type"] = "file";
 
-	json_object_set(j, "overlay", serialize_overlay());
+	j["overlay"] = serialize_overlay();
 
 	// TODO store checksum of backend
-	json_object_set(j, "filename", json_string(filename.c_str()));
+
+	j["filename"] = filename;
 
 	return j;
 }
 
-disk_backend_file *disk_backend_file::deserialize(const json_t *const j)
+disk_backend_file *disk_backend_file::deserialize(const JsonDocument j)
 {
 	// TODO verify checksum of backend
 	// TODO overlay
-	return new disk_backend_file(json_string_value(json_object_get(j, "filename")));
+	return new disk_backend_file(j["filename"]);
 }
 
 bool disk_backend_file::begin(const bool snapshots)

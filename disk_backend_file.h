@@ -1,6 +1,7 @@
 // (C) 2018-2024 by Folkert van Heusden
 // Released under MIT license
 
+#include <ArduinoJson.h>
 #include <string>
 
 #include "disk_backend.h"
@@ -17,10 +18,8 @@ public:
 	disk_backend_file(const std::string & filename);
 	virtual ~disk_backend_file();
 
-#if IS_POSIX
-	json_t *serialize() const override;
-	static disk_backend_file *deserialize(const json_t *const j);
-#endif
+	JsonDocument serialize() const override;
+	static disk_backend_file *deserialize(const JsonDocument j);
 
 	std::string get_identifier() const override { return filename; }
 
