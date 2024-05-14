@@ -546,15 +546,15 @@ JsonDocument mmu::serialize() const
 
 void mmu::set_par_pdr(const JsonDocument j_in, const int run_mode, const bool is_d)
 {
-	JsonDocument j_par = j_in["par"];
-	int          i_par = 0;
+	JsonArray j_par = j_in["par"];
+	int       i_par = 0;
 	for(auto & v: j_par)
-		pages[run_mode][is_d][i++].par = v;
+		pages[run_mode][is_d][i_par++].par = v;
 
-	JsonDocument j_pdr = j_in["pdr"];
-	int          i_pdr = 0;
+	JsonArray j_pdr = j_in["pdr"];
+	int       i_pdr = 0;
 	for(auto & v: j_pdr)
-		pages[run_mode][is_d][i++].pdr = v;
+		pages[run_mode][is_d][i_pdr++].pdr = v;
 }
 
 mmu *mmu::deserialize(const JsonDocument j, memory *const mem)

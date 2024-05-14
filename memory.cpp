@@ -59,7 +59,7 @@ memory *memory::deserialize(const JsonDocument j)
 	size_t  size = j["size"];
 	memory *m    = new memory(size);
 
-	JsonArray ja = j["contents"];
+	JsonArray ja = j["contents"].as<JsonArray>();
 	uint32_t  i  = 0;
 	for(auto v: ja)
 		m->m[i++] = v;
