@@ -216,19 +216,18 @@ uint8_t kw11_l::get_lf_crs()
 	return rc;
 }
 
-#if IS_POSIX
-json_t *kw11_l::serialize()
+JsonDocument kw11_l::serialize()
 {
-	json_t *j = json_object();
+	JsonDocument j;
 
-	json_object_set(j, "CSR", json_integer(lf_csr));
+	j["CSR"] = lf_csr;
 
 	return j;
 }
 
 kw11_l *kw11_l::deserialize(const json_t *const j, bus *const b, console *const cnsl)
 {
-	uint16_t CSR = json_integer_value(json_object_get(j, "CSR"));
+	uint16_t CSR = j["CSR"];
 
 	kw11_l *out  = new kw11_l(b);
 	out->lf_csr  = CSR;
@@ -236,4 +235,3 @@ kw11_l *kw11_l::deserialize(const json_t *const j, bus *const b, console *const 
 
 	return out;
 }
-#endif

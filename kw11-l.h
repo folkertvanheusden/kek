@@ -1,6 +1,7 @@
 // (C) 2018-2024 by Folkert van Heusden
 // Released under MIT license
 
+#include <ArduinoJson.h>
 #include <atomic>
 #include <thread>
 
@@ -42,10 +43,8 @@ public:
 
 	void     show_state(console *const cnsl) const override;
 
-#if IS_POSIX
-	json_t *serialize();
-	static kw11_l *deserialize(const json_t *const j, bus *const b, console *const cnsl);
-#endif
+	JsonDocument serialize();
+	static kw11_l *deserialize(const JsonDocument j, bus *const b, console *const cnsl);
 
 	void     begin(console *const cnsl);
 	void     operator()();
