@@ -54,7 +54,7 @@ JsonDocument memory::serialize() const
 	return j;
 }
 
-memory *memory::deserialize(const json_t *const j)
+memory *memory::deserialize(const JsonDocument j)
 {
 	size_t  size = j["size"];
 	memory *m    = new memory(size);

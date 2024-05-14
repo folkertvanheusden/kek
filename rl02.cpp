@@ -72,8 +72,7 @@ void rl02::show_state(console *const cnsl) const
 	cnsl->put_string_lf(format("sector: %d", sector));
 }
 
-#if IS_POSIX
-json_t *rl02::serialize() const
+JsonDocument rl02::serialize() const
 {
 	json_t *j = json_object();
 
@@ -96,7 +95,7 @@ json_t *rl02::serialize() const
 	return j;
 }
 
-rl02 *rl02::deserialize(const json_t *const j, bus *const b)
+rl02 *rl02::deserialize(const JsonDocument j, bus *const b)
 {
 	std::vector<disk_backend *> backends;
 
@@ -119,7 +118,6 @@ rl02 *rl02::deserialize(const json_t *const j, bus *const b)
 
 	return r;
 }
-#endif
 
 uint8_t rl02::read_byte(const uint16_t addr)
 {

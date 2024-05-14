@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <ArduinoJson.h>
 #include <atomic>
 #include <stdint.h>
 #include <stdio.h>
@@ -55,10 +56,8 @@ public:
 
 	void show_state(console *const cnsl) const override;
 
-#if IS_POSIX
-	json_t *serialize() const;
-	static rl02 *deserialize(const json_t *const j, bus *const b);
-#endif
+	JsonDocument serialize() const;
+	static rl02 *deserialize(const JsonDocument j, bus *const b);
 
 	uint8_t  read_byte(const uint16_t addr) override;
 	uint16_t read_word(const uint16_t addr) override;

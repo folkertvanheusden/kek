@@ -81,21 +81,21 @@ bus *bus::deserialize(const JsonDocument j, console *const cnsl, std::atomic_uin
 
 	memory *m = nullptr;
 	if (j.containsKey("memory")) {
-		m = memory::deserialize(j["memory"]);
+		m = memory::deserialize(j["memory"].as<JsonDocument>());
 		b->add_ram(m);
 	}
 
 	if (j.containsKey("kw11-l"))
-		b->add_KW11_L(kw11_l::deserialize(j["kw11-l"], b, cnsl));
+		b->add_KW11_L(kw11_l::deserialize(j["kw11-l"].as<JsonDocument>(), b, cnsl));
 
 	if (j.containsKey("tty"))
-		b->add_tty(tty::deserialize(j["tty"], b, cnsl));
+		b->add_tty(tty::deserialize(j["tty"].as<JsonDocument>(), b, cnsl));
 
 	if (j.containsKey("mmu"))
-		b->add_mmu(mmu::deserialize(j["mmu"], m));
+		b->add_mmu(mmu::deserialize(j["mmu"].as<JsonDocument>(), m));
 
 	if (j.containsKey("cpu"))
-		b->add_cpu(cpu::deserialize(j["cpu"], b, event));
+		b->add_cpu(cpu::deserialize(j["cpu"].as<JsonDocument>(), b, event));
 
 	if (j.containsKey("rl02"))
 		b->add_rl02(rl02::deserialize(j["rl02"], b));
