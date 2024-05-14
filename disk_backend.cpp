@@ -115,4 +115,3 @@ disk_backend *disk_backend::deserialize(const json_t *const j)
 
 	return d;
 }
-#endif
