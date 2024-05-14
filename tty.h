@@ -52,8 +52,8 @@ public:
 	tty(console *const c, bus *const b);
 	virtual ~tty();
 
-	JsonDocument serialize();
-	static tty *deserialize(const JsonDocument j, bus *const b, console *const cnsl);
+	JsonVariant serialize();
+	static tty *deserialize(const JsonVariant j, bus *const b, console *const cnsl);
 
 	void reset();
 

@@ -72,9 +72,9 @@ void rl02::show_state(console *const cnsl) const
 	cnsl->put_string_lf(format("sector: %d", sector));
 }
 
-JsonDocument rl02::serialize() const
+JsonVariant rl02::serialize() const
 {
-	JsonDocument j;
+	JsonVariant j;
 
 	JsonArray j_backends;
 	for(auto & dbe: fhs)
@@ -94,13 +94,13 @@ JsonDocument rl02::serialize() const
 	return j;
 }
 
-rl02 *rl02::deserialize(const JsonDocument j, bus *const b)
+rl02 *rl02::deserialize(const JsonVariant j, bus *const b)
 {
 	rl02 *r = new rl02(b, nullptr, nullptr);
 	r->begin();
 
 	JsonArray j_backends = j["backends"];
-	for(auto & v: j_backends)
+	for(auto v: j_backends)
 		r->access_disk_backends()->push_back(disk_backend::deserialize(v));
 
 	for(int regnr=0; regnr<4; regnr++)

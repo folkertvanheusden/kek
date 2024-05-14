@@ -48,28 +48,26 @@ disk_backend_nbd::~disk_backend_nbd()
 	close(fd);
 }
 
-#if IS_POSIX
-json_t *disk_backend_nbd::serialize() const
+JsonVariant disk_backend_nbd::serialize() const
 {
-	json_t *j = json_object();
+	JsonVariant j;
 
-	json_object_set(j, "disk-backend-type", json_string("nbd"));
+	j["disk-backend-type"] = "nbd";
 
-	json_object_set(j, "overlay", serialize_overlay());
+	j["overlay"] = serialize_overlay();
 
 	// TODO store checksum of backend
-	json_object_set(j, "host", json_string(host.c_str()));
-	json_object_set(j, "port", json_integer(port));
+	j["host"] = host.c_str();
+	j["port"] = port;
 
 	return j;
 }
 
-disk_backend_nbd *disk_backend_nbd::deserialize(const json_t *const j)
+disk_backend_nbd *disk_backend_nbd::deserialize(const JsonVariant j)
 {
 	// TODO verify checksum of backend
-	return new disk_backend_nbd(json_string_value(json_object_get(j, "host")), json_integer_value(json_object_get(j, "port")));
+	return new disk_backend_nbd(j["host"], j["port"]);
 }
-#endif
 
 bool disk_backend_nbd::begin(const bool snapshots)
 {

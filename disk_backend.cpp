@@ -58,12 +58,12 @@ bool disk_backend::store_mem_range_in_overlay(const off_t offset, const size_t n
 	return false;
 }
 
-JsonDocument disk_backend::serialize_overlay() const
+JsonVariant disk_backend::serialize_overlay() const
 {
-	JsonDocument out;
+	JsonVariant out;
 
 	for(auto & id: overlay) {
-		JsonDocument j_data;
+		JsonVariant j_data;
 
 		for(size_t i=0; i<id.second.size(); i++)
 			j_data.add(id.second.at(i));
@@ -74,28 +74,25 @@ JsonDocument disk_backend::serialize_overlay() const
 	return out;
 }
 
-void disk_backend::deserialize_overlay(const json_t *const j)
+void disk_backend::deserialize_overlay(const JsonVariant j)
 {
-	json_t *input = json_object_get(j, "overlay");
-	if (!input)  // we can have state-dumps without overlay
-		return;
+	if (j.containsKey("overlay") == false)
+		return; // we can have state-dumps without overlay
 
-	const char *key   = nullptr;
-	json_t     *value = nullptr;
-	json_object_foreach(input, key, value) {
-		uint32_t id = std::atoi(key);
+	for(auto kv : j.as<JsonObject>()) {
+		uint32_t id = std::atoi(kv.key().c_str());
 
 		std::vector<uint8_t> data;
-		for(size_t i=0; i<json_array_size(value); i++)
-			data.push_back(json_integer_value(json_array_get(value, i)));
+		for(auto v: kv.value().as<JsonArray>())
+			data.push_back(v);
 
 		store_object_in_overlay(id, data);
 	}
 }
 
-disk_backend *disk_backend::deserialize(const json_t *const j)
+disk_backend *disk_backend::deserialize(const JsonVariant j)
 {
-	std::string   type = json_string_value(json_object_get(j, "disk-backend-type"));
+	std::string   type = j["disk-backend-type"];
 
 	disk_backend *d    = nullptr;
 
@@ -105,7 +102,7 @@ disk_backend *disk_backend::deserialize(const json_t *const j)
 	else if (type == "nbd")
 		d = disk_backend_nbd::deserialize(j);
 
-	// should not be reached
+	// should not be triggered
 	assert(d);
 
 	d->deserialize_overlay(j);

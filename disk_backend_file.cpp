@@ -21,9 +21,9 @@ disk_backend_file::~disk_backend_file()
 	close(fd);
 }
 
-JsonDocument disk_backend_file::serialize() const
+JsonVariant disk_backend_file::serialize() const
 {
-	JsonDocument j;
+	JsonVariant j;
 
 	j["disk-backend-type"] = "file";
 
@@ -36,11 +36,11 @@ JsonDocument disk_backend_file::serialize() const
 	return j;
 }
 
-disk_backend_file *disk_backend_file::deserialize(const JsonDocument j)
+disk_backend_file *disk_backend_file::deserialize(const JsonVariant j)
 {
 	// TODO verify checksum of backend
 	// TODO overlay
-	return new disk_backend_file(j["filename"]);
+	return new disk_backend_file(j["filename"].as<std::string>());
 }
 
 bool disk_backend_file::begin(const bool snapshots)

@@ -216,16 +216,16 @@ uint8_t kw11_l::get_lf_crs()
 	return rc;
 }
 
-JsonDocument kw11_l::serialize()
+JsonVariant kw11_l::serialize()
 {
-	JsonDocument j;
+	JsonVariant j;
 
 	j["CSR"] = lf_csr;
 
 	return j;
 }
 
-kw11_l *kw11_l::deserialize(const json_t *const j, bus *const b, console *const cnsl)
+kw11_l *kw11_l::deserialize(const JsonVariant j, bus *const b, console *const cnsl)
 {
 	uint16_t CSR = j["CSR"];
 

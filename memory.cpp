@@ -40,9 +40,9 @@ void memory::reset()
 	memset(m, 0x00, size);
 }
 
-JsonDocument memory::serialize() const
+JsonVariant memory::serialize() const
 {
-	JsonDocument j;
+	JsonVariant j;
 
 	j["size"] = size;
 
@@ -54,7 +54,7 @@ JsonDocument memory::serialize() const
 	return j;
 }
 
-memory *memory::deserialize(const JsonDocument j)
+memory *memory::deserialize(const JsonVariant j)
 {
 	size_t  size = j["size"];
 	memory *m    = new memory(size);

@@ -2434,9 +2434,9 @@ void cpu::step()
 	}
 }
 
-JsonDocument cpu::serialize()
+JsonVariant cpu::serialize()
 {
-	JsonDocument j;
+	JsonVariant j;
 
 	for(int set=0; set<2; set++) {
 		for(int regnr=0; regnr<6; regnr++)
@@ -2461,7 +2461,7 @@ JsonDocument cpu::serialize()
 	if (trap_delay.has_value())
 		j["trap_delay"] = trap_delay.value();
 
-	JsonDocument j_queued_interrupts;
+	JsonVariant j_queued_interrupts;
 	for(auto & il: queued_interrupts) {
 		JsonArray ja_qi_level;
 		for(auto v: il.second)
@@ -2477,7 +2477,7 @@ JsonDocument cpu::serialize()
 	return j;
 }
 
-cpu *cpu::deserialize(const JsonDocument j, bus *const b, std::atomic_uint32_t *const event)
+cpu *cpu::deserialize(const JsonVariant j, bus *const b, std::atomic_uint32_t *const event)
 {
 	cpu *c = new cpu(b, event);
 

@@ -281,9 +281,9 @@ void rk05::write_word(const uint16_t addr, const uint16_t v)
 	}
 }
 
-JsonDocument rk05::serialize() const
+JsonVariant rk05::serialize() const
 {
-	JsonDocument j;
+	JsonVariant j;
 
 	JsonArray j_backends;
 	for(auto & dbe: fhs)
@@ -296,12 +296,12 @@ JsonDocument rk05::serialize() const
 	return j;
 }
 
-rk05 *rk05::deserialize(const JsonDocument j, bus *const b)
+rk05 *rk05::deserialize(const JsonVariant j, bus *const b)
 {
 	rk05 *r = new rk05(b, nullptr, nullptr);
 	r->begin();
 
-	for(auto j_backend: j["backends"])
+	for(auto j_backend: j["backends"].as<JsonArray>())
 		r->access_disk_backends()->push_back(disk_backend::deserialize(j_backend));
 
 	for(int regnr=0; regnr<7; regnr++)

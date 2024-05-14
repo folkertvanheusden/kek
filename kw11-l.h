@@ -43,8 +43,8 @@ public:
 
 	void     show_state(console *const cnsl) const override;
 
-	JsonDocument serialize();
-	static kw11_l *deserialize(const JsonDocument j, bus *const b, console *const cnsl);
+	JsonVariant serialize();
+	static kw11_l *deserialize(const JsonVariant j, bus *const b, console *const cnsl);
 
 	void     begin(console *const cnsl);
 	void     operator()();

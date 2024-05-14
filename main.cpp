@@ -567,27 +567,32 @@ int main(int argc, char *argv[])
 		if (enable_bootloader)
 			set_boot_loader(b, bootloader);
 	}
-#if IS_POSIX
 	else {
 		FILE *fh = fopen(deserialize.c_str(), "r");
 		if (!fh)
 			error_exit(true, "Failed to open %s", deserialize.c_str());
 
-		json_error_t je { };
-		json_t *j = json_loadf(fh, 0, &je);
+		std::string j_in;
+		char        buffer[4096];
+		for(;;) {
+			char *rc = fgets(buffer, sizeof buffer, fh);
+			if (!rc)
+				break;
+
+			j_in += buffer;
+		}
 
 		fclose(fh);
 
-		if (!j)
-			error_exit(true, "State file %s is corrupt: %s", deserialize.c_str(), je.text);
+		JsonDocument         j;
+		DeserializationError error = deserializeJson(j, j_in);
+		if (error)
+			error_exit(true, "State file %s is corrupt: %s", error.c_str());
 
 		b = bus::deserialize(j, cnsl, &event);
 
-		json_decref(j);
-
 		myusleep(251000);
 	}
-#endif
 
 	if (b->getTty() == nullptr) {
 		tty *tty_ = new tty(cnsl, b);
