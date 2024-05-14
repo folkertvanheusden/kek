@@ -98,10 +98,10 @@ bus *bus::deserialize(const JsonDocument j, console *const cnsl, std::atomic_uin
 		b->add_cpu(cpu::deserialize(j["cpu"].as<JsonDocument>(), b, event));
 
 	if (j.containsKey("rl02"))
-		b->add_rl02(rl02::deserialize(j["rl02"], b));
+		b->add_rl02(rl02::deserialize(j["rl02"].as<JsonDocument>(), b));
 
 	if (j.containsKey("rk05"))
-		b->add_rk05(rk05::deserialize(j["rk05"], b));
+		b->add_rk05(rk05::deserialize(j["rk05"].as<JsonDocument>(), b));
 
 	// TODO: tm11, dc11
 

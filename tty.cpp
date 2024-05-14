@@ -204,7 +204,7 @@ JsonDocument tty::serialize()
 	j["registers"] = ja_reg;
 
 	JsonArray ja_buf;
-	for(auto & c: chars)
+	for(auto c: chars)
                 ja_buf.add(c);
         j["input-buffer"] = ja_buf;
 

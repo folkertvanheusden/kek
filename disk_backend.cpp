@@ -19,7 +19,6 @@ disk_backend::~disk_backend()
 {
 }
 
-#if IS_POSIX
 void disk_backend::store_object_in_overlay(const off_t id, const std::vector<uint8_t> & data)
 {
 	overlay.insert_or_assign(id, data);
@@ -59,17 +58,17 @@ bool disk_backend::store_mem_range_in_overlay(const off_t offset, const size_t n
 	return false;
 }
 
-json_t *disk_backend::serialize_overlay() const
+JsonDocument disk_backend::serialize_overlay() const
 {
-	json_t *out = json_object();
+	JsonDocument out;
 
 	for(auto & id: overlay) {
-		json_t *j_data = json_array();
+		JsonDocument j_data;
 
 		for(size_t i=0; i<id.second.size(); i++)
-			json_array_append(j_data, json_integer(id.second.at(i)));
+			j_data.add(id.second.at(i));
 
-		json_object_set(out, format("%lu", id.first).c_str(), j_data);
+		out[format("%lu", id.first)] = j_data;
 	}
 
 	return out;

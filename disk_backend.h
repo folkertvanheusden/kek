@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <ArduinoJson.h>
 #include <map>
 #include <optional>
 #include <stdint.h>
@@ -16,7 +17,6 @@
 class disk_backend
 {
 protected:
-#if IS_POSIX
 	bool use_overlay { false };
 	std::map<off_t, std::vector<uint8_t> > overlay;
 
@@ -25,18 +25,15 @@ protected:
 	std::optional<std::vector<uint8_t> > get_object_from_overlay(const off_t id);
 	std::optional<std::vector<uint8_t> > get_from_overlay(const off_t offset, const size_t sector_size);
 
-	json_t *serialize_overlay() const;
-	void deserialize_overlay(const json_t *const j);
-#endif
+	JsonDocument serialize_overlay() const;
+	void deserialize_overlay(const JsonDocument j);
 
 public:
 	disk_backend();
 	virtual ~disk_backend();
 
-#if IS_POSIX
-	virtual json_t *serialize() const = 0;
-	static disk_backend *deserialize(const json_t *const j);
-#endif
+	virtual JsonDocument serialize() const = 0;
+	static disk_backend *deserialize(const JsonDocument j);
 
 	virtual std::string get_identifier() const = 0;
 

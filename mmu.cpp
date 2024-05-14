@@ -567,7 +567,7 @@ mmu *mmu::deserialize(const JsonDocument j, memory *const mem)
 			continue;
 
 		for(int is_d=0; is_d<2; is_d++)
-			m->set_par_pdr(j[format("runmode_%d_d_%d", run_mode, is_d)], run_mode, is_d);
+			m->set_par_pdr(j[format("runmode_%d_d_%d", run_mode, is_d)].as<JsonDocument>(), run_mode, is_d);
 	}
 
         m->MMR0   = j["MMR0"];

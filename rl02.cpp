@@ -74,47 +74,44 @@ void rl02::show_state(console *const cnsl) const
 
 JsonDocument rl02::serialize() const
 {
-	json_t *j = json_object();
+	JsonDocument j;
 
-	json_t *j_backends = json_array();
+	JsonArray j_backends;
 	for(auto & dbe: fhs)
-		json_array_append(j_backends, dbe->serialize());
-
-	json_object_set(j, "backends", j_backends);
+		j_backends.add(dbe->serialize());
+	j["backends"] = j_backends;
 
 	for(int regnr=0; regnr<4; regnr++)
-		json_object_set(j, format("register-%d", regnr).c_str(), json_integer(registers[regnr]));
+		j[format("register-%d", regnr)] = registers[regnr];
 
 	for(int mprnr=0; mprnr<3; mprnr++)
-		json_object_set(j, format("mpr-%d", mprnr).c_str(), json_integer(mpr[mprnr]));
+		j[format("mpr-%d", mprnr)] = mpr[mprnr];
 
-	json_object_set(j, "track",  json_integer(track));
-	json_object_set(j, "head",   json_integer(head));
-	json_object_set(j, "sector", json_integer(sector));
+	j["track"]  = track;
+	j["head"]   = head;
+	j["sector"] = sector;
 
 	return j;
 }
 
 rl02 *rl02::deserialize(const JsonDocument j, bus *const b)
 {
-	std::vector<disk_backend *> backends;
-
 	rl02 *r = new rl02(b, nullptr, nullptr);
 	r->begin();
 
-	json_t *j_backends = json_object_get(j, "backends");
-	for(size_t i=0; i<json_array_size(j_backends); i++)
-		r->access_disk_backends()->push_back(disk_backend::deserialize(json_array_get(j_backends, i)));
+	JsonArray j_backends = j["backends"];
+	for(auto & v: j_backends)
+		r->access_disk_backends()->push_back(disk_backend::deserialize(v));
 
 	for(int regnr=0; regnr<4; regnr++)
-		r->registers[regnr] = json_integer_value(json_object_get(j, format("register-%d", regnr).c_str()));
+		r->registers[regnr] = j[format("register-%d", regnr)];
 
 	for(int mprnr=0; mprnr<3; mprnr++)
-		r->mpr[mprnr] = json_integer_value(json_object_get(j, format("mpr-%d", mprnr).c_str()));
+		r->mpr[mprnr] = j[format("mpr-%d", mprnr)];
 
-	r->track  = json_integer_value(json_object_get(j, "track" ));
-	r->head   = json_integer_value(json_object_get(j, "head"  ));
-	r->sector = json_integer_value(json_object_get(j, "sector"));
+	r->track  = j["track"];
+	r->head   = j["head"];
+	r->sector = j["sector"];
 
 	return r;
 }
