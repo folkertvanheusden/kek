@@ -538,10 +538,12 @@ struct state_writer {
 	FILE *fh = nullptr;
 
 	size_t write(uint8_t c) {
+		assert(fh);
 		return fputc(c, fh) == EOF ? 0 : 1;
 	}
 
 	size_t write(const uint8_t *buffer, size_t length) {
+		assert(fh);
 		return fwrite(buffer, 1, length, fh);
 	}
 };
