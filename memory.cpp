@@ -40,30 +40,29 @@ void memory::reset()
 	memset(m, 0x00, size);
 }
 
-#if IS_POSIX
-json_t *memory::serialize() const
+JsonDocument memory::serialize() const
 {
-	json_t *j = json_object();
+	JsonDocument j;
 
-	json_object_set(j, "size", json_integer(size));
+	j["size"] = size;
 
-	json_t *ja = json_array();
+	JsonArray ja;
 	for(size_t i=0; i<size; i++)
-		json_array_append(ja, json_integer(m[i]));
-	json_object_set(j, "contents", ja);
+		ja.add(m[i]);
+	j["contents"] = ja;
 
 	return j;
 }
 
 memory *memory::deserialize(const json_t *const j)
 {
-	size_t  size = json_integer_value(json_object_get(j, "size"));
+	size_t  size = j["size"];
 	memory *m    = new memory(size);
 
-	json_t *ja   = json_object_get(j, "contents");
-	for(size_t i=0; i<size; i++)
-		m->m[i] = json_integer_value(json_array_get(ja, i));
+	JsonArray ja = j["contents"];
+	uint32_t  i  = 0;
+	for(auto v: ja)
+		m->m[i++] = v;
 
 	return m;
 }
-#endif

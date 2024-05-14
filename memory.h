@@ -2,6 +2,7 @@
 // Released under MIT license
 
 #pragma once
+#include <ArduinoJson.h>
 #include <cstdint>
 
 #include "gen.h"
@@ -20,10 +21,9 @@ public:
 	uint32_t get_memory_size() const { return size; }
 
 	void reset();
-#if IS_POSIX
-	json_t *serialize() const;
-	static memory *deserialize(const json_t *const j);
-#endif
+
+	JsonDocument serialize() const;
+	static memory *deserialize(const JsonDocument j);
 
 	uint16_t read_byte(const uint32_t a) const { return m[a]; }
 	void write_byte(const uint32_t a, const uint16_t v) { if (a < size) m[a] = v; }
