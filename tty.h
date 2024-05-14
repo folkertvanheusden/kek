@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <ArduinoJson.h>
 #include <atomic>
 #include <mutex>
 #include <stdint.h>
@@ -51,10 +52,8 @@ public:
 	tty(console *const c, bus *const b);
 	virtual ~tty();
 
-#if IS_POSIX
-	json_t *serialize();
-	static tty *deserialize(const json_t *const j, bus *const b, console *const cnsl);
-#endif
+	JsonDocument serialize();
+	static tty *deserialize(const JsonDocument j, bus *const b, console *const cnsl);
 
 	void reset();
 

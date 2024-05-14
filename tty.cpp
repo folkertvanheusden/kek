@@ -194,37 +194,35 @@ void tty::write_word(const uint16_t addr, uint16_t v)
 	registers[(addr - PDP11TTY_BASE) / 2] = v;
 }
 
-#if IS_POSIX
-json_t *tty::serialize()
+JsonDocument tty::serialize()
 {
-	json_t *j = json_object();
+	JsonDocument j;
 
-        json_t *ja_reg = json_array();
+	JsonArray ja_reg;
         for(size_t i=0; i<4; i++)
-                json_array_append(ja_reg, json_integer(registers[i]));
-        json_object_set(j, "registers", ja_reg);
+                ja_reg.add(registers[i]);
+	j["registers"] = ja_reg;
 
-        json_t *ja_buf = json_array();
+	JsonArray ja_buf;
 	for(auto & c: chars)
-                json_array_append(ja_buf, json_integer(c));
-        json_object_set(j, "input-buffer", ja_buf);
+                ja_buf.add(c);
+        j["input-buffer"] = ja_buf;
 
 	return j;
 }
 
 tty *tty::deserialize(const json_t *const j, bus *const b, console *const cnsl)
 {
-	tty *out  = new tty(cnsl, b);
+	tty       *out   = new tty(cnsl, b);
 
-	json_t *ja_reg = json_object_get(j, "registers");
-	for(size_t i=0; i<4; i++)
-		out->registers[i] = json_integer_value(json_array_get(ja_reg, i));
+	JsonArray ja_reg = j["registers"];
+	int       i_reg  = 0;
+	for(auto v: ja_reg)
+		out->registers[i_reg++] = v;
 
-	json_t *ja_buf   = json_object_get(j, "input-buffer");
-	size_t  buf_size = json_array_size(ja_buf);
-	for(size_t i=0; i<buf_size; i++)
-		out->chars.push_back(json_integer_value(json_array_get(ja_buf, i)));
+	JsonArray ja_buf = j["input-buffer"];
+	for(auto v: ja_buf)
+		out->chars.push_back(v);
 
 	return out;
 }
-#endif
