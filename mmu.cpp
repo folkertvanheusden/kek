@@ -10,6 +10,7 @@
 
 mmu::mmu()
 {
+	reset();
 }
 
 mmu::~mmu()
