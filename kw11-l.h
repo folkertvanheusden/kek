@@ -38,7 +38,7 @@ public:
 	kw11_l(bus *const b);
 	virtual ~kw11_l();
 
-	void     reset();
+	void     reset() override;
 
 	void     show_state(console *const cnsl) const override;
 
@@ -50,8 +50,8 @@ public:
 	void     begin(console *const cnsl);
 	void     operator()();
 
-	uint16_t read_word (const uint16_t a);
+	uint16_t read_word(const uint16_t a) override;
 
-	void     write_byte(const uint16_t addr, const uint8_t v);
-	void     write_word(const uint16_t a, const uint16_t v);
+	void     write_byte(const uint16_t addr, const uint8_t  v) override;
+	void     write_word(const uint16_t addr, const uint16_t v) override;
 };
