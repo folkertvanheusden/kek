@@ -11,6 +11,9 @@
 #include <unistd.h>
 
 #include "error.h"
+#include "comm.h"
+#include "comm_posix_tty.h"
+#include "comm_tcp_socket.h"
 #if !defined(_WIN32)
 #include "console_ncurses.h"
 #endif
@@ -602,13 +605,24 @@ int main(int argc, char *argv[])
 	cnsl->set_bus(b);
 	cnsl->begin();
 
-	// TODO
-	dc11 *dc11_ = new dc11(1100, b);
+	//// DC11
+	constexpr const int bitrate = 38400;
+
+	std::vector<comm *> comm_interfaces;
 	if (dc11_device.has_value()) {
-		DOLOG(info, false, "Configuring DC11 device for serial port on %s", dc11_device.value().c_str());
-		dc11_->set_serial(38400, dc11_device.value());
+		DOLOG(info, false, "Configuring DC11 device for TTY on %s (%d bps)", dc11_device.value().c_str(), bitrate);
+		comm_interfaces.push_back(new comm_posix_tty(dc11_device.value(), bitrate));
 	}
+
+	for(size_t i=comm_interfaces.size(); i<4; i++) {
+		int port = 1100 + i;
+		comm_interfaces.push_back(new comm_tcp_socket(port));
+		DOLOG(info, false, "Configuring DC11 device for TCP socket on port %d", port);
+	}
+
+	dc11 *dc11_ = new dc11(b, comm_interfaces);
 	b->add_DC11(dc11_);
+	//
 
 	tm_11 *tm_11_ = new tm_11(b);
 	b->add_tm11(tm_11_);

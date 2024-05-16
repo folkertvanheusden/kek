@@ -30,12 +30,12 @@ public:
 	comm_tcp_socket(const int port);
 	virtual ~comm_tcp_socket();
 
-	virtual bool    is_connected() = 0;
+	bool    is_connected() override;
 
-	virtual bool    has_data() = 0;
-	virtual uint8_t get_byte() = 0;
+	bool    has_data() override;
+	uint8_t get_byte() override;
 
-	virtual void    send_data(const uint8_t *const in, const size_t n) = 0;
+	void    send_data(const uint8_t *const in, const size_t n) override;
 
-	void            operator()();
+	void    operator()();
 };

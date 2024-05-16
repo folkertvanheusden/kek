@@ -1,6 +1,8 @@
 // (C) 2024 by Folkert van Heusden
 // Released under MIT license
 
+#pragma once
+
 #include "gen.h"
 #include <cstddef>
 #include <cstdint>

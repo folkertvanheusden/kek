@@ -8,14 +8,8 @@
 #include <mutex>
 #include <thread>
 #include <vector>
-#if defined(_WIN32)
-#include <ws2tcpip.h>
-#include <winsock2.h>
-#else
-#define SOCKET int
-#define INVALID_SOCKET -1
-#endif
 
+#include "comm.h"
 #include "device.h"
 #include "gen.h"
 #include "bus.h"
@@ -27,7 +21,6 @@
 
 class Stream;
 class bus;
-struct pollfd;
 
 // 4 interfaces
 constexpr const int dc11_n_lines = 4;
@@ -35,33 +28,23 @@ constexpr const int dc11_n_lines = 4;
 class dc11: public device
 {
 private:
-	int               base_port        { 1100    };
 	bus              *const b          { nullptr };
 	uint16_t          registers[4 * dc11_n_lines] { 0 };
 	std::atomic_bool  stop_flag        { false   };
 	std::thread      *th               { nullptr };
 
-	// not statically allocated because of compiling problems on arduino
-#if defined(_WIN32)
-	WSAPOLLFD        *pfds             { nullptr };
-#else
-	pollfd           *pfds             { nullptr };
-#endif
-	std::vector<char> recv_buffers[dc11_n_lines];
-        mutable std::mutex input_lock[dc11_n_lines];
-	std::atomic_bool  serial_thread_running { false };
-	bool              serial_enabled   { false   };
-#if IS_POSIX
-	std::thread      *serial_th        { nullptr };
-	int               serial_fd        { -1      };
-#endif
+	std::vector<comm *> comm_interfaces;
+	std::vector<bool  > connected;
+
+	std::vector<char>   recv_buffers[dc11_n_lines];
+        mutable std::mutex  input_lock  [dc11_n_lines];
 
 	void trigger_interrupt(const int line_nr, const bool is_tx);
 	bool is_rx_interrupt_enabled(const int line_nr) const;
 	bool is_tx_interrupt_enabled(const int line_nr) const;
 
 public:
-	dc11(const int base_port, bus *const b);
+	dc11(bus *const b, const std::vector<comm *> & comm_interfaces);
 	virtual ~dc11();
 
 #if IS_POSIX
@@ -73,15 +56,8 @@ public:
 
 	void show_state(console *const cnsl) const override;
 
-	void test_serial(const std::string & txt) const;
-
-#if defined(ESP32)
-	void set_serial(const int bitrate, const int rx, const int tx);
-	void serial_handler();
-#elif IS_POSIX
-	void set_serial(const int bitrate, const std::string & device_name);
-	void serial_handler();
-#endif
+	void test_port(const size_t port_nr, const std::string & txt) const;
+	void test_ports(const std::string & txt) const;
 
 	uint8_t  read_byte(const uint16_t addr) override;
 	uint16_t read_word(const uint16_t addr) override;

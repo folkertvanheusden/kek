@@ -22,6 +22,9 @@
 #include "esp_heap_caps.h"
 #endif
 
+#include "comm.h"
+#include "comm_esp32_hardwareserial.h"
+#include "comm_tcp_socket.h"
 #if defined(SHA2017)
 #include "console_shabadge.h"
 #else
@@ -204,7 +207,7 @@ void start_network(console *const c)
 		dc11_loaded = true;
 
 		Serial.println(F("* Adding DC11"));
-		dc11 *dc11_ = new dc11(1100, b);
+		std::vector<comm *> comm_interfaces;
 
 #if !defined(BUILD_FOR_RP2040) && defined(TTY_SERIAL_RX)
 		uint32_t bitrate = load_serial_speed_configuration();
@@ -212,8 +215,16 @@ void start_network(console *const c)
 		Serial.printf("* Init TTY (on DC11), baudrate: %d bps, RX: %d, TX: %d", bitrate, TTY_SERIAL_RX, TTY_SERIAL_TX);
 		Serial.println(F(""));
 
-		dc11_->set_serial(38400 /* bitrate TODO */, TTY_SERIAL_RX, TTY_SERIAL_TX);
+		comm_interfaces.push_back(new comm_esp32_hardwareserial(1, TTY_SERIAL_RX, TTY_SERIAL_TX, bitrate));
 #endif
+
+		for(size_t i=comm_interfaces.size(); i<4; i++) {
+			int port = 1100 + i;
+			comm_interfaces.push_back(new comm_tcp_socket(port));
+			DOLOG(info, false, "Configuring DC11 device for TCP socket on port %d", port);
+		}
+
+		dc11 *dc11_ = new dc11(b, comm_interfaces);
 		b->add_DC11(dc11_);
 
 		Serial.println(F("* Starting (NTP-) clock"));

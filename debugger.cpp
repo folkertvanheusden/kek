@@ -982,7 +982,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 				continue;
 			}
 			else if (parts[0] == "testdc11") {
-				b->getDC11()->test_serial(cmd);
+				b->getDC11()->test_ports(cmd);
 
 				continue;
 			}
