@@ -194,18 +194,20 @@ void tty::write_word(const uint16_t addr, uint16_t v)
 	registers[(addr - PDP11TTY_BASE) / 2] = v;
 }
 
-JsonVariant tty::serialize()
+JsonDocument tty::serialize()
 {
-	JsonVariant j;
+	JsonDocument j;
 
-	JsonArray ja_reg;
+	JsonDocument ja_reg;
+	JsonArray    ja_reg_work = ja_reg.to<JsonArray>();
         for(size_t i=0; i<4; i++)
-                ja_reg.add(registers[i]);
+                ja_reg_work.add(registers[i]);
 	j["registers"] = ja_reg;
 
-	JsonArray ja_buf;
+	JsonDocument ja_buf;
+	JsonArray    ja_buf_work = ja_buf.to<JsonArray>();
 	for(auto c: chars)
-                ja_buf.add(static_cast<signed char>(c));
+                ja_buf_work.add(static_cast<signed char>(c));
         j["input-buffer"] = ja_buf;
 
 	return j;

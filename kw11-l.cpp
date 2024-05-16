@@ -216,9 +216,9 @@ uint8_t kw11_l::get_lf_crs()
 	return rc;
 }
 
-JsonVariant kw11_l::serialize()
+JsonDocument kw11_l::serialize()
 {
-	JsonVariant j;
+	JsonDocument j;
 
 	j["CSR"] = lf_csr;
 

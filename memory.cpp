@@ -40,15 +40,16 @@ void memory::reset()
 	memset(m, 0x00, size);
 }
 
-JsonVariant memory::serialize() const
+JsonDocument memory::serialize() const
 {
-	JsonVariant j;
+	JsonDocument j;
 
 	j["size"] = size;
 
-	JsonArray ja;
+	JsonDocument ja;
+	JsonArray ja_work = ja.to<JsonArray>();
 	for(size_t i=0; i<size; i++)
-		ja.add(m[i]);
+		ja_work.add(m[i]);
 	j["contents"] = ja;
 
 	return j;

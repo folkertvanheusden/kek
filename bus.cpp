@@ -45,48 +45,34 @@ bus::~bus()
 	delete dc11_;
 }
 
-void dump(JsonVariantConst j)
-{
-	std::string temp;
-	printf("%zu\n", serializeJson(j, temp));
-
-	printf("%s\r\n", temp.c_str());
-}
-
 JsonDocument bus::serialize() const
 {
-	JsonDocument doc;
-	JsonVariant  j_out = doc.to<JsonVariant>();
+	JsonDocument j_out;
 
 	if (m)
 		j_out["memory"] = m->serialize();
 
 	if (kw11_l_)
 		j_out["kw11-l"] = kw11_l_->serialize();
-	dump(kw11_l_->serialize());
 
 	if (tty_)
-		j_out["tty"] = tty_->serialize();
-	dump(tty_->serialize());
+		j_out["tty"]    = tty_->serialize();
 
 	if (mmu_)
-		j_out["mmu"] = mmu_->serialize();
-	dump(mmu_->serialize());
+		j_out["mmu"]    = mmu_->serialize();
 
 	if (c)
-		c->serialize(j_out["cpu"]);
+		j_out["cpu"]    = c->serialize();
 
 	if (rl02_)
-		j_out["rl02"] = rl02_->serialize();
-	dump(rl02_->serialize());
+		j_out["rl02"]   = rl02_->serialize();
 
 	if (rk05_)
-		j_out["rk05"] = rk05_->serialize();
-	dump(rk05_->serialize());
+		j_out["rk05"]   = rk05_->serialize();
 
 	// TODO: tm11, dc11
 
-	return doc;
+	return j_out;
 }
 
 bus *bus::deserialize(const JsonDocument j, console *const cnsl, std::atomic_uint32_t *const event)

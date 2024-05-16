@@ -22,7 +22,7 @@ public:
 
 	void reset();
 
-	JsonVariant serialize() const;
+	JsonDocument serialize() const;
 	static memory *deserialize(const JsonVariantConst j);
 
 	uint16_t read_byte(const uint32_t a) const { return m[a]; }

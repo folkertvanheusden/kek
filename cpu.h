@@ -114,7 +114,7 @@ public:
 	explicit cpu(bus *const b, std::atomic_uint32_t *const event);
 	~cpu();
 
-	void serialize(JsonVariant j);
+	JsonDocument serialize();
 	static cpu *deserialize(const JsonVariantConst j, bus *const b, std::atomic_uint32_t *const event);
 
 	std::optional<std::string> check_breakpoint();

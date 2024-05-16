@@ -21,9 +21,9 @@ disk_backend_file::~disk_backend_file()
 	close(fd);
 }
 
-JsonVariant disk_backend_file::serialize() const
+JsonDocument disk_backend_file::serialize() const
 {
-	JsonVariant j;
+	JsonDocument j;
 
 	j["disk-backend-type"] = "file";
 

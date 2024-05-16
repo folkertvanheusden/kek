@@ -557,7 +557,7 @@ void serialize_state(console *const cnsl, const bus *const b, const std::string 
 	FILE *fh = fopen(filename.c_str(), "w");
 	if (fh) {
 		state_writer ws { fh };
-		serializeJson(j, ws);
+		serializeJsonPretty(j, ws);
 		fclose(fh);
 
 		ok = true;

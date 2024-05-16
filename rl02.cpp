@@ -72,13 +72,14 @@ void rl02::show_state(console *const cnsl) const
 	cnsl->put_string_lf(format("sector: %d", sector));
 }
 
-JsonVariant rl02::serialize() const
+JsonDocument rl02::serialize() const
 {
-	JsonVariant j;
+	JsonDocument j;
 
-	JsonArray j_backends;
+	JsonDocument j_backends;
+	JsonArray    j_backends_work = j_backends.to<JsonArray>();
 	for(auto & dbe: fhs)
-		j_backends.add(dbe->serialize());
+		j_backends_work.add(dbe->serialize());
 	j["backends"] = j_backends;
 
 	for(int regnr=0; regnr<4; regnr++)

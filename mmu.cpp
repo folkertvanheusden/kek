@@ -505,26 +505,28 @@ uint32_t mmu::calculate_physical_address(cpu *const c, const int run_mode, const
 	return m_offset;
 }
 
-JsonVariant mmu::add_par_pdr(const int run_mode, const bool is_d) const
+JsonDocument mmu::add_par_pdr(const int run_mode, const bool is_d) const
 {
-	JsonVariant j;
+	JsonDocument j;
 
-	JsonArray ja_par;
+	JsonDocument ja_par;
+	JsonArray ja_par_work = ja_par.to<JsonArray>();
 	for(int i=0; i<8; i++)
-		ja_par.add(pages[run_mode][is_d][i].par);
+		ja_par_work.add(pages[run_mode][is_d][i].par);
 	j["par"] = ja_par;
 
-	JsonArray ja_pdr;
+	JsonDocument ja_pdr;
+	JsonArray ja_pdr_work = ja_pdr.to<JsonArray>();
 	for(int i=0; i<8; i++)
-		ja_pdr.add(pages[run_mode][is_d][i].pdr);
+		ja_pdr_work.add(pages[run_mode][is_d][i].pdr);
 	j["pdr"] = ja_pdr;
 
 	return j;
 }
 
-JsonVariant mmu::serialize() const
+JsonDocument mmu::serialize() const
 {
-	JsonVariant j;
+	JsonDocument j;
 
 	for(int run_mode=0; run_mode<4; run_mode++) {
 		if (run_mode == 2)

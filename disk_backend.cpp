@@ -61,15 +61,16 @@ bool disk_backend::store_mem_range_in_overlay(const off_t offset, const size_t n
 	return false;
 }
 
-JsonVariant disk_backend::serialize_overlay() const
+JsonDocument disk_backend::serialize_overlay() const
 {
-	JsonVariant out;
+	JsonDocument out;
 
 	for(auto & id: overlay) {
-		JsonVariant j_data;
+		JsonDocument j_data;
+		JsonArray j_data_work = j_data.to<JsonArray>();
 
 		for(size_t i=0; i<id.second.size(); i++)
-			j_data.add(id.second.at(i));
+			j_data_work.add(id.second.at(i));
 
 		out[format("%lu", id.first)] = j_data;
 	}

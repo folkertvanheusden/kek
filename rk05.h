@@ -49,7 +49,7 @@ public:
 
 	void show_state(console *const cnsl) const override;
 
-	JsonVariant serialize() const;
+	JsonDocument serialize() const;
 	static rk05 *deserialize(const JsonVariantConst j, bus *const b);
 
 	uint8_t  read_byte(const uint16_t addr) override;

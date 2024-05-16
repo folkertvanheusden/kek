@@ -48,9 +48,9 @@ disk_backend_nbd::~disk_backend_nbd()
 	close(fd);
 }
 
-JsonVariant disk_backend_nbd::serialize() const
+JsonDocument disk_backend_nbd::serialize() const
 {
-	JsonVariant j;
+	JsonDocument j;
 
 	j["disk-backend-type"] = "nbd";
 

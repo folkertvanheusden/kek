@@ -281,13 +281,14 @@ void rk05::write_word(const uint16_t addr, const uint16_t v)
 	}
 }
 
-JsonVariant rk05::serialize() const
+JsonDocument rk05::serialize() const
 {
-	JsonVariant j;
+	JsonDocument j;
 
-	JsonArray j_backends;
+	JsonDocument j_backends;
+	JsonArray j_backends_work = j_backends.to<JsonArray>();
 	for(auto & dbe: fhs)
-		j_backends.add(dbe->serialize());
+		j_backends_work.add(dbe->serialize());
 	j["backends"] = j_backends;
 
 	for(int regnr=0; regnr<7; regnr++)
