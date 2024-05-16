@@ -24,9 +24,9 @@ disk_backend_esp32::~disk_backend_esp32()
 	delete fh;
 }
 
-JsonVariant disk_backend_esp32::serialize() const
+JsonDocument disk_backend_esp32::serialize() const
 {
-	JsonVariant j;
+	JsonDocument j;
 
 	j["disk-backend-type"] = "esp32";
 
