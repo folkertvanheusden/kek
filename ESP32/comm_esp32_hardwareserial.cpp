@@ -51,6 +51,9 @@ bool comm_esp32_hardwareserial::has_data()
 
 uint8_t comm_esp32_hardwareserial::get_byte()
 {
+	while(!has_data())
+		vTaskDelay(5 / portTICK_PERIOD_MS);
+
 	uint8_t c = 0;
 	uart_read_bytes(uart_nr, &c, 1, 100);  // error checking?
 
