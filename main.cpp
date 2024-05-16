@@ -4,9 +4,6 @@
 #include <assert.h>
 #include <atomic>
 #include <cinttypes>
-#if !defined(_WIN32)
-#include <jansson.h>
-#endif
 #include <signal.h>
 #include <stdlib.h>
 #include <string>

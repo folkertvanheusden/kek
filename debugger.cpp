@@ -11,9 +11,6 @@
 #include <Arduino.h>
 #include <LittleFS.h>
 #endif
-#if IS_POSIX
-#include <jansson.h>
-#endif
 
 #include "breakpoint_parser.h"
 #include "bus.h"
