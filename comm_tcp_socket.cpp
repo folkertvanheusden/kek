@@ -19,11 +19,13 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #endif
+#include <cstring>
 #if IS_POSIX
 #include <errno.h>
 #include <fcntl.h>
 #include <termios.h>
 #include <thread>
+#include <unistd.h>
 #endif
 
 #include "comm_tcp_socket.h"
