@@ -2,6 +2,10 @@ KEK
 ---
 Kek is a DEC PDP-11 (11/70) emulator capable of running UNIX-v7.
 
+You need to retrieve the git repository with the --recursive switch for the git command:
+
+    git clone --recursive https://github.com/folkertvanheusden/kek
+
 To build for e.g. linux:
 
     mkdir build
