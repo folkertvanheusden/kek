@@ -41,7 +41,7 @@ constexpr const int serial_line = 3;
 
 const char *const dc11_register_names[] { "RCSR", "RBUF", "TSCR", "TBUF" };
 
-bool setup_telnet_session(const int fd)
+static bool setup_telnet_session(const int fd)
 {
 	uint8_t dont_auth[]        = { 0xff, 0xf4, 0x25 };
 	uint8_t suppress_goahead[] = { 0xff, 0xfb, 0x03 };

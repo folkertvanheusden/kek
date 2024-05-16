@@ -31,8 +31,114 @@
 #include "utils.h"
 
 
-comm_tcp_socket::comm_tcp_socket(const int port)
+static bool setup_telnet_session(const int fd)
 {
+	uint8_t dont_auth[]        = { 0xff, 0xf4, 0x25 };
+	uint8_t suppress_goahead[] = { 0xff, 0xfb, 0x03 };
+	uint8_t dont_linemode[]    = { 0xff, 0xfe, 0x22 };
+	uint8_t dont_new_env[]     = { 0xff, 0xfe, 0x27 };
+	uint8_t will_echo[]        = { 0xff, 0xfb, 0x01 };
+	uint8_t dont_echo[]        = { 0xff, 0xfe, 0x01 };
+	uint8_t noecho[]           = { 0xff, 0xfd, 0x2d };
+	// uint8_t charset[]          = { 0xff, 0xfb, 0x01 };
+
+	if (write(fd, dont_auth, sizeof dont_auth) != sizeof dont_auth)
+		return false;
+
+	if (write(fd, suppress_goahead, sizeof suppress_goahead) != sizeof suppress_goahead)
+		return false;
+
+	if (write(fd, dont_linemode, sizeof dont_linemode) != sizeof dont_linemode)
+		return false;
+
+	if (write(fd, dont_new_env, sizeof dont_new_env) != sizeof dont_new_env)
+		return false;
+
+	if (write(fd, will_echo, sizeof will_echo) != sizeof will_echo)
+		return false;
+
+	if (write(fd, dont_echo, sizeof dont_echo) != sizeof dont_echo)
+		return false;
+
+	if (write(fd, noecho, sizeof noecho) != sizeof noecho)
+		return false;
+
+	return true;
+}
+
+comm_tcp_socket::comm_tcp_socket(const int port) : port(port)
+{
+	th = new std::thread(std::ref(*this));
+}
+
+comm_tcp_socket::~comm_tcp_socket()
+{
+	stop_flag = true;
+
+	if (th) {
+		th->join();
+		delete th;
+	}
+}
+
+bool comm_tcp_socket::is_connected()
+{
+	std::unique_lock<std::mutex> lck(cfd_lock);
+
+	return cfd != INVALID_SOCKET;
+}
+
+bool comm_tcp_socket::has_data()
+{
+	std::unique_lock<std::mutex> lck(cfd_lock);
+#if defined(_WIN32)
+	WSAPOLLFD fds[] { { cfd, POLLIN, 0 } };
+	int rc = WSAPoll(fds, 1, 0);
+#else
+	pollfd    fds[] { { cfd, POLLIN, 0 } };
+	int rc = poll(fds, 1, 0);
+#endif
+
+	return rc == 1;
+}
+
+uint8_t comm_tcp_socket::get_byte()
+{
+	int use_fd = -1;
+
+	{
+		std::unique_lock<std::mutex> lck(cfd_lock);
+		use_fd = cfd;
+	}
+
+	uint8_t c = 0;
+	read(use_fd, &c, 1);  // TODO error checking
+
+	return c;
+}
+
+void comm_tcp_socket::send_data(const uint8_t *const in, const size_t n)
+{
+	const uint8_t *p   = in;
+	size_t         len = n;
+
+	while(len > 0) {
+		std::unique_lock<std::mutex> lck(cfd_lock);
+		int rc = write(cfd, p, len);
+		if (rc <= 0)  // TODO error checking
+			break;
+
+		p   += rc;
+		len -= rc;
+	}
+}
+
+void comm_tcp_socket::operator()()
+{
+	set_thread_name("kek:COMMTCP");
+
+	DOLOG(info, true, "TCP comm thread started for port %d", port);
+
 	fd = socket(AF_INET, SOCK_STREAM, 0);
 
 	int reuse_addr = 1;
@@ -67,48 +173,44 @@ comm_tcp_socket::comm_tcp_socket(const int port)
 		DOLOG(warning, true, "Cannot listen on port %d (comm_tcp_socket)", port);
 		return;
 	}
-}
 
-comm_tcp_socket::~comm_tcp_socket()
-{
-}
-
-bool comm_tcp_socket::is_connected()
-{
-}
-
-bool comm_tcp_socket::has_data()
-{
 #if defined(_WIN32)
 	WSAPOLLFD fds[] { { fd, POLLIN, 0 } };
-	int rc = WSAPoll(fds, 1, 0);
 #else
-	pollfd fds[] { { fd, POLLIN, 0 } };
-	int rc = poll(fds, 1, 0);
+	pollfd    fds[] { { fd, POLLIN, 0 } };
 #endif
 
-	return rc == 1;
-}
+	while(!stop_flag) {
+#if defined(_WIN32)
+		int rc = WSAPoll(fds, 1, 100);
+#else
+		int rc = poll(fds, 1, 100);
+#endif
+		if (rc == 0)
+			continue;
 
-uint8_t comm_tcp_socket::get_byte()
-{
-	uint8_t c = 0;
-	read(fd, &c, 1);  // TODO error checking
+		std::unique_lock<std::mutex> lck(cfd_lock);
 
-	return c;
-}
+		// disconnect any existing client session
+		// yes, one can 'DOS' with this
+		if (cfd != INVALID_SOCKET) {
+			close(cfd);
+			DOLOG(info, false, "Restarting session for port %d", port);
+		}
 
-void comm_tcp_socket::send_data(const uint8_t *const in, const size_t n)
-{
-	const uint8_t *p   = in;
-	size_t         len = n;
+		cfd = accept(fd, nullptr, nullptr);
 
-	while(len > 0) {
-		int rc = write(fd, p, len);
-		if (rc <= 0)  // TODO error checking
-			break;
+		if (setup_telnet_session(cfd) == false) {
+			close(cfd);
+			cfd = INVALID_SOCKET;
+		}
 
-		p   += rc;
-		len -= rc;
+		if (cfd != INVALID_SOCKET)
+			set_nodelay(cfd);
 	}
+
+	DOLOG(info, true, "DC11 thread terminating");
+
+	close(cfd);
+	close(fd);
 }
