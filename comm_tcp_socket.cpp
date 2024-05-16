@@ -114,7 +114,11 @@ uint8_t comm_tcp_socket::get_byte()
 	}
 
 	uint8_t c = 0;
-	read(use_fd, &c, 1);  // TODO error checking
+	if (read(use_fd, &c, 1) <= 0) {
+		std::unique_lock<std::mutex> lck(cfd_lock);
+		close(cfd);
+		cfd = INVALID_SOCKET;
+	}
 
 	return c;
 }
@@ -127,8 +131,11 @@ void comm_tcp_socket::send_data(const uint8_t *const in, const size_t n)
 	while(len > 0) {
 		std::unique_lock<std::mutex> lck(cfd_lock);
 		int rc = write(cfd, p, len);
-		if (rc <= 0)  // TODO error checking
+		if (rc <= 0) {  // TODO error checking
+			close(cfd);
+			cfd = INVALID_SOCKET;
 			break;
+		}
 
 		p   += rc;
 		len -= rc;
