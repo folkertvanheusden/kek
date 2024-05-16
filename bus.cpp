@@ -85,9 +85,6 @@ bus *bus::deserialize(const JsonDocument j, console *const cnsl, std::atomic_uin
 		b->add_ram(m);
 	}
 
-	if (j.containsKey("kw11-l"))
-		b->add_KW11_L(kw11_l::deserialize(j["kw11-l"], b, cnsl));
-
 	if (j.containsKey("tty"))
 		b->add_tty(tty::deserialize(j["tty"], b, cnsl));
 
@@ -102,6 +99,9 @@ bus *bus::deserialize(const JsonDocument j, console *const cnsl, std::atomic_uin
 
 	if (j.containsKey("rk05"))
 		b->add_rk05(rk05::deserialize(j["rk05"], b));
+
+	if (j.containsKey("kw11-l"))
+		b->add_KW11_L(kw11_l::deserialize(j["kw11-l"], b, cnsl));
 
 	// TODO: tm11, dc11
 
