@@ -1,13 +1,13 @@
 // (C) 2018-2024 by Folkert van Heusden
 // Released under MIT license
 
+#include "gen.h"
 #include <ArduinoJson.h>
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
 
 #include "bus.h"
-#include "gen.h"
 #include "cpu.h"
 #include "dc11.h"
 #include "kw11-l.h"
@@ -45,34 +45,48 @@ bus::~bus()
 	delete dc11_;
 }
 
-JsonVariant bus::serialize() const
+void dump(JsonVariantConst j)
 {
-	JsonVariant j_out;
+	std::string temp;
+	printf("%zu\n", serializeJson(j, temp));
+
+	printf("%s\r\n", temp.c_str());
+}
+
+JsonDocument bus::serialize() const
+{
+	JsonDocument doc;
+	JsonVariant  j_out = doc.to<JsonVariant>();
 
 	if (m)
 		j_out["memory"] = m->serialize();
 
 	if (kw11_l_)
 		j_out["kw11-l"] = kw11_l_->serialize();
+	dump(kw11_l_->serialize());
 
 	if (tty_)
 		j_out["tty"] = tty_->serialize();
+	dump(tty_->serialize());
 
 	if (mmu_)
 		j_out["mmu"] = mmu_->serialize();
+	dump(mmu_->serialize());
 
 	if (c)
-		j_out["cpu"] = c->serialize();
+		c->serialize(j_out["cpu"]);
 
 	if (rl02_)
 		j_out["rl02"] = rl02_->serialize();
+	dump(rl02_->serialize());
 
 	if (rk05_)
 		j_out["rk05"] = rk05_->serialize();
+	dump(rk05_->serialize());
 
 	// TODO: tm11, dc11
 
-	return j_out;
+	return doc;
 }
 
 bus *bus::deserialize(const JsonDocument j, console *const cnsl, std::atomic_uint32_t *const event)

@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include "gen.h"
 #include <ArduinoJson.h>
 #include <atomic>
 #include <mutex>
@@ -14,7 +15,6 @@
 
 #include "bus.h"
 #include "console.h"
-#include "gen.h"
 
 
 #define PDP11TTY_TKS		0177560	// reader status

@@ -3,6 +3,8 @@
 
 #pragma once
 
+#define ARDUINOJSON_DEBUG 1
+
 // #define TURBO
 
 typedef enum { EVENT_NONE = 0, EVENT_HALT, EVENT_INTERRUPT, EVENT_TERMINATE } stop_event_t;

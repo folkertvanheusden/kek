@@ -3,13 +3,13 @@
 
 #pragma once
 
+#include "gen.h"
 #include <ArduinoJson.h>
 #include <assert.h>
 #include <mutex>
 #include <stdint.h>
 #include <stdio.h>
 
-#include "gen.h"
 #include "device.h"
 #include "dc11.h"
 #include "mmu.h"
@@ -80,7 +80,7 @@ public:
 	bus();
 	~bus();
 
-	JsonVariant serialize() const;
+	JsonDocument serialize() const;
 	static bus *deserialize(const JsonDocument j, console *const cnsl, std::atomic_uint32_t *const event);
 
 	void reset() override;

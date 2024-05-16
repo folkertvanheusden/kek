@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include "gen.h"
 #include <ArduinoJson.h>
 #include <atomic>
 #include <cassert>
@@ -13,8 +14,6 @@
 #include <set>
 #include <stdint.h>
 #include <vector>
-
-#include "gen.h"
 
 
 class breakpoint;
@@ -115,7 +114,7 @@ public:
 	explicit cpu(bus *const b, std::atomic_uint32_t *const event);
 	~cpu();
 
-	JsonVariant serialize();
+	void serialize(JsonVariant j);
 	static cpu *deserialize(const JsonVariantConst j, bus *const b, std::atomic_uint32_t *const event);
 
 	std::optional<std::string> check_breakpoint();

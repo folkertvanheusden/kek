@@ -2434,9 +2434,9 @@ void cpu::step()
 	}
 }
 
-JsonVariant cpu::serialize()
+void cpu::serialize(JsonVariant j_in)
 {
-	JsonVariant j;
+	JsonVariant j = j_in["cpu"].to<JsonVariant>();
 
 	for(int set=0; set<2; set++) {
 		for(int regnr=0; regnr<6; regnr++)
@@ -2473,8 +2473,6 @@ JsonVariant cpu::serialize()
 	j["queued_interrupts"]     = j_queued_interrupts;
 
 	j["any_queued_interrupts"] = bool(any_queued_interrupts);
-
-	return j;
 }
 
 cpu *cpu::deserialize(const JsonVariantConst j, bus *const b, std::atomic_uint32_t *const event)

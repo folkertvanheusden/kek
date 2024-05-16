@@ -1,6 +1,7 @@
 // (C) 2018-2024 by Folkert van Heusden
 // Released under MIT license
 
+#include "gen.h"
 #include <ArduinoJson.h>
 #include <atomic>
 #include <thread>
@@ -8,7 +9,6 @@
 #include "bus.h"
 #include "console.h"
 #include "device.h"
-#include "gen.h"
 
 
 class kw11_l: public device

@@ -2,10 +2,10 @@
 // Released under MIT license
 
 #pragma once
-#include <ArduinoJson.h>
-#include <cstdint>
 
 #include "gen.h"
+#include <ArduinoJson.h>
+#include <cstdint>
 
 
 class memory

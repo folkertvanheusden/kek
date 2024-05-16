@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include "gen.h"
 #include <ArduinoJson.h>
 #include <atomic>
 #include <stdint.h>
@@ -12,7 +13,6 @@
 
 #include "disk_device.h"
 #include "disk_backend.h"
-#include "gen.h"
 
 
 #define RL02_CSR 0174400  // control status register

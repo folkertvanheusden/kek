@@ -1,10 +1,9 @@
 #pragma once
 
+#include "gen.h"
 #include <ArduinoJson.h>
 #include <cstdint>
 #include <string>
-
-#include "gen.h"
 #include "cpu.h"
 #include "device.h"
 #include "memory.h"

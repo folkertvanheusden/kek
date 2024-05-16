@@ -550,7 +550,7 @@ struct state_writer {
 
 void serialize_state(console *const cnsl, const bus *const b, const std::string & filename)
 {
-	JsonVariant j = b->serialize();
+	JsonDocument j = b->serialize();
 
 	bool ok = false;
 

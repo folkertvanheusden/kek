@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include "gen.h"
 #include <ArduinoJson.h>
 #include <map>
 #include <optional>
@@ -10,8 +11,6 @@
 #include <string>
 #include <vector>
 #include <sys/types.h>
-
-#include "gen.h"
 
 
 class disk_backend
