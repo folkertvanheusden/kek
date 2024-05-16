@@ -27,6 +27,9 @@ add_executable(
   breakpoint_parser.cpp
   breakpoint_register.cpp
   bus.cpp
+  comm.cpp
+  comm_posix_tty.cpp
+  comm_tcp_socket.cpp
   console.cpp
   console_ncurses.cpp
   console_posix.cpp
@@ -75,6 +78,9 @@ add_executable(
   breakpoint_parser.cpp
   breakpoint_register.cpp
   bus.cpp
+  comm.cpp
+  comm_posix_tty.cpp
+  comm_tcp_socket.cpp
   console.cpp
   console_posix.cpp
   cpu.cpp
