@@ -25,12 +25,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+        with:
+          submodules: 'true'
 
       - name: Install Packages (cpp)
         if: ${{ matrix.language == 'cpp' }}
         run: |
           sudo apt-get update
-          sudo apt-get install --yes libncurses-dev libjansson-dev
+          sudo apt-get install --yes libncurses-dev
 
       - name: Configure (cpp)
         if: ${{ matrix.language == 'cpp' }}
