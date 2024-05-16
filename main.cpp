@@ -586,7 +586,7 @@ int main(int argc, char *argv[])
 		JsonDocument         j;
 		DeserializationError error = deserializeJson(j, j_in);
 		if (error)
-			error_exit(true, "State file %s is corrupt: %s", error.c_str());
+			error_exit(true, "State file %s is corrupt: %s", deserialize.c_str(), error.c_str());
 
 		b = bus::deserialize(j, cnsl, &event);
 
