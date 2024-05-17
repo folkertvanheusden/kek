@@ -51,8 +51,8 @@ dc11::~dc11()
 
 void dc11::show_state(console *const cnsl) const
 {
-	for(int i=0; i<comm_interfaces.size(); i++) {
-		cnsl->put_string_lf(format("* LINE %d", i + 1));
+	for(size_t i=0; i<comm_interfaces.size(); i++) {
+		cnsl->put_string_lf(format("* LINE %zu", i + 1));
 
 #if 0  // TODO
 		if (i == serial_line) {
