@@ -6,6 +6,7 @@
 #include "gen.h"
 #include <cstddef>
 #include <cstdint>
+#include <string>
 
 
 class comm

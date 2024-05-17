@@ -6,7 +6,9 @@
 #include <mutex>
 #include <string>
 #include <thread>
+
 #include "comm.h"
+#include "utils.h"
 
 #if defined(_WIN32)
 #include <ws2tcpip.h>
