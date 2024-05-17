@@ -24,7 +24,8 @@
 
 #include "comm.h"
 #include "comm_esp32_hardwareserial.h"
-#include "comm_tcp_socket.h"
+#include "comm_tcp_socket_client.h"
+#include "comm_tcp_socket_server.h"
 #if defined(SHA2017)
 #include "console_shabadge.h"
 #else
@@ -220,7 +221,7 @@ void start_network(console *const c)
 
 		for(size_t i=comm_interfaces.size(); i<4; i++) {
 			int port = 1100 + i;
-			comm_interfaces.push_back(new comm_tcp_socket(port));
+			comm_interfaces.push_back(new comm_tcp_socket_server(port));
 			DOLOG(info, false, "Configuring DC11 device for TCP socket on port %d", port);
 		}
 
