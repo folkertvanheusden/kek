@@ -115,6 +115,7 @@ uint8_t comm_tcp_socket_server::get_byte()
 
 	uint8_t c = 0;
 	if (read(use_fd, &c, 1) <= 0) {
+		DOLOG(warning, false, " comm_tcp_socket_server::get_byte failed");
 		std::unique_lock<std::mutex> lck(cfd_lock);
 		close(cfd);
 		cfd = INVALID_SOCKET;
@@ -132,6 +133,7 @@ void comm_tcp_socket_server::send_data(const uint8_t *const in, const size_t n)
 		std::unique_lock<std::mutex> lck(cfd_lock);
 		int rc = write(cfd, p, len);
 		if (rc <= 0) {  // TODO error checking
+			DOLOG(warning, false, " comm_tcp_socket_server::send_data failed");
 			close(cfd);
 			cfd = INVALID_SOCKET;
 			break;
@@ -144,7 +146,7 @@ void comm_tcp_socket_server::send_data(const uint8_t *const in, const size_t n)
 
 void comm_tcp_socket_server::operator()()
 {
-	set_thread_name("kek:COMMTCP");
+	set_thread_name("kek:COMMTCPS");
 
 	DOLOG(info, true, "TCP comm thread started for port %d", port);
 
@@ -171,7 +173,7 @@ void comm_tcp_socket_server::operator()()
 		close(fd);
 		fd = INVALID_SOCKET;
 
-		DOLOG(warning, true, "Cannot bind to port %d (comm_tcp_socket_server)", port);
+		DOLOG(warning, true, "Cannot bind to port %d (send_datacomm_tcp_socket_server)", port);
 		return;
 	}
 
@@ -218,7 +220,7 @@ void comm_tcp_socket_server::operator()()
 			set_nodelay(cfd);
 	}
 
-	DOLOG(info, true, "DC11 thread terminating");
+	DOLOG(info, true, "comm_tcp_socket_server thread terminating");
 
 	close(cfd);
 	close(fd);
