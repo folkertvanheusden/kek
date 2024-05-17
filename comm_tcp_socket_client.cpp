@@ -48,7 +48,6 @@ comm_tcp_socket_client::comm_tcp_socket_client(const std::string & host, const i
 	host(host),
 	port(port)
 {
-	th = new std::thread(std::ref(*this));
 }
 
 comm_tcp_socket_client::~comm_tcp_socket_client()
@@ -59,6 +58,13 @@ comm_tcp_socket_client::~comm_tcp_socket_client()
 		th->join();
 		delete th;
 	}
+}
+
+bool comm_tcp_socket_client::begin()
+{
+	th = new std::thread(std::ref(*this));
+
+	return true;
 }
 
 bool comm_tcp_socket_client::is_connected()

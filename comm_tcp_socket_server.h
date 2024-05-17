@@ -32,6 +32,8 @@ public:
 	comm_tcp_socket_server(const int port);
 	virtual ~comm_tcp_socket_server();
 
+	bool    begin() override;
+
 	std::string get_identifier() const override { return format(":%d", port) + " (server)"; }
 
 	bool    is_connected() override;

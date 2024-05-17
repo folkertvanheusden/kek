@@ -21,12 +21,18 @@
 #include "log.h"
 
 
-comm_posix_tty::comm_posix_tty(const std::string & device, const int bitrate)
+comm_posix_tty::comm_posix_tty(const std::string & device, const int bitrate) :
+	device(device),
+	bitrate(bitrate)
+{
+}
+
+bool comm_posix_tty::begin()
 {
 	fd = open(device.c_str(), O_RDWR);
 	if (fd == -1) {
 		DOLOG(warning, false, "com_posix_tty failed to access %s: %s", device.c_str(), strerror(errno));
-		return;  // TODO error handling
+		return false;  // TODO error handling
 	}
 
 	// from https://stackoverflow.com/questions/6947413/how-to-open-read-and-write-from-serial-port-in-c
@@ -35,7 +41,7 @@ comm_posix_tty::comm_posix_tty(const std::string & device, const int bitrate)
 		DOLOG(warning, false, "com_posix_tty tcgetattr failed: %s", strerror(errno));
 		close(fd);
 		fd = -1;
-                return;
+                return false;
 	}
 
         cfsetospeed(&tty, bitrate);
@@ -63,8 +69,10 @@ comm_posix_tty::comm_posix_tty(const std::string & device, const int bitrate)
 		DOLOG(warning, false, "com_posix_tty tcsetattr failed: %s", strerror(errno));
 		close(fd);
 		fd = -1;
-		return;
+		return false;
 	}
+
+	return true;
 }
 
 comm_posix_tty::~comm_posix_tty()

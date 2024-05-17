@@ -15,6 +15,8 @@ public:
 	comm();
 	virtual ~comm();
 
+	virtual bool    begin() = 0;
+
 	virtual std::string get_identifier() const = 0;
 
 	virtual bool    is_connected() = 0;

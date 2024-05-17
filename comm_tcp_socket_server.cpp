@@ -70,7 +70,6 @@ static bool setup_telnet_session(const int fd)
 
 comm_tcp_socket_server::comm_tcp_socket_server(const int port) : port(port)
 {
-	th = new std::thread(std::ref(*this));
 }
 
 comm_tcp_socket_server::~comm_tcp_socket_server()
@@ -81,6 +80,13 @@ comm_tcp_socket_server::~comm_tcp_socket_server()
 		th->join();
 		delete th;
 	}
+}
+
+bool comm_tcp_socket_server::begin()
+{
+	th = new std::thread(std::ref(*this));
+
+	return true;
 }
 
 bool comm_tcp_socket_server::is_connected()

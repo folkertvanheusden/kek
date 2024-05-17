@@ -620,6 +620,11 @@ int main(int argc, char *argv[])
 		DOLOG(info, false, "Configuring DC11 device for TCP socket on port %d", port);
 	}
 
+	for(auto & c: comm_interfaces) {
+		if (c->begin() == false)
+			DOLOG(warning, false, "Failed to configure %s", c->get_identifier().c_str());
+	}
+
 	dc11 *dc11_ = new dc11(b, comm_interfaces);
 	b->add_DC11(dc11_);
 	//

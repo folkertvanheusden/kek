@@ -268,7 +268,8 @@ void configure_comm(console *const cnsl, std::vector<comm *> & device_list)
 
 		size_t device_nr = ch_dev - 'A';
 
-		int ch_opt = wait_for_key("1. TCP client, 2. TCP server, 3. serial device, 9. to abort", cnsl, { '1', '2', '3', '9' });
+		int  ch_opt = wait_for_key("1. TCP client, 2. TCP server, 3. serial device, 9. to abort", cnsl, { '1', '2', '3', '9' });
+		bool rc     = false;
 
 		if (ch_opt == '1') {
 			std::string temp_host = cnsl->read_line("host: ");
@@ -277,6 +278,7 @@ void configure_comm(console *const cnsl, std::vector<comm *> & device_list)
 			if (temp_host.empty() == false && temp_port.empty() == false) {
 				delete device_list.at(device_nr);
 				device_list.at(device_nr) = new comm_tcp_socket_client(temp_host, std::stoi(temp_port));
+				rc = device_list.at(device_nr)->begin();
 			}
 		}
 		else if (ch_opt == '2') {
@@ -284,6 +286,7 @@ void configure_comm(console *const cnsl, std::vector<comm *> & device_list)
 			if (temp.empty() == false) {
 				delete device_list.at(device_nr);
 				device_list.at(device_nr) = new comm_tcp_socket_server(std::stoi(temp));
+				rc = device_list.at(device_nr)->begin();
 			}
 		}
 		else if (ch_opt == '3') {
@@ -293,12 +296,16 @@ void configure_comm(console *const cnsl, std::vector<comm *> & device_list)
 			if (temp_dev.empty() == false && temp_bitrate.empty() == false) {
 				delete device_list.at(device_nr);
 				device_list.at(device_nr) = new comm_posix_tty(temp_dev, std::stoi(temp_bitrate));
+				rc = device_list.at(device_nr)->begin();
 			}
 #else
 			// TODO
 			cnsl->put_string_lf("Not implemented yet");
 #endif
 		}
+
+		if (ch_opt != 9 && rc == false)
+			cnsl->put_string_lf("Failed to initialize device");
 	}
 }
 
