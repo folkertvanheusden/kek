@@ -248,6 +248,23 @@ int wait_for_key(const std::string & title, console *const cnsl, const std::vect
 	return ch;
 }
 
+void configure_comm(console *const cnsl, std::vector<comm *> & device_list)
+{
+	for(;;) {
+		std::vector<char> keys_allowed { '9' };
+		int               slot_key     { 'A' };
+		for(auto & c: device_list) {
+			cnsl->put_string_lf(format(" %c. %s", slot_key, c ? c->get_identifier().c_str() : "-"));
+			keys_allowed.push_back(slot_key);
+			slot_key++;
+		}
+
+		int ch = wait_for_key("Select communication device to setup or 9. to exit", cnsl, keys_allowed);
+		if (ch == '9')
+			break;
+	}
+}
+
 std::optional<disk_backend *> select_disk_backend(console *const cnsl)
 {
 #if defined(BUILD_FOR_RP2040)
@@ -290,7 +307,7 @@ void configure_disk(bus *const b, console *const cnsl)
 		std::vector<char> keys_allowed { '1', '2', '9' };
 
 		auto cartridge_slots = dd->access_disk_backends();
-		int slot_key = 'A';
+		int  slot_key        = 'A';
 		for(auto & slot: *cartridge_slots) {
 			cnsl->put_string_lf(format(" %c. %s", slot_key, slot ? slot->get_identifier().c_str() : "-"));
 			keys_allowed.push_back(slot_key);
@@ -991,6 +1008,11 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 				continue;
 			}
+			else if (cmd == "cdc11") {
+				configure_comm(cnsl, *b->getDC11()->get_comm_interfaces());
+
+				continue;
+			}
 			else if (cmd == "bt") {
 				if (c->get_debug() == false)
 					cnsl->put_string_lf("Debug mode is disabled!");
@@ -1046,6 +1068,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 					"stats         - show run statistics",
 					"ramsize x     - set ram size (page count (8 kB), decimal)",
 					"bl            - set bootloader (rl02 or rk05)",
+					"cdc11         - configure DC11 device",
 #if IS_POSIX
 					"ser x         - serialize state to a file",
 //					"dser          - deserialize state from a file",
