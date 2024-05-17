@@ -28,7 +28,7 @@
 #include <unistd.h>
 #endif
 
-#include "comm_tcp_socket.h"
+#include "comm_tcp_socket_server.h"
 #include "log.h"
 #include "utils.h"
 
@@ -68,12 +68,12 @@ static bool setup_telnet_session(const int fd)
 	return true;
 }
 
-comm_tcp_socket::comm_tcp_socket(const int port) : port(port)
+comm_tcp_socket_server::comm_tcp_socket_server(const int port) : port(port)
 {
 	th = new std::thread(std::ref(*this));
 }
 
-comm_tcp_socket::~comm_tcp_socket()
+comm_tcp_socket_server::~comm_tcp_socket_server()
 {
 	stop_flag = true;
 
@@ -83,14 +83,14 @@ comm_tcp_socket::~comm_tcp_socket()
 	}
 }
 
-bool comm_tcp_socket::is_connected()
+bool comm_tcp_socket_server::is_connected()
 {
 	std::unique_lock<std::mutex> lck(cfd_lock);
 
 	return cfd != INVALID_SOCKET;
 }
 
-bool comm_tcp_socket::has_data()
+bool comm_tcp_socket_server::has_data()
 {
 	std::unique_lock<std::mutex> lck(cfd_lock);
 #if defined(_WIN32)
@@ -104,7 +104,7 @@ bool comm_tcp_socket::has_data()
 	return rc == 1;
 }
 
-uint8_t comm_tcp_socket::get_byte()
+uint8_t comm_tcp_socket_server::get_byte()
 {
 	int use_fd = -1;
 
@@ -123,7 +123,7 @@ uint8_t comm_tcp_socket::get_byte()
 	return c;
 }
 
-void comm_tcp_socket::send_data(const uint8_t *const in, const size_t n)
+void comm_tcp_socket_server::send_data(const uint8_t *const in, const size_t n)
 {
 	const uint8_t *p   = in;
 	size_t         len = n;
@@ -142,7 +142,7 @@ void comm_tcp_socket::send_data(const uint8_t *const in, const size_t n)
 	}
 }
 
-void comm_tcp_socket::operator()()
+void comm_tcp_socket_server::operator()()
 {
 	set_thread_name("kek:COMMTCP");
 
@@ -155,7 +155,7 @@ void comm_tcp_socket::operator()()
 		close(fd);
 		fd = INVALID_SOCKET;
 
-		DOLOG(warning, true, "Cannot set reuseaddress for port %d (comm_tcp_socket)", port);
+		DOLOG(warning, true, "Cannot set reuseaddress for port %d (comm_tcp_socket_server)", port);
 		return;
 	}
 
@@ -171,7 +171,7 @@ void comm_tcp_socket::operator()()
 		close(fd);
 		fd = INVALID_SOCKET;
 
-		DOLOG(warning, true, "Cannot bind to port %d (comm_tcp_socket)", port);
+		DOLOG(warning, true, "Cannot bind to port %d (comm_tcp_socket_server)", port);
 		return;
 	}
 
@@ -179,7 +179,7 @@ void comm_tcp_socket::operator()()
 		close(fd);
 		fd = INVALID_SOCKET;
 
-		DOLOG(warning, true, "Cannot listen on port %d (comm_tcp_socket)", port);
+		DOLOG(warning, true, "Cannot listen on port %d (comm_tcp_socket_server)", port);
 		return;
 	}
 

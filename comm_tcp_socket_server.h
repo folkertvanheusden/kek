@@ -16,7 +16,7 @@
 #endif
 
 
-class comm_tcp_socket: public comm
+class comm_tcp_socket_server: public comm
 {
 private:
 	const int        port      { -1             };
@@ -27,8 +27,8 @@ private:
 	std::thread     *th        { nullptr        };
 
 public:
-	comm_tcp_socket(const int port);
-	virtual ~comm_tcp_socket();
+	comm_tcp_socket_server(const int port);
+	virtual ~comm_tcp_socket_server();
 
 	bool    is_connected() override;
 
