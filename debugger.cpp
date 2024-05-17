@@ -14,6 +14,8 @@
 
 #include "breakpoint_parser.h"
 #include "bus.h"
+#include "comm_tcp_socket_client.h"
+#include "comm_tcp_socket_server.h"
 #include "console.h"
 #include "cpu.h"
 #include "disk_backend.h"
@@ -259,9 +261,33 @@ void configure_comm(console *const cnsl, std::vector<comm *> & device_list)
 			slot_key++;
 		}
 
-		int ch = wait_for_key("Select communication device to setup or 9. to exit", cnsl, keys_allowed);
-		if (ch == '9')
+		int ch_dev = wait_for_key("Select communication device to setup or 9. to exit", cnsl, keys_allowed);
+		if (ch_dev == '9')
 			break;
+
+		size_t device_nr = ch_dev - 'A';
+
+		int ch_opt = wait_for_key("1. TCP client, 2. TCP server, 3. serial device, 9. to abort", cnsl, { '1', '2', '3', '9' });
+
+		if (ch_opt == '1') {
+			std::string temp_host = cnsl->read_line("host: ");
+			std::string temp_port = temp_host.empty() ? "" : cnsl->read_line("port: ");
+
+			if (temp_host.empty() == false && temp_port.empty() == false) {
+				delete device_list.at(device_nr);
+				device_list.at(device_nr) = new comm_tcp_socket_client(temp_host, std::stoi(temp_port));
+			}
+		}
+		else if (ch_opt == '2') {
+			std::string temp = cnsl->read_line("port: ");
+			if (temp.empty() == false) {
+				delete device_list.at(device_nr);
+				device_list.at(device_nr) = new comm_tcp_socket_server(std::stoi(temp));
+			}
+		}
+		else if (ch_opt == '3') {
+			// TODO
+		}
 	}
 }
 
