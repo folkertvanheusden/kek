@@ -8,11 +8,14 @@
 class comm_posix_tty: public comm
 {
 private:
-	int fd { -1 };
+	std::string dev;
+	int         fd { -1 };
 
 public:
 	comm_posix_tty(const std::string & dev, const int bitrate);
 	virtual ~comm_posix_tty();
+
+	std::string get_identifier() const override { return dev; }
 
 	bool    is_connected() override;
 
