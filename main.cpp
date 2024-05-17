@@ -705,7 +705,12 @@ int main(int argc, char *argv[])
 
 	cnsl->stop_thread();
 
+	auto dc11_devices = *b->getDC11()->get_comm_interfaces();  // TODO fix RAII
+
 	delete b;
+
+	for(auto & c: dc11_devices)
+		delete c;
 
 	delete cnsl;
 
