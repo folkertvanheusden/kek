@@ -52,6 +52,8 @@ public:
 //	static tty *deserialize(const json_t *const j, bus *const b, console *const cnsl);
 #endif
 
+	std::vector<comm *> *get_comm_interfaces() { return &comm_interfaces; }
+
 	void reset() override;
 
 	void show_state(console *const cnsl) const override;
