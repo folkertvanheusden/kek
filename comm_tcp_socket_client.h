@@ -33,7 +33,7 @@ public:
 	comm_tcp_socket_client(const std::string & host, const int port);
 	virtual ~comm_tcp_socket_client();
 
-	std::string get_identifier() const override { host + format(":%d", port) + " (client)"; }
+	std::string get_identifier() const override { return host + format(":%d", port) + " (client)"; }
 
 	bool    is_connected() override;
 
