@@ -34,6 +34,7 @@ comm_posix_tty::comm_posix_tty(const std::string & device, const int bitrate)
         if (tcgetattr(fd, &tty) == -1) {
 		DOLOG(warning, false, "com_posix_tty tcgetattr failed: %s", strerror(errno));
 		close(fd);
+		fd = -1;
                 return;
 	}
 
@@ -61,22 +62,27 @@ comm_posix_tty::comm_posix_tty(const std::string & device, const int bitrate)
         if (tcsetattr(fd, TCSANOW, &tty) == -1) {
 		DOLOG(warning, false, "com_posix_tty tcsetattr failed: %s", strerror(errno));
 		close(fd);
+		fd = -1;
 		return;
 	}
 }
 
 comm_posix_tty::~comm_posix_tty()
 {
-	close(fd);
+	if (fd != -1)
+		close(fd);
 }
 
 bool comm_posix_tty::is_connected()
 {
-	return true;
+	return fd != -1;
 }
 
 bool comm_posix_tty::has_data()
 {
+	if (fd == -1)
+		return false;
+
 #if defined(_WIN32)
 	WSAPOLLFD fds[] { { fd, POLLIN, 0 } };
 	int rc = WSAPoll(fds, 1, 0);
@@ -91,7 +97,11 @@ bool comm_posix_tty::has_data()
 uint8_t comm_posix_tty::get_byte()
 {
 	uint8_t c = 0;
-	read(fd, &c, 1);  // TODO error handling
+	if (read(fd, &c, 1) <= 0) {
+		DOLOG(warning, false, "com_posix_tty cannot read");
+		close(fd);
+		fd = -1;
+	}
 
 	return c;
 }
@@ -103,8 +113,12 @@ void comm_posix_tty::send_data(const uint8_t *const in, const size_t n)
 
 	while(len > 0) {
 		int rc = write(fd, p, len);
-		if (rc <= 0)  // TODO error checking
+		if (rc <= 0) {  // TODO error checking
+			DOLOG(warning, false, "com_posix_tty cannot write");
+			close(fd);
+			fd = -1;
 			break;
+		}
 
 		p   += rc;
 		len -= rc;
