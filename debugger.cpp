@@ -14,6 +14,7 @@
 
 #include "breakpoint_parser.h"
 #include "bus.h"
+#include "comm_posix_tty.h"
 #include "comm_tcp_socket_client.h"
 #include "comm_tcp_socket_server.h"
 #include "console.h"
@@ -286,7 +287,17 @@ void configure_comm(console *const cnsl, std::vector<comm *> & device_list)
 			}
 		}
 		else if (ch_opt == '3') {
+#if IS_POSIX
+			std::string temp_dev = cnsl->read_line("device: ");
+			std::string temp_bitrate = cnsl->read_line("bitrate: ");
+			if (temp_dev.empty() == false && temp_bitrate.empty() == false) {
+				delete device_list.at(device_nr);
+				device_list.at(device_nr) = new comm_posix_tty(temp_dev, std::stoi(temp_bitrate));
+			}
+#else
 			// TODO
+			cnsl->put_string_lf("Not implemented yet");
+#endif
 		}
 	}
 }
