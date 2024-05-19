@@ -56,8 +56,8 @@ void dc11::show_state(console *const cnsl) const
 
 #if 0  // TODO
 		if (i == serial_line) {
-			cnsl->put_string_lf(format(" Serial thread running: %s", serial_thread_running ? "true": "false" ));
-			cnsl->put_string_lf(format(" Serial enabled: %s", serial_enabled ? "true": "false" ));
+			cnsl->put_string_lf(format(" TTY thread running: %s", serial_thread_running ? "true": "false" ));
+			cnsl->put_string_lf(format(" TTY enabled: %s", serial_enabled ? "true": "false" ));
 		}
 		else {
 			if (pfds[dc11_n_lines + i].fd != INVALID_SOCKET)

@@ -1,4 +1,4 @@
-// (C) 2023 by Folkert van Heusden
+// (C) 2023-2024 by Folkert van Heusden
 // Released under MIT license
 
 #include <Arduino.h>
@@ -22,7 +22,7 @@ private:
 	void put_char_ll(const char c) override;
 
 public:
-	console_shabadge(std::atomic_uint32_t *const stop_event, std::vector<Stream *> & io_ports);
+	console_shabadge(std::atomic_uint32_t *const stop_event, comm *const io_port);
 	virtual ~console_shabadge();
 
 	void panel_update_thread() override;

@@ -13,9 +13,9 @@
 #include "utils.h"
 
 
-console_esp32::console_esp32(std::atomic_uint32_t *const stop_event, std::vector<Stream *> & io_ports, const int t_width, const int t_height) :
+console_esp32::console_esp32(std::atomic_uint32_t *const stop_event, comm *const io_port, const int t_width, const int t_height) :
 	console(stop_event, t_width, t_height),
-	io_ports(io_ports)
+	io_port(io_port)
 {
 }
 
@@ -32,10 +32,8 @@ void console_esp32::set_panel_mode(const panel_mode_t pm)
 int console_esp32::wait_for_char_ll(const short timeout)
 {
 	for(short i=0; i<timeout / 10; i++) {
-		for(auto port : io_ports) {
-			if (port->available())
-				return port->read();
-		}
+		if (io_port->has_data())
+			return io_port->get_byte();
 
 		vTaskDelay(10 / portTICK_PERIOD_MS);
 	}
@@ -45,8 +43,7 @@ int console_esp32::wait_for_char_ll(const short timeout)
 
 void console_esp32::put_char_ll(const char c)
 {
-	for(auto port : io_ports)
-		port->print(c);
+	io_port->send_data(reinterpret_cast<const uint8_t *>(&c), 1);
 }
 
 void console_esp32::put_string_lf(const std::string & what)

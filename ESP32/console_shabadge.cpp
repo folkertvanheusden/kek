@@ -1,4 +1,4 @@
-// (C) 2023 by Folkert van Heusden
+// (C) 2023-2024 by Folkert van Heusden
 // Released under MIT license
 
 #include <SPI.h>
@@ -15,8 +15,8 @@
 #define COLORED     0
 #define UNCOLORED   1
 
-console_shabadge::console_shabadge(std::atomic_uint32_t *const stop_event, std::vector<Stream *> & io_ports) :
-	console_esp32(stop_event, io_ports, 296 / 8, 128 / 8)
+console_shabadge::console_shabadge(std::atomic_uint32_t *const stop_event, comm *const io_port):
+	console_esp32(stop_event, io_port, 296 / 8, 128 / 8)
 {
 	if (epd.Init() != 0)
 		printf("Init of DEPG0290B01 failed");

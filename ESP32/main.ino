@@ -4,9 +4,6 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <atomic>
-#if !defined(BUILD_FOR_RP2040)
-#include <HardwareSerial.h>
-#endif
 #include <LittleFS.h>
 #include <stdio.h>
 #include <string.h>
@@ -23,6 +20,7 @@
 #endif
 
 #include "comm.h"
+#include "comm_arduino.h"
 #include "comm_esp32_hardwareserial.h"
 #include "comm_tcp_socket_client.h"
 #include "comm_tcp_socket_server.h"
@@ -75,6 +73,8 @@ std::atomic_bool    *running         { nullptr    };
 bool                 trace_output    { false      };
 
 ntp                 *ntp_            { nullptr    };
+
+comm                *cs              { nullptr    };  // Console Serial
 
 static void console_thread_wrapper_panel(void *const c)
 {
@@ -207,14 +207,13 @@ void start_network(console *const c)
 	if (!dc11_loaded) {
 		dc11_loaded = true;
 
-		Serial.println(F("* Adding DC11"));
+		cs->println("* Adding DC11");
 		std::vector<comm *> comm_interfaces;
 
 #if !defined(BUILD_FOR_RP2040) && defined(TTY_SERIAL_RX)
 		uint32_t bitrate = load_serial_speed_configuration();
 
-		Serial.printf("* Init TTY (on DC11), baudrate: %d bps, RX: %d, TX: %d", bitrate, TTY_SERIAL_RX, TTY_SERIAL_TX);
-		Serial.println(F(""));
+		cs->println(format("* Init TTY (on DC11), baudrate: %d bps, RX: %d, TX: %d", bitrate, TTY_SERIAL_RX, TTY_SERIAL_TX));
 
 		comm_interfaces.push_back(new comm_esp32_hardwareserial(1, TTY_SERIAL_RX, TTY_SERIAL_TX, bitrate));
 #endif
@@ -233,7 +232,7 @@ void start_network(console *const c)
 		dc11 *dc11_ = new dc11(b, comm_interfaces);
 		b->add_DC11(dc11_);
 
-		Serial.println(F("* Starting (NTP-) clock"));
+		cs->println("* Starting (NTP-) clock");
 		ntp_ = new ntp("188.212.113.203");  // TODO configurable
 		ntp_->begin();
 
@@ -260,28 +259,20 @@ void heap_caps_alloc_failed_hook(size_t requested_size, uint32_t caps, const cha
 
 void setup() {
 	Serial.begin(115200);
-
 	while(!Serial)
 		delay(100);
 
-	Serial.println(F("PDP11 emulator, by Folkert van Heusden"));
-	Serial.print(F("GIT hash: "));
-	Serial.println(version_str);
-	Serial.println(F("Build on: " __DATE__ " " __TIME__));
+	cs = new comm_arduino(&Serial, "Serial");
 
-	Serial.print(F("Size of int: "));
-	Serial.println(sizeof(int));
+	cs->println("PDP11 emulator, by Folkert van Heusden");
+	cs->println(format("GIT hash: %s", version_str));
+	cs->println("Build on: " __DATE__ " " __TIME__);
 
 #if defined(ESP32)
 	heap_caps_register_failed_alloc_callback(heap_caps_alloc_failed_hook);
 #endif
 #if defined(ESP32)
 	set_hostname();
-#endif
-
-#if !defined(BUILD_FOR_RP2040)
-	Serial.print(F("CPU clock frequency (MHz): "));
-	Serial.println(getCpuFrequencyMhz());
 #endif
 
 #if defined(BUILD_FOR_RP2040)
@@ -293,7 +284,7 @@ void setup() {
 		if (SD.begin(false, SD_SCK_MHZ(10), SPI))
 			break;
 
-		Serial.println(F("Cannot initialize SD card"));
+		cs->println("Cannot initialize SD card");
 	}
 #endif
 
@@ -304,18 +295,17 @@ void setup() {
 	LittleFS.setConfig(cfg);
 #else
 	if (!LittleFS.begin(true))
-		Serial.println(F("LittleFS.begin() failed"));
+		cs->println("LittleFS.begin() failed");
 #endif
 
-	Serial.println(F("* Init bus"));
+	cs->println("* Init bus");
 	b = new bus();
 
-	Serial.println(F("* Allocate memory"));
+	cs->println("* Allocate memory");
 	uint32_t n_pages = DEFAULT_N_PAGES;
 
 #if !defined(BUILD_FOR_RP2040)
-	Serial.print(F("Free RAM after init (decimal bytes): "));
-	Serial.println(ESP.getFreeHeap());
+	cs->println(format("Free RAM after init (decimal bytes): %d", ESP.getFreeHeap()));
 
 	if (psramInit()) {
 		constexpr const uint32_t leave_unallocated = 32768;
@@ -323,32 +313,29 @@ void setup() {
 		uint32_t free_psram = ESP.getFreePsram();
 		if (free_psram > leave_unallocated) {
 			n_pages = min((free_psram - leave_unallocated) / 8192, uint32_t(256));  // start size is 2 MB max (with 1 MB, UNIX 7 behaves strangely)
-			Serial.printf("Free PSRAM: %d decimal bytes (or %d pages (see 'ramsize' in the debugger))", free_psram, n_pages);
-			Serial.println(F(""));
+			cs->println(format("Free PSRAM: %d decimal bytes (or %d pages (see 'ramsize' in the debugger))", free_psram, n_pages));
 		}
 	}
 #endif
 
-	Serial.printf("Allocating %d (decimal) pages", n_pages);
+	cs->println(format("Allocating %d (decimal) pages", n_pages));
 	b->set_memory_size(n_pages);
-	Serial.println(F(""));
 
-	Serial.println(F("* Init CPU"));
+	cs->println("* Init CPU");
 	c = new cpu(b, &stop_event);
 	b->add_cpu(c);
 
-	std::vector<Stream *> serial_ports { &Serial };
 #if defined(SHA2017)
-	cnsl = new console_shabadge(&stop_event, serial_ports);
+	cnsl = new console_shabadge(&stop_event, cs);
 #elif defined(ESP32) || defined(BUILD_FOR_RP2040)
-	cnsl = new console_esp32(&stop_event, serial_ports, 80, 25);
+	cnsl = new console_esp32(&stop_event, cs, 80, 25);
 #endif
 	cnsl->set_bus(b);
 	cnsl->begin();
 
 	running = cnsl->get_running_flag();
 
-	Serial.println(F("* Connect RK05 and RL02 devices to BUS"));
+	cs->println("* Connect RK05 and RL02 devices to BUS");
 	auto rk05_dev = new rk05(b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag());
 	rk05_dev->begin();
 	b->add_rk05(rk05_dev);
@@ -357,14 +344,14 @@ void setup() {
 	rl02_dev->begin();
 	b->add_rl02(rl02_dev);
 
-	Serial.println(F("* Adding TTY"));
+	cs->println("* Adding TTY");
 	tty_ = new tty(cnsl, b);
 	b->add_tty(tty_);
 
-	Serial.println(F("* Adding TM-11"));
+	cs->println("* Adding TM-11");
 	b->add_tm11(new tm_11(b));
 
-	Serial.println(F("* Starting KW11-L"));
+	cs->println("* Starting KW11-L");
 	b->getKW11_L()->begin(cnsl);
 
 #if !defined(SHA2017)
@@ -375,19 +362,16 @@ void setup() {
 #endif
 
 #if !defined(BUILD_FOR_RP2040) && (defined(NEOPIXELS_PIN) || defined(HEARTBEAT_PIN))
-	Serial.println(F("Starting panel"));
+	cs->println("Starting panel");
 	xTaskCreate(&console_thread_wrapper_panel, "panel", 3072, cnsl, 1, nullptr);
 #endif
 
 #if !defined(BUILD_FOR_RP2040)
 	uint32_t free_heap = ESP.getFreeHeap();
-	Serial.printf("Free RAM after init: %d decimal bytes", free_heap);
-	Serial.println(F(""));
+	cs->println(format("Free RAM after init: %d decimal bytes", free_heap));
 #endif
 
-	Serial.flush();
-
-	Serial.println(F("* Starting console"));
+	cs->println("* Starting console");
 	cnsl->start_thread();
 
 	cnsl->put_string_lf("PDP-11/70 emulator, (C) Folkert van Heusden");

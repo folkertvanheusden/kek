@@ -25,4 +25,7 @@ public:
 	virtual uint8_t get_byte() = 0;
 
 	virtual void    send_data(const uint8_t *const in, const size_t n) = 0;
+
+        void            println(const char *const s);
+        void            println(const std::string & in);
 };
