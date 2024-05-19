@@ -14,11 +14,16 @@
 
 #include "breakpoint_parser.h"
 #include "bus.h"
+#if IS_POSIX
 #include "comm_posix_tty.h"
+#endif
 #include "comm_tcp_socket_client.h"
 #include "comm_tcp_socket_server.h"
 #include "console.h"
 #include "cpu.h"
+#if defined(ESP32)
+#include "comm_esp32_hardwareserial.h"
+#endif
 #include "disk_backend.h"
 #if IS_POSIX || defined(_WIN32)
 #include "disk_backend_file.h"
@@ -298,8 +303,17 @@ void configure_comm(console *const cnsl, std::vector<comm *> & device_list)
 				device_list.at(device_nr) = new comm_posix_tty(temp_dev, std::stoi(temp_bitrate));
 				rc = device_list.at(device_nr)->begin();
 			}
+#elif defined(ESP32)
+			std::string temp_dev = cnsl->read_line("Uart number (0...2): ");
+			std::string temp_rx  = cnsl->read_line("RX pin: ");
+			std::string temp_tx  = cnsl->read_line("TX pin: ");
+			std::string temp_bitrate = cnsl->read_line("bitrate: ");
+			if (temp_dev.empty() == false && temp_bitrate.empty() == false && temp_rx.empty() == false && temp_tx.empty() == false) {
+				delete device_list.at(device_nr);
+				device_list.at(device_nr) = new comm_esp32_hardwareserial(std::stoi(temp_dev), std::stoi(temp_rx), std::stoi(temp_tx), std::stoi(temp_bitrate));
+				rc = device_list.at(device_nr)->begin();
+			}
 #else
-			// TODO
 			cnsl->put_string_lf("Not implemented yet");
 #endif
 		}

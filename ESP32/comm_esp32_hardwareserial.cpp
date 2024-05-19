@@ -7,9 +7,22 @@
 #include <driver/uart.h>
 
 #include "comm_esp32_hardwareserial.h"
+#include "utils.h"
 
 
-comm_esp32_hardwareserial::comm_esp32_hardwareserial(const int uart_nr, const int rx_pin, const int tx_pin, const int bitrate) : uart_nr(uart_nr)
+comm_esp32_hardwareserial::comm_esp32_hardwareserial(const int uart_nr, const int rx_pin, const int tx_pin, const int bitrate) :
+	uart_nr(uart_nr),
+	rx_pin(rx_pin), tx_pin(tx_pin),
+	bitrate(bitrate)
+{
+}
+
+comm_esp32_hardwareserial::~comm_esp32_hardwareserial()
+{
+	ESP_ERROR_CHECK(uart_driver_delete(uart_nr));
+}
+
+bool comm_esp32_hardwareserial::begin()
 {
 	// Configure UART parameters
 	static uart_config_t uart_config = {
@@ -20,20 +33,32 @@ comm_esp32_hardwareserial::comm_esp32_hardwareserial(const int uart_nr, const in
 		.flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
 		.rx_flow_ctrl_thresh = 122,
 	};
-	ESP_ERROR_CHECK(uart_param_config(uart_nr, &uart_config));
 
-	ESP_ERROR_CHECK(uart_set_pin(uart_nr, tx_pin, rx_pin, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
+	if (uart_param_config(uart_nr, &uart_config) != ESP_OK) {
+		DOLOG(warning, false, "uart_param_config(%d, %d) failed", uart_nr, bitrate);
+		return false;
+	}
+
+	if (uart_set_pin(uart_nr, tx_pin, rx_pin, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE) != ESP_OK) {
+		DOLOG(warning, false, "uart_set_pin(%d, %d, %d) failed", uart_nr, rx_pin, tx_pin);
+		return false;
+	}
 
 	// Setup UART buffered IO with event queue
 	const int uart_buffer_size = 1024 * 2;
 	static QueueHandle_t uart_queue;
 	// Install UART driver using an event queue here
-	ESP_ERROR_CHECK(uart_driver_install(uart_nr, uart_buffer_size, uart_buffer_size, 10, &uart_queue, 0));
+	if (uart_driver_install(uart_nr, uart_buffer_size, uart_buffer_size, 10, &uart_queue, 0) != ESP_OK) {
+		DOLOG(warning, false, "uart_driver_install(%d) failed", uart_nr);
+		return false;
+	}
+
+	return true;
 }
 
-comm_esp32_hardwareserial::~comm_esp32_hardwareserial()
+std::string comm_esp32_hardwareserial::get_identifier() const
 {
-	ESP_ERROR_CHECK(uart_driver_delete(uart_nr));
+	return format("UART:%d/RX:%d/TX:%d/@:%d", uart_nr, rx_pin, tx_pin, bitrate);
 }
 
 bool comm_esp32_hardwareserial::is_connected()
