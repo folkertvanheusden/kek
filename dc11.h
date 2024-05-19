@@ -19,7 +19,6 @@
 #define DC11_BASE DC11_RCSR
 #define DC11_END  (DC11_BASE + (4 * 4 + 1) * 2)  // 4 interfaces, + 2 to point behind it
 
-class Stream;
 class bus;
 
 // 4 interfaces
