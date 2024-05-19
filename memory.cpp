@@ -7,16 +7,16 @@
 #include <cstdlib>
 #include <cstring>
 
+#include "log.h"
 #include "memory.h"
 
 memory::memory(const uint32_t size): size(size)
 {
 #if defined(ESP32)
-	Serial.print(F("Memory size (in bytes, decimal): "));
-	Serial.println(size);
+	DOLOG(info, false, "Memory size (in bytes, decimal): %d", size);
 
 	if (psramFound()) {
-		Serial.println(F("Using PSRAM"));
+		DOLOG(info, false, "Using PSRAM");
 
 		m = reinterpret_cast<uint8_t *>(ps_malloc(size));
 

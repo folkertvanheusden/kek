@@ -66,7 +66,7 @@ void console_esp32::refresh_virtual_terminal()
 
 void console_esp32::panel_update_thread()
 {
-	Serial.println(F("panel task started"));
+	DOLOG(info, false, "panel task started");
 
 	cpu *const c = b->getCpu();
 
@@ -175,5 +175,5 @@ void console_esp32::panel_update_thread()
 	}
 #endif
 
-	Serial.println(F("panel task terminating"));
+	DOLOG(info, false, "panel task terminating");
 }

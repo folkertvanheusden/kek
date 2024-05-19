@@ -19,9 +19,9 @@ console_shabadge::console_shabadge(std::atomic_uint32_t *const stop_event, std::
 	console_esp32(stop_event, io_ports, 296 / 8, 128 / 8)
 {
 	if (epd.Init() != 0)
-		Serial.println("Init of DEPG0290B01 failed");
+		printf("Init of DEPG0290B01 failed");
 	else {
-		Serial.println("DEPG0290B01 initialized");
+		printf("DEPG0290B01 initialized");
 
 		paint = new Paint(image, 0, 0);
 

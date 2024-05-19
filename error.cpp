@@ -19,15 +19,15 @@
 
 [[ noreturn ]] void error_exit(bool sys_err, const char *format, ...)
 {
+#if defined(ESP32) || defined(BUILD_FOR_RP2040)
+	printf("Fatal error: %s\n", format);
+#else
 	int e = errno;
 
-#if !defined(_WIN32) && !defined(ESP32) && !defined(BUILD_FOR_RP2040)
+#if !defined(_WIN32)
 	(void)endwin();
 #endif
 
-#if defined(ESP32) || defined(BUILD_FOR_RP2040)
-	Serial.println(format);
-#else
 	va_list ap;
 
 	va_start(ap, format);
@@ -36,7 +36,7 @@
 
 	if (sys_err == true)
 		fprintf(stderr, "error: %s (%d)\n", strerror(e), e);
-#endif
 
 	exit(1);
+#endif
 }

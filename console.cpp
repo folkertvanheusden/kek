@@ -357,7 +357,7 @@ void console::operator()()
 
 			uint8_t value = 1;
 			if (xQueueSend(have_data, &value, portMAX_DELAY) == pdFALSE)
-				Serial.println("xQueueSend failed");
+				TRACE("xQueueSend failed");
 #else
 			have_data.notify_all();
 #endif
