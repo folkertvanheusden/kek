@@ -24,7 +24,7 @@ typedef enum { rm_prev, rm_cur } rm_selection_t;
 #if defined(ESP32) || defined(BUILD_FOR_RP2040)
 // ESP32 goes in a crash-loop when allocating 128kB
 // see also https://github.com/espressif/esp-idf/issues/1934
-#define DEFAULT_N_PAGES 12
+#define DEFAULT_N_PAGES 10  // was 12
 #else
 // more requires unibusmap support
 #define DEFAULT_N_PAGES 31
