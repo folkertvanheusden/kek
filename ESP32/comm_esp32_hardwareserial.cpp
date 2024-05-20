@@ -19,7 +19,8 @@ comm_esp32_hardwareserial::comm_esp32_hardwareserial(const int uart_nr, const in
 
 comm_esp32_hardwareserial::~comm_esp32_hardwareserial()
 {
-	ESP_ERROR_CHECK(uart_driver_delete(uart_nr));
+	if (initialized)
+		ESP_ERROR_CHECK(uart_driver_delete(uart_nr));
 }
 
 bool comm_esp32_hardwareserial::begin()
@@ -44,6 +45,9 @@ bool comm_esp32_hardwareserial::begin()
 		return false;
 	}
 
+	// it already was at this point?!
+	uart_driver_delete(uart_nr);
+
 	// Setup UART buffered IO with event queue
 	const int uart_buffer_size = 1024 * 2;
 	static QueueHandle_t uart_queue;
@@ -52,6 +56,8 @@ bool comm_esp32_hardwareserial::begin()
 		DOLOG(warning, false, "uart_driver_install(%d) failed", uart_nr);
 		return false;
 	}
+
+	initialized = true;
 
 	return true;
 }
