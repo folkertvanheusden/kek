@@ -56,7 +56,7 @@ void start_network(console *const cnsl);
 extern SdFs SD;
 #endif
 
-#define SERIAL_CFG_FILE "/dc11.json"
+#define SERIAL_CFG_FILE "dc11.json"
 
 #if !defined(BUILD_FOR_RP2040)
 std::optional<disk_backend *> select_nbd_server(console *const cnsl)
@@ -657,7 +657,7 @@ void tm11_unload_tape(bus *const b)
 	b->getTM11()->unload();
 }
 
-void serdc11(console *const cnsl, bus *const b, const std::string & filename)
+void serdc11(console *const cnsl, bus *const b)
 {
 	dc11         *d = b->getDC11();
 	if (!d) {
@@ -670,7 +670,7 @@ void serdc11(console *const cnsl, bus *const b, const std::string & filename)
 	bool ok = false;
 
 #if IS_POSIX
-	FILE *fh = fopen(filename.c_str(), "w");
+	FILE *fh = fopen(SERIAL_CFG_FILE, "w");
 	if (fh) {
 		state_writer ws { fh };
 		serializeJsonPretty(j, ws);
@@ -679,16 +679,31 @@ void serdc11(console *const cnsl, bus *const b, const std::string & filename)
 		ok = true;
 	}
 #elif defined(ESP32)
-	File dataFile = LittleFS.open(SERIAL_CFG_FILE, "w");
-	if (dataFile) {
-		serializeJsonPretty(j, dataFile);
-		dataFile.close();
+	File data_file = LittleFS.open("/" SERIAL_CFG_FILE, "w");
+	if (data_file) {
+		serializeJsonPretty(j, data_file);
+		data_file.close();
 
 		ok = true;
 	}
 #endif
 
-	cnsl->put_string_lf(format("Serialize to %s: %s", filename.c_str(), ok ? "OK" : "failed"));
+	cnsl->put_string_lf(format("Serialize to " SERIAL_CFG_FILE ": %s", ok ? "OK" : "failed"));
+}
+
+void deserdc11(console *const cnsl, bus *const b)
+{
+	auto rc = deserialize_file(SERIAL_CFG_FILE);
+	if (rc.has_value() == false) {
+		cnsl->put_string_lf("Failed to deserialize " SERIAL_CFG_FILE);
+		return;
+	}
+
+	b->del_DC11();
+
+	b->add_DC11(dc11::deserialize(rc.value(), b));
+
+	cnsl->put_string_lf(format("Deserialized " SERIAL_CFG_FILE));
 }
 
 void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const stop_event)
@@ -1107,13 +1122,13 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 				continue;
 			}
-			else if (parts[0] == "serdc11" && parts.size() == 2) {
-				serdc11(cnsl, b, parts[1]);
+			else if (cmd == "serdc11") {
+				serdc11(cnsl, b);
 
 				continue;
 			}
-			else if (parts[0] == "dserdc11" && parts.size() == 2) {
-				// TODO
+			else if (cmd == "dserdc11") {
+				deserdc11(cnsl, b);
 
 				continue;
 			}
@@ -1173,8 +1188,8 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 					"ramsize x     - set ram size (page count (8 kB), decimal)",
 					"bl            - set bootloader (rl02 or rk05)",
 					"cdc11         - configure DC11 device",
-					"serdc11 x     - store DC11 device settings",
-					"dserdc11 x    - load DC11 device settings",
+					"serdc11       - store DC11 device settings",
+					"dserdc11      - load DC11 device settings",
 #if IS_POSIX
 					"ser x         - serialize state to a file",
 //					"dser          - deserialize state from a file",

@@ -5,6 +5,7 @@
 
 #if defined(ESP32) || defined(BUILD_FOR_RP2040)
 #include <Arduino.h>
+#include <LittleFS.h>
 #include "rp2040.h"
 #include <sys/socket.h>
 #elif defined(_WIN32)
@@ -33,8 +34,6 @@
 #if defined(_WIN32)
 #include "win32.h"
 #endif
-
-#include "log.h"
 
 
 void setBit(uint16_t & v, const int bit, const bool vb)
@@ -250,15 +249,18 @@ void update_word(uint16_t *const w, const bool msb, const uint8_t v)
 	}
 }
 
-void set_nodelay(const int fd)
+bool set_nodelay(const int fd)
 {
         int flags = 1;
 #if defined(__FreeBSD__) || defined(ESP32) || defined(_WIN32)
         if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<char *>(&flags), sizeof(flags)) == -1)
+		return false;
 #else
         if (setsockopt(fd, SOL_TCP, TCP_NODELAY, reinterpret_cast<void *>(&flags), sizeof(flags)) == -1)
+		return false;
 #endif
-                DOLOG(warning, true, "Cannot disable nagle algorithm");
+
+	return true;
 }
 
 std::string get_endpoint_name(const int fd)
@@ -274,11 +276,19 @@ std::string get_endpoint_name(const int fd)
 
 std::optional<JsonDocument> deserialize_file(const std::string & filename)
 {
-	FILE *fh = fopen(filename.c_str(), "r");
-	if (!fh) {
-		DOLOG(warning, false, "Failed to open %s", filename.c_str());
+	JsonDocument j;
+
+#if defined(ESP32)
+        File data_file = LittleFS.open(filename.c_str(), "r");
+        if (!data_file)
 		return { };
-	}
+
+	deserializeJson(j, data_file);
+	data_file.close();
+#else
+	FILE *fh = fopen(filename.c_str(), "r");
+	if (!fh)
+		return { };
 
 	std::string j_in;
 	char        buffer[4096];
@@ -292,12 +302,10 @@ std::optional<JsonDocument> deserialize_file(const std::string & filename)
 
 	fclose(fh);
 
-	JsonDocument         j;
 	DeserializationError error = deserializeJson(j, j_in);
-	if (error) {
-		DOLOG(warning, false, "Failed to de-serialize %s", filename.c_str());
+	if (error)
 		return { };
-	}
+#endif
 
 	return j;
 }

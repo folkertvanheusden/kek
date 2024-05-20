@@ -80,6 +80,13 @@ comm_tcp_socket_server::~comm_tcp_socket_server()
 		th->join();
 		delete th;
 	}
+
+	if (fd != INVALID_SOCKET)
+		close(fd);
+	if (cfd != INVALID_SOCKET)
+		close(cfd);
+
+	DOLOG(debug, false, "comm_tcp_socket_server: destructor for port %d finished", port);
 }
 
 bool comm_tcp_socket_server::begin()
@@ -159,7 +166,7 @@ void comm_tcp_socket_server::operator()()
 	fd = socket(AF_INET, SOCK_STREAM, 0);
 
 	int reuse_addr = 1;
-	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse_addr, sizeof(reuse_addr)) == -1) {
+	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char *>(&reuse_addr), sizeof(reuse_addr)) == -1) {
 		close(fd);
 		fd = INVALID_SOCKET;
 
@@ -176,10 +183,10 @@ void comm_tcp_socket_server::operator()()
 	listen_addr.sin_port        = htons(port);
 
 	if (bind(fd, reinterpret_cast<struct sockaddr *>(&listen_addr), sizeof(listen_addr)) == -1) {
+		DOLOG(warning, true, "Cannot bind to port %d (send_datacomm_tcp_socket_server): %s", port, strerror(errno));
+
 		close(fd);
 		fd = INVALID_SOCKET;
-
-		DOLOG(warning, true, "Cannot bind to port %d (send_datacomm_tcp_socket_server)", port);
 		return;
 	}
 
@@ -227,9 +234,6 @@ void comm_tcp_socket_server::operator()()
 	}
 
 	DOLOG(info, true, "comm_tcp_socket_server thread terminating");
-
-	close(cfd);
-	close(fd);
 }
 
 JsonDocument comm_tcp_socket_server::serialize() const
@@ -246,7 +250,6 @@ JsonDocument comm_tcp_socket_server::serialize() const
 comm_tcp_socket_server *comm_tcp_socket_server::deserialize(const JsonVariantConst j)
 {
 	comm_tcp_socket_server *r = new comm_tcp_socket_server(j["port"].as<int>());
-	r->begin();  // TODO error-checking
 
 	return r;
 }

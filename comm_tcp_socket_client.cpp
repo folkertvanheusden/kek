@@ -201,7 +201,6 @@ JsonDocument comm_tcp_socket_client::serialize() const
 comm_tcp_socket_client *comm_tcp_socket_client::deserialize(const JsonVariantConst j)
 {
 	comm_tcp_socket_client *r = new comm_tcp_socket_client(j["host"].as<std::string>(), j["port"].as<int>());
-	r->begin();  // TODO error-checking
 
 	return r;
 }

@@ -47,6 +47,11 @@ dc11::~dc11()
 		th->join();
 		delete th;
 	}
+
+	for(auto & c : comm_interfaces) {
+		DOLOG(debug, false, "Stopping %s", c->get_identifier().c_str());
+		delete c;
+	}
 }
 
 void dc11::show_state(console *const cnsl) const

@@ -71,7 +71,7 @@ comm *comm::deserialize(const JsonVariantConst j, bus *const b)
 
         if (!d->begin()) {
 		delete d;
-		DOLOG(warning, false, "comm::deserialize: begin() failed");
+		DOLOG(warning, false, "comm::deserialize: begin() \"%s\" failed", type.c_str());
 		return nullptr;
 	}
 

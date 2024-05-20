@@ -1,6 +1,7 @@
 // (C) 2018-2024 by Folkert van Heusden
 // Released under MIT license
 
+#include "gen.h"
 #include <fcntl.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -11,6 +12,9 @@
 #include <ws2tcpip.h>
 #include <winsock2.h>
 #else
+#if defined(ESP32)
+#include <Arduino.h>
+#endif
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
