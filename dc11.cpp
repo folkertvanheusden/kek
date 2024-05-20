@@ -271,3 +271,35 @@ void dc11::write_word(const uint16_t addr, const uint16_t v)
 
 	registers[reg] = v;
 }
+
+JsonDocument dc11::serialize() const
+{
+	JsonDocument j;
+
+	JsonDocument j_interfaces;
+	JsonArray    j_interfaces_work = j_interfaces.to<JsonArray>();
+	for(auto & c: comm_interfaces)
+		j_interfaces_work.add(c->serialize());
+	j["interfaces"] = j_interfaces;
+
+	for(int regnr=0; regnr<4; regnr++)
+		j[format("register-%d", regnr)] = registers[regnr];
+
+	return j;
+}
+
+dc11 *dc11::deserialize(const JsonVariantConst j, bus *const b)
+{
+	std::vector<comm *> interfaces;
+
+	JsonArrayConst j_interfaces = j["interfaces"];
+	for(auto v: j_interfaces)
+		interfaces.push_back(comm::deserialize(v, b));
+
+	dc11 *r = new dc11(b, interfaces);
+
+	for(int regnr=0; regnr<4; regnr++)
+		r->registers[regnr] = j[format("register-%d", regnr)];
+
+	return r;
+}

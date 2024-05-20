@@ -89,4 +89,26 @@ void comm_esp32_hardwareserial::send_data(const uint8_t *const in, const size_t 
 {
 	uart_write_bytes(uart_nr, in, n);  // error checking?
 }
+
+JsonDocument comm_esp32_hardwareserial::serialize() const
+{
+	JsonDocument j;
+
+	j["comm-backend-type"] = "hardware-serial";
+
+	j["uart"]     = uart_nr;
+	j["rx-pin"]   = rx_pin;
+	j["tx-pin"]   = tx_pin;
+	j["bitratre"] = bitrate;
+
+	return j;
+}
+
+comm_esp32_hardwareserial *comm_esp32_hardwareserial::deserialize(const JsonVariantConst j)
+{
+	comm_esp32_hardwareserial *r = new comm_esp32_hardwareserial(j["uart"].as<int>(), j["rx-pin"].as<int>(), j["tx-pin"].as<int>(), j["bitrate"].as<int>());
+	r->begin();  // TODO error checking
+
+	return r;
+}
 #endif

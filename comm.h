@@ -8,6 +8,10 @@
 #include <cstdint>
 #include <string>
 
+#include "ArduinoJson.h"
+
+
+class bus;
 
 class comm
 {
@@ -16,6 +20,9 @@ public:
 	virtual ~comm();
 
 	virtual bool    begin() = 0;
+
+	virtual JsonDocument serialize() const = 0;
+	static comm    *deserialize(const JsonVariantConst j, bus *const b);
 
 	virtual std::string get_identifier() const = 0;
 

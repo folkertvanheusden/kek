@@ -20,6 +20,9 @@ public:
 
 	bool    begin() override;
 
+	JsonDocument serialize() const override;
+	static comm_esp32_hardwareserial *deserialize(const JsonVariantConst j);
+
 	std::string get_identifier() const;
 
 	bool    is_connected() override;

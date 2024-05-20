@@ -231,3 +231,22 @@ void comm_tcp_socket_server::operator()()
 	close(cfd);
 	close(fd);
 }
+
+JsonDocument comm_tcp_socket_server::serialize() const
+{
+	JsonDocument j;
+
+	j["comm-backend-type"] = "tcp-server";
+
+	j["port"] = port;
+
+	return j;
+}
+
+comm_tcp_socket_server *comm_tcp_socket_server::deserialize(const JsonVariantConst j)
+{
+	comm_tcp_socket_server *r = new comm_tcp_socket_server(j["port"].as<int>());
+	r->begin();  // TODO error-checking
+
+	return r;
+}

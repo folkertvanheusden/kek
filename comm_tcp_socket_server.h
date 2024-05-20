@@ -34,6 +34,9 @@ public:
 
 	bool    begin() override;
 
+	JsonDocument serialize() const override;
+	static comm_tcp_socket_server *deserialize(const JsonVariantConst j);
+
 	std::string get_identifier() const override { return format(":%d", port) + " (server)"; }
 
 	bool    is_connected() override;

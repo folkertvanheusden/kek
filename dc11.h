@@ -46,10 +46,8 @@ public:
 	dc11(bus *const b, const std::vector<comm *> & comm_interfaces);
 	virtual ~dc11();
 
-#if IS_POSIX
-//	json_t *serialize();
-//	static tty *deserialize(const json_t *const j, bus *const b, console *const cnsl);
-#endif
+	JsonDocument serialize() const;
+	static dc11 *deserialize(const JsonVariantConst j, bus *const b);
 
 	std::vector<comm *> *get_comm_interfaces() { return &comm_interfaces; }
 

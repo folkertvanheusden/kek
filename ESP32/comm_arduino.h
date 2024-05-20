@@ -18,6 +18,9 @@ public:
 
 	bool    begin() override;
 
+	JsonDocument serialize() const override;
+	static comm_arduino *deserialize(const JsonVariantConst j);
+
 	std::string get_identifier() const;
 
 	bool    is_connected() override;
