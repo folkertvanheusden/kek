@@ -92,15 +92,31 @@ void kw11_l::operator()()
 		if (*cnsl->get_running_flag()) {
 			myusleep(1000000 / 100);  // 100 Hz
 
+			int cur_int_freq = 1;
+
+			{
+#if defined(BUILD_FOR_RP2040)
+				xSemaphoreTake(lf_csr_lock, portMAX_DELAY);
+#else
+				std::unique_lock<std::mutex> lck(lf_csr_lock);
+#endif
+
+				cur_int_freq = int_frequency;
+
+#if defined(BUILD_FOR_RP2040)
+				xSemaphoreGive(lf_csr_lock);
+#endif
+			}
+
 			uint64_t current_cycle_count = b->getCpu()->get_instructions_executed_count();
 			uint32_t took_ms = b->getCpu()->get_effective_run_time(current_cycle_count - prev_cycle_count);
 			auto     now     = get_ms();
 
-			// - 50 Hz depending on instrution count
+			// - 50 Hz depending on instruction count ('cur_int_freq')
 			// - nothing executed in interval
-			// - 10 Hz minimum
+			// - 2 Hz minimum
 			auto t_diff = now - prev_tick;
-			if (took_ms >= 1000 / 50 || current_cycle_count - interval_prev_cycle_count == 0 || t_diff >= 100) {
+			if (took_ms >= 1000 / cur_int_freq || current_cycle_count - interval_prev_cycle_count == 0 || t_diff >= 500) {
 				do_interrupt();
 
 				prev_cycle_count = current_cycle_count;
@@ -137,10 +153,25 @@ uint16_t kw11_l::read_word(const uint16_t a)
 	uint16_t temp = lf_csr;
 
 #if defined(BUILD_FOR_RP2040)
-       	xSemaphoreGive(lf_csr_lock);
+	xSemaphoreGive(lf_csr_lock);
 #endif
 
 	return temp;
+}
+
+void kw11_l::set_interrupt_frequency(const int Hz)
+{
+#if defined(BUILD_FOR_RP2040)
+	xSemaphoreTake(lf_csr_lock, portMAX_DELAY);
+#else
+	std::unique_lock<std::mutex> lck(lf_csr_lock);
+#endif
+
+	int_frequency = Hz;
+
+#if defined(BUILD_FOR_RP2040)
+	xSemaphoreGive(lf_csr_lock);
+#endif
 }
 
 void kw11_l::write_byte(const uint16_t addr, const uint8_t value)

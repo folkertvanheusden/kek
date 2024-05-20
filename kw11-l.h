@@ -23,6 +23,7 @@ private:
 	std::thread       *th         { nullptr };
 	std::mutex         lf_csr_lock;
 #endif
+	int                int_frequency { 50   };
 	uint16_t           lf_csr     { 0       };
 
 	int64_t            t_diff_sum { 0       };
@@ -42,6 +43,8 @@ public:
 	void     reset() override;
 
 	void     show_state(console *const cnsl) const override;
+
+	void     set_interrupt_frequency(const int Hz);
 
 	JsonDocument serialize();
 	static kw11_l *deserialize(const JsonVariantConst j, bus *const b, console *const cnsl);

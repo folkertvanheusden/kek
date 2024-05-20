@@ -710,6 +710,14 @@ void deserdc11(console *const cnsl, bus *const b)
 	cnsl->put_string_lf(format("Deserialized " SERIAL_CFG_FILE));
 }
 
+void set_kw11_l_interrupt_freq(console *const cnsl, bus *const b, const int freq)
+{
+	if (freq >= 1 && freq < 1000)
+		b->getKW11_L()->set_interrupt_frequency(freq);
+	else
+		cnsl->put_string_lf("Frequency out of range");
+}
+
 void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const stop_event)
 {
 	int32_t trace_start_addr = -1;
@@ -1062,6 +1070,10 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 				continue;
 			}
 #endif
+			else if (parts[0] == "setinthz" && parts.size() == 2) {
+				set_kw11_l_interrupt_freq(cnsl, b, std::stoi(parts.at(1)));
+				continue;
+			}
 			else if (parts[0] == "setsl" && parts.size() == 3) {
 				if (setloghost(parts.at(1).c_str(), parse_ll(parts[2])) == false)
 					cnsl->put_string_lf("Failed parsing IP address");
@@ -1183,6 +1195,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 					"setpc x       - set PC to value",
 					"setmem ...    - set memory (a=) to value (v=), both in octal, one byte",
 					"toggle ...    - set switch (s=, 0...15 (decimal)) of the front panel to state (t=, 0 or 1)",
+					"setinthz x    - set KW11-L interrupt frequency (Hz)",
 					"cls           - clear screen",
 					"dir           - list files",
 					"bic x         - run BIC/LDA file",
