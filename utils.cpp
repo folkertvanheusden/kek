@@ -17,7 +17,9 @@
 #include <sys/socket.h>
 #endif
 
+#include <ArduinoJson.h>
 #include <errno.h>
+#include <optional>
 #include <pthread.h>
 #include <stdarg.h>
 #include <stdint.h>
@@ -268,4 +270,34 @@ std::string get_endpoint_name(const int fd)
 		return format("FAILED TO FIND NAME OF %d: %s", fd, strerror(errno));
 
 	return std::string(inet_ntoa(addr.sin_addr)) + "." + format("%d", ntohs(addr.sin_port));
+}
+
+std::optional<JsonDocument> deserialize_file(const std::string & filename)
+{
+	FILE *fh = fopen(filename.c_str(), "r");
+	if (!fh) {
+		DOLOG(warning, false, "Failed to open %s", filename.c_str());
+		return { };
+	}
+
+	std::string j_in;
+	char        buffer[4096];
+	for(;;) {
+		char *rc = fgets(buffer, sizeof buffer, fh);
+		if (!rc)
+			break;
+
+		j_in += buffer;
+	}
+
+	fclose(fh);
+
+	JsonDocument         j;
+	DeserializationError error = deserializeJson(j, j_in);
+	if (error) {
+		DOLOG(warning, false, "Failed to de-serialize %s", filename.c_str());
+		return { };
+	}
+
+	return j;
 }

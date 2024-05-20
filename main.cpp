@@ -570,28 +570,11 @@ int main(int argc, char *argv[])
 			set_boot_loader(b, bootloader);
 	}
 	else {
-		FILE *fh = fopen(deserialize.c_str(), "r");
-		if (!fh)
+		auto rc = deserialize_file(deserialize);
+		if (rc.has_value() == false)
 			error_exit(true, "Failed to open %s", deserialize.c_str());
 
-		std::string j_in;
-		char        buffer[4096];
-		for(;;) {
-			char *rc = fgets(buffer, sizeof buffer, fh);
-			if (!rc)
-				break;
-
-			j_in += buffer;
-		}
-
-		fclose(fh);
-
-		JsonDocument         j;
-		DeserializationError error = deserializeJson(j, j_in);
-		if (error)
-			error_exit(true, "State file %s is corrupt: %s", deserialize.c_str(), error.c_str());
-
-		b = bus::deserialize(j, cnsl, &event);
+		b = bus::deserialize(rc.value(), cnsl, &event);
 
 		myusleep(251000);
 	}
