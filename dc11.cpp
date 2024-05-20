@@ -105,9 +105,11 @@ void dc11::operator()()
 	DOLOG(info, true, "DC11 thread started");
 
 	while(!stop_flag) {
-		myusleep(5000);  // TODO replace polling
+		myusleep(10000);  // TODO replace polling
 
 		for(size_t line_nr=0; line_nr<comm_interfaces.size(); line_nr++) {
+			std::unique_lock<std::mutex> lck(input_lock[line_nr]);
+
 			// (dis-)connected?
 			bool is_connected = comm_interfaces.at(line_nr)->is_connected();
 
@@ -128,7 +130,6 @@ void dc11::operator()()
 			while(comm_interfaces.at(line_nr)->has_data()) {
 				uint8_t buffer = comm_interfaces.at(line_nr)->get_byte();
 
-				std::unique_lock<std::mutex> lck(input_lock[line_nr]);
 				recv_buffers[line_nr].push_back(char(buffer));
 
 				have_data = true;
@@ -234,6 +235,7 @@ uint16_t dc11::read_word(const uint16_t addr)
 	return vtemp;
 }
 
+// FIXME locking
 void dc11::write_byte(const uint16_t addr, const uint8_t v)
 {
 	uint16_t vtemp = registers[(addr - DC11_BASE) / 2];
