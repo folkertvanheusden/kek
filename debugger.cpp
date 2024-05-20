@@ -1189,7 +1189,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 					"lt x          - load tape (parameter is filename)",
 					"ult           - unload tape",
 					"stats         - show run statistics",
-					"ramsize x     - set ram size (page count (8 kB), decimal)",
+					"ramsize x     - set ram size (page (8 kB) count, decimal)",
 					"bl            - set bootloader (rl02 or rk05)",
 					"cdc11         - configure DC11 device",
 					"serdc11       - store DC11 device settings",
