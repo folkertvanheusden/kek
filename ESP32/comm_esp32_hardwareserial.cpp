@@ -96,10 +96,10 @@ JsonDocument comm_esp32_hardwareserial::serialize() const
 
 	j["comm-backend-type"] = "hardware-serial";
 
-	j["uart"]     = uart_nr;
-	j["rx-pin"]   = rx_pin;
-	j["tx-pin"]   = tx_pin;
-	j["bitratre"] = bitrate;
+	j["uart"]    = uart_nr;
+	j["rx-pin"]  = rx_pin;
+	j["tx-pin"]  = tx_pin;
+	j["bitrate"] = bitrate;
 
 	return j;
 }
