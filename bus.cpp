@@ -70,7 +70,10 @@ JsonDocument bus::serialize() const
 	if (rk05_)
 		j_out["rk05"]   = rk05_->serialize();
 
-	// TODO: tm11, dc11
+	if (dc11_)
+		j_out["dc11"]   = dc11_->serialize();
+
+	// TODO: tm11
 
 	return j_out;
 }
@@ -103,7 +106,10 @@ bus *bus::deserialize(const JsonDocument j, console *const cnsl, std::atomic_uin
 	if (j.containsKey("kw11-l"))
 		b->add_KW11_L(kw11_l::deserialize(j["kw11-l"], b, cnsl));
 
-	// TODO: tm11, dc11
+	if (j.containsKey("dc11"))
+		b->add_DC11(dc11::deserialize(j["dc11"], b));
+
+	// TODO: tm11
 
 	return b;
 }

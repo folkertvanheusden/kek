@@ -132,3 +132,23 @@ void comm_posix_tty::send_data(const uint8_t *const in, const size_t n)
 		len -= rc;
 	}
 }
+
+JsonDocument comm_posix_tty::serialize() const
+{
+	JsonDocument j;
+
+	j["comm-backend-type"] = "posix";
+
+	j["device"]  = device;
+	j["bitrate"] = bitrate;
+
+	return j;
+}
+
+comm_posix_tty *comm_posix_tty::deserialize(const JsonVariantConst j)
+{
+	comm_posix_tty *r = new comm_posix_tty(j["device"].as<std::string>(), j["bitrate"].as<int>());
+	r->begin();  // TODO error-checking
+
+	return r;
+}

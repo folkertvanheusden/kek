@@ -2,6 +2,7 @@
 // Released under MIT license
 
 #include "gen.h"
+#include <cassert>
 #include <cstring>
 
 #include "comm.h"
@@ -10,6 +11,9 @@
 #endif
 #if defined(ESP32)
 #include "comm_esp32_hardwareserial.h"
+#endif
+#if IS_POSIX
+#include "comm_posix_tty.h"
 #endif
 #include "comm_tcp_socket_client.h"
 #include "comm_tcp_socket_server.h"
@@ -53,6 +57,10 @@ comm *comm::deserialize(const JsonVariantConst j, bus *const b)
 #if defined(ARDUINO)
 	else if (type == "arduino")
                 d = comm_arduino::deserialize(j);
+#endif
+#if IS_POSIX
+	else if (type == "posix")
+                d = comm_posix_tty::deserialize(j);
 #endif
 	else {
 		DOLOG(warning, false, "comm::deserialize: \"%s\" not de-serialized", type.c_str());

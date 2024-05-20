@@ -18,6 +18,9 @@ public:
 
 	bool    begin() override;
 
+	JsonDocument serialize() const override;
+	static comm_posix_tty *deserialize(const JsonVariantConst j);
+
 	std::string get_identifier() const override { return device; }
 
 	bool    is_connected() override;
