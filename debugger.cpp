@@ -56,6 +56,8 @@ void start_network(console *const cnsl);
 extern SdFs SD;
 #endif
 
+#define SERIAL_CFG_FILE "/dc11.json"
+
 #if !defined(BUILD_FOR_RP2040)
 std::optional<disk_backend *> select_nbd_server(console *const cnsl)
 {
@@ -655,6 +657,40 @@ void tm11_unload_tape(bus *const b)
 	b->getTM11()->unload();
 }
 
+void serdc11(console *const cnsl, bus *const b, const std::string & filename)
+{
+	dc11         *d = b->getDC11();
+	if (!d) {
+		cnsl->put_string_lf("No DC11 configured");
+		return;
+	}
+
+	JsonDocument j = d->serialize();
+
+	bool ok = false;
+
+#if IS_POSIX
+	FILE *fh = fopen(filename.c_str(), "w");
+	if (fh) {
+		state_writer ws { fh };
+		serializeJsonPretty(j, ws);
+		fclose(fh);
+
+		ok = true;
+	}
+#elif defined(ESP32)
+	File dataFile = LittleFS.open(SERIAL_CFG_FILE, "w");
+	if (dataFile) {
+		serializeJsonPretty(j, dataFile);
+		dataFile.close();
+
+		ok = true;
+	}
+#endif
+
+	cnsl->put_string_lf(format("Serialize to %s: %s", filename.c_str(), ok ? "OK" : "failed"));
+}
+
 void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const stop_event)
 {
 	int32_t trace_start_addr = -1;
@@ -1072,7 +1108,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 				continue;
 			}
 			else if (parts[0] == "serdc11" && parts.size() == 2) {
-				// TODO
+				serdc11(cnsl, b, parts[1]);
 
 				continue;
 			}
