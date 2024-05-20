@@ -1071,6 +1071,16 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 				continue;
 			}
+			else if (parts[0] == "serdc11" && parts.size() == 2) {
+				// TODO
+
+				continue;
+			}
+			else if (parts[0] == "dserdc11" && parts.size() == 2) {
+				// TODO
+
+				continue;
+			}
 			else if (cmd == "bt") {
 				if (c->get_debug() == false)
 					cnsl->put_string_lf("Debug mode is disabled!");
@@ -1127,6 +1137,8 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 					"ramsize x     - set ram size (page count (8 kB), decimal)",
 					"bl            - set bootloader (rl02 or rk05)",
 					"cdc11         - configure DC11 device",
+					"serdc11 x     - store DC11 device settings",
+					"dserdc11 x    - load DC11 device settings",
 #if IS_POSIX
 					"ser x         - serialize state to a file",
 //					"dser          - deserialize state from a file",
