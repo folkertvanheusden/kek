@@ -211,6 +211,12 @@ void bus::add_DC11(dc11 *const dc11_)
 	this->dc11_ = dc11_;
 }
 
+void bus::del_DC11()
+{
+	delete dc11_;
+	dc11_ = nullptr;
+}
+
 void bus::init()
 {
 	mmu_->setMMR0(0);

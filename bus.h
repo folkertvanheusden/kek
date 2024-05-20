@@ -105,6 +105,8 @@ public:
 	void add_tty   (tty    *const tty_   );
 	void add_KW11_L(kw11_l *const kw11_l_);
 	void add_DC11  (dc11   *const dc11_  );
+	// required to release devices when doing a reload
+	void del_DC11  ();
 
 	memory *getRAM()    { return m;       }
 	cpu    *getCpu()    { return c;       }
