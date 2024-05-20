@@ -118,7 +118,7 @@ void console_esp32::panel_update_thread()
 
 			uint16_t current_PC    = c->getPC();
 
-			if (pm == PM_BITS) {
+			if (panel_mode == PM_BITS) {
 				uint32_t full_addr     = b->getMMU()->calculate_physical_address(c, run_mode, current_PC, false, false, i_space);
 
 				uint16_t current_instr = b->read_word(current_PC);
@@ -140,7 +140,7 @@ void console_esp32::panel_update_thread()
 			else {
 				pixels.clear();
 
-				pixels.setPixelColor(current_PC * n_pixels / 65536, led_color);
+				pixels.setPixelColor(current_PC * n_leds / 65536, led_color);
 			}
 
 			pixels.show();
