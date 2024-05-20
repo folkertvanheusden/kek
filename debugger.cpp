@@ -693,7 +693,11 @@ void serdc11(console *const cnsl, bus *const b)
 
 void deserdc11(console *const cnsl, bus *const b)
 {
+#if defined(ESP32)
+	auto rc = deserialize_file("/" SERIAL_CFG_FILE);
+#else
 	auto rc = deserialize_file(SERIAL_CFG_FILE);
+#endif
 	if (rc.has_value() == false) {
 		cnsl->put_string_lf("Failed to deserialize " SERIAL_CFG_FILE);
 		return;
