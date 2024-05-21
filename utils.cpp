@@ -271,7 +271,7 @@ std::string get_endpoint_name(const int fd)
 	if (getpeername(fd, reinterpret_cast<sockaddr *>(&addr), &addr_len) == -1)
 		return format("FAILED TO FIND NAME OF %d: %s", fd, strerror(errno));
 
-	return std::string(inet_ntoa(addr.sin_addr)) + "." + format("%d", ntohs(addr.sin_port));
+	return std::string(inet_ntoa(addr.sin_addr)) + ":" + format("%d", ntohs(addr.sin_port));
 }
 
 std::optional<JsonDocument> deserialize_file(const std::string & filename)
