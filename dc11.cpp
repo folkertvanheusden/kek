@@ -114,6 +114,8 @@ void dc11::operator()()
 			bool is_connected = comm_interfaces.at(line_nr)->is_connected();
 
 			if (is_connected != connected[line_nr]) {
+				DOLOG(debug, false, "DC11 line %d state changed to %d", line_nr, is_connected);
+
 				connected[line_nr] = is_connected;
 
 				if (is_connected)
