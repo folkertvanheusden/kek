@@ -124,7 +124,7 @@ void setloguid(const int uid, const int gid)
 
 void send_syslog(const int ll, const std::string & what)
 {
-	std::string msg = format("<%d>%s", 16 * 8 + ll, what.c_str());
+	std::string msg = format("<%d>PDP11 %s", 16 * 8 + ll, what.c_str());
 
 	int s = socket(AF_INET, SOCK_DGRAM, 0);
 	if (s != -1) {
