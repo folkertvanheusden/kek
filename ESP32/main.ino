@@ -230,6 +230,7 @@ void start_network(console *const c)
 		}
 
 		dc11 *dc11_ = new dc11(b, comm_interfaces);
+		dc11_->begin();
 		b->add_DC11(dc11_);
 
 		cs->println("* Starting (NTP-) clock");

@@ -609,6 +609,7 @@ int main(int argc, char *argv[])
 	}
 
 	dc11 *dc11_ = new dc11(b, comm_interfaces);
+	dc11_->begin();
 	b->add_DC11(dc11_);
 	//
 

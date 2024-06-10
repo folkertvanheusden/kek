@@ -1,0 +1,25 @@
+{
+  "interfaces": [
+    {
+      "comm-backend-type": "tcp-server",
+      "port": 1100
+    },
+    {
+      "comm-backend-type": "tcp-server",
+      "port": 1101
+    },
+    {
+      "comm-backend-type": "tcp-server",
+      "port": 1102
+    },
+    {
+      "comm-backend-type": "posix",
+      "device": "/tmp/virtualcom0",
+      "bitrate": 38400
+    }
+  ],
+  "register-0": 0,
+  "register-1": 0,
+  "register-2": 0,
+  "register-3": 0
+}

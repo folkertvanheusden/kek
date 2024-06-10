@@ -224,13 +224,18 @@ void comm_tcp_socket_server::operator()()
 
 		cfd = accept(fd, nullptr, nullptr);
 
+		if (cfd != INVALID_SOCKET) {
+			set_nodelay(cfd);
+
+			DOLOG(info, false, "Connected with %s", get_endpoint_name(cfd).c_str());
+		}
+
+#if 0
 		if (setup_telnet_session(cfd) == false) {
 			close(cfd);
 			cfd = INVALID_SOCKET;
 		}
-
-		if (cfd != INVALID_SOCKET)
-			set_nodelay(cfd);
+#endif
 	}
 
 	DOLOG(info, true, "comm_tcp_socket_server thread terminating");

@@ -31,10 +31,7 @@ dc11::dc11(bus *const b, const std::vector<comm *> & comm_interfaces):
 	b(b),
 	comm_interfaces(comm_interfaces)
 {
-	connected.resize(comm_interfaces.size());
-
-	// TODO move to begin()
-	th = new std::thread(std::ref(*this));
+	connected.resize(4);  // FIXME keep same size as comm_interfaces
 }
 
 dc11::~dc11()
@@ -78,6 +75,13 @@ void dc11::show_state(console *const cnsl) const
 	}
 }
 
+bool dc11::begin()
+{
+	th = new std::thread(std::ref(*this));
+
+	return true;
+}
+
 void dc11::test_port(const size_t nr, const std::string & txt) const
 {
 	DOLOG(info, false, "DC11 test line %zu", nr);
@@ -115,6 +119,7 @@ void dc11::operator()()
 
 			if (is_connected != connected[line_nr]) {
 				DOLOG(debug, false, "DC11 line %d state changed to %d", line_nr, is_connected);
+				Serial.printf("DC11 line %d state changed to %d\r\n", line_nr, is_connected);
 
 				connected[line_nr] = is_connected;
 
@@ -306,6 +311,7 @@ dc11 *dc11::deserialize(const JsonVariantConst j, bus *const b)
 		interfaces.push_back(comm::deserialize(v, b));
 
 	dc11 *r = new dc11(b, interfaces);
+	r->begin();
 
 	for(int regnr=0; regnr<4; regnr++)
 		r->registers[regnr] = j[format("register-%d", regnr)];

@@ -46,6 +46,8 @@ public:
 	dc11(bus *const b, const std::vector<comm *> & comm_interfaces);
 	virtual ~dc11();
 
+	bool begin();
+
 	JsonDocument serialize() const;
 	static dc11 *deserialize(const JsonVariantConst j, bus *const b);
 
