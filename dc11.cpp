@@ -119,7 +119,9 @@ void dc11::operator()()
 
 			if (is_connected != connected[line_nr]) {
 				DOLOG(debug, false, "DC11 line %d state changed to %d", line_nr, is_connected);
+#if defined(ESP32)
 				Serial.printf("DC11 line %d state changed to %d\r\n", line_nr, is_connected);
+#endif
 
 				connected[line_nr] = is_connected;
 
