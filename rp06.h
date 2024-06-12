@@ -1,5 +1,6 @@
 // (C) 2024 by Folkert van Heusden
 // Released under MIT license
+// Some of the code is translated from Neil Webber's PDP11/70 emulator
 
 #pragma once
 
@@ -15,9 +16,20 @@
 #include "disk_backend.h"
 
 
-#define RP06_CR 0176700  // control register
-#define RP06_BASE  RP06_CSR
-#define RP06_END  (RP06_MPR + 2)
+#define RP06_CS1 	0176700  // control register
+#define RP06_WC	 	0176702  // word count
+#define RP06_UBA	0176704  // UNIBUS address
+#define RP06_DA	 	0176706  // desired address
+#define RP06_CS2	0176710  // control/status register 2
+#define RP06_DS	 	0176712  // drive status
+#define RP06_AS	 	0176716  // unified attention status
+#define RP06_RMLA	0176720  // lookahead (sector under head!!)
+#define RP06_OFR	0176732  // heads offset
+#define RP06_DC	 	0176734  // desired cylinder
+#define RP06_CC	 	0176736  // "current cylinder" and/or holding register
+#define RP06_BAE	0176750  // address extension (pdp11/70 extra phys bits)
+#define RP06_BASE  RP06_CS1
+#define RP06_END  (RP06_BAE + 2)
 
 
 class bus;
@@ -27,10 +39,14 @@ class rp06: public disk_device
 private:
 	bus      *const b;
 
-	uint16_t registers[20] { };
+	uint16_t registers[32] { };
 
 	std::atomic_bool *const disk_read_activity  { nullptr };
 	std::atomic_bool *const disk_write_activity { nullptr };
+
+	int      reg_num(uint16_t addr) const;
+	uint32_t getphysaddr() const;
+	uint32_t compute_offset() const;
 
 public:
 	rp06(bus *const b, std::atomic_bool *const disk_read_activity, std::atomic_bool *const disk_write_activity);
