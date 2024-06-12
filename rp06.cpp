@@ -14,9 +14,9 @@
 #include "utils.h"
 
 
-constexpr const int NSECT       = 22;               // sectors per track
-constexpr const int NTRAC       = 19;               // tracks per cylinder
-constexpr const int SECTOR_SIZE = 512;
+constexpr const unsigned NSECT       = 22;               // sectors per track
+constexpr const unsigned NTRAC       = 19;               // tracks per cylinder
+constexpr const unsigned SECTOR_SIZE = 512;
 
 constexpr const char *regnames[] { "Control", "Status", "Error register 1", "Maintenance", "Attention summary", "Desired sector/track address", "Look ahead", "Drive type", "Serial no", "Offset", "Desired cylinder address", "Current cylinder address", "Error register 2", "Error register 3", "ECC position", "ECC pattern" };
 
@@ -71,9 +71,8 @@ uint8_t rp06::read_byte(const uint16_t addr)
 
 uint16_t rp06::read_word(const uint16_t addr)
 {
-	const int reg = reg_num(addr);
-	uint16_t value = 0;
-
+	const int reg   = reg_num(addr);
+	uint16_t  value = registers[reg];
 
 	TRACE("RP06: read \"%s\"/%o: %06o", regnames[reg], addr, value);
 
@@ -151,7 +150,18 @@ void rp06::write_word(const uint16_t addr, uint16_t v)
 
 	if (addr == RP06_CS1) {
 		if (v & 1) {
-			int function_code = v & 62;
+			bool generate_interrupt = false;
+
+			int  function_code      = v & 62;
+
+			if (function_code == 006 || function_code == 012 || function_code == 016 ||
+					function_code == 020 || function_code == 022) {
+				DOLOG(debug, false, "RP06: ignoring command %03o", function_code);
+
+				registers[reg_num(RP06_CS1)] |= 0200;  // drive ready
+
+				generate_interrupt = true;
+			}
 
 			if (function_code == 070) {  // READ
 				uint32_t offs = compute_offset();
@@ -160,33 +170,39 @@ void rp06::write_word(const uint16_t addr, uint16_t v)
 				uint32_t nw   = 65536 - registers[reg_num(RP06_WC)];
 				uint32_t nb   = nw * 2;
 
-				DOLOG(debug, false, "RP06: reading %u bytes from %u (dec) to %06o (oct)\n", nw, offs, addr);
+				DOLOG(debug, false, "RP06: reading %u bytes from %u (dec) to %06o (oct)", nw, offs, addr);
 
 				uint8_t xfer_buffer[SECTOR_SIZE] { };
 				for(uint32_t cur_offset = offs; cur_offset<offs + nb; cur_offset += SECTOR_SIZE) {
-					if (!fhs.at(0)->read(cur_offset, SECTOR_SIZE, xfer_buffer, SECTOR_SIZE)) {
+					uint32_t cur_n = std::min(nb - cur_offset, SECTOR_SIZE);
+
+					if (!fhs.at(0)->read(cur_offset, cur_n, xfer_buffer, SECTOR_SIZE)) {
 						DOLOG(ll_error, true, "RP06 read error %s from %u", strerror(errno), cur_offset);
 						//registers[(RK05_ERROR - RK05_BASE) / 2] |= 32;  // non existing sector
 						//registers[(RK05_CS - RK05_BASE) / 2] |= 3 << 14;  // an error occured
 						break;
 					}
 
-					for(uint32_t i=0; i<SECTOR_SIZE; i++)
+					for(uint32_t i=0; i<cur_n; i++)
 						b->writeUnibusByte(addr++, xfer_buffer[i]);
 				}
 
 				registers[reg_num(RP06_WC)] = 0;
 				registers[reg_num(RP06_CS1)] |= 0200;  // drive ready
 
-				if (registers[reg_num(RP06_CS1)] & 0100)  // IE? (interrupt enable)
-					b->getCpu()->queue_interrupt(5, 0254);
+				generate_interrupt = true;
 			}
 			else {
-				DOLOG(debug, false, "RP06: command %03o not implemented\n", function_code);
+				DOLOG(debug, false, "RP06: command %03o not implemented", function_code);
+			}
+
+			if (generate_interrupt) {
+				if (registers[reg_num(RP06_CS1)] & 0100)  // IE? (interrupt enable)
+					b->getCpu()->queue_interrupt(5, 0254);
 			}
 		}
 	}
 	else {
-		DOLOG(debug, false, "RP06: write ignored to %06o\n", addr);
+		DOLOG(debug, false, "RP06: write ignored to %06o", addr);
 	}
 }
