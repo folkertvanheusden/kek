@@ -138,18 +138,11 @@ void set_boot_loader(bus *const b, const bootloader_t which)
 		bl = rl02_code;
 	}
 	else if (which == BL_RP06) {
-		start = offset = 01000;
+		start = offset = 02000;
 
 		static const uint16_t rp06_code[] = {
-			0012700,          // MOV #0176704,R0
-			0176704,
-			0012740,          // MOV #0177000,-(R0)
-			0177000,
-			0012740,          // MOV #071, -(R0)
-			0000071,
-			0000127,          // JMP #0
-			0000000,
-			00,               // HALT
+			012700, 0176704, 012740, 0177000, 012740, 000071, 012700, 0, 000110, 000000
+
 		};
 
 		size = sizeof(rp06_code)/sizeof(rp06_code[0]);
