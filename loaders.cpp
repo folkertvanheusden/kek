@@ -38,6 +38,7 @@ void set_boot_loader(bus *const b, const bootloader_t which)
 	int              size   = 0;
 
 	if (which == BL_RK05) {
+		DOLOG(debug, false, "Enabling RK05 bootloader");
 		start = offset = 01000;
 
 		static const uint16_t rk05_code[] = {
@@ -89,6 +90,7 @@ void set_boot_loader(bus *const b, const bootloader_t which)
 		size = sizeof(rk05_code)/sizeof(rk05_code[0]);
 	}
 	else if (which == BL_RL02) {
+		DOLOG(debug, false, "Enabling RL02 bootloader");
 		start = offset = 01000;
 
 		/* from https://www.pdp-11.nl/peripherals/disk/rl-info.html
@@ -138,6 +140,7 @@ void set_boot_loader(bus *const b, const bootloader_t which)
 		bl = rl02_code;
 	}
 	else if (which == BL_RP06) {
+		DOLOG(debug, false, "Enabling RP06 bootloader");
 		start = offset = 02000;
 
 		static const uint16_t rp06_code[] = {
