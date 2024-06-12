@@ -16,6 +16,7 @@
 #include <sys/types.h>
 #endif
 #if defined(ESP32)
+#include "esp_clk.h"
 #include "esp_heap_caps.h"
 #endif
 
@@ -268,6 +269,8 @@ void setup() {
 	cs->println("PDP11 emulator, by Folkert van Heusden");
 	cs->println(format("GIT hash: %s", version_str));
 	cs->println("Build on: " __DATE__ " " __TIME__);
+
+	cs->println(format("# cores: %d, CPU frequency: %d", SOC_CPU_CORES_NUM, esp_clk_cpu_freq()));
 
 #if defined(ESP32)
 	heap_caps_register_failed_alloc_callback(heap_caps_alloc_failed_hook);
