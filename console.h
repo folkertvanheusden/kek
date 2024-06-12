@@ -10,6 +10,8 @@
 #include <thread>
 #include <vector>
 
+#include "utils.h"
+
 #if defined(_WIN32)
 #include "win32.h"
 #endif
@@ -48,6 +50,8 @@ protected:
 	char                   *screen_buffer    { nullptr };
 	uint8_t                 tx               { 0 };
 	uint8_t                 ty               { 0 };
+	std::atomic_bool        timestamps       { false };
+	const uint64_t          start_ts         { get_us() };
 
 	const size_t            n_edit_lines_hist { 8 };  // maximum number of previous edit-lines
 	std::vector<std::string> edit_lines_hist;
@@ -74,6 +78,8 @@ public:
 	std::optional<char> wait_char(const int timeout_ms);
 	std::string  read_line(const std::string & prompt);
 	void         flush_input();
+
+	void         enable_timestamp(const bool state) { timestamps = state; }
 
 	void         emit_backspace();
 	void         put_char(const char c);

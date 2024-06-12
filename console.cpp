@@ -290,6 +290,21 @@ void console::put_char(const char c)
 			debug_buffer.clear();
 		}
 
+		if (timestamps) {
+			char     buffer[32] { };
+			uint64_t timestamp = get_us() - start_ts;
+			uint64_t seconds   = timestamp / 1000000;
+
+			int len = snprintf(buffer, sizeof buffer, "%02d:%02d:%02d.%06d ",
+					int(seconds / 3600),
+					int((seconds / 60) % 60),
+					int(seconds % 60),
+					int(timestamp % 1000000));
+
+			for(int i=0; i<len; i++)
+				put_char_ll(buffer[i]);
+		}
+
 		ty++;
 	}
 	else if (c == 8) {  // backspace
