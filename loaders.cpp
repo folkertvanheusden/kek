@@ -137,7 +137,7 @@ void set_boot_loader(bus *const b, const bootloader_t which)
 
 		bl = rl02_code;
 	}
-	else if (which == BL_RP6) {
+	else if (which == BL_RP06) {
 		start = offset = 01000;
 
 		static const uint16_t rp06_code[] = {

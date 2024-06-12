@@ -316,9 +316,9 @@ void help()
 	printf("-P       when serializing state to file (in the debugger), include an overlay: changes to disk-files are then non-persistent, they only exist in the state-dump\n");
 	printf("-T t.bin load file as a binary tape file (like simh \"load\" command), also for .BIC files\n");
 	printf("-B       run tape file as a unit test (for .BIC files)\n");
-	printf("-R d.rk  load file as a RK05 disk device\n");
-	printf("-r d.rl  load file as a RL02 disk device\n");
-	printf("-N host:port:type  use NBD-server as disk device, type being either \"rk05\" or \"rl02\"\n");
+	printf("-r d.img load file as a disk device\n");
+	printf("-N host:port  use NBD-server as disk device (like -r)");
+	printf("-R x     select disk type (rk05, rl02 or rp06)\n");
 	printf("-p 123   set CPU start pointer to decimal(!) value\n");
 	printf("-b       enable bootloader (builtin)\n");
 	printf("-n       ncurses UI\n");
@@ -338,8 +338,8 @@ int main(int argc, char *argv[])
 {
 	//setlocale(LC_ALL, "");
 
-	std::vector<disk_backend *> rk05_files;
-	std::vector<disk_backend *> rl02_files;
+	std::vector<disk_backend *> disk_files;
+	std::string  disk_type = "rk05";
 
 	bool run_debugger = false;
 
@@ -443,26 +443,21 @@ int main(int argc, char *argv[])
 				break;
 
 			case 'R':
-				rk05_files.push_back(new disk_backend_file(optarg));
+				disk_type = optarg;
+				if (disk_type != "rk05" && disk_type != "rl02" && disk_type != "rp06")
+					error_exit(false, "Disk type not known");
 				break;
 
 			case 'r':
-				rl02_files.push_back(new disk_backend_file(optarg));
+				disk_files.push_back(new disk_backend_file(optarg));
 				break;
 
 			case 'N': {
 					  auto parts = split(optarg, ":");
-					  if (parts.size() != 3)
+					  if (parts.size() != 2)
 						  error_exit(false, "-N: parameter missing");
 
-					  disk_backend *temp_d = new disk_backend_nbd(parts.at(0), atoi(parts.at(1).c_str()));
-
-					  if (parts.at(2) == "rk05")
-						rk05_files.push_back(temp_d);
-					  else if (parts.at(2) == "rl02")
-						rl02_files.push_back(temp_d);
-					  else
-					  	error_exit(false, "\"%s\" is not recognized as a disk type", parts.at(2).c_str());
+					  disk_files.push_back(new disk_backend_nbd(parts.at(0), std::stoi(parts.at(1))));
 				  }
 				  break;
 
@@ -513,9 +508,7 @@ int main(int argc, char *argv[])
 
 	DOLOG(info, true, "Built on: " __DATE__ " " __TIME__);
 
-	start_disk_devices(rk05_files, disk_snapshots);
-
-	start_disk_devices(rl02_files, disk_snapshots);
+	start_disk_devices(disk_files, disk_snapshots);
 
 #if defined(_WIN32)
 	cnsl = new console_posix(&event);
@@ -552,18 +545,27 @@ int main(int argc, char *argv[])
 		rl02_dev->begin();
 		b->add_rl02(rl02_dev);
 
-		if (rk05_files.empty() == false) {
+		auto rp06_dev = new rp06(b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag());
+		rp06_dev->begin();
+		b->add_RP06(rp06_dev);
+
+		if (disk_type == "rk05") {
 			bootloader = BL_RK05;
 
-			for(auto & file: rk05_files)
+			for(auto & file: disk_files)
 				rk05_dev->access_disk_backends()->push_back(file);
 		}
-
-		if (rl02_files.empty() == false) {
+		else if (disk_type == "rl02") {
 			bootloader = BL_RL02;
 
-			for(auto & file: rl02_files)
+			for(auto & file: disk_files)
 				rl02_dev->access_disk_backends()->push_back(file);
+		}
+		else if (disk_type == "rp06") {
+			bootloader = BL_RP06;
+
+			for(auto & file: disk_files)
+				rp06_dev->access_disk_backends()->push_back(file);
 		}
 
 		if (enable_bootloader)

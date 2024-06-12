@@ -120,6 +120,7 @@ public:
 	rl02   *getRL02()   { return rl02_;   }
 	dc11   *getDC11()   { return dc11_;   }
 	tm_11  *getTM11()   { return tm11;    }
+	rp06   *getRP06()   { return rp06_;   }
 
 	uint16_t read(const uint16_t a, const word_mode_t word_mode, const rm_selection_t mode_selection, const bool peek_only=false, const d_i_space_t s = i_space);
 	uint8_t  read_byte(const uint16_t a) override { return read(a, wm_byte, rm_cur); }
