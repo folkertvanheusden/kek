@@ -317,7 +317,7 @@ void help()
 	printf("-T t.bin load file as a binary tape file (like simh \"load\" command), also for .BIC files\n");
 	printf("-B       run tape file as a unit test (for .BIC files)\n");
 	printf("-r d.img load file as a disk device\n");
-	printf("-N host:port  use NBD-server as disk device (like -r)");
+	printf("-N host:port  use NBD-server as disk device (like -r)\n");
 	printf("-R x     select disk type (rk05, rl02 or rp06)\n");
 	printf("-p 123   set CPU start pointer to decimal(!) value\n");
 	printf("-b       enable bootloader (builtin)\n");
