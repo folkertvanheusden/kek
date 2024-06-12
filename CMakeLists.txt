@@ -50,6 +50,7 @@ add_executable(
   mmu.cpp
   rk05.cpp
   rl02.cpp
+  rp06.cpp
   terminal.cpp
   tm-11.cpp
   tty.cpp
@@ -101,6 +102,7 @@ add_executable(
   mmu.cpp
   rk05.cpp
   rl02.cpp
+  rp06.cpp
   tm-11.cpp
   tty.cpp
   utils.cpp
