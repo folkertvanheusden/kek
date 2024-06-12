@@ -71,7 +71,7 @@ std::optional<disk_backend *> select_nbd_server(console *const cnsl)
 	if (port_str.empty())
 		return { };
 
-	disk_backend *d = new disk_backend_nbd(hostname, atoi(port_str.c_str()));
+	disk_backend *d = new disk_backend_nbd(hostname, std::stoi(port_str));
 	if (d->begin(false) == false) {
 		cnsl->put_string_lf("Cannot initialize NBD client");
 		delete d;
@@ -749,7 +749,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 				single_step = true;
 
 				if (parts.size() == 2)
-					n_single_step = atoi(parts[1].c_str());
+					n_single_step = std::stoi(parts[1]);
 				else
 					n_single_step = 1;
 
@@ -915,7 +915,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 					cnsl->put_string_lf("parameter missing");
 				else {
 					uint32_t addr = std::stoi(parts[1], nullptr, 8);
-					int      n    = parts.size() == 4 ? atoi(parts[3].c_str()) : 1;
+					int      n    = parts.size() == 4 ? std::stoi(parts[3]) : 1;
 
 					if (parts[2] != "p" && parts[2] != "v") {
 						cnsl->put_string_lf("expected p (physical address) or v (virtual address)");
