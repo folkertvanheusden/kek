@@ -270,7 +270,7 @@ void setup() {
 	cs->println(format("GIT hash: %s", version_str));
 	cs->println("Build on: " __DATE__ " " __TIME__);
 
-	cs->println(format("# cores: %d, CPU frequency: %d", SOC_CPU_CORES_NUM, esp_clk_cpu_freq()));
+	cs->println(format("# cores: %d, CPU frequency: %d Hz", SOC_CPU_CORES_NUM, esp_clk_cpu_freq()));
 
 #if defined(ESP32)
 	heap_caps_register_failed_alloc_callback(heap_caps_alloc_failed_hook);
