@@ -148,6 +148,9 @@ void console_esp32::panel_update_thread()
 		catch(std::exception & e) {
 			put_string_lf(format("Exception in panel thread: %s", e.what()));
 		}
+		catch(int e) {
+			put_string_lf(format("Exception in panel thread: %d", e));
+		}
 		catch(...) {
 			put_string_lf("Unknown exception in panel thread");
 		}
