@@ -143,10 +143,12 @@ void set_boot_loader(bus *const b, const bootloader_t which)
 		static const uint16_t rp06_code[] = {
 			0012700,          // MOV #0176704,R0
 			0176704,
-			0012740,          // MOV #177000,-(R0)
+			0012740,          // MOV #0177000,-(R0)
 			0177000,
 			0012740,          // MOV #071, -(R0)
 			0000071,
+			0000127,          // JMP #0
+			0000000,
 			00,               // HALT
 		};
 
