@@ -1082,6 +1082,11 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 				continue;
 			}
+			else if (parts[0] == "pts" && parts.size() == 2) {
+				cnsl->enable_timestamp(std::stoi(parts[1]));
+
+				continue;
+			}
 			else if (cmd == "qi") {
 				show_queued_interrupts(cnsl, c);
 
@@ -1183,6 +1188,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 					"trace/t       - toggle tracing",
 					"setll x,y     - set loglevel: terminal,file",
 					"setsl x,y     - set syslog target: requires a hostname and a loglevel",
+					"pts x         - enable (1) / disable (0) timestamps",
 					"turbo         - toggle turbo mode (cannot be interrupted)",
 					"debug         - enable CPU debug mode",
 					"bt            - show backtrace - need to enable debug first",

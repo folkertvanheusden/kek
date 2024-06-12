@@ -108,7 +108,7 @@ void console_esp32::panel_update_thread()
 	pixels.show();
 
 	while(!stop_panel) {
-		vTaskDelay(20 / portTICK_PERIOD_MS);
+		vTaskDelay(100 / portTICK_PERIOD_MS);
 
 		try {
 			// note that these are approximately as there's no mutex on the emulation
