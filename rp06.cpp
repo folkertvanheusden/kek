@@ -71,8 +71,7 @@ uint8_t rp06::read_byte(const uint16_t addr)
 
 uint16_t rp06::read_word(const uint16_t addr)
 {
-	const int reg = (addr - RP06_BASE) / 2;
-
+	const int reg = reg_num(addr);
 	uint16_t value = 0;
 
 
@@ -150,9 +149,9 @@ void rp06::write_word(const uint16_t addr, uint16_t v)
 
         registers[reg] = v;
 
-	if (reg == RP06_CS1) {
+	if (addr == RP06_CS1) {
 		if (v & 1) {
-			int function_code = v & 63;
+			int function_code = v & 62;
 
 			if (function_code == 070) {  // READ
 				uint32_t offs = compute_offset();
@@ -161,9 +160,11 @@ void rp06::write_word(const uint16_t addr, uint16_t v)
 				uint32_t nw   = 65536 - registers[reg_num(RP06_WC)];
 				uint32_t nb   = nw * 2;
 
+				DOLOG(debug, false, "RP06: reading %u bytes from %u (dec) to %06o (oct)\n", nw, offs, addr);
+
 				uint8_t xfer_buffer[SECTOR_SIZE] { };
 				for(uint32_t cur_offset = offs; cur_offset<offs + nb; cur_offset += SECTOR_SIZE) {
-					if (!fhs.at(0)->read(offs, SECTOR_SIZE, xfer_buffer, SECTOR_SIZE)) {
+					if (!fhs.at(0)->read(cur_offset, SECTOR_SIZE, xfer_buffer, SECTOR_SIZE)) {
 						DOLOG(ll_error, true, "RP06 read error %s from %u", strerror(errno), cur_offset);
 						//registers[(RK05_ERROR - RK05_BASE) / 2] |= 32;  // non existing sector
 						//registers[(RK05_CS - RK05_BASE) / 2] |= 3 << 14;  // an error occured
@@ -180,6 +181,12 @@ void rp06::write_word(const uint16_t addr, uint16_t v)
 				if (registers[reg_num(RP06_CS1)] & 0100)  // IE? (interrupt enable)
 					b->getCpu()->queue_interrupt(5, 0254);
 			}
+			else {
+				DOLOG(debug, false, "RP06: command %03o not implemented\n", function_code);
+			}
 		}
+	}
+	else {
+		DOLOG(debug, false, "RP06: write ignored to %06o\n", addr);
 	}
 }
