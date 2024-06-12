@@ -154,8 +154,28 @@ void rp06::write_word(const uint16_t addr, uint16_t v)
 		if (v & 1) {
 			int function_code = v & 63;
 
-			if (function_code == 070) {
+			if (function_code == 060) {  // READ
+				uint32_t offs = compute_offset();
+				uint32_t addr = getphysaddr();
 
+				uint32_t nw   = 65536 - registers[reg_num(RP06_WC)];
+				uint32_t nb   = nw * 2;
+
+				uint8_t xfer_buffer[SECTOR_SIZE] { };
+				for(uint32_t cur_offset = offs; cur_offset<offs + nb; cur_offset += SECTOR_SIZE) {
+					if (!fhs.at(0)->read(offs, SECTOR_SIZE, xfer_buffer, SECTOR_SIZE)) {
+						DOLOG(ll_error, true, "RP06 read error %s from %u", strerror(errno), cur_offset);
+						//registers[(RK05_ERROR - RK05_BASE) / 2] |= 32;  // non existing sector
+						//registers[(RK05_CS - RK05_BASE) / 2] |= 3 << 14;  // an error occured
+						break;
+					}
+
+					for(uint32_t i=0; i<SECTOR_SIZE; i++)
+						b->writeUnibusByte(addr++, xfer_buffer[i]);
+				}
+
+				registers[reg_num(RP06_WC)] = 0;
+				registers[reg_num(RP06_CS1)] |= 0200;  // drive ready
 			}
 		}
 	}
