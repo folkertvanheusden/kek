@@ -567,6 +567,9 @@ int main(int argc, char *argv[])
 			for(auto & file: disk_files)
 				rp06_dev->access_disk_backends()->push_back(file);
 		}
+		else {
+			error_exit(false, "Internal error: disk-type %s not understood", disk_type.c_str());
+		}
 
 		if (enable_bootloader)
 			set_boot_loader(b, bootloader);
