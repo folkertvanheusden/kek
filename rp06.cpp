@@ -154,7 +154,7 @@ void rp06::write_word(const uint16_t addr, uint16_t v)
 		if (v & 1) {
 			int function_code = v & 63;
 
-			if (function_code == 060) {  // READ
+			if (function_code == 070) {  // READ
 				uint32_t offs = compute_offset();
 				uint32_t addr = getphysaddr();
 
@@ -176,6 +176,9 @@ void rp06::write_word(const uint16_t addr, uint16_t v)
 
 				registers[reg_num(RP06_WC)] = 0;
 				registers[reg_num(RP06_CS1)] |= 0200;  // drive ready
+
+				if (registers[reg_num(RP06_CS1)] & 0100)  // IE? (interrupt enable)
+					b->getCpu()->queue_interrupt(5, 0254);
 			}
 		}
 	}
