@@ -137,6 +137,23 @@ void set_boot_loader(bus *const b, const bootloader_t which)
 
 		bl = rl02_code;
 	}
+	else if (which == BL_RP6) {
+		start = offset = 01000;
+
+		static const uint16_t rp06_code[] = {
+			0012700,          // MOV #0176704,R0
+			0176704,
+			0012740,          // MOV #177000,-(R0)
+			0177000,
+			0012740,          // MOV #071, -(R0)
+			0000071,
+			00,               // HALT
+		};
+
+		size = sizeof(rp06_code)/sizeof(rp06_code[0]);
+
+		bl = rp06_code;
+	}
 
 	for(uint16_t i=0; i<size; i++)
 		b->write_word(uint16_t(offset + i * 2), bl[i]);

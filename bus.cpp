@@ -43,6 +43,7 @@ bus::~bus()
 	delete mmu_;
 	delete m;
 	delete dc11_;
+	delete rp06_;
 }
 
 JsonDocument bus::serialize() const
@@ -72,6 +73,9 @@ JsonDocument bus::serialize() const
 
 	if (dc11_)
 		j_out["dc11"]   = dc11_->serialize();
+
+	if (rp06_)
+		j_out["rp06"]   = rp06_->serialize();
 
 	// TODO: tm11
 
@@ -108,6 +112,9 @@ bus *bus::deserialize(const JsonDocument j, console *const cnsl, std::atomic_uin
 
 	if (j.containsKey("dc11"))
 		b->add_DC11(dc11::deserialize(j["dc11"], b));
+
+	if (j.containsKey("rp06"))
+		b->add_RP06(rp06::deserialize(j["rp06"], b));
 
 	// TODO: tm11
 
@@ -153,6 +160,14 @@ void bus::reset()
 		kw11_l_->reset();
 	if (dc11_)
 		dc11_->reset();
+	if (rp06_)
+		rp06_->reset();
+}
+
+void bus::add_RP06(rp06 *const rp06_)
+{
+	delete this->rp06_;
+	this->rp06_ = rp06_;
 }
 
 void bus::add_KW11_L(kw11_l *const kw11_l_)
@@ -465,6 +480,9 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 		if (dc11_ && a >= DC11_BASE && a < DC11_END && !peek_only)
 			return word_mode == wm_byte ? dc11_->read_byte(a) : dc11_->read_word(a);
 
+		if (rp06_ && a >= RP06_BASE && a < RP06_END && !peek_only)
+			return word_mode == wm_byte ? rp06_->read_byte(a) : rp06_->read_word(a);
+
 		// LO size register field must be all 1s, so subtract 1
 		uint32_t system_size = m->get_memory_size() / 64 - 1;
 
@@ -718,6 +736,11 @@ write_rc_t bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint1
 
 		if (dc11_ && a >= DC11_BASE && a < DC11_END) {
 			word_mode == wm_byte ? dc11_->write_byte(a, value) : dc11_->write_word(a, value);
+			return { false };
+		}
+
+		if (rp06_ && a >= RP06_BASE && a < RP06_END) {
+			word_mode == wm_byte ? rp06_->write_byte(a, value) : rp06_->write_word(a, value);
 			return { false };
 		}
 

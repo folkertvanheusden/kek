@@ -346,7 +346,7 @@ std::optional<disk_backend *> select_disk_backend(console *const cnsl)
 
 void configure_disk(bus *const b, console *const cnsl)
 {
-	int type_ch = wait_for_key("1. RK05, 2. RL02, 9. abort", cnsl, { '1', '2', '3', '9' });
+	int type_ch = wait_for_key("1. RK05, 2. RL02, 3. RP06, 9. abort", cnsl, { '1', '2', '3', '9' });
 
 	bootloader_t bl = BL_NONE;
 	disk_device *dd = nullptr;
@@ -358,6 +358,10 @@ void configure_disk(bus *const b, console *const cnsl)
 	else if (type_ch == '2') {
 		dd = b->getRL02();
 		bl = BL_RL02;
+	}
+	else if (type_ch == '3') {
+		dd = b->getRP06();
+		bl = BL_RP06;
 	}
 	else if (type_ch == '9') {
 		return;
@@ -878,6 +882,8 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 					b->getTM11()->show_state(cnsl);
 				else if (parts[1] == "kw11l")
 					b->getKW11_L()->show_state(cnsl);
+				else if (parts[1] == "rp06")
+					b->getRP06()->show_state(cnsl);
 				else
 					cnsl->put_string_lf(format("Device \"%s\" is not known", parts[1].c_str()));
 
@@ -1000,8 +1006,14 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 				continue;
 			}
 			else if (parts[0] == "bl" && parts.size() == 2) {
-				set_boot_loader(b, parts.at(1) == "rk05" ? BL_RK05 : BL_RL02);
-				cnsl->put_string_lf("Bootloader set");
+				if (parts.at(1) == "rk05")
+					set_boot_loader(b, BL_RK05);
+				else if (parts.at(1) == "rl02")
+					set_boot_loader(b, BL_RL02);
+				else if (parts.at(1) == "rp06")
+					set_boot_loader(b, BL_RP06);
+				else
+					cnsl->put_string_lf("???");
 
 				continue;
 			}
@@ -1195,7 +1207,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 					"strace x      - start tracing from address - invoke without address to disable",
 					"trl x         - set trace run-level (0...3), empty for all",
 					"regdump       - dump register contents",
-					"state x       - dump state of a device: rl02, rk05, mmu, tm11, kw11l or dc11",
+					"state x       - dump state of a device: rl02, rk05, rp06, mmu, tm11, kw11l or dc11",
 					"mmures x      - resolve a virtual address",
 					"qi            - show queued interrupts",
 					"setpc x       - set PC to value",
@@ -1209,7 +1221,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 					"ult           - unload tape",
 					"stats         - show run statistics",
 					"ramsize x     - set ram size (page (8 kB) count, decimal)",
-					"bl            - set bootloader (rl02 or rk05)",
+					"bl            - set bootloader (rl02, rk05 or rp06)",
 					"cdc11         - configure DC11 device",
 					"serdc11       - store DC11 device settings",
 					"dserdc11      - load DC11 device settings",

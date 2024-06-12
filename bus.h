@@ -15,6 +15,7 @@
 #include "mmu.h"
 #include "rk05.h"
 #include "rl02.h"
+#include "rp06.h"
 #include "tm-11.h"
 
 #if defined(BUILD_FOR_RP2040)
@@ -70,6 +71,7 @@ private:
 	mmu     *mmu_    { nullptr };
 	memory  *m       { nullptr };
 	dc11    *dc11_   { nullptr };
+	rp06    *rp06_   { nullptr };
 
 	uint16_t microprogram_break_register { 0 };
 
@@ -107,6 +109,7 @@ public:
 	void add_DC11  (dc11   *const dc11_  );
 	// required to release devices when doing a reload
 	void del_DC11  ();
+	void add_RP06  (rp06   *const rp06_  );
 
 	memory *getRAM()    { return m;       }
 	cpu    *getCpu()    { return c;       }

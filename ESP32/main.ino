@@ -348,6 +348,10 @@ void setup() {
 	rl02_dev->begin();
 	b->add_rl02(rl02_dev);
 
+	auto rp06_dev = new rp06(b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag());
+	rp06_dev->begin();
+	b->add_rp06(rp06_dev);
+
 	cs->println("* Adding TTY");
 	tty_ = new tty(cnsl, b);
 	b->add_tty(tty_);

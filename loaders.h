@@ -8,7 +8,7 @@
 #include "bus.h"
 
 
-typedef enum { BL_NONE, BL_RK05, BL_RL02 } bootloader_t;
+typedef enum { BL_NONE, BL_RK05, BL_RL02, BL_RP06 } bootloader_t;
 
 void                    loadbin(bus *const b, uint16_t base, const char *const file);
 void                    set_boot_loader(bus *const b, const bootloader_t which);
