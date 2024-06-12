@@ -75,6 +75,7 @@ uint16_t rp06::read_word(const uint16_t addr)
 	uint16_t  value = registers[reg];
 
 	TRACE("RP06: read \"%s\"/%o: %06o", regnames[reg], addr, value);
+	printf("RP06: read \"%s\"/%o: %06o\r\n", regnames[reg], addr, value);
 
 	return value;
 }
@@ -149,10 +150,14 @@ void rp06::write_word(const uint16_t addr, uint16_t v)
         registers[reg] = v;
 
 	if (addr == RP06_CS1) {
+	        if (registers[reg_num(RP06_CS1)] & 0200)  // ready
+			registers[reg_num(RP06_AS)] = 1;  // this is very bogus but maybe works for now
+
 		if (v & 1) {
 			bool generate_interrupt = false;
-
 			int  function_code      = v & 62;
+
+			registers[reg_num(RP06_CS1)] &= ~(function_code | 1 | 040000);
 
 			if (function_code == 006 || function_code == 012 || function_code == 016 ||
 					function_code == 020 || function_code == 022) {
