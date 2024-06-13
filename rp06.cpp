@@ -172,7 +172,13 @@ void rp06::write_word(const uint16_t addr, uint16_t v)
 
 				generate_interrupt = true;
 			}
-			else if (function_code == 070) {  // READ
+			else if (function_code == 030) {  // SEARCH
+				registers[reg_num(RP06_CS1)] |= uint16_t(rp06::cs1_bits::RDY);  // drive ready
+				registers[reg_num(RP06_CC)]   = registers[reg_num(RP06_DC)];
+
+				generate_interrupt = true;
+			}
+			else if (function_code == 060 || function_code == 070) {  // WRITE (060), READ (070)
 				uint32_t offs = compute_offset();
 				uint32_t addr = getphysaddr();
 
@@ -184,17 +190,32 @@ void rp06::write_word(const uint16_t addr, uint16_t v)
 				for(uint32_t cur_offset = offs; cur_offset<end_offset; cur_offset += SECTOR_SIZE) {
 					uint32_t cur_n = std::min(end_offset - cur_offset, SECTOR_SIZE);
 
-					DOLOG(debug, false, "RP06: reading %u bytes from %u (dec) to %06o (oct)", cur_n, offs, addr);
+					if (function_code == 070) {
+						DOLOG(debug, false, "RP06: reading %u bytes from %u (dec) to %06o (oct)", cur_n, offs, addr);
 
-					if (!fhs.at(0)->read(cur_offset, cur_n, xfer_buffer, SECTOR_SIZE)) {
-						DOLOG(ll_error, true, "RP06 read error %s from %u", strerror(errno), cur_offset);
-						//registers[(RK05_ERROR - RK05_BASE) / 2] |= 32;  // non existing sector
-						//registers[(RK05_CS - RK05_BASE) / 2] |= 3 << 14;  // an error occured
-						break;
+						if (!fhs.at(0)->read(cur_offset, cur_n, xfer_buffer, SECTOR_SIZE)) {
+							DOLOG(ll_error, true, "RP06 read error %s from %u", strerror(errno), cur_offset);
+							//registers[(RK05_ERROR - RK05_BASE) / 2] |= 32;  // non existing sector
+							//registers[(RK05_CS - RK05_BASE) / 2] |= 3 << 14;  // an error occured
+							break;
+						}
+
+						for(uint32_t i=0; i<cur_n; i++)
+							b->writeUnibusByte(addr++, xfer_buffer[i]);
 					}
+					else {
+						DOLOG(debug, false, "RP06: writing %u bytes to %u (dec) from %06o (oct)", cur_n, offs, addr);
 
-					for(uint32_t i=0; i<cur_n; i++)
-						b->writeUnibusByte(addr++, xfer_buffer[i]);
+						for(uint32_t i=0; i<cur_n; i++)
+							xfer_buffer[i] = b->readUnibusByte(addr++);
+
+						if (!fhs.at(0)->write(cur_offset, cur_n, xfer_buffer, SECTOR_SIZE)) {
+							DOLOG(ll_error, true, "RP06 write error %s from %u", strerror(errno), cur_offset);
+							//registers[(RK05_ERROR - RK05_BASE) / 2] |= 32;  // non existing sector
+							//registers[(RK05_CS - RK05_BASE) / 2] |= 3 << 14;  // an error occured
+							break;
+						}
+					}
 				}
 
 				registers[reg_num(RP06_WC)]   = 0;
@@ -203,7 +224,7 @@ void rp06::write_word(const uint16_t addr, uint16_t v)
 				generate_interrupt = true;
 			}
 			else {
-				DOLOG(debug, false, "RP06: command %03o not implemented", function_code);
+				DOLOG(warning, true, "RP06: command %03o not implemented", function_code);
 			}
 
 			if (generate_interrupt) {
