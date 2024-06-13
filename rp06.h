@@ -22,6 +22,7 @@
 #define RP06_DA	 	0176706  // desired address
 #define RP06_CS2	0176710  // control/status register 2
 #define RP06_DS	 	0176712  // drive status
+#define RP06_ERRREG1    0176714  // error register 1
 #define RP06_AS	 	0176716  // unified attention status
 #define RP06_RMLA	0176720  // lookahead (sector under head!!)
 #define RP06_OFR	0176732  // heads offset
