@@ -17,7 +17,7 @@
 constexpr const unsigned NSECT       = 22;               // sectors per track
 constexpr const unsigned NTRAC       = 19;               // tracks per cylinder
 constexpr const unsigned SECTOR_SIZE = 512;
-constexpr const uint16_t default_DS  = 0400 /* drive present */ | 010000 /* medium on-line */ | 0100 /* volume valid */ | 0200 /* drive ready */;
+constexpr const uint16_t default_DS  = uint16_t(rp06::ds_bits::DPR) /* drive present */ | uint16_t(rp06::ds_bits::MOL) /* medium on-line */ | uint16_t(rp06::ds_bits::VV) /* volume valid */ | uint16_t(rp06::ds_bits::DRY) /* drive ready */;
 
 constexpr const char *regnames[] { "Control", "Status", "Error register 1", "Maintenance", "Attention summary", "Desired sector/track address", "Error register 1", "Look ahead", "Drive type", "Serial no", "Offset", "Desired cylinder address", "Current cylinder address", "Error register 2", "Error register 3", "ECC position", "ECC pattern" };
 
@@ -79,9 +79,9 @@ uint16_t rp06::read_word(const uint16_t addr)
 	uint16_t  value = registers[reg];
 
 	if (addr == RP06_CS1)
-		value |= 0200 /* ready */;
+		value |= uint16_t(rp06::cs1_bits::RDY /* ready */);
 	else if (addr == RP06_DS)
-		value |= 0400 /* drive present */ | 010000 /* medium on-line */ | 0100 /* volume valid */ | 0200 /* drive ready */;
+		value |= default_DS;
 
 	TRACE("RP06: read \"%s\"/%o: %06o", regnames[reg], addr, value);
 
@@ -128,12 +128,9 @@ uint32_t rp06::compute_offset() const
 
 uint32_t rp06::getphysaddr() const
 {
-	constexpr const uint16_t A16 = 0400;
-	constexpr const uint16_t A17 = 01000;
-
 	// low 16 bits in UBA, and tack on A16/A17
-	bool cur_A16 = registers[reg_num(RP06_CS1)] & A16;
-	bool cur_A17 = registers[reg_num(RP06_CS1)] & A17;
+	bool cur_A16 = registers[reg_num(RP06_CS1)] & uint16_t(rp06::cs1_bits::A16);
+	bool cur_A17 = registers[reg_num(RP06_CS1)] & uint16_t(rp06::cs1_bits::A17);
 
 	uint16_t cur_A1621 = 0;
 
@@ -158,20 +155,20 @@ void rp06::write_word(const uint16_t addr, uint16_t v)
         registers[reg] = v;
 
 	if (addr == RP06_CS1) {
-	        if (registers[reg_num(RP06_CS1)] & 0200)  // ready
+	        if (registers[reg_num(RP06_CS1)] & uint16_t(rp06::cs1_bits::RDY))  // ready
 			registers[reg_num(RP06_AS)] = 1;  // this is very bogus but maybe works for now
 
 		if (v & 1) {
-			bool generate_interrupt = false;
-			int  function_code      = v & 62;
+			bool     generate_interrupt = false;
+			uint16_t function_code      = v & 62;
 
-			registers[reg_num(RP06_CS1)] &= ~(function_code | 1 | 040000);
+			registers[reg_num(RP06_CS1)] &= ~(function_code | 1 | uint16_t(rp06::cs1_bits::TRE));
 
 			if (function_code == 006 || function_code == 012 || function_code == 016 ||
 					function_code == 020 || function_code == 022) {
 				DOLOG(debug, false, "RP06: ignoring command %03o", function_code);
 
-				registers[reg_num(RP06_CS1)] |= 0200;  // drive ready
+				registers[reg_num(RP06_CS1)] |= uint16_t(rp06::cs1_bits::RDY);  // drive ready
 
 				generate_interrupt = true;
 			}
@@ -201,7 +198,7 @@ void rp06::write_word(const uint16_t addr, uint16_t v)
 				}
 
 				registers[reg_num(RP06_WC)]   = 0;
-				registers[reg_num(RP06_CS1)] |= 0200;  // drive ready
+				registers[reg_num(RP06_CS1)] |= uint16_t(rp06::cs1_bits::RDY);  // drive ready
 
 				generate_interrupt = true;
 			}
@@ -210,7 +207,7 @@ void rp06::write_word(const uint16_t addr, uint16_t v)
 			}
 
 			if (generate_interrupt) {
-				if (registers[reg_num(RP06_CS1)] & 0100)  // IE? (interrupt enable)
+				if (registers[reg_num(RP06_CS1)] & uint16_t(rp06::cs1_bits::IE))  // IE? (interrupt enable)
 					b->getCpu()->queue_interrupt(5, 0254);
 			}
 		}

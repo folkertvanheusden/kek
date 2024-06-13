@@ -66,4 +66,22 @@ public:
 
 	void write_byte(const uint16_t addr, const uint8_t  v) override;
 	void write_word(const uint16_t addr, const uint16_t v) override;
+
+	enum class ds_bits {
+		OFM = 0000001,  // offset mode
+		VV  = 0000100,  // volume valid
+		DRY = 0000200,  // drive ready
+		DPR = 0000400,  // drive present
+		MOL = 0010000   // medium online
+	};
+
+	enum class cs1_bits {
+		GO  = 0000001,  // GO bit
+		FN  = 0000076,  // 5 bit function code - this is the mask
+		IE  = 0000100,  // Interrupt enable
+		RDY = 0000200,  // Drive ready
+		A16 = 0000400,
+		A17 = 0001000,
+		TRE = 0040000,
+	};
 };
