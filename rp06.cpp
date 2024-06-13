@@ -162,7 +162,7 @@ void rp06::write_word(const uint16_t addr, uint16_t v)
 			bool     generate_interrupt = false;
 			uint16_t function_code      = v & 62;
 
-			registers[reg_num(RP06_CS1)] &= ~(function_code | 1 | uint16_t(rp06::cs1_bits::TRE));
+			registers[reg_num(RP06_CS1)] &= ~(function_code | uint16_t(rp06::cs1_bits::GO) | uint16_t(rp06::cs1_bits::TRE));
 
 			if (function_code == 006 || function_code == 012 || function_code == 016 ||
 					function_code == 020 || function_code == 022) {
