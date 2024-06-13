@@ -182,11 +182,12 @@ void rp06::write_word(const uint16_t addr, uint16_t v)
 				uint32_t nw   = 65536 - registers[reg_num(RP06_WC)];
 				uint32_t nb   = nw * 2;
 
-				DOLOG(debug, false, "RP06: reading %u bytes from %u (dec) to %06o (oct)", nw, offs, addr);
+				uint8_t  xfer_buffer[SECTOR_SIZE] { };
+				uint32_t end_offset = offs + nb;
+				for(uint32_t cur_offset = offs; cur_offset<end_offset; cur_offset += SECTOR_SIZE) {
+					uint32_t cur_n = std::min(end_offset - cur_offset, SECTOR_SIZE);
 
-				uint8_t xfer_buffer[SECTOR_SIZE] { };
-				for(uint32_t cur_offset = offs; cur_offset<offs + nb; cur_offset += SECTOR_SIZE) {
-					uint32_t cur_n = std::min(nb - cur_offset, SECTOR_SIZE);
+					DOLOG(debug, false, "RP06: reading %u bytes from %u (dec) to %06o (oct)", cur_n, offs, addr);
 
 					if (!fhs.at(0)->read(cur_offset, cur_n, xfer_buffer, SECTOR_SIZE)) {
 						DOLOG(ll_error, true, "RP06 read error %s from %u", strerror(errno), cur_offset);
