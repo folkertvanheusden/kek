@@ -106,7 +106,7 @@ void rp06::write_byte(const uint16_t addr, const uint8_t v)
 		vtemp |= v;
 	}
 
-	write_word(addr, vtemp);
+	write_word(addr & ~1, vtemp);
 }
 
 uint32_t rp06::compute_offset() const
