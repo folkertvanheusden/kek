@@ -26,12 +26,17 @@ To build for e.g. windows:
 
 To run an RK05 disk image:
 
-    ./kek -R filename.rk -b 2> /dev/null
+    ./kek -r filename.rk -R rk05 -b 2> /dev/null
 
 
 To run an RL02 disk image:
 
-    ./kek -r filename.rk -b 2> /dev/null
+    ./kek -r filename.rk -R rl02 -b 2> /dev/null
+
+
+To run an RP06 disk image:
+
+    ./kek -r filename.rk -R rp06 -b 2> /dev/null
 
 
 To run a tape image:
