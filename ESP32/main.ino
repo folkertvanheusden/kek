@@ -339,7 +339,7 @@ void setup() {
 
 	running = cnsl->get_running_flag();
 
-	cs->println("* Connect RK05 and RL02 devices to BUS");
+	cs->println("* Connect RK05, RL02 and RP06 devices to BUS");
 	auto rk05_dev = new rk05(b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag());
 	rk05_dev->begin();
 	b->add_rk05(rk05_dev);
@@ -350,7 +350,7 @@ void setup() {
 
 	auto rp06_dev = new rp06(b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag());
 	rp06_dev->begin();
-	b->add_rp06(rp06_dev);
+	b->add_RP06(rp06_dev);
 
 	cs->println("* Adding TTY");
 	tty_ = new tty(cnsl, b);
