@@ -152,6 +152,8 @@ void configure_network(console *const c)
 	c->flush_input();
 
 	std::string wifi_ap = c->read_line("Enter SSID[|PSK]: ");
+	if (wifi_ap.empty())
+		return;
 
 	auto parts = split(wifi_ap, "|");
 	if (parts.size() > 2) {
