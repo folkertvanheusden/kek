@@ -126,7 +126,7 @@ public:
 	uint8_t  read_byte(const uint16_t a) override { return read(a, wm_byte, rm_cur); }
 	uint16_t read_word(const uint16_t a, const d_i_space_t s);
 	uint16_t read_word(const uint16_t a) override { return read_word(a, i_space); }
-	uint16_t peekWord(const uint16_t a);
+	uint16_t peek_word(const uint16_t a);
 	uint8_t  readUnibusByte(const uint32_t a);
 	uint16_t readPhysical(const uint32_t a);
 

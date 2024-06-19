@@ -861,7 +861,7 @@ uint16_t bus::read_word(const uint16_t a, const d_i_space_t s)
 	return read(a, wm_word, rm_cur, false, s);
 }
 
-uint16_t bus::peekWord(const uint16_t a)
+uint16_t bus::peek_word(const uint16_t a)
 {
 	return read(a, wm_word, rm_cur, true);
 }

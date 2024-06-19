@@ -1900,7 +1900,7 @@ cpu::operand_parameters cpu::addressing_to_string(const uint8_t mode_register, c
 {
 	assert(mode_register < 64);
 
-	uint16_t    next_word = b->peekWord(pc & 65535);
+	uint16_t    next_word = b->peek_word(pc & 65535);
 
 	int         reg       = mode_register & 7;
 
@@ -1919,37 +1919,37 @@ cpu::operand_parameters cpu::addressing_to_string(const uint8_t mode_register, c
 			return { reg_name, 2, -1, uint16_t(getRegister(reg) & mask) };
 
 		case 1:
-			return { format("(%s)", reg_name.c_str()), 2, -1, uint16_t(b->peekWord(getRegister(reg)) & mask) };
+			return { format("(%s)", reg_name.c_str()), 2, -1, uint16_t(b->peek_word(getRegister(reg)) & mask) };
 
 		case 2:
 			if (reg == 7)
 				return { format("#%06o", next_word), 4, int(next_word), uint16_t(next_word & mask) };
 
-			return { format("(%s)+", reg_name.c_str()), 2, -1, uint16_t(b->peekWord(getRegister(reg)) & mask) };
+			return { format("(%s)+", reg_name.c_str()), 2, -1, uint16_t(b->peek_word(getRegister(reg)) & mask) };
 
 		case 3:
 			if (reg == 7)
-				return { format("@#%06o", next_word), 4, int(next_word), uint16_t(b->peekWord(next_word) & mask) };
+				return { format("@#%06o", next_word), 4, int(next_word), uint16_t(b->peek_word(next_word) & mask) };
 
-			return { format("@(%s)+", reg_name.c_str()), 2, -1, uint16_t(b->peekWord(b->peekWord(getRegister(reg))) & mask) };
+			return { format("@(%s)+", reg_name.c_str()), 2, -1, uint16_t(b->peek_word(b->peek_word(getRegister(reg))) & mask) };
 
 		case 4:
-			return { format("-(%s)", reg_name.c_str()), 2, -1, uint16_t(b->peekWord(getRegister(reg) - (word_mode == wm_word || reg >= 6 ? 2 : 1)) & mask) };
+			return { format("-(%s)", reg_name.c_str()), 2, -1, uint16_t(b->peek_word(getRegister(reg) - (word_mode == wm_word || reg >= 6 ? 2 : 1)) & mask) };
 
 		case 5:
-			return { format("@-(%s)", reg_name.c_str()), 2, -1, uint16_t(b->peekWord(b->peekWord(getRegister(reg) - 2)) & mask) };
+			return { format("@-(%s)", reg_name.c_str()), 2, -1, uint16_t(b->peek_word(b->peek_word(getRegister(reg) - 2)) & mask) };
 
 		case 6:
 			if (reg == 7)
-				return { format("%06o", (pc + next_word + 2) & 65535), 4, int(next_word), uint16_t(b->peekWord(getRegister(reg) + next_word) & mask) };
+				return { format("%06o", (pc + next_word + 2) & 65535), 4, int(next_word), uint16_t(b->peek_word(getRegister(reg) + next_word) & mask) };
 
-			return { format("%o(%s)", next_word, reg_name.c_str()), 4, int(next_word), uint16_t(b->peekWord(getRegister(reg) + next_word) & mask) };
+			return { format("%o(%s)", next_word, reg_name.c_str()), 4, int(next_word), uint16_t(b->peek_word(getRegister(reg) + next_word) & mask) };
 
 		case 7:
 			if (reg == 7)
-				return { format("@%06o", next_word), 4, int(next_word), uint16_t(b->peekWord(b->peekWord(getRegister(reg) + next_word)) & mask) };
+				return { format("@%06o", next_word), 4, int(next_word), uint16_t(b->peek_word(b->peek_word(getRegister(reg) + next_word)) & mask) };
 
-			return { format("@%o(%s)", next_word, reg_name.c_str()), 4, int(next_word), uint16_t(b->peekWord(b->peekWord(getRegister(reg) + next_word)) & mask) };
+			return { format("@%o(%s)", next_word, reg_name.c_str()), 4, int(next_word), uint16_t(b->peek_word(b->peek_word(getRegister(reg) + next_word)) & mask) };
 	}
 
 	return { "??", 0, -1, 0123456 };
@@ -1957,7 +1957,7 @@ cpu::operand_parameters cpu::addressing_to_string(const uint8_t mode_register, c
 
 std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t addr) const
 {
-	uint16_t    instruction   = b->peekWord(addr);
+	uint16_t    instruction   = b->peek_word(addr);
 
 	word_mode_t word_mode     = instruction & 0x8000 ? wm_byte : wm_word;
 	std::string word_mode_str = word_mode == wm_byte ? "B" : "";
