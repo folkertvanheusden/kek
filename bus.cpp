@@ -841,7 +841,7 @@ void bus::write_physical(const uint32_t a, const uint16_t value)
 	}
 }
 
-uint16_t bus::readPhysical(const uint32_t a)
+uint16_t bus::read_physical(const uint32_t a)
 {
 	if (a >= m->get_memory_size()) {
 		TRACE("physicalREAD from %o: trap 004", a);
