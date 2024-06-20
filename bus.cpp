@@ -827,7 +827,7 @@ write_rc_t bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint1
 	return { false };
 }
 
-void bus::writePhysical(const uint32_t a, const uint16_t value)
+void bus::write_physical(const uint32_t a, const uint16_t value)
 {
 	TRACE("physicalWRITE %06o to %o", value, a);
 

@@ -84,7 +84,7 @@ int run_cpu_validation(const std::string & filename)
 			const char *key   = nullptr;
 			json_t     *value = nullptr;
 			json_object_foreach(memory_before, key, value) {
-				b->writePhysical(atoi(key), json_integer_value(value));
+				b->write_physical(atoi(key), json_integer_value(value));
 			}
 		}
 
