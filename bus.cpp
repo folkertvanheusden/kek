@@ -871,15 +871,15 @@ void bus::write_word(const uint16_t a, const uint16_t value, const d_i_space_t s
 	write(a, wm_word, value, rm_cur, s);
 }
 
-uint8_t bus::readUnibusByte(const uint32_t a)
+uint8_t bus::read_unibus_byte(const uint32_t a)
 {
 	uint8_t v = m->read_byte(a);
-	TRACE("readUnibusByte[%08o]=%03o", a, v);
+	TRACE("read_unibus_byte[%08o]=%03o", a, v);
 	return v;
 }
 
-void bus::writeUnibusByte(const uint32_t a, const uint8_t v)
+void bus::write_unibus_byte(const uint32_t a, const uint8_t v)
 {
-	TRACE("writeUnibusByte[%08o]=%03o", a, v);
+	TRACE("write_unibus_byte[%08o]=%03o", a, v);
 	m->write_byte(a, v);
 }

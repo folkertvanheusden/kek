@@ -127,11 +127,11 @@ public:
 	uint16_t read_word(const uint16_t a, const d_i_space_t s);
 	uint16_t read_word(const uint16_t a) override { return read_word(a, i_space); }
 	uint16_t peek_word(const uint16_t a);
-	uint8_t  readUnibusByte(const uint32_t a);
+	uint8_t  read_unibus_byte(const uint32_t a);
 	uint16_t read_physical(const uint32_t a);
 
 	write_rc_t write(const uint16_t a, const word_mode_t word_mode, uint16_t value, const rm_selection_t mode_selection, const d_i_space_t s = i_space);
-	void     writeUnibusByte(const uint32_t a, const uint8_t value);
+	void     write_unibus_byte(const uint32_t a, const uint8_t value);
 	void     write_byte(const uint16_t a, const uint8_t value) override { write(a, wm_byte, value, rm_cur); }
 	void     write_word(const uint16_t a, const uint16_t value, const d_i_space_t s);
 	void     write_word(const uint16_t a, const uint16_t value) override { write_word(a, value, i_space); }

@@ -275,8 +275,8 @@ void rl02::write_word(const uint16_t addr, uint16_t v)
 
 				for(uint32_t i=0; i<cur;) {
 					// BA and MPR are increased by 2
-					xfer_buffer[i++] = b->readUnibusByte(memory_address++);
-					xfer_buffer[i++] = b->readUnibusByte(memory_address++);
+					xfer_buffer[i++] = b->read_unibus_byte(memory_address++);
+					xfer_buffer[i++] = b->read_unibus_byte(memory_address++);
 
 					// update_bus_address(memory_address);
 					mpr[0]++;
@@ -343,8 +343,8 @@ void rl02::write_word(const uint16_t addr, uint16_t v)
 
 				for(uint32_t i=0; i<cur;) {
 					// BA and MPR are increased by 2
-					b->writeUnibusByte(memory_address++, xfer_buffer[i++]);
-					b->writeUnibusByte(memory_address++, xfer_buffer[i++]);
+					b->write_unibus_byte(memory_address++, xfer_buffer[i++]);
+					b->write_unibus_byte(memory_address++, xfer_buffer[i++]);
 
 					// update_bus_address(memory_address);
 
