@@ -873,7 +873,9 @@ void bus::write_word(const uint16_t a, const uint16_t value, const d_i_space_t s
 
 uint8_t bus::read_unibus_byte(const uint32_t a)
 {
-	uint8_t v = m->read_byte(a);
+	uint8_t v = 0;
+	if (a < m->get_memory_size())
+		v = m->read_byte(a);
 	TRACE("read_unibus_byte[%08o]=%03o", a, v);
 	return v;
 }
@@ -881,5 +883,7 @@ uint8_t bus::read_unibus_byte(const uint32_t a)
 void bus::write_unibus_byte(const uint32_t a, const uint8_t v)
 {
 	TRACE("write_unibus_byte[%08o]=%03o", a, v);
-	m->write_byte(a, v);
+
+	if (a < m->get_memory_size())
+		m->write_byte(a, v);
 }
