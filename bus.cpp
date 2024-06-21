@@ -827,7 +827,7 @@ write_rc_t bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint1
 	return { false };
 }
 
-void bus::writePhysical(const uint32_t a, const uint16_t value)
+void bus::write_physical(const uint32_t a, const uint16_t value)
 {
 	TRACE("physicalWRITE %06o to %o", value, a);
 
@@ -841,7 +841,7 @@ void bus::writePhysical(const uint32_t a, const uint16_t value)
 	}
 }
 
-uint16_t bus::readPhysical(const uint32_t a)
+uint16_t bus::read_physical(const uint32_t a)
 {
 	if (a >= m->get_memory_size()) {
 		TRACE("physicalREAD from %o: trap 004", a);
@@ -871,15 +871,19 @@ void bus::write_word(const uint16_t a, const uint16_t value, const d_i_space_t s
 	write(a, wm_word, value, rm_cur, s);
 }
 
-uint8_t bus::readUnibusByte(const uint32_t a)
+uint8_t bus::read_unibus_byte(const uint32_t a)
 {
-	uint8_t v = m->read_byte(a);
-	TRACE("readUnibusByte[%08o]=%03o", a, v);
+	uint8_t v = 0;
+	if (a < m->get_memory_size())
+		v = m->read_byte(a);
+	TRACE("read_unibus_byte[%08o]=%03o", a, v);
 	return v;
 }
 
-void bus::writeUnibusByte(const uint32_t a, const uint8_t v)
+void bus::write_unibus_byte(const uint32_t a, const uint8_t v)
 {
-	TRACE("writeUnibusByte[%08o]=%03o", a, v);
-	m->write_byte(a, v);
+	TRACE("write_unibus_byte[%08o]=%03o", a, v);
+
+	if (a < m->get_memory_size())
+		m->write_byte(a, v);
 }

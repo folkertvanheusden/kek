@@ -84,7 +84,7 @@ int run_cpu_validation(const std::string & filename)
 			const char *key   = nullptr;
 			json_t     *value = nullptr;
 			json_object_foreach(memory_before, key, value) {
-				b->writePhysical(atoi(key), json_integer_value(value));
+				b->write_physical(atoi(key), json_integer_value(value));
 			}
 		}
 
@@ -144,7 +144,7 @@ int run_cpu_validation(const std::string & filename)
 				json_t     *value = nullptr;
 				json_object_foreach(memory_after, key, value) {
 					int      key_v        = atoi(key);
-					uint16_t mem_contains = b->readPhysical(key_v);
+					uint16_t mem_contains = b->read_physical(key_v);
 					uint16_t should_be    = json_integer_value(value);
 
 					if (mem_contains != should_be) {
@@ -193,7 +193,7 @@ int run_cpu_validation(const std::string & filename)
 					json_t *temp = json_array_get(a_sp, i);
 					uint16_t sp = c->lowlevel_register_sp_get(i);
 					if (json_integer_value(temp) != sp) {
-						DOLOG(warning, true, "SP[%d] register mismatch (is: %06o (%d), should be: %06o (%d)) for %06o", i, sp, sp, json_integer_value(temp), json_integer_value(temp), b->readPhysical(start_pc));
+						DOLOG(warning, true, "SP[%d] register mismatch (is: %06o (%d), should be: %06o (%d)) for %06o", i, sp, sp, json_integer_value(temp), json_integer_value(temp), b->read_physical(start_pc));
 						err = true;
 					}
 				}

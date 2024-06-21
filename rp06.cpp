@@ -201,13 +201,13 @@ void rp06::write_word(const uint16_t addr, uint16_t v)
 						}
 
 						for(uint32_t i=0; i<cur_n; i++)
-							b->writeUnibusByte(addr++, xfer_buffer[i]);
+							b->write_unibus_byte(addr++, xfer_buffer[i]);
 					}
 					else {
 						DOLOG(debug, false, "RP06: writing %u bytes to %u (dec) from %06o (oct)", cur_n, offs, addr);
 
 						for(uint32_t i=0; i<cur_n; i++)
-							xfer_buffer[i] = b->readUnibusByte(addr++);
+							xfer_buffer[i] = b->read_unibus_byte(addr++);
 
 						if (!fhs.at(0)->write(cur_offset, cur_n, xfer_buffer, SECTOR_SIZE)) {
 							DOLOG(ll_error, true, "RP06 write error %s from %u", strerror(errno), cur_offset);

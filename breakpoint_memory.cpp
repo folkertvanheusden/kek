@@ -25,7 +25,7 @@ std::optional<std::string> breakpoint_memory::is_triggered() const
 	if (is_virtual)
 		v = b->read(addr, word_mode, rm_cur, true, i_space);
 	else
-		v = b->readPhysical(addr);
+		v = b->read_physical(addr);
 
 	auto     it = values.find(v);
 	if (it == values.end())

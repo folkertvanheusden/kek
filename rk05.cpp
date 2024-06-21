@@ -173,7 +173,7 @@ void rk05::write_word(const uint16_t addr, const uint16_t v)
 						work_reclen -= cur;
 
 						for(size_t i=0; i<cur; i++)
-							xfer_buffer[i] = b->readUnibusByte(work_memoff++);
+							xfer_buffer[i] = b->read_unibus_byte(work_memoff++);
 
 						if (!fhs.at(device)->write(work_diskoffb, cur, xfer_buffer, 512)) {
 							DOLOG(ll_error, true, "RK05(%d) write error %s to %u len %u", device, strerror(errno), work_diskoffb, cur);
@@ -230,7 +230,7 @@ void rk05::write_word(const uint16_t addr, const uint16_t v)
 						temp_diskoffb += cur;
 
 						for(uint32_t i=0; i<cur; i++) {
-							b->writeUnibusByte(p++, xfer_buffer[i]);
+							b->write_unibus_byte(p++, xfer_buffer[i]);
 
 							if ((v & 2048) == 0)
 								update_bus_address(2);
