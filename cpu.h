@@ -29,16 +29,16 @@ typedef struct {
 } mmr1_delta_t;
 
 typedef struct {
-	word_mode_t word_mode;
+	word_mode_t    word_mode;
 	rm_selection_t mode_selection;
-	d_i_space_t space;
-	int access_mode;
+	d_i_space_t    space;
+	int            access_mode;
 
 	// for MMR1 register
 	std::optional<mmr1_delta_t> mmr1_update;
 
 	std::optional<uint16_t> addr;
-	std::optional<int> reg;
+	std::optional<int>      reg;
 
 	std::optional<uint16_t> value;
 } gam_rc_t;
