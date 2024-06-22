@@ -68,7 +68,7 @@ void console_esp32::panel_update_thread()
 	cpu *const c = b->getCpu();
 
 #if !defined(BUILD_FOR_RP2040) && defined(NEOPIXELS_PIN)
-	constexpr const uint8_t n_leds = 60;
+	constexpr const uint8_t n_leds = 64;
 #if defined(RGBW_PIXELS)
 	Adafruit_NeoPixel pixels(n_leds, NEOPIXELS_PIN, NEO_RGBW);
 #else
@@ -119,23 +119,36 @@ void console_esp32::panel_update_thread()
 			uint16_t current_PC    = c->getPC();
 
 			if (panel_mode == PM_BITS) {
-				uint32_t full_addr     = b->getMMU()->calculate_physical_address(c, run_mode, current_PC, false, false, i_space);
+				memory_addresses_t rc  = b->getMMU()->calculate_physical_address(run_mode, current_PC);
 
 				uint16_t current_instr = b->peek_word(current_PC);
 
+				int pixel_offset = 0;
+
 				for(uint8_t b=0; b<22; b++)
-					pixels.setPixelColor(b, full_addr & (1 << b) ? led_color : 0);
+					pixels.setPixelColor(pixel_offset++, rc.physical_instruction & (1 << b) ? led_color : 0);
+
+				for(uint8_t b=0; b<3; b++)
+					pixels.setPixelColor(pixel_offset++, rc.apf ? yellow : 0);
+
+				pixels.setPixelColor(pixel_offset++, rc.physical_instruction_is_psw | rc.physical_data_is_psw ? blue : 0);
+
+				pixels.setPixelColor(pixel_offset++, b->getMMU()->is_enabled() ? white : 0);
+
+				pixels.setPixelColor(pixel_offset++, b->getMMU()->getMMR3() & 7 ? white : 0);
 
 				for(uint8_t b=0; b<16; b++)
-					pixels.setPixelColor(b + 22, current_PSW & (1l << b) ? magenta : 0);
+					pixels.setPixelColor(pixel_offset++, current_PSW   & (1l << b) ? magenta : 0);
 
 				for(uint8_t b=0; b<16; b++)
-					pixels.setPixelColor(b + 38, current_instr & (1l << b) ? red : 0);
+					pixels.setPixelColor(pixel_offset++, current_instr & (1l << b) ? red     : 0);
 
-				pixels.setPixelColor(54, running_flag             ? white : 0);
+				pixels.setPixelColor(pixel_offset++, running_flag             ? white : 0);
 
-				pixels.setPixelColor(55, disk_read_activity_flag  ? blue  : 0);
-				pixels.setPixelColor(56, disk_write_activity_flag ? blue  : 0);
+				pixels.setPixelColor(pixel_offset++, disk_read_activity_flag  ? blue  : 0);
+				pixels.setPixelColor(pixel_offset++, disk_write_activity_flag ? blue  : 0);
+
+				// 1
 			}
 			else {
 				pixels.clear();
