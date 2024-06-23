@@ -121,7 +121,7 @@ void console_esp32::panel_update_thread()
 			if (panel_mode == PM_BITS) {
 				memory_addresses_t rc  = b->getMMU()->calculate_physical_address(run_mode, current_PC);
 
-				uint16_t current_instr = b->peek_word(current_PC);
+				uint16_t current_instr = b->peek_word(run_mode, current_PC);
 
 				int pixel_offset = 0;
 

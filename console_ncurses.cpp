@@ -148,7 +148,7 @@ void console_ncurses::panel_update_thread()
 			uint16_t current_PC    = c->getPC();
 			memory_addresses_t rc  = b->getMMU()->calculate_physical_address(run_mode, current_PC);
 
-			uint16_t current_instr = b->peek_word(current_PC);
+			uint16_t current_instr = b->peek_word(run_mode, current_PC);
 
 			auto data = c->disassemble(current_PC);
 

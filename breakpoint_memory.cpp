@@ -23,7 +23,7 @@ std::optional<std::string> breakpoint_memory::is_triggered() const
 	uint16_t v  = 0;
 
 	if (is_virtual)
-		v = b->peek_word(addr);
+		v = b->peek_word(rm_cur, addr);  // FIXME rm_cur
 	else
 		v = b->read_physical(addr);
 

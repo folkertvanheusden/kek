@@ -496,23 +496,23 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t wo
 		case 1:  // (Rn)
 			g.addr  = getRegister(reg, mode_selection);
 			if (read_value)
-				g.value = b->read(g.addr.value(), word_mode, mode_selection, false, isR7_space);
+				g.value = b->read(g.addr.value(), word_mode, mode_selection, isR7_space);
 			break;
 		case 2:  // (Rn)+  /  #n
 			g.addr  = getRegister(reg, mode_selection);
 			if (read_value)
-				g.value = b->read(g.addr.value(), word_mode, mode_selection, false, isR7_space);
+				g.value = b->read(g.addr.value(), word_mode, mode_selection, isR7_space);
 			addRegister(reg, mode_selection, word_mode == wm_word || reg == 7 || reg == 6 ? 2 : 1);
 			g.mmr1_update = { word_mode == wm_word || reg == 7 || reg == 6 ? 2 : 1, reg };
 			break;
 		case 3:  // @(Rn)+  /  @#a
-			g.addr  = b->read(getRegister(reg, mode_selection), wm_word, mode_selection, false, isR7_space);
+			g.addr  = b->read(getRegister(reg, mode_selection), wm_word, mode_selection, isR7_space);
 			// might be wrong: the adds should happen when the read is really performed, because of traps
 			addRegister(reg, mode_selection, 2);
 			g.mmr1_update = { 2, reg };
 			g.space = d_space;
 			if (read_value)
-				g.value = b->read(g.addr.value(), word_mode, mode_selection, false, g.space);
+				g.value = b->read(g.addr.value(), word_mode, mode_selection, g.space);
 			break;
 		case 4:  // -(Rn)
 			addRegister(reg, mode_selection, word_mode == wm_word || reg == 7 || reg == 6 ? -2 : -1);
@@ -520,31 +520,31 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t wo
 			g.space = d_space;
 			g.addr  = getRegister(reg, mode_selection);
 			if (read_value)
-				g.value = b->read(g.addr.value(), word_mode, mode_selection, false, isR7_space);
+				g.value = b->read(g.addr.value(), word_mode, mode_selection, isR7_space);
 			break;
 		case 5:  // @-(Rn)
 			addRegister(reg, mode_selection, -2);
 			g.mmr1_update = { -2, reg };
-			g.addr  = b->read(getRegister(reg, mode_selection), wm_word, mode_selection, false, isR7_space);
+			g.addr  = b->read(getRegister(reg, mode_selection), wm_word, mode_selection, isR7_space);
 			g.space = d_space;
 			if (read_value)
-				g.value = b->read(g.addr.value(), word_mode, mode_selection, false, g.space);
+				g.value = b->read(g.addr.value(), word_mode, mode_selection, g.space);
 			break;
 		case 6:  // x(Rn)  /  a
-			next_word = b->read(getPC(), wm_word, mode_selection, false, i_space);
+			next_word = b->read(getPC(), wm_word, mode_selection, i_space);
 			addRegister(7, mode_selection, + 2);
 			g.addr  = getRegister(reg, mode_selection) + next_word;
 			g.space = d_space;
 			if (read_value)
-				g.value = b->read(g.addr.value(), word_mode, mode_selection, false, g.space);
+				g.value = b->read(g.addr.value(), word_mode, mode_selection, g.space);
 			break;
 		case 7:  // @x(Rn)  /  @a
-			next_word = b->read(getPC(), wm_word, mode_selection, false, i_space);
+			next_word = b->read(getPC(), wm_word, mode_selection, i_space);
 			addRegister(7, mode_selection, + 2);
-			g.addr  = b->read(getRegister(reg, mode_selection) + next_word, wm_word, mode_selection, false, d_space);
+			g.addr  = b->read(getRegister(reg, mode_selection) + next_word, wm_word, mode_selection, d_space);
 			g.space = d_space;
 			if (read_value)
-				g.value = b->read(g.addr.value(), word_mode, mode_selection, false, g.space);
+				g.value = b->read(g.addr.value(), word_mode, mode_selection, g.space);
 			break;
 	}
 
@@ -1427,7 +1427,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 				                addToMMR1(a);
 
 						// read from previous space
-						v = b->read(a.addr.value(), wm_word, rm_prev, false, word_mode == wm_byte ? d_space : i_space);
+						v = b->read(a.addr.value(), wm_word, rm_prev, word_mode == wm_byte ? d_space : i_space);
 					 }
 
 					 setPSW_flags_nzv(v, wm_word);
@@ -1900,10 +1900,9 @@ cpu::operand_parameters cpu::addressing_to_string(const uint8_t mode_register, c
 {
 	assert(mode_register < 64);
 
-	uint16_t    next_word = b->peek_word(pc & 65535);
-
+	int         run_mode  = getPSW_runmode();
+	uint16_t    next_word = b->peek_word(run_mode, pc & 65535);
 	int         reg       = mode_register & 7;
-
 	uint16_t    mask      = word_mode == wm_byte ? 0xff : 0xffff;
 
 	std::string reg_name;
@@ -1919,37 +1918,37 @@ cpu::operand_parameters cpu::addressing_to_string(const uint8_t mode_register, c
 			return { reg_name, 2, -1, uint16_t(getRegister(reg) & mask) };
 
 		case 1:
-			return { format("(%s)", reg_name.c_str()), 2, -1, uint16_t(b->peek_word(getRegister(reg)) & mask) };
+			return { format("(%s)", reg_name.c_str()), 2, -1, uint16_t(b->peek_word(run_mode, getRegister(reg)) & mask) };
 
 		case 2:
 			if (reg == 7)
 				return { format("#%06o", next_word), 4, int(next_word), uint16_t(next_word & mask) };
 
-			return { format("(%s)+", reg_name.c_str()), 2, -1, uint16_t(b->peek_word(getRegister(reg)) & mask) };
+			return { format("(%s)+", reg_name.c_str()), 2, -1, uint16_t(b->peek_word(run_mode, getRegister(reg)) & mask) };
 
 		case 3:
 			if (reg == 7)
-				return { format("@#%06o", next_word), 4, int(next_word), uint16_t(b->peek_word(next_word) & mask) };
+				return { format("@#%06o", next_word), 4, int(next_word), uint16_t(b->peek_word(run_mode, next_word) & mask) };
 
-			return { format("@(%s)+", reg_name.c_str()), 2, -1, uint16_t(b->peek_word(b->peek_word(getRegister(reg))) & mask) };
+			return { format("@(%s)+", reg_name.c_str()), 2, -1, uint16_t(b->peek_word(run_mode, b->peek_word(run_mode, getRegister(reg))) & mask) };
 
 		case 4:
-			return { format("-(%s)", reg_name.c_str()), 2, -1, uint16_t(b->peek_word(getRegister(reg) - (word_mode == wm_word || reg >= 6 ? 2 : 1)) & mask) };
+			return { format("-(%s)", reg_name.c_str()), 2, -1, uint16_t(b->peek_word(run_mode, getRegister(reg) - (word_mode == wm_word || reg >= 6 ? 2 : 1)) & mask) };
 
 		case 5:
-			return { format("@-(%s)", reg_name.c_str()), 2, -1, uint16_t(b->peek_word(b->peek_word(getRegister(reg) - 2)) & mask) };
+			return { format("@-(%s)", reg_name.c_str()), 2, -1, uint16_t(b->peek_word(run_mode, b->peek_word(run_mode, getRegister(reg) - 2)) & mask) };
 
 		case 6:
 			if (reg == 7)
-				return { format("%06o", (pc + next_word + 2) & 65535), 4, int(next_word), uint16_t(b->peek_word(getRegister(reg) + next_word) & mask) };
+				return { format("%06o", (pc + next_word + 2) & 65535), 4, int(next_word), uint16_t(b->peek_word(run_mode, getRegister(reg) + next_word) & mask) };
 
-			return { format("%o(%s)", next_word, reg_name.c_str()), 4, int(next_word), uint16_t(b->peek_word(getRegister(reg) + next_word) & mask) };
+			return { format("%o(%s)", next_word, reg_name.c_str()), 4, int(next_word), uint16_t(b->peek_word(run_mode, getRegister(reg) + next_word) & mask) };
 
 		case 7:
 			if (reg == 7)
-				return { format("@%06o", next_word), 4, int(next_word), uint16_t(b->peek_word(b->peek_word(getRegister(reg) + next_word)) & mask) };
+				return { format("@%06o", next_word), 4, int(next_word), uint16_t(b->peek_word(run_mode, b->peek_word(run_mode, getRegister(reg) + next_word)) & mask) };
 
-			return { format("@%o(%s)", next_word, reg_name.c_str()), 4, int(next_word), uint16_t(b->peek_word(b->peek_word(getRegister(reg) + next_word)) & mask) };
+			return { format("@%o(%s)", next_word, reg_name.c_str()), 4, int(next_word), uint16_t(b->peek_word(run_mode, b->peek_word(run_mode, getRegister(reg) + next_word)) & mask) };
 	}
 
 	return { "??", 0, -1, 0123456 };
@@ -1957,7 +1956,7 @@ cpu::operand_parameters cpu::addressing_to_string(const uint8_t mode_register, c
 
 std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t addr) const
 {
-	uint16_t    instruction   = b->peek_word(addr);
+	uint16_t    instruction   = b->peek_word(getPSW_runmode(), addr);
 
 	word_mode_t word_mode     = instruction & 0x8000 ? wm_byte : wm_word;
 	std::string word_mode_str = word_mode == wm_byte ? "B" : "";

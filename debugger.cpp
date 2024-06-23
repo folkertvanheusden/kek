@@ -933,7 +933,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 					for(int i=0; i<n; i++) {
 						uint32_t cur_addr = addr + i * 2;
-						int val = parts[2] == "v" ? b->peek_word(cur_addr) : b->read_physical(cur_addr);
+						int val = parts[2] == "v" ? b->peek_word(c->getPSW_runmode(), cur_addr) : b->read_physical(cur_addr);
 
 						if (val == -1) {
 							cnsl->put_string_lf(format("Can't read from %06o\n", cur_addr));
