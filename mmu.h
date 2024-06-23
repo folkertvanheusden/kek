@@ -94,7 +94,7 @@ public:
 
 	memory_addresses_t            calculate_physical_address(const int run_mode, const uint16_t a) const;
 	std::pair<trap_action_t, int> get_trap_action(const int run_mode, const bool d, const int apf, const bool is_write);
-	uint32_t                      calculate_physical_address(cpu *const c, const int run_mode, const uint16_t a, const bool trap_on_failure, const bool is_write, const d_i_space_t space);
+	uint32_t                      calculate_physical_address(cpu *const c, const int run_mode, const uint16_t a, const bool is_write, const d_i_space_t space);
 
 	uint16_t getMMR0() const { return MMR0; }
 	uint16_t getMMR1() const { return MMR1; }

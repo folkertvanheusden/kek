@@ -473,7 +473,7 @@ void mmu::verify_page_length(cpu *const c, const uint16_t virt_addr, const int r
 	}
 }
 
-uint32_t mmu::calculate_physical_address(cpu *const c, const int run_mode, const uint16_t a, const bool trap_on_failure, const bool is_write, const d_i_space_t space)
+uint32_t mmu::calculate_physical_address(cpu *const c, const int run_mode, const uint16_t a, const bool is_write, const d_i_space_t space)
 {
 	uint32_t m_offset = a;
 
@@ -490,17 +490,15 @@ uint32_t mmu::calculate_physical_address(cpu *const c, const int run_mode, const
 		if ((getMMR3() & 16) == 0)  // off is 18bit
 			m_offset &= 0x3ffff;
 
-		if (trap_on_failure) [[likely]] {
-			verify_page_access(c, a, run_mode, d, apf, is_write);
+		verify_page_access(c, a, run_mode, d, apf, is_write);
 
-			// e.g. ram or i/o, not unmapped
-			uint32_t io_base  = get_io_base();
-			bool     is_io    = m_offset >= io_base;
+		// e.g. ram or i/o, not unmapped
+		uint32_t io_base  = get_io_base();
+		bool     is_io    = m_offset >= io_base;
 
-			verify_access_valid(c, m_offset, run_mode, d, apf, is_io, is_write);
+		verify_access_valid(c, m_offset, run_mode, d, apf, is_io, is_write);
 
-			verify_page_length(c, a, run_mode, d, apf, is_write);
-		}
+		verify_page_length(c, a, run_mode, d, apf, is_write);
 	}
 
 	return m_offset;
