@@ -95,11 +95,14 @@ bus *bus::deserialize(const JsonDocument j, console *const cnsl, std::atomic_uin
 	if (j.containsKey("tty"))
 		b->add_tty(tty::deserialize(j["tty"], b, cnsl));
 
-	if (j.containsKey("mmu"))
-		b->add_mmu(mmu::deserialize(j["mmu"], m));
+	cpu *c = nullptr;
+	if (j.containsKey("cpu")) {
+		c = cpu::deserialize(j["cpu"], b, event);
+		b->add_cpu(c);
+	}
 
-	if (j.containsKey("cpu"))
-		b->add_cpu(cpu::deserialize(j["cpu"], b, event));
+	if (j.containsKey("mmu"))
+		b->add_mmu(mmu::deserialize(j["mmu"], m, c));
 
 	if (j.containsKey("rl02"))
 		b->add_rl02(rl02::deserialize(j["rl02"], b));
@@ -135,7 +138,7 @@ void bus::set_memory_size(const int n_pages)
 	delete m;
 	m = new memory(n_bytes);
 
-	mmu_->begin(m);
+	mmu_->begin(m, c);
 
 	TRACE("Memory is now %u kB in size", n_bytes / 1024);
 }
@@ -181,19 +184,24 @@ void bus::add_ram(memory *const m)
 	delete this->m;
 	this->m = m;
 
-	mmu_->begin(m);
+	mmu_->begin(m, c);
 }
 
 void bus::add_mmu(mmu *const mmu_)
 {
 	delete this->mmu_;
 	this->mmu_ = mmu_;
+
+	mmu_->begin(m, c);
 }
 
 void bus::add_cpu(cpu *const c)
 {
 	delete this->c;
 	this->c = c;
+
+	if (mmu_)
+		mmu_->begin(m, c);
 }
 
 void bus::add_tm11(tm_11 *const tm11)
@@ -242,7 +250,7 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 {
 	int  run_mode     = mode_selection == rm_cur ? c->getPSW_runmode() : c->getPSW_prev_runmode();
 
-	uint32_t m_offset = mmu_->calculate_physical_address(c, run_mode, addr_in, false, space);
+	uint32_t m_offset = mmu_->calculate_physical_address(run_mode, addr_in, false, space);
 
 	uint32_t io_base  = mmu_->get_io_base();
 	bool     is_io    = m_offset >= io_base;
@@ -552,7 +560,7 @@ write_rc_t bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint1
 	if (mmu_->is_enabled() && (addr_in & 1) == 0 /* TODO remove this? */ && addr_in != ADDR_MMR0)
 		mmu_->set_page_written_to(run_mode, d, apf);
 
-	uint32_t m_offset = mmu_->calculate_physical_address(c, run_mode, addr_in, true, space);
+	uint32_t m_offset = mmu_->calculate_physical_address(run_mode, addr_in, true, space);
 
 	uint32_t io_base  = mmu_->get_io_base();
 	bool     is_io    = m_offset >= io_base;

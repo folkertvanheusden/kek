@@ -56,22 +56,23 @@ private:
 	uint16_t CSR { 0 };
 
 	memory  *m { nullptr };
+	cpu     *c { nullptr };
 
 	JsonDocument add_par_pdr(const int run_mode, const bool is_d) const;
 	void set_par_pdr(const JsonVariantConst j_in, const int run_mode, const bool is_d);
 
-	void verify_page_access (cpu *const c, const uint16_t virt_addr, const int run_mode, const bool d, const int apf, const bool is_write);
-	void verify_access_valid(cpu *const c, const uint32_t m_offset,  const int run_mode, const bool d, const int apf, const bool is_io, const bool is_write);
-	void verify_page_length (cpu *const c, const uint16_t virt_addr, const int run_mode, const bool d, const int apf, const bool is_write);
+	void verify_page_access (const uint16_t virt_addr, const int run_mode, const bool d, const int apf, const bool is_write);
+	void verify_access_valid(const uint32_t m_offset,  const int run_mode, const bool d, const int apf, const bool is_io, const bool is_write);
+	void verify_page_length (const uint16_t virt_addr, const int run_mode, const bool d, const int apf, const bool is_write);
 
 public:
 	mmu();
 	virtual ~mmu();
 
-	void     begin(memory *const m);
+	void     begin(memory *const m, cpu *const c);
 
 	JsonDocument serialize() const;
-	static mmu *deserialize(const JsonVariantConst j, memory *const m);
+	static mmu *deserialize(const JsonVariantConst j, memory *const m, cpu *const c);
 
 	void     mmudebug(const uint16_t a);
 
@@ -94,7 +95,7 @@ public:
 
 	memory_addresses_t            calculate_physical_address(const int run_mode, const uint16_t a) const;
 	std::pair<trap_action_t, int> get_trap_action(const int run_mode, const bool d, const int apf, const bool is_write);
-	uint32_t                      calculate_physical_address(cpu *const c, const int run_mode, const uint16_t a, const bool is_write, const d_i_space_t space);
+	uint32_t                      calculate_physical_address(const int run_mode, const uint16_t a, const bool is_write, const d_i_space_t space);
 
 	uint16_t getMMR0() const { return MMR0; }
 	uint16_t getMMR1() const { return MMR1; }
