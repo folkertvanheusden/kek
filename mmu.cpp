@@ -478,11 +478,11 @@ uint32_t mmu::calculate_physical_address(cpu *const c, const int run_mode, const
 	uint32_t m_offset = a;
 
 	if (is_enabled() || (is_write && (getMMR0() & (1 << 8 /* maintenance check */)))) {
-		uint8_t  apf      = a >> 13; // active page field
-
 		bool     d        = space == d_space && get_use_data_space(run_mode);
 
 		uint16_t p_offset = a & 8191;  // page offset
+
+		uint8_t  apf      = a >> 13;  // active page field
 
 		m_offset  = get_physical_memory_offset(run_mode, d, apf);
 		m_offset += p_offset;
