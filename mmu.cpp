@@ -357,7 +357,6 @@ void mmu::mmudebug(const uint16_t a)
 void mmu::verify_page_access(cpu *const c, const uint16_t virt_addr, const int run_mode, const bool d, const int apf, const bool is_write)
 {
 	const auto [ trap_action, access_control ] = get_trap_action(run_mode, d, apf, is_write);
-
 	if (trap_action == T_PROCEED)
 		return;
 
@@ -436,6 +435,9 @@ void mmu::verify_access_valid(cpu *const c, const uint32_t m_offset, const int r
 void mmu::verify_page_length(cpu *const c, const uint16_t virt_addr, const int run_mode, const bool d, const int apf, const bool is_write)
 {
 	uint16_t pdr_len = get_pdr_len(run_mode, d, apf);
+	if (pdr_len == 127)
+		return;
+
 	uint16_t pdr_cmp = (virt_addr >> 6) & 127;
 
 	bool direction   = get_pdr_direction(run_mode, d, apf);
@@ -489,7 +491,7 @@ uint32_t mmu::calculate_physical_address(cpu *const c, const int run_mode, const
 		if ((getMMR3() & 16) == 0)  // off is 18bit
 			m_offset &= 0x3ffff;
 
-		if (trap_on_failure) {
+		if (trap_on_failure) [[likely]] {
 			verify_page_access(c, a, run_mode, d, apf, is_write);
 
 			// e.g. ram or i/o, not unmapped
