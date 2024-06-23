@@ -806,7 +806,7 @@ write_rc_t bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint1
 		throw 9;
 	}
 
-	if (word_mode == wm_word && (addr_in & 1)) [[unlikely]] {
+	if ( (addr_in & 1) && word_mode == wm_word) [[unlikely]] {
 		TRACE("WRITE to %06o (value: %06o) - odd address!", addr_in, value);
 
 		mmu_->trap_if_odd(addr_in, run_mode, space, true);
