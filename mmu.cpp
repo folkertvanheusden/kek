@@ -442,7 +442,7 @@ void mmu::verify_page_length(cpu *const c, const uint16_t virt_addr, const int r
 
 	bool direction   = get_pdr_direction(run_mode, d, apf);
 
-	if ((pdr_cmp > pdr_len && direction == false) || (pdr_cmp < pdr_len && direction == true)) [[unlikely]] {
+	if (direction == false ? pdr_cmp > pdr_len : pdr_cmp < pdr_len) [[unlikely]] {
 		TRACE("mmu::calculate_physical_address::p_offset %o versus %o direction %d", pdr_cmp, pdr_len, direction);
 		TRACE("TRAP(0250) (throw 7) on address %06o", virt_addr);
 
@@ -485,7 +485,6 @@ uint32_t mmu::calculate_physical_address(cpu *const c, const int run_mode, const
 		uint16_t p_offset = a & 8191;  // page offset
 
 		m_offset  = get_physical_memory_offset(run_mode, d, apf);
-
 		m_offset += p_offset;
 
 		if ((getMMR3() & 16) == 0)  // off is 18bit
