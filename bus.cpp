@@ -283,8 +283,8 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 		}
 		///^ registers ^///
 
-		if (!peek_only) {
-			if ((a & 1) && word_mode == wm_word) [[unlikely]] {
+		if ((a & 1) && word_mode == wm_word) [[unlikely]] {
+			if (!peek_only) {
 				TRACE("READ-I/O odd address %06o UNHANDLED", a);
 				mmu_->trap_if_odd(addr_in, run_mode, space, false);
 				throw 0;
@@ -508,11 +508,13 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 		return -1;
 	}
 
-	if (peek_only == false && word_mode == wm_word && (addr_in & 1)) {
-		TRACE("READ from %06o - odd address!", addr_in);
-		mmu_->trap_if_odd(addr_in, run_mode, space, false);
-		throw 2;
-		return 0;
+	if ((addr_in & 1) && word_mode == wm_word) {
+		if (peek_only == false) {
+			TRACE("READ from %06o - odd address!", addr_in);
+			mmu_->trap_if_odd(addr_in, run_mode, space, false);
+			throw 2;
+			return 0;
+		}
 	}
 
 	if (m_offset >= m->get_memory_size()) {
