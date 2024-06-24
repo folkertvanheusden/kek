@@ -143,7 +143,7 @@ void cpu::reset()
 	init_interrupt_queue();
 }
 
-uint16_t cpu::get_register(const int nr, const rm_selection_t mode_selection) const
+uint16_t cpu::get_register(const int nr) const
 {
 	if (nr < 6) {
 		int set = get_register_set();
@@ -151,31 +151,23 @@ uint16_t cpu::get_register(const int nr, const rm_selection_t mode_selection) co
 		return regs0_5[set][nr];
 	}
 
-	if (nr == 6) {
-		if (mode_selection == rm_prev)
-			return sp[getPSW_prev_runmode()];
-
+	if (nr == 6)
 		return sp[getPSW_runmode()];
-	}
 
 	assert(nr == 7);
 
 	return pc;
 }
 
-void cpu::set_register(const int nr, const uint16_t value, const rm_selection_t mode_selection)
+void cpu::set_register(const int nr, const uint16_t value)
 {
 	if (nr < 6) {
 		int set = get_register_set();
 
 		regs0_5[set][nr] = value;
 	}
-	else if (nr == 6) {
-		if (mode_selection == rm_prev)
-			sp[getPSW_prev_runmode()] = value;
-		else
-			sp[getPSW_runmode()] = value;
-	}
+	else if (nr == 6)
+		sp[getPSW_runmode()] = value;
 	else {
 		assert(nr == 7);
 		pc = value;
@@ -491,22 +483,22 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t wo
 	switch(mode) {
 		case 0:  // Rn
 			g.reg   = reg;
-			g.value = get_register(reg, rm_cur) & (word_mode == wm_byte ? 0xff : 0xffff);
+			g.value = get_register(reg) & (word_mode == wm_byte ? 0xff : 0xffff);
 			break;
 		case 1:  // (Rn)
-			g.addr  = get_register(reg, rm_cur);
+			g.addr  = get_register(reg);
 			if (read_value)
 				g.value = b->read(g.addr.value(), word_mode, rm_cur, isR7_space);
 			break;
 		case 2:  // (Rn)+  /  #n
-			g.addr  = get_register(reg, rm_cur);
+			g.addr  = get_register(reg);
 			if (read_value)
 				g.value = b->read(g.addr.value(), word_mode, rm_cur, isR7_space);
 			addRegister(reg, rm_cur, word_mode == wm_word || reg == 7 || reg == 6 ? 2 : 1);
 			g.mmr1_update = { word_mode == wm_word || reg == 7 || reg == 6 ? 2 : 1, reg };
 			break;
 		case 3:  // @(Rn)+  /  @#a
-			g.addr  = b->read(get_register(reg, rm_cur), wm_word, rm_cur, isR7_space);
+			g.addr  = b->read(get_register(reg), wm_word, rm_cur, isR7_space);
 			// might be wrong: the adds should happen when the read is really performed, because of traps
 			addRegister(reg, rm_cur, 2);
 			g.mmr1_update = { 2, reg };
@@ -518,14 +510,14 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t wo
 			addRegister(reg, rm_cur, word_mode == wm_word || reg == 7 || reg == 6 ? -2 : -1);
 			g.mmr1_update = { word_mode == wm_word || reg == 7 || reg == 6 ? -2 : -1, reg };
 			g.space = d_space;
-			g.addr  = get_register(reg, rm_cur);
+			g.addr  = get_register(reg);
 			if (read_value)
 				g.value = b->read(g.addr.value(), word_mode, rm_cur, isR7_space);
 			break;
 		case 5:  // @-(Rn)
 			addRegister(reg, rm_cur, -2);
 			g.mmr1_update = { -2, reg };
-			g.addr  = b->read(get_register(reg, rm_cur), wm_word, rm_cur, isR7_space);
+			g.addr  = b->read(get_register(reg), wm_word, rm_cur, isR7_space);
 			g.space = d_space;
 			if (read_value)
 				g.value = b->read(g.addr.value(), word_mode, rm_cur, g.space);
@@ -533,7 +525,7 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t wo
 		case 6:  // x(Rn)  /  a
 			next_word = b->read(getPC(), wm_word, rm_cur, i_space);
 			addRegister(7, rm_cur, + 2);
-			g.addr  = get_register(reg, rm_cur) + next_word;
+			g.addr  = get_register(reg) + next_word;
 			g.space = d_space;
 			if (read_value)
 				g.value = b->read(g.addr.value(), word_mode, rm_cur, g.space);
@@ -541,7 +533,7 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t wo
 		case 7:  // @x(Rn)  /  @a
 			next_word = b->read(getPC(), wm_word, rm_cur, i_space);
 			addRegister(7, rm_cur, + 2);
-			g.addr  = b->read(get_register(reg, rm_cur) + next_word, wm_word, rm_cur, d_space);
+			g.addr  = b->read(get_register(reg) + next_word, wm_word, rm_cur, d_space);
 			g.space = d_space;
 			if (read_value)
 				g.value = b->read(g.addr.value(), word_mode, rm_cur, g.space);
@@ -563,7 +555,13 @@ bool cpu::putGAM(const gam_rc_t & g, const uint16_t value)
 		return rc.is_psw == false;
 	}
 
-	set_register(g.reg.value(), value, g.mode_selection);
+	if (g.mode_selection == rm_prev) {
+		assert(g.reg.value() == 6);
+		sp[getPSW_prev_runmode()] = value;
+	}
+	else {
+		set_register(g.reg.value(), value);
+	}
 
 	return true;
 }
@@ -1419,8 +1417,12 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					 // always words: word_mode-bit is to select between MFPI and MFPD
 					 uint16_t v = 0xffff;
 
-					 if (dst_mode == 0)
-						 v = get_register(dst_reg, rm_prev);
+					 if (dst_mode == 0) {
+						 if (dst_reg == 6)
+							v = sp[getPSW_prev_runmode()];
+						 else
+							v = get_register(dst_reg);
+					 }
 					 else {
 						 // calculate address in current address space
 						auto a = getGAMAddress(dst_mode, dst_reg, wm_word);
@@ -1444,8 +1446,12 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					 uint16_t v             = popStack();
 					 bool     set_flags     = true;
 
-					 if (dst_mode == 0)
-						set_register(dst_reg, v, rm_prev);
+					 if (dst_mode == 0) {
+						if (dst_reg == 6)
+							sp[getPSW_prev_runmode()] = v;
+						else
+							set_register(dst_reg, v);
+					 }
 					 else {
 						auto a = getGAMAddress(dst_mode, dst_reg, wm_word);
 						addToMMR1(a);
