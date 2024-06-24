@@ -633,13 +633,13 @@ int main(int argc, char *argv[])
 		if (bic_start.has_value() == false)
 			return 1;  // fail
 
-		b->getCpu()->setRegister(7, bic_start.value());
+		b->getCpu()->set_register(7, bic_start.value());
 	}
 
 	if (sa_set)
-		b->getCpu()->setRegister(7, start_addr);
+		b->getCpu()->set_register(7, start_addr);
 
-	DOLOG(info, true, "Start running at %06o", b->getCpu()->getRegister(7));
+	DOLOG(info, true, "Start running at %06o", b->getCpu()->get_register(7));
 
 #if !defined(_WIN32)
 	struct sigaction sa { };

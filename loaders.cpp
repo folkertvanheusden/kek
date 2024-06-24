@@ -156,7 +156,7 @@ void set_boot_loader(bus *const b, const bootloader_t which)
 	for(uint16_t i=0; i<size; i++)
 		b->write_word(uint16_t(offset + i * 2), bl[i]);
 
-	c->setRegister(7, start);
+	c->set_register(7, start);
 }
 
 std::optional<uint16_t> load_tape(bus *const b, const std::string & file)
@@ -291,5 +291,5 @@ void load_p11_x11(bus *const b, const std::string & file)
 	fclose(fh);
 
 	cpu *const c      = b->getCpu();
-	c->setRegister(7, 0);
+	c->set_register(7, 0);
 }

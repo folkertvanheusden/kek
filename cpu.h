@@ -181,8 +181,8 @@ public:
 	uint16_t getStackPointer(const int which) const { assert(which >= 0 && which < 4); return sp[which]; }
 	uint16_t getPC() const { return pc; }
 
-	void setRegister(const int nr, const uint16_t value, const rm_selection_t mode_selection = rm_cur);
-	void setRegisterLowByte(const int nr, const word_mode_t word_mode, const uint16_t value);
+	void set_register(const int nr, const uint16_t value, const rm_selection_t mode_selection = rm_cur);
+	void set_registerLowByte(const int nr, const word_mode_t word_mode, const uint16_t value);
 	// used by 'main' for json-validation
 	void lowlevel_register_set(const uint8_t set, const uint8_t reg, const uint16_t value);
 	void lowlevel_register_sp_set(const uint8_t set, const uint16_t value);
@@ -193,7 +193,7 @@ public:
 	void setStackPointer(const int which, const uint16_t value) { assert(which >= 0 && which < 4); sp[which] = value; }
 	void setPC(const uint16_t value) { pc = value; }
 
-	uint16_t getRegister(const int nr, const rm_selection_t mode_selection = rm_cur) const;
+	uint16_t get_register(const int nr, const rm_selection_t mode_selection = rm_cur) const;
 
 	bool put_result(const gam_rc_t & g, const uint16_t value);
 };

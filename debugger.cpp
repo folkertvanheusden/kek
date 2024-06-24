@@ -1310,7 +1310,7 @@ void run_bic(console *const cnsl, bus *const b, std::atomic_uint32_t *const stop
 {
 	cpu *const c = b->getCpu();
 
-	c->setRegister(7, start_addr);
+	c->set_register(7, start_addr);
 
 	*cnsl->get_running_flag() = true;
 

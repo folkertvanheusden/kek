@@ -260,12 +260,12 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 
 		//// REGISTERS ////
 		if (a >= ADDR_KERNEL_R && a <= ADDR_KERNEL_R + 5) { // kernel R0-R5
-			uint16_t temp = c->getRegister(a - ADDR_KERNEL_R) & (word_mode == wm_byte ? 0xff : 0xffff);
+			uint16_t temp = c->get_register(a - ADDR_KERNEL_R) & (word_mode == wm_byte ? 0xff : 0xffff);
 			TRACE("READ-I/O kernel R%d: %06o", a - ADDR_KERNEL_R, temp);
 			return temp;
 		}
 		if (a >= ADDR_USER_R && a <= ADDR_USER_R + 5) { // user R0-R5
-			uint16_t temp = c->getRegister(a - ADDR_USER_R) & (word_mode == wm_byte ? 0xff : 0xffff);
+			uint16_t temp = c->get_register(a - ADDR_USER_R) & (word_mode == wm_byte ? 0xff : 0xffff);
 			TRACE("READ-I/O user R%d: %06o", a - ADDR_USER_R, temp);
 			return temp;
 		}
@@ -628,13 +628,13 @@ write_rc_t bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint1
 			if (a >= ADDR_KERNEL_R && a <= ADDR_KERNEL_R + 5) { // kernel R0-R5
 				int reg = a - ADDR_KERNEL_R;
 				TRACE("WRITE-I/O kernel R%d: %06o", reg, value);
-				c->setRegister(reg, value);
+				c->set_register(reg, value);
 				return { false };
 			}
 			if (a >= ADDR_USER_R && a <= ADDR_USER_R + 5) { // user R0-R5
 				int reg = a - ADDR_USER_R;
 				TRACE("WRITE-I/O user R%d: %06o", reg, value);
-				c->setRegister(reg, value);
+				c->set_register(reg, value);
 				return { false };
 			}
 			if (a == ADDR_KERNEL_SP) { // kernel SP
