@@ -87,7 +87,7 @@ private:
 
 	void     addToMMR1(const gam_rc_t & g);
 
-	gam_rc_t getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t word_mode, const rm_selection_t mode_selection, const bool read_value = true);
+	gam_rc_t getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t word_mode, const bool read_value = true);
 	gam_rc_t getGAMAddress(const uint8_t mode, const int reg, const word_mode_t word_mode);
 	bool     putGAM(const gam_rc_t & g, const uint16_t value); // returns false when flag registers should not be updated
 
