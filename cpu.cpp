@@ -606,7 +606,7 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 				    if (word_mode == wm_byte && dst_mode == 0)
 					    setRegister(dst_reg, int8_t(g_src.value.value()));  // int8_t: sign extension
 				    else {
-					    auto g_dst = getGAM(dst_mode, dst_reg, word_mode, rm_cur, false);
+					    auto g_dst = getGAMAddress(dst_mode, dst_reg, word_mode);
 					    addToMMR1(g_dst);
 
 					    set_flags = putGAM(g_dst, g_src.value.value());
@@ -1017,7 +1017,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						  set_flags = true;
 					  }
 					  else {
-						  auto g_dst = getGAM(dst_mode, dst_reg, word_mode, rm_cur, false);
+						  auto g_dst = getGAMAddress(dst_mode, dst_reg, word_mode);
 						  addToMMR1(g_dst);
 
 						  set_flags = putGAM(g_dst, 0);
