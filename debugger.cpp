@@ -431,6 +431,8 @@ void configure_disk(bus *const b, console *const cnsl)
 int disassemble(cpu *const c, console *const cnsl, const uint16_t pc, const bool instruction_only)
 {
 	auto data      = c->disassemble(pc);
+	if (data.empty())
+		return 2;  // problem!
 
 	auto registers = data["registers"];
 	auto psw       = data["psw"][0];
@@ -933,11 +935,20 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 					for(int i=0; i<n; i++) {
 						uint32_t cur_addr = addr + i * 2;
-						int val = parts[2] == "v" ? b->peek_word(c->getPSW_runmode(), cur_addr) : b->read_physical(cur_addr);
+						uint16_t val      = 0;
 
-						if (val == -1) {
-							cnsl->put_string_lf(format("Can't read from %06o\n", cur_addr));
-							break;
+						if (parts[2] == "v") {
+							auto v = b->peek_word(c->getPSW_runmode(), cur_addr);
+
+							if (v.has_value() == false) {
+								cnsl->put_string_lf(format("Can't read from %06o\n", cur_addr));
+								break;
+							}
+
+							val = v.value();
+						}
+						else {
+							val = b->read_physical(cur_addr);
 						}
 
 						if (n == 1)

@@ -22,10 +22,16 @@ std::optional<std::string> breakpoint_memory::is_triggered() const
 {
 	uint16_t v  = 0;
 
-	if (is_virtual)
-		v = b->peek_word(rm_cur, addr);  // FIXME rm_cur
-	else
+	if (is_virtual) {
+		auto temp = b->peek_word(rm_cur, addr);  // FIXME rm_cur
+		if (temp.has_value() == false)
+			return { };
+
+		v = temp.value();
+	}
+	else {
 		v = b->read_physical(addr);
+	}
 
 	auto     it = values.find(v);
 	if (it == values.end())

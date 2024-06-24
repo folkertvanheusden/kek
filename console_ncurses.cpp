@@ -148,7 +148,7 @@ void console_ncurses::panel_update_thread()
 			uint16_t current_PC    = c->getPC();
 			memory_addresses_t rc  = b->getMMU()->calculate_physical_address(run_mode, current_PC);
 
-			uint16_t current_instr = b->peek_word(run_mode, current_PC);
+			auto     current_instr = b->peek_word(run_mode, current_PC);
 
 			auto data = c->disassemble(current_PC);
 
@@ -167,8 +167,14 @@ void console_ncurses::panel_update_thread()
 			for(uint8_t b=0; b<16; b++)
 				mvwprintw(w_panel->win, 1, 1 + 16 - b,      "%c", current_PSW   & (1 << b) ? '1' : '0');
 
-			for(uint8_t b=0; b<16; b++)
-				mvwprintw(w_panel->win, 1, 1 + 16 - b + 17, "%c", current_instr & (1 << b) ? '1' : '0');
+			if (current_instr.has_value()) {
+				for(uint8_t b=0; b<16; b++)
+					mvwprintw(w_panel->win, 1, 1 + 16 - b + 17, "%c", current_instr.value() & (1 << b) ? '1' : '0');
+			}
+			else {
+				for(uint8_t b=0; b<16; b++)
+					mvwprintw(w_panel->win, 1, 1 + 16 - b + 17, "-");
+			}
 
 			mvwprintw(w_panel->win, 4, 1, "LEDs:");
 

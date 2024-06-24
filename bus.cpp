@@ -854,13 +854,13 @@ uint16_t bus::read_word(const uint16_t a, const d_i_space_t s)
 	return read(a, wm_word, rm_cur, s);
 }
 
-uint16_t bus::peek_word(const int run_mode, const uint16_t a)
+std::optional<uint16_t> bus::peek_word(const int run_mode, const uint16_t a)
 {
 	auto meta = mmu_->calculate_physical_address(run_mode, a);
 
 	uint32_t io_base  = mmu_->get_io_base();
-	if (meta.physical_instruction >= io_base)  // TODO: I/O always returns 0xffff
-		return 0xffff;
+	if (meta.physical_instruction >= io_base)
+		return { };
 
 	return m->read_word(meta.physical_instruction);
 }
@@ -882,7 +882,6 @@ uint8_t bus::read_unibus_byte(const uint32_t a)
 void bus::write_unibus_byte(const uint32_t a, const uint8_t v)
 {
 	TRACE("write_unibus_byte[%08o]=%03o", a, v);
-
 	if (a < m->get_memory_size())
 		m->write_byte(a, v);
 }

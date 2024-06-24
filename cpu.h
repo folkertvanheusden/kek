@@ -105,7 +105,7 @@ private:
 		uint16_t    work_value;
 	};
 
-	operand_parameters addressing_to_string(const uint8_t mode_register, const uint16_t pc, const word_mode_t word_mode) const;
+	std::optional<operand_parameters> addressing_to_string(const uint8_t mode_register, const uint16_t pc, const word_mode_t word_mode) const;
 
 	void add_to_stack_trace(const uint16_t p);
 	void pop_from_stack_trace();
