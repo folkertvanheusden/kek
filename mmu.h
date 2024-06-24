@@ -82,7 +82,7 @@ public:
 	void     show_state(console *const cnsl) const override;
 
 	bool     is_enabled() const { return MMR0 & 1; }
-	bool     is_locked()  const { return !!(MMR0 & 0160000); }
+	bool     is_locked()  const { return MMR0 & 0160000; }
 
 	void     set_page_trapped   (const int run_mode, const bool d, const int apf) { pages[run_mode][d][apf].pdr |= 1 << 7; }
 	void     set_page_written_to(const int run_mode, const bool d, const int apf) { pages[run_mode][d][apf].pdr |= 1 << 6; }
