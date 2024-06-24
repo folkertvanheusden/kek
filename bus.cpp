@@ -545,7 +545,7 @@ bool bus::is_psw(const uint16_t addr, const int run_mode, const d_i_space_t spac
 	return false;
 }
 
-write_rc_t bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t value, const rm_selection_t mode_selection, const d_i_space_t space)
+bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t value, const rm_selection_t mode_selection, const d_i_space_t space)
 {
 	int           run_mode = mode_selection == rm_cur ? c->getPSW_runmode() : c->getPSW_prev_runmode();
 
@@ -577,7 +577,7 @@ write_rc_t bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint1
 
 				c->setPSW(vtemp, false);
 
-				return { true };
+				return true;
 			}
 
 			if (a == ADDR_STACKLIM || a == ADDR_STACKLIM + 1) { // stack limit register
@@ -591,7 +591,7 @@ write_rc_t bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint1
 
 				c->setStackLimitRegister(v);
 
-				return { false };
+				return false;
 			}
 
 			if (a == ADDR_MICROPROG_BREAK_REG || a == ADDR_MICROPROG_BREAK_REG + 1) {  // microprogram break register
@@ -599,7 +599,7 @@ write_rc_t bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint1
 
 				update_word(&microprogram_break_register, a & 1, value);
 
-				return { false };
+				return false;
 			}
 
 			if (a == ADDR_MMR0 || a == ADDR_MMR0 + 1) { // MMR0
@@ -609,7 +609,7 @@ write_rc_t bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint1
 				update_word(&temp, a & 1, value);
 				mmu_->setMMR0(temp);
 
-				return { false };
+				return false;
 			}
 		}
 		else {
@@ -622,65 +622,65 @@ write_rc_t bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint1
 			if (a == ADDR_STACKLIM) { // stack limit register
 				TRACE("WRITE-I/O stack limit register: %06o", value);
 				c->setStackLimitRegister(value & 0xff00);
-				return { false };
+				return false;
 			}
 
 			if (a >= ADDR_KERNEL_R && a <= ADDR_KERNEL_R + 5) { // kernel R0-R5
 				int reg = a - ADDR_KERNEL_R;
 				TRACE("WRITE-I/O kernel R%d: %06o", reg, value);
 				c->set_register(reg, value);
-				return { false };
+				return false;
 			}
 			if (a >= ADDR_USER_R && a <= ADDR_USER_R + 5) { // user R0-R5
 				int reg = a - ADDR_USER_R;
 				TRACE("WRITE-I/O user R%d: %06o", reg, value);
 				c->set_register(reg, value);
-				return { false };
+				return false;
 			}
 			if (a == ADDR_KERNEL_SP) { // kernel SP
 				TRACE("WRITE-I/O kernel SP: %06o", value);
 				c->setStackPointer(0, value);
-				return { false };
+				return false;
 			}
 			if (a == ADDR_PC) { // PC
 				TRACE("WRITE-I/O PC: %06o", value);
 				c->setPC(value);
-				return { false };
+				return false;
 			}
 			if (a == ADDR_SV_SP) { // supervisor SP
 				TRACE("WRITE-I/O supervisor sp: %06o", value);
 				c->setStackPointer(1, value);
-				return { false };
+				return false;
 			}
 			if (a == ADDR_USER_SP) { // user SP
 				TRACE("WRITE-I/O user sp: %06o", value);
 				c->setStackPointer(3, value);
-				return { false };
+				return false;
 			}
 
 			if (a == ADDR_MICROPROG_BREAK_REG) {  // microprogram break register
 				TRACE("WRITE-I/O microprogram break register: %06o", value);
 				microprogram_break_register = value & 0xff; // only 8b on 11/70?
-				return { false };
+				return false;
 			}
 		}
 
 		if (a == ADDR_CPU_ERR) { // cpu error register
 			TRACE("WRITE-I/O CPUERR: %06o", value);
 			mmu_->setCPUERR(0);
-			return { false };
+			return false;
 		}
 
 		if (a == ADDR_MMR3) { // MMR3
 			TRACE("WRITE-I/O set MMR3: %06o", value);
 			mmu_->setMMR3(value);
-			return { false };
+			return false;
 		}
 
 		if (a == ADDR_MMR0) { // MMR0
 			TRACE("WRITE-I/O set MMR0: %06o", value);
 			mmu_->setMMR0(value);
-			return { false };
+			return false;
 		}
 
 		if (a == ADDR_PIR) { // PIR
@@ -697,52 +697,52 @@ write_rc_t bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint1
 
 			mmu_->setPIR(value);
 
-			return { false };
+			return false;
 		}
 
 		if (a == ADDR_LFC) { // line frequency clock and status register
 			kw11_l_->write_word(a, value);
 
-			return { false };
+			return false;
 		}
 
 		if (tm11 && a >= TM_11_BASE && a < TM_11_END) {
 			TRACE("WRITE-I/O TM11 register %d: %06o", (a - TM_11_BASE) / 2, value);
 			word_mode == wm_byte ? tm11->write_byte(a, value) : tm11->write_word(a, value);
-			return { false };
+			return false;
 		}
 
 		if (rk05_ && a >= RK05_BASE && a < RK05_END) {
 			TRACE("WRITE-I/O RK05 register %d: %06o", (a - RK05_BASE) / 2, value);
 			word_mode == wm_byte ? rk05_->write_byte(a, value) : rk05_->write_word(a, value);
-			return { false };
+			return false;
 		}
 
 		if (rl02_ && a >= RL02_BASE && a < RL02_END) {
 			TRACE("WRITE-I/O RL02 register %d: %06o", (a - RL02_BASE) / 2, value);
 			word_mode == wm_byte ? rl02_->write_byte(a, value) : rl02_->write_word(a, value);
-			return { false };
+			return false;
 		}
 
 		if (tty_ && a >= PDP11TTY_BASE && a < PDP11TTY_END) {
 			TRACE("WRITE-I/O TTY register %d: %06o", (a - PDP11TTY_BASE) / 2, value);
 			word_mode == wm_byte ? tty_->write_byte(a, value) : tty_->write_word(a, value);
-			return { false };
+			return false;
 		}
 
 		if (dc11_ && a >= DC11_BASE && a < DC11_END) {
 			word_mode == wm_byte ? dc11_->write_byte(a, value) : dc11_->write_word(a, value);
-			return { false };
+			return false;
 		}
 
 		if (rp06_ && a >= RP06_BASE && a < RP06_END) {
 			word_mode == wm_byte ? rp06_->write_byte(a, value) : rp06_->write_word(a, value);
-			return { false };
+			return false;
 		}
 
 		if (a >= 0172100 && a <= 0172137) {  // MM11-LP parity
 			TRACE("WRITE-I/O MM11-LP parity (%06o): %o", a, value);
-			return { false };
+			return false;
 		}
 
 		/// MMU ///
@@ -754,31 +754,31 @@ write_rc_t bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint1
 			else
 				mmu_->write_byte(a, value);
 
-			return { false };
+			return false;
 		}
 		///////////
 
 		if (a >= 0177740 && a <= 0177753) { // cache control register and others
 			// TODO
-			return { false };
+			return false;
 		}
 
 		if (a >= 0170200 && a <= 0170377) { // unibus map
 			TRACE("writing %06o to unibus map (%06o)", value, a);
 			// TODO
-			return { false };
+			return false;
 		}
 
 		if (a == ADDR_CONSW) {  // switch register
 			console_leds = value;
-			return { false };
+			return false;
 		}
 
 		if (a == ADDR_SYSSIZE || a == ADDR_SYSSIZE + 2)  // system size (is read-only)
-			return { false };
+			return false;
 
 		if (a == ADDR_SYSTEM_ID)  // is r/o
-			return { false };
+			return false;
 
 		///////////
 
@@ -817,7 +817,7 @@ write_rc_t bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint1
 	else
 		m->write_word(m_offset, value);
 
-	return { false };
+	return false;
 }
 
 void bus::write_physical(const uint32_t a, const uint16_t value)
