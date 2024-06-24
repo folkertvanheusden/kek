@@ -346,12 +346,9 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 		}
 
 		/// MMU ///
-		if ((a >= ADDR_PDR_SV_START && a < ADDR_PDR_SV_END) ||
-				(a >= ADDR_PAR_SV_START && a < ADDR_PAR_SV_END) ||
-				(a >= ADDR_PDR_K_START && a < ADDR_PDR_K_END) ||
-				(a >= ADDR_PAR_K_START && a < ADDR_PAR_K_END) ||
-				(a >= ADDR_PDR_U_START && a < ADDR_PDR_U_END) ||
-				(a >= ADDR_PAR_U_START && a < ADDR_PAR_U_END)) {
+		if ((a >= ADDR_PDR_SV_START && a < ADDR_PAR_SV_END) ||
+				(a >= ADDR_PDR_K_START && a < ADDR_PAR_K_END) ||
+				(a >= ADDR_PDR_U_START && a < ADDR_PAR_U_END)) {
 			if (word_mode == wm_word)
 				return mmu_->read_word(a);
 
@@ -749,13 +746,9 @@ write_rc_t bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint1
 		}
 
 		/// MMU ///
-		// supervisor
-		if ((a >= ADDR_PDR_SV_START && a < ADDR_PDR_SV_END) ||
-				(a >= ADDR_PAR_SV_START && a < ADDR_PAR_SV_END) ||
-				(a >= ADDR_PDR_K_START && a < ADDR_PDR_K_END) ||
-				(a >= ADDR_PAR_K_START && a < ADDR_PAR_K_END) ||
-				(a >= ADDR_PDR_U_START && a < ADDR_PDR_U_END) ||
-				(a >= ADDR_PAR_U_START && a < ADDR_PAR_U_END)) {
+		if ((a >= ADDR_PDR_SV_START && a < ADDR_PAR_SV_END) ||
+				(a >= ADDR_PDR_K_START && a < ADDR_PAR_K_END) ||
+				(a >= ADDR_PDR_U_START && a < ADDR_PAR_U_END)) {
 			if (word_mode == wm_word)
 				mmu_->write_word(a, value);
 			else
@@ -763,6 +756,7 @@ write_rc_t bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint1
 
 			return { false };
 		}
+		///////////
 
 		if (a >= 0177740 && a <= 0177753) { // cache control register and others
 			// TODO
