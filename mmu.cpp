@@ -140,7 +140,7 @@ bool mmu::get_use_data_space(const int run_mode) const
 {
 	constexpr const int di_ena_mask[4] = { 4, 2, 0, 1 };
 
-	return !!(MMR3 & di_ena_mask[run_mode]);
+	return MMR3 & di_ena_mask[run_mode];
 }
 
 void mmu::clearMMR1()
