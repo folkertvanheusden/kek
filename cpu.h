@@ -83,7 +83,7 @@ private:
 	bool     check_pending_interrupts() const;  // needs the 'qi_lock'-lock
 	bool     execute_any_pending_interrupt();
 
-	uint16_t addRegister(const int nr, const rm_selection_t mode_selection, const uint16_t value);
+	uint16_t add_register(const int nr, const uint16_t value);
 
 	void     addToMMR1(const gam_rc_t & g);
 

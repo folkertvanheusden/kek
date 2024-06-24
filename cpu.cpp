@@ -202,17 +202,13 @@ bool cpu::put_result(const gam_rc_t & g, const uint16_t value)
 	return b->write(g.addr.value(), g.word_mode, value, g.mode_selection, g.space).is_psw == false;
 }
 
-uint16_t cpu::addRegister(const int nr, const rm_selection_t mode_selection, const uint16_t value)
+uint16_t cpu::add_register(const int nr, const uint16_t value)
 {
 	if (nr < 6)
 		return regs0_5[get_register_set()][nr] += value;
 
-	if (nr == 6) {
-		if (mode_selection == rm_prev)
-			return sp[getPSW_prev_runmode()] += value;
-
+	if (nr == 6)
 		return sp[getPSW_runmode()] += value;
-	}
 
 	assert(nr == 7);
 
@@ -494,20 +490,20 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t wo
 			g.addr  = get_register(reg);
 			if (read_value)
 				g.value = b->read(g.addr.value(), word_mode, rm_cur, isR7_space);
-			addRegister(reg, rm_cur, word_mode == wm_word || reg == 7 || reg == 6 ? 2 : 1);
+			add_register(reg, word_mode == wm_word || reg == 7 || reg == 6 ? 2 : 1);
 			g.mmr1_update = { word_mode == wm_word || reg == 7 || reg == 6 ? 2 : 1, reg };
 			break;
 		case 3:  // @(Rn)+  /  @#a
 			g.addr  = b->read(get_register(reg), wm_word, rm_cur, isR7_space);
 			// might be wrong: the adds should happen when the read is really performed, because of traps
-			addRegister(reg, rm_cur, 2);
+			add_register(reg, 2);
 			g.mmr1_update = { 2, reg };
 			g.space = d_space;
 			if (read_value)
 				g.value = b->read(g.addr.value(), word_mode, rm_cur, g.space);
 			break;
 		case 4:  // -(Rn)
-			addRegister(reg, rm_cur, word_mode == wm_word || reg == 7 || reg == 6 ? -2 : -1);
+			add_register(reg, word_mode == wm_word || reg == 7 || reg == 6 ? -2 : -1);
 			g.mmr1_update = { word_mode == wm_word || reg == 7 || reg == 6 ? -2 : -1, reg };
 			g.space = d_space;
 			g.addr  = get_register(reg);
@@ -515,7 +511,7 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t wo
 				g.value = b->read(g.addr.value(), word_mode, rm_cur, isR7_space);
 			break;
 		case 5:  // @-(Rn)
-			addRegister(reg, rm_cur, -2);
+			add_register(reg, -2);
 			g.mmr1_update = { -2, reg };
 			g.addr  = b->read(get_register(reg), wm_word, rm_cur, isR7_space);
 			g.space = d_space;
@@ -524,7 +520,7 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t wo
 			break;
 		case 6:  // x(Rn)  /  a
 			next_word = b->read(getPC(), wm_word, rm_cur, i_space);
-			addRegister(7, rm_cur, + 2);
+			add_register(7, + 2);
 			g.addr  = get_register(reg) + next_word;
 			g.space = d_space;
 			if (read_value)
@@ -532,7 +528,7 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t wo
 			break;
 		case 7:  // @x(Rn)  /  @a
 			next_word = b->read(getPC(), wm_word, rm_cur, i_space);
-			addRegister(7, rm_cur, + 2);
+			add_register(7, + 2);
 			g.addr  = b->read(get_register(reg) + next_word, wm_word, rm_cur, d_space);
 			g.space = d_space;
 			if (read_value)
@@ -961,7 +957,7 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 			}
 
 		case 7: { // SOB
-				if (addRegister(reg, rm_cur, -1)) {
+				if (add_register(reg, -1)) {
 					uint16_t newPC = getPC() - dst * 2;
 
 					setPC(newPC);
@@ -1603,7 +1599,7 @@ bool cpu::conditional_branch_instructions(const uint16_t instr)
 	}
 
 	if (take)
-		addRegister(7, rm_cur, offset * 2);
+		add_register(7, offset * 2);
 
 	return true;
 }
@@ -1655,7 +1651,7 @@ void cpu::pushStack(const uint16_t v)
 		trap(04, 7);
 	}
 	else {
-		uint16_t a = addRegister(6, rm_cur, -2);
+		uint16_t a = add_register(6, -2);
 
 		b->write_word(a, v, d_space);
 	}
@@ -1666,7 +1662,7 @@ uint16_t cpu::popStack()
 	uint16_t a    = get_register(6);
 	uint16_t temp = b->read_word(a, d_space);
 
-	addRegister(6, rm_cur, 2);
+	add_register(6, 2);
 
 	return temp;
 }
@@ -1812,7 +1808,7 @@ bool cpu::misc_operations(const uint16_t instr)
 
 		// do not overwrite SP when it was just set
 		if (link_reg != 6)
-			addRegister(6, rm_cur, 2);
+			add_register(6, 2);
 
 		return true;
 	}
@@ -2416,7 +2412,7 @@ void cpu::step()
 
 		uint16_t instr = b->read_word(instruction_start);
 
-		addRegister(7, rm_cur, 2);
+		add_register(7, 2);
 
 		if (double_operand_instructions(instr))
 			return;
