@@ -1911,6 +1911,7 @@ std::optional<cpu::operand_parameters> cpu::addressing_to_string(const uint8_t m
 	uint16_t    mask      = word_mode == wm_byte ? 0xff : 0xffff;
 
 	std::optional<uint16_t> temp2;
+	bool        valid     = true;
 
 	std::string reg_name;
 	if (reg == 6)
@@ -1922,99 +1923,103 @@ std::optional<cpu::operand_parameters> cpu::addressing_to_string(const uint8_t m
 
 	switch(mode_register >> 3) {
 		case 0:
-			return { { reg_name, 2, -1, uint16_t(get_register(reg) & mask) } };
+			return { { reg_name, 2, -1, uint16_t(get_register(reg) & mask), true } };
 
 		case 1:
 			temp2 = b->peek_word(run_mode, get_register(reg));
 			if (temp2.has_value() == false)
-				return { };
+				temp2 = 0xffff, valid = false;
 
-			return { { format("(%s)", reg_name.c_str()), 2, -1, uint16_t(temp2.value() & mask) } };
+			return { { format("(%s)", reg_name.c_str()), 2, -1, uint16_t(temp2.value() & mask), valid } };
 
 		case 2:
 			if (reg == 7)
-				return { { format("#%06o", next_word), 4, int(next_word), uint16_t(next_word & mask) } };
+				return { { format("#%06o", next_word), 4, int(next_word), uint16_t(next_word & mask), true } };
 
 			temp2 = b->peek_word(run_mode, get_register(reg));
 			if (temp2.has_value() == false)
-				return { };
+				temp2 = 0xffff, valid = false;
 
-			return { { format("(%s)+", reg_name.c_str()), 2, -1, uint16_t(temp2.value() & mask) } };
+			return { { format("(%s)+", reg_name.c_str()), 2, -1, uint16_t(temp2.value() & mask), valid } };
 
 		case 3:
 			if (reg == 7) {
 				temp2 = b->peek_word(run_mode, next_word);
 				if (temp2.has_value() == false)
-					return { };
+					temp2 = 0xffff, valid = false;
 
-				return { { format("@#%06o", next_word), 4, int(next_word), uint16_t(temp2.value() & mask) } };
+				return { { format("@#%06o", next_word), 4, int(next_word), uint16_t(temp2.value() & mask), valid } };
 			}
 
 			temp2 = b->peek_word(run_mode, get_register(reg));
 			if (temp2.has_value() == false)
-				return { };
+				temp2 = 0xffff, valid = false;
+			else {
+				temp2 = b->peek_word(run_mode, temp2.value());
+				if (temp2.has_value() == false)
+					temp2 = 0xffff, valid = false;
+			}
 
-			temp2 = b->peek_word(run_mode, temp2.value());
-			if (temp2.has_value() == false)
-				return { };
-
-			return { { format("@(%s)+", reg_name.c_str()), 2, -1, uint16_t(temp2.value() & mask) } };
+			return { { format("@(%s)+", reg_name.c_str()), 2, -1, uint16_t(temp2.value() & mask), valid } };
 
 		case 4:
 			temp2 = b->peek_word(run_mode, get_register(reg) - (word_mode == wm_word || reg >= 6 ? 2 : 1));
 			if (temp2.has_value() == false)
-				return { };
+				temp2 = 0xffff, valid = false;
 
-			return { { format("-(%s)", reg_name.c_str()), 2, -1, uint16_t(temp2.value() & mask) } };
+			return { { format("-(%s)", reg_name.c_str()), 2, -1, uint16_t(temp2.value() & mask), valid } };
 
 		case 5:
 			temp2 = b->peek_word(run_mode, get_register(reg) - 2);
 			if (temp2.has_value() == false)
-				return { };
+				temp2 = 0xffff, valid = false;
+			else {
+				temp2 = b->peek_word(run_mode, temp2.value());
+				if (temp2.has_value() == false)
+					temp2 = 0xffff, valid = false;
+			}
 
-			temp2 = b->peek_word(run_mode, temp2.value());
-			if (temp2.has_value() == false)
-				return { };
-
-			return { { format("@-(%s)", reg_name.c_str()), 2, -1, uint16_t(temp2.value() & mask) } };
+			return { { format("@-(%s)", reg_name.c_str()), 2, -1, uint16_t(temp2.value() & mask), valid } };
 
 		case 6:
 			if (reg == 7) {
 				temp2 = b->peek_word(run_mode, get_register(reg) + next_word);
 				if (temp2.has_value() == false)
-					return { };
+					temp2 = 0xffff, valid = false;
 
-				return { { format("%06o", (pc + next_word + 2) & 65535), 4, int(next_word), uint16_t(temp2.value() & mask) } };
+				return { { format("%06o", (pc + next_word + 2) & 65535), 4, int(next_word), uint16_t(temp2.value() & mask), valid } };
 			}
 
 			temp2 = b->peek_word(run_mode, get_register(reg) + next_word);
 			if (temp2.has_value() == false)
-				return { };
+				temp2 = 0xffff, valid = false;
 
-			return { { format("%o(%s)", next_word, reg_name.c_str()), 4, int(next_word), uint16_t(temp2.value() & mask) } };
+			return { { format("%o(%s)", next_word, reg_name.c_str()), 4, int(next_word), uint16_t(temp2.value() & mask), valid } };
 
 		case 7:
 			if (reg == 7) {
 				temp2 = b->peek_word(run_mode, get_register(reg) + next_word);
 				if (temp2.has_value() == false)
-					return { };
+					temp2 = 0xffff, valid = false;
+				else {
+					temp2 = b->peek_word(run_mode, temp2.value());
+					if (temp2.has_value() == false)
+						temp2 = 0xffff, valid = false;
+				}
 
-				temp2 = b->peek_word(run_mode, temp2.value());
-				if (temp2.has_value() == false)
-					return { };
-
-				return { { format("@%06o", next_word), 4, int(next_word), uint16_t(temp2.value() & mask) } };
+				return { { format("@%06o", next_word), 4, int(next_word), uint16_t(temp2.value() & mask), valid } };
 			}
 
 			temp2 = b->peek_word(run_mode, get_register(reg) + next_word);
 			if (temp2.has_value() == false)
-				return { };
+				temp2 = 0xffff, valid = false;
+			else {
+				temp2 = b->peek_word(run_mode, temp2.value());
+				if (temp2.has_value() == false)
+					temp2 = 0xffff, valid = false;
+			}
 
-			temp2 = b->peek_word(run_mode, temp2.value());
-			if (temp2.has_value() == false)
-				return { };
-
-			return { { format("@%o(%s)", next_word, reg_name.c_str()), 4, int(next_word), uint16_t(temp2.value() & mask) } };
+			return { { format("@%o(%s)", next_word, reg_name.c_str()), 4, int(next_word), uint16_t(temp2.value() & mask), valid } };
 	}
 
 	return { };
@@ -2049,8 +2054,6 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 
 	if (do_opcode == 0b000) {
 		auto addressing = addressing_to_string(dst_register, (addr + 2) & 65535, word_mode);
-		if (addressing.has_value() == false)
-			return { };
 		auto dst_text { addressing.value() };
 
 		auto next_word = dst_text.instruction_part;
@@ -2136,6 +2139,9 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 		if (text.empty() && name.empty() == false)
 			text = name + word_mode_str + space + dst_text.operand;
 
+		if (dst_text.valid == false)
+			text += " (INV)";
+
 		if (text.empty() == false && next_word != -1)
 			instruction_words.push_back(next_word);
 	}
@@ -2145,8 +2151,6 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 		else {
 			std::string src_text = format("R%d", (instruction >> 6) & 7);
 			auto        addressing = addressing_to_string(dst_register, (addr + 2) & 65535, word_mode);
-			if (addressing.has_value() == false)
-				return { };
 			auto        dst_text { addressing.value() };
 
 			auto next_word = dst_text.instruction_part;
@@ -2181,6 +2185,9 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 
 			if (text.empty() && name.empty() == false)
 				text = name + space + src_text + comma + dst_text.operand;  // TODO: swap for ASH, ASHC
+
+			if (dst_text.valid == false)
+				text += " (INV)";
 
 			if (text.empty() == false && next_word != -1)
 				instruction_words.push_back(next_word);
@@ -2218,8 +2225,6 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 
 		// source
 		auto addressing_src = addressing_to_string(src_register, (addr + 2) & 65535, word_mode);
-		if (addressing_src.has_value() == false)
-			return { };
 		auto src_text { addressing_src.value() };
 
 		auto next_word_src = src_text.instruction_part;
@@ -2230,8 +2235,6 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 
 		// destination
 		auto addressing_dst = addressing_to_string(dst_register, (addr + src_text.length) & 65535, word_mode);
-		if (addressing_dst.has_value() == false)
-			return { };
 		auto dst_text { addressing_dst.value() };
 
 		auto next_word_dst = dst_text.instruction_part;
@@ -2240,13 +2243,16 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 
 		work_values.push_back(dst_text.work_value);
 
+		if (src_text.valid == false || dst_text.valid == false)
+			text += " (INV)";
+
 		text = name + word_mode_str + space + src_text.operand + comma + dst_text.operand;
 	}
 
 	if (text.empty()) {  // conditional branch instructions
-		uint8_t  cb_opcode = (instruction >> 8) & 255;
-		int8_t   offset    = instruction & 255;
-		uint16_t new_pc    = (addr + 2 + offset * 2) & 65535;
+		uint8_t  cb_opcode = instruction >> 8;
+		int8_t   offset    = instruction;
+		uint16_t new_pc    = addr + 2 + offset * 2;
 
 		switch(cb_opcode) {
 			case 0b00000001:
@@ -2311,7 +2317,7 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 		}
 
 		if (text.empty() && name.empty() == false)
-			text = name + space + format("%06o", new_pc);
+			text = name + space + format("0%06o", new_pc);
 	}
 
 	if (text.empty()) {
@@ -2384,8 +2390,6 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 
 		if ((instruction & ~0b111111) == 0b0000000001000000) {
 			auto addressing = addressing_to_string(dst_register, (addr + 2) & 65535, word_mode);
-			if (addressing.has_value() == false)
-				return { };
 			auto dst_text { addressing.value() };
 
 			auto next_word = dst_text.instruction_part;
@@ -2395,12 +2399,13 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 			work_values.push_back(dst_text.work_value);
 
 			text = std::string("JMP ") + dst_text.operand;
+
+			if (dst_text.valid == false)
+				text += " (INV)";
 		}
 
 		if ((instruction & 0b1111111000000000) == 0b0000100000000000) {
 			auto addressing = addressing_to_string(dst_register, (addr + 2) & 65535, word_mode);
-			if (addressing.has_value() == false)
-				return { };
 			auto dst_text { addressing.value() };
 
 			auto next_word = dst_text.instruction_part;
