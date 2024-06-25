@@ -191,7 +191,7 @@ void rp06::write_word(const uint16_t addr, uint16_t v)
 					uint32_t cur_n = std::min(end_offset - cur_offset, SECTOR_SIZE);
 
 					if (function_code == 070) {
-						DOLOG(debug, false, "RP06: reading %u bytes from %u (dec) to %06o (oct)", cur_n, offs, addr);
+						DOLOG(debug, false, "RP06: reading %u bytes from %u (dec) to %06o (oct)", cur_n, cur_offset, addr);
 
 						if (!fhs.at(0)->read(cur_offset, cur_n, xfer_buffer, SECTOR_SIZE)) {
 							DOLOG(ll_error, true, "RP06 read error %s from %u", strerror(errno), cur_offset);
@@ -204,7 +204,7 @@ void rp06::write_word(const uint16_t addr, uint16_t v)
 							b->write_unibus_byte(addr++, xfer_buffer[i]);
 					}
 					else {
-						DOLOG(debug, false, "RP06: writing %u bytes to %u (dec) from %06o (oct)", cur_n, offs, addr);
+						DOLOG(debug, false, "RP06: writing %u bytes to %u (dec) from %06o (oct)", cur_n, cur_offset, addr);
 
 						for(uint32_t i=0; i<cur_n; i++)
 							xfer_buffer[i] = b->read_unibus_byte(addr++);
