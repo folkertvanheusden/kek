@@ -67,6 +67,11 @@ void kw11_l::begin(console *const cnsl)
 
 void kw11_l::reset()
 {
+#if defined(BUILD_FOR_RP2040)
+	xSemaphoreTake(lf_csr_lock, portMAX_DELAY);
+#else
+	std::unique_lock<std::mutex> lck(lf_csr_lock);
+#endif
 	lf_csr = 0;
 }
 
