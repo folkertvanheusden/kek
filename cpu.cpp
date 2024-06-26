@@ -1685,7 +1685,7 @@ bool cpu::misc_operations(const uint16_t instr)
 #else
 				std::unique_lock<std::mutex> lck(qi_lock);
 
-				if (check_pending_interrupts() == false)
+				while (check_pending_interrupts() == false)
 					qi_cv.wait(lck);
 #endif
 				uint64_t end = get_us();
