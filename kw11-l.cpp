@@ -67,6 +67,11 @@ void kw11_l::begin(console *const cnsl)
 
 void kw11_l::reset()
 {
+#if defined(BUILD_FOR_RP2040)
+	xSemaphoreTake(lf_csr_lock, portMAX_DELAY);
+#else
+	std::unique_lock<std::mutex> lck(lf_csr_lock);
+#endif
 	lf_csr = 0;
 }
 
@@ -181,6 +186,11 @@ void kw11_l::write_byte(const uint16_t addr, const uint8_t value)
 		return;
 	}
 
+#if defined(BUILD_FOR_RP2040)
+	xSemaphoreTake(lf_csr_lock, portMAX_DELAY);
+#else
+	std::unique_lock<std::mutex> lck(lf_csr_lock);
+#endif
 	uint16_t vtemp = lf_csr;
 	
 	if (addr & 1) {

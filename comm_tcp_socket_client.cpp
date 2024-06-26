@@ -157,7 +157,6 @@ void comm_tcp_socket_client::operator()()
 			DOLOG(ll_error, true, "comm_tcp_socket_client: cannot resolve \"%s\":%s: %s", host.c_str(), port_str, gai_strerror(rc));
 #endif
 
-			myusleep(101000l);
 			continue;
 		}
 
