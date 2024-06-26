@@ -146,9 +146,9 @@ void console_ncurses::panel_update_thread()
 			int      run_mode      = current_PSW >> 14;
 
 			uint16_t current_PC    = c->getPC();
-			uint32_t full_addr     = b->getMMU()->calculate_physical_address(c, run_mode, current_PC, false, false, i_space);
+			memory_addresses_t rc  = b->getMMU()->calculate_physical_address(run_mode, current_PC);
 
-			uint16_t current_instr = b->read_word(current_PC);
+			auto     current_instr = b->peek_word(run_mode, current_PC);
 
 			auto data = c->disassemble(current_PC);
 
@@ -160,15 +160,21 @@ void console_ncurses::panel_update_thread()
 			wattron(w_panel->win, COLOR_PAIR(1 + run_mode));
 
 			for(uint8_t b=0; b<22; b++)
-				mvwprintw(w_panel->win, 0, 1 + 22 - b,      "%c", full_addr     & (1 << b) ? '1' : '0');
+				mvwprintw(w_panel->win, 0, 1 + 22 - b,      "%c", rc.physical_instruction & (1 << b) ? '1' : '0');
 
 			wattron(w_panel->win, COLOR_PAIR(1));
 
 			for(uint8_t b=0; b<16; b++)
 				mvwprintw(w_panel->win, 1, 1 + 16 - b,      "%c", current_PSW   & (1 << b) ? '1' : '0');
 
-			for(uint8_t b=0; b<16; b++)
-				mvwprintw(w_panel->win, 1, 1 + 16 - b + 17, "%c", current_instr & (1 << b) ? '1' : '0');
+			if (current_instr.has_value()) {
+				for(uint8_t b=0; b<16; b++)
+					mvwprintw(w_panel->win, 1, 1 + 16 - b + 17, "%c", current_instr.value() & (1 << b) ? '1' : '0');
+			}
+			else {
+				for(uint8_t b=0; b<16; b++)
+					mvwprintw(w_panel->win, 1, 1 + 16 - b + 17, "-");
+			}
 
 			mvwprintw(w_panel->win, 4, 1, "LEDs:");
 

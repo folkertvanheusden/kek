@@ -42,7 +42,7 @@ std::optional<std::string> breakpoint_register::is_triggered() const
 	uint16_t v  = 0;
 
 	if (register_nr < 8)
-		v = c->getRegister(register_nr);  // TODO run-mode
+		v = c->get_register(register_nr);  // TODO run-mode
 	else {
 		hwreg_t reg = hwreg_t(register_nr);
 

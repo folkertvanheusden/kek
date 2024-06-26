@@ -17,9 +17,10 @@ mmu::~mmu()
 {
 }
 
-void mmu::begin(memory *const m)
+void mmu::begin(memory *const m, cpu *const c)
 {
 	this->m = m;
+	this->c = c;
 
 	reset();
 }
@@ -139,7 +140,7 @@ bool mmu::get_use_data_space(const int run_mode) const
 {
 	constexpr const int di_ena_mask[4] = { 4, 2, 0, 1 };
 
-	return !!(MMR3 & di_ena_mask[run_mode]);
+	return MMR3 & di_ena_mask[run_mode];
 }
 
 void mmu::clearMMR1()
@@ -347,17 +348,18 @@ std::pair<trap_action_t, int> mmu::get_trap_action(const int run_mode, const boo
 
 void mmu::mmudebug(const uint16_t a)
 {
+#if !defined(TURBO)
 	for(int rm=0; rm<4; rm++) {
 		auto ma = calculate_physical_address(rm, a);
 
 		TRACE("RM %d, a: %06o, apf: %d, PI: %08o (PSW: %d), PD: %08o (PSW: %d)", rm, ma.virtual_address, ma.apf, ma.physical_instruction, ma.physical_instruction_is_psw, ma.physical_data, ma.physical_data_is_psw);
 	}
+#endif
 }
 
-void mmu::verify_page_access(cpu *const c, const uint16_t virt_addr, const int run_mode, const bool d, const int apf, const bool is_write)
+void mmu::verify_page_access(const uint16_t virt_addr, const int run_mode, const bool d, const int apf, const bool is_write)
 {
 	const auto [ trap_action, access_control ] = get_trap_action(run_mode, d, apf, is_write);
-
 	if (trap_action == T_PROCEED)
 		return;
 
@@ -404,7 +406,7 @@ void mmu::verify_page_access(cpu *const c, const uint16_t virt_addr, const int r
 	}
 }
 
-void mmu::verify_access_valid(cpu *const c, const uint32_t m_offset, const int run_mode, const bool d, const int apf, const bool is_io, const bool is_write)
+void mmu::verify_access_valid(const uint32_t m_offset, const int run_mode, const bool d, const int apf, const bool is_io, const bool is_write)
 {
 	if (m_offset >= m->get_memory_size() && !is_io) [[unlikely]] {
 		TRACE("TRAP(04) (throw 6) on address %08o", m_offset);
@@ -433,14 +435,17 @@ void mmu::verify_access_valid(cpu *const c, const uint32_t m_offset, const int r
 	}
 }
 
-void mmu::verify_page_length(cpu *const c, const uint16_t virt_addr, const int run_mode, const bool d, const int apf, const bool is_write)
+void mmu::verify_page_length(const uint16_t virt_addr, const int run_mode, const bool d, const int apf, const bool is_write)
 {
 	uint16_t pdr_len = get_pdr_len(run_mode, d, apf);
+	if (pdr_len == 127)
+		return;
+
 	uint16_t pdr_cmp = (virt_addr >> 6) & 127;
 
 	bool direction   = get_pdr_direction(run_mode, d, apf);
 
-	if ((pdr_cmp > pdr_len && direction == false) || (pdr_cmp < pdr_len && direction == true)) [[unlikely]] {
+	if (direction == false ? pdr_cmp > pdr_len : pdr_cmp < pdr_len) [[unlikely]] {
 		TRACE("mmu::calculate_physical_address::p_offset %o versus %o direction %d", pdr_cmp, pdr_len, direction);
 		TRACE("TRAP(0250) (throw 7) on address %06o", virt_addr);
 
@@ -471,35 +476,32 @@ void mmu::verify_page_length(cpu *const c, const uint16_t virt_addr, const int r
 	}
 }
 
-uint32_t mmu::calculate_physical_address(cpu *const c, const int run_mode, const uint16_t a, const bool trap_on_failure, const bool is_write, const d_i_space_t space)
+uint32_t mmu::calculate_physical_address(const int run_mode, const uint16_t a, const bool is_write, const d_i_space_t space)
 {
 	uint32_t m_offset = a;
 
 	if (is_enabled() || (is_write && (getMMR0() & (1 << 8 /* maintenance check */)))) {
-		uint8_t  apf      = a >> 13; // active page field
-
 		bool     d        = space == d_space && get_use_data_space(run_mode);
 
 		uint16_t p_offset = a & 8191;  // page offset
 
-		m_offset  = get_physical_memory_offset(run_mode, d, apf);
+		uint8_t  apf      = a >> 13;  // active page field
 
+		m_offset  = get_physical_memory_offset(run_mode, d, apf);
 		m_offset += p_offset;
 
 		if ((getMMR3() & 16) == 0)  // off is 18bit
 			m_offset &= 0x3ffff;
 
-		if (trap_on_failure) {
-			verify_page_access(c, a, run_mode, d, apf, is_write);
+		verify_page_access(a, run_mode, d, apf, is_write);
 
-			// e.g. ram or i/o, not unmapped
-			uint32_t io_base  = get_io_base();
-			bool     is_io    = m_offset >= io_base;
+		// e.g. ram or i/o, not unmapped
+		uint32_t io_base  = get_io_base();
+		bool     is_io    = m_offset >= io_base;
 
-			verify_access_valid(c, m_offset, run_mode, d, apf, is_io, is_write);
+		verify_access_valid(m_offset, run_mode, d, apf, is_io, is_write);
 
-			verify_page_length(c, a, run_mode, d, apf, is_write);
-		}
+		verify_page_length(a, run_mode, d, apf, is_write);
 	}
 
 	return m_offset;
@@ -560,10 +562,10 @@ void mmu::set_par_pdr(const JsonVariantConst j_in, const int run_mode, const boo
 		pages[run_mode][is_d][i_pdr++].pdr = v;
 }
 
-mmu *mmu::deserialize(const JsonVariantConst j, memory *const mem)
+mmu *mmu::deserialize(const JsonVariantConst j, memory *const mem, cpu *const c)
 {
 	mmu *m = new mmu();
-	m->begin(mem);
+	m->begin(mem, c);
 
 	for(int run_mode=0; run_mode<4; run_mode++) {
 		if (run_mode == 2)

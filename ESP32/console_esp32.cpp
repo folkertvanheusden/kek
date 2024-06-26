@@ -121,7 +121,7 @@ void console_esp32::panel_update_thread()
 			if (panel_mode == PM_BITS) {
 				memory_addresses_t rc  = b->getMMU()->calculate_physical_address(run_mode, current_PC);
 
-				uint16_t current_instr = b->peek_word(current_PC);
+				auto current_instr = b->peek_word(run_mode, current_PC);
 
 				int pixel_offset = 0;
 
@@ -140,8 +140,14 @@ void console_esp32::panel_update_thread()
 				for(uint8_t b=0; b<16; b++)
 					pixels.setPixelColor(pixel_offset++, current_PSW   & (1l << b) ? magenta : 0);
 
-				for(uint8_t b=0; b<16; b++)
-					pixels.setPixelColor(pixel_offset++, current_instr & (1l << b) ? red     : 0);
+				if (current_instr.has_value()) {
+					for(uint8_t b=0; b<16; b++)
+						pixels.setPixelColor(pixel_offset++, current_instr.value() & (1l << b) ? red     : 0);
+				}
+				else {
+					for(uint8_t b=0; b<16; b++)
+						pixels.setPixelColor(pixel_offset++, 0);
+				}
 
 				pixels.setPixelColor(pixel_offset++, running_flag             ? white : 0);
 
