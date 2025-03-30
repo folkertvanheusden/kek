@@ -437,13 +437,12 @@ void mmu::verify_access_valid(const uint32_t m_offset, const int run_mode, const
 
 void mmu::verify_page_length(const uint16_t virt_addr, const int run_mode, const bool d, const int apf, const bool is_write)
 {
-	uint16_t pdr_len = get_pdr_len(run_mode, d, apf);
+	uint16_t pdr_len   = get_pdr_len(run_mode, d, apf);
 	if (pdr_len == 127)
 		return;
 
-	uint16_t pdr_cmp = (virt_addr >> 6) & 127;
-
-	bool direction   = get_pdr_direction(run_mode, d, apf);
+	uint16_t pdr_cmp   = (virt_addr >> 6) & 127;
+	bool     direction = get_pdr_direction(run_mode, d, apf);
 
 	if (direction == false ? pdr_cmp > pdr_len : pdr_cmp < pdr_len) [[unlikely]] {
 		TRACE("mmu::calculate_physical_address::p_offset %o versus %o direction %d", pdr_cmp, pdr_len, direction);

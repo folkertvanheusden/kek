@@ -25,8 +25,7 @@
 
 bus::bus()
 {
-	mmu_ = new mmu();
-
+	mmu_    = new mmu();
 	kw11_l_ = new kw11_l(this);
 
 	reset();

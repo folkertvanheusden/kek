@@ -29,11 +29,8 @@ JsonDocument disk_backend_esp32::serialize() const
 	JsonDocument j;
 
 	j["disk-backend-type"] = "esp32";
-
         j["overlay"] = serialize_overlay();
-
         // TODO store checksum of backend
-
         j["filename"] = filename;
 
 	return j;

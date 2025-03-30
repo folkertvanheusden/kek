@@ -63,10 +63,8 @@ int console_ncurses::wait_for_char_ll(const short timeout)
 		std::unique_lock<std::mutex> lck(ncurses_mutex);
 
 		int c = getch();
-
 		if (c == ERR)
 			return -1;
-
 		return c;
 	}
 

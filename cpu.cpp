@@ -570,18 +570,7 @@ gam_rc_t cpu::getGAMAddress(const uint8_t mode, const int reg, const word_mode_t
 bool cpu::double_operand_instructions(const uint16_t instr)
 {
 	const uint8_t     operation = (instr >> 12) & 7;
-
-	if (operation == 0b000)
-		return single_operand_instructions(instr);
-
 	const word_mode_t word_mode = instr & 0x8000 ? wm_byte : wm_word;
-
-	if (operation == 0b111) {
-		if (word_mode == wm_byte)
-			return false;
-
-		return additional_double_operand_instructions(instr);
-	}
 
 	const uint8_t src        = (instr >> 6) & 63;
 	const uint8_t src_mode   = (src >> 3) & 7;
@@ -592,6 +581,9 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 	const uint8_t dst_reg    = dst & 7;
 
 	switch(operation) {
+		case 0b000:
+			return single_operand_instructions(instr);
+
 		case 0b001: { // MOV/MOVB Move Word/Byte
 				    gam_rc_t g_src = getGAM(src_mode, src_reg, word_mode);
 
@@ -751,6 +743,13 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 
 				    return true;
 			    }
+
+		case 0b111: { // ADD/SUB Add/Subtract Word
+			if (word_mode == wm_byte) [[unlikely]]
+				return false;
+
+			return additional_double_operand_instructions(instr);
+		}
 	}
 
 	return false;

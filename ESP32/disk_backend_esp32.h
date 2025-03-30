@@ -31,6 +31,5 @@ public:
 	bool begin(const bool dummy) override;
 
 	bool read(const off_t offset, const size_t n, uint8_t *const target, const size_t sector_size) override;
-
 	bool write(const off_t offset, const size_t n, const uint8_t *const from, const size_t sector_size) override;
 };
