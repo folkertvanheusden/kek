@@ -1,4 +1,4 @@
-// (C) 2024 by Folkert van Heusden
+// (C) 2024-2025 by Folkert van Heusden
 // Released under MIT license
 
 #pragma once
@@ -10,17 +10,29 @@
 
 #include "ArduinoJson.h"
 
+#if defined(ESP32)
+#include <SC16IS752.h>
+#endif
+
 
 class bus;
 
 class comm
 {
+private:
+#if defined(ESP32)
+	static SC16IS752 *dc11_inst_1;
+	static SC16IS752 *dc11_inst_2;
+#endif
 public:
 	comm();
 	virtual ~comm();
 
 	virtual bool    begin() = 0;
 
+#if defined(ESP32)
+	void            set_comm(SC16IS752 *const a, SC16IS752 *const b);
+#endif
 	virtual JsonDocument serialize() const = 0;
 	static comm    *deserialize(const JsonVariantConst j, bus *const b);
 

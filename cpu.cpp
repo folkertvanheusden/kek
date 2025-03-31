@@ -98,10 +98,8 @@ uint64_t cpu::get_instructions_executed_count() const
 std::tuple<double, double, uint64_t, uint32_t, double> cpu::get_mips_rel_speed(const std::optional<uint64_t> & instruction_count, const std::optional<uint64_t> & t_diff_in) const
 {
 	uint64_t instr_count = instruction_count.has_value() ? instruction_count.value() : get_instructions_executed_count();
-
-        uint64_t t_diff = t_diff_in.has_value() ? t_diff_in.value() : (get_us() - running_since - wait_time);
-
-        double mips = t_diff ? instr_count / double(t_diff) : 0;
+        uint64_t t_diff      = t_diff_in.has_value() ? t_diff_in.value() : (get_us() - running_since - wait_time);
+        double   mips        = t_diff ? instr_count / double(t_diff) : 0;
 
 	return { mips, mips * 100 / pdp11_estimated_mips, instr_count, t_diff, wait_time };
 }
@@ -147,7 +145,6 @@ uint16_t cpu::get_register(const int nr) const
 {
 	if (nr < 6) {
 		int set = get_register_set();
-
 		return regs0_5[set][nr];
 	}
 

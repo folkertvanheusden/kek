@@ -1,4 +1,4 @@
-// (C) 2018-2024 by Folkert van Heusden
+// (C) 2018-2025 by Folkert van Heusden
 // Released under MIT license
 
 #include <Arduino.h>
@@ -18,6 +18,7 @@
 #if defined(ESP32)
 #include "esp_clk.h"
 #include "esp_heap_caps.h"
+#include <SC16IS752.h>
 #endif
 
 #include "comm.h"
@@ -68,14 +69,14 @@ SdFs     SD;
 #endif
 
 std::atomic_uint32_t stop_event      { EVENT_NONE };
-
 std::atomic_bool    *running         { nullptr    };
-
 bool                 trace_output    { false      };
 
 ntp                 *ntp_            { nullptr    };
 
 comm                *cs              { nullptr    };  // Console Serial
+SC16IS752           *SC16IS752_a     { nullptr    };
+SC16IS752           *SC16IS752_b     { nullptr    };
 
 static void console_thread_wrapper_panel(void *const c)
 {
@@ -258,7 +259,6 @@ void heap_caps_alloc_failed_hook(size_t requested_size, uint32_t caps, const cha
 {
 	printf("%s was called but failed to allocate %d bytes with 0x%X capabilities\r\n", function_name, requested_size, caps);
 }
-
 #endif
 
 void setup() {
@@ -267,6 +267,11 @@ void setup() {
 		delay(100);
 
 	cs = new comm_arduino(&Serial, "Serial");
+#if defined(ESP32)
+  SC16IS752_a = new SC16IS752(SC16IS750_PROTOCOL_I2C, 0x4d);
+  SC16IS752_b = new SC16IS752(SC16IS750_PROTOCOL_I2C, 0x4e);  // TODO 0x4e
+  cs->set_comm(SC16IS752_a, SC16IS752_b);
+#endif
 
 	cs->println("PDP11 emulator, by Folkert van Heusden");
 	cs->println(format("GIT hash: %s", version_str));
