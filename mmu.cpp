@@ -341,7 +341,7 @@ void mmu::mmudebug(const uint16_t a)
 void mmu::verify_page_access(const uint16_t virt_addr, const int run_mode, const bool d, const int apf, const bool is_write)
 {
 	const auto [ trap_action, access_control ] = get_trap_action(run_mode, d, apf, is_write);
-	if (trap_action == T_PROCEED)
+	if (trap_action == T_PROCEED) [[likely]]
 		return;
 
 	if (is_write)
