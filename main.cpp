@@ -679,16 +679,21 @@ int main(int argc, char *argv[])
 		// FILL MEMORY
 		memory *m = b->getRAM();
 		for(uint32_t i=0; i<m->get_memory_size(); i++)
-			m->write_byte(i, i * 3);
+			m->write_byte(i, i * 7);
 		// SET MMU TO ENABLED
 		b->getMMU()->setMMR0_as_is(1);  // enable MMU
 		// run for a second
+		b->getCpu()->setPC(0);
 		b->getCpu()->emulation_start();  // for statistics
 		uint64_t start = get_us();
 		do {
+			// disassemble(b->getCpu(), nullptr, b->getCpu()->getPC(), false);
+			uint16_t before_pc = b->getCpu()->getPC();
 			b->getCpu()->step();
+			if (b->getCpu()->getPC() == before_pc)
+				b->getCpu()->setPC(before_pc + 4);
 		}
-		while(get_us() - start <= 2500000);
+		while(get_us() - start <= 5000000);
 
 		auto stats = b->getCpu()->get_mips_rel_speed({ }, { });
 		cnsl->put_string_lf(format("MIPS: %.2f, relative speed: %.2f%%, instructions executed: %" PRIu64 " in %.2f seconds", std::get<0>(stats), std::get<1>(stats), std::get<2>(stats), std::get<3>(stats) / 1000000.));
