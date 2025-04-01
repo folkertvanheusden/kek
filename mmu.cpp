@@ -308,42 +308,23 @@ memory_addresses_t mmu::calculate_physical_address(const int run_mode, const uin
 
 std::pair<trap_action_t, int> mmu::get_trap_action(const int run_mode, const bool d, const int apf, const bool is_write)
 {
-	const int     access_control = get_access_control(run_mode, d, apf);
+	const int access_control = get_access_control(run_mode, d, apf);
 
-	trap_action_t trap_action    = T_PROCEED;
+	constexpr const trap_action_t map[8][2] {
+			{ T_ABORT_4,  T_ABORT_4  },
+			{ T_TRAP_250, T_ABORT_4  },
+			{ T_PROCEED,  T_ABORT_4  },
+			{ T_ABORT_4,  T_ABORT_4  },
+			{ T_TRAP_250, T_TRAP_250 },
+			{ T_PROCEED,  T_TRAP_250 },
+			{ T_PROCEED,  T_PROCEED  },
+			{ T_ABORT_4,  T_ABORT_4  },
+	};
 
-	switch(access_control) {
-		case 0:
-			trap_action = T_ABORT_4;
-			break;
-		case 1:
-			trap_action = is_write ? T_ABORT_4 : T_TRAP_250;
-			break;
+	assert(map[1][false] == T_TRAP_250);
+	assert(map[1][true ] == T_ABORT_4 );
 
-		case 2:
-			if (is_write)
-				trap_action = T_ABORT_4;
-			break;
-		case 3:
-			trap_action = T_ABORT_4;
-			break;
-		case 4:
-			trap_action = T_TRAP_250;
-			break;
-		case 5:
-			if (is_write)
-				trap_action = T_TRAP_250;
-			break;
-		case 6:
-			// proceed
-			break;
-
-		case 7:
-			trap_action = T_ABORT_4;
-			break;
-	}
-
-	return { trap_action, access_control };
+	return {  map[access_control][is_write], access_control };
 }
 
 void mmu::mmudebug(const uint16_t a)

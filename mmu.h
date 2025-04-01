@@ -89,7 +89,7 @@ public:
 	int      get_access_control (const int run_mode, const bool d, const int apf) { return pages[run_mode][d][apf].pdr & 7; }
 	int      get_pdr_len        (const int run_mode, const bool d, const int apf) { return (pages[run_mode][d][apf].pdr >> 8) & 127; }
 	int      get_pdr_direction  (const int run_mode, const bool d, const int apf) { return pages[run_mode][d][apf].pdr & 8; }
-	uint32_t get_physical_memory_offset(const int run_mode, const bool d, const int apf) const { return pages[run_mode][d][apf].par * 64; }
+	uint32_t get_physical_memory_offset(const int run_mode, const bool d, const int apf) const { return pages[run_mode][d][apf].par << 6; }
 	bool     get_use_data_space(const int run_mode) const;
 	uint32_t get_io_base() const { return is_enabled() ? (getMMR3() & 16 ? 017760000 : 0760000) : 0160000; }
 
