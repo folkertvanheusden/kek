@@ -679,7 +679,7 @@ int main(int argc, char *argv[])
 		// FILL MEMORY
 		memory *m = b->getRAM();
 		for(uint32_t i=0; i<m->get_memory_size(); i++)
-			m->write_byte(i, i);
+			m->write_byte(i, i * 3);
 		// SET MMU TO ENABLED
 		b->getMMU()->setMMR0_as_is(1);  // enable MMU
 		// run for a second
