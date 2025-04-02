@@ -547,7 +547,6 @@ bool cpu::putGAM(const gam_rc_t & g, const uint16_t value)
 
 	if (g.addr.has_value()) {
 		auto rc = b->write(g.addr.value(), g.word_mode, value, g.mode_selection, g.space);
-
 		return rc == false;
 	}
 
@@ -709,36 +708,26 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 
 				    int16_t  result = 0;
 
-				    bool     set_flags  = true;
+				    if (instr & 0x8000)  // SUB
+					    result = g_dst.value.value() - g_ssrc.value.value();
+				    else  // ADD
+					    result = g_dst.value.value() + g_ssrc.value.value();
 
-				    if (g_dst.addr.has_value())
-					set_flags = !b->is_psw(g_dst.addr.value(), g_dst.mode_selection, g_dst.space);
+				    bool set_flags = putGAM(g_dst, result);
 
-				    if (instr & 0x8000) {  // SUB
-					    result = (g_dst.value.value() - g_ssrc.value.value()) & 0xffff;
-
-					    if (set_flags) {
+				    if (set_flags) {
+					    if (instr & 0x8000) {  // SUB
 						    setPSW_v(SIGN((g_dst.value.value() ^ g_ssrc.value.value()) & (~g_ssrc.value.value() ^ result), wm_word));
 						    setPSW_c(uint16_t(g_dst.value.value()) < uint16_t(g_ssrc.value.value()));
 					    }
-				    }
-				    else {  // ADD
-					    uint32_t temp = g_dst.value.value() + g_ssrc.value.value();
-
-					    result = temp;
-
-					    if (set_flags) {
-						    setPSW_v(SIGN((~g_ssrc.value.value() ^ g_dst.value.value()) & (g_ssrc.value.value() ^ (temp & 0xffff)), wm_word));
+					    else {
+						    setPSW_v(SIGN((~g_ssrc.value.value() ^ g_dst.value.value()) & (g_ssrc.value.value() ^ (result & 0xffff)), wm_word));
 						    setPSW_c(uint16_t(result) < uint16_t(g_ssrc.value.value()));
 					    }
-				    }
 
-				    if (set_flags) {
 					    setPSW_n(result < 0);
 					    setPSW_z(result == 0);
 				    }
-
-				    (void)putGAM(g_dst, result);
 
 				    return true;
 			    }

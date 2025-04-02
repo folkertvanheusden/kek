@@ -136,6 +136,4 @@ public:
 	void     write_word(const uint16_t a, const uint16_t value, const d_i_space_t s);
 	void     write_word(const uint16_t a, const uint16_t value) override { write_word(a, value, i_space); }
 	void     write_physical(const uint32_t a, const uint16_t value);
-
-	bool     is_psw(const uint16_t addr, const int run_mode, const d_i_space_t space) const;
 };

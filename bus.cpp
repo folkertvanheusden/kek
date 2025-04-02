@@ -531,19 +531,6 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 	return temp;
 }
 
-bool bus::is_psw(const uint16_t addr, const int run_mode, const d_i_space_t space) const
-{
-	auto meta = mmu_->calculate_physical_address(run_mode, addr);
-
-	if (space == d_space && meta.physical_data_is_psw)
-		return true;
-
-	if (space == i_space && meta.physical_instruction_is_psw)
-		return true;
-
-	return false;
-}
-
 bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t value, const rm_selection_t mode_selection, const d_i_space_t space)
 {
 	int           run_mode = mode_selection == rm_cur ? c->getPSW_runmode() : c->getPSW_prev_runmode();
