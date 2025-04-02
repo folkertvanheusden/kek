@@ -47,16 +47,16 @@ private:
 	// 8 pages, D/I, 3 modes and 1 invalid mode
 	page_t   pages[4][2][8];
 
-	uint16_t MMR0 { 0 };
-	uint16_t MMR1 { 0 };
-	uint16_t MMR2 { 0 };
-	uint16_t MMR3 { 0 };
+	uint16_t MMR0   { 0 };
+	uint16_t MMR1   { 0 };
+	uint16_t MMR2   { 0 };
+	uint16_t MMR3   { 0 };
 	uint16_t CPUERR { 0 };
-	uint16_t PIR { 0 };
-	uint16_t CSR { 0 };
+	uint16_t PIR    { 0 };
+	uint16_t CSR    { 0 };
 
-	memory  *m { nullptr };
-	cpu     *c { nullptr };
+	memory  *m      { nullptr };
+	cpu     *c      { nullptr };
 
 	JsonDocument add_par_pdr(const int run_mode, const bool is_d) const;
 	void set_par_pdr(const JsonVariantConst j_in, const int run_mode, const bool is_d);

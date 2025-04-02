@@ -324,7 +324,7 @@ std::pair<trap_action_t, int> mmu::get_trap_action(const int run_mode, const boo
 	assert(map[1][false] == T_TRAP_250);
 	assert(map[1][true ] == T_ABORT_4 );
 
-	return {  map[access_control][is_write], access_control };
+	return { map[access_control][is_write], access_control };
 }
 
 void mmu::mmudebug(const uint16_t a)
@@ -464,7 +464,6 @@ uint32_t mmu::calculate_physical_address(const int run_mode, const uint16_t a, c
 		bool     d        = space == d_space && get_use_data_space(run_mode);
 
 		uint16_t p_offset = a & 8191;  // page offset
-
 		uint8_t  apf      = a >> 13;  // active page field
 
 		m_offset  = get_physical_memory_offset(run_mode, d, apf);

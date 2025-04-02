@@ -702,7 +702,6 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 
 		case 0b110: { // ADD/SUB Add/Subtract Word
 				    auto     g_ssrc = getGAM(src_mode, src_reg, wm_word);
-
 				    auto     g_dst  = getGAM(dst_mode, dst_reg, wm_word);
 
 				    addToMMR1(g_dst);

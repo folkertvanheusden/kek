@@ -1,0 +1,2 @@
+41ef37ce6b7f13f1cc2df0e6ac570647fe07fe12:
+MIPS: 0.74, relative speed: 33.23%, instructions executed: 3692600 in 5.00 seconds
