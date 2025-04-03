@@ -164,7 +164,8 @@ int run_cpu_validation(console *const cnsl, const std::string & filename)
 
 		total_error_count      +=   cur_n_errors;
 		tests_with_error_count += !!cur_n_errors;
-		
+
+		cnsl->put_string_lf(format("Test result for %d, %s: %s", n_tests, test["id"].as<std::string>().c_str(), cur_n_errors ? "FAILED":"OK"));
 
 		// clean-up
 		delete b;

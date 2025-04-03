@@ -2488,7 +2488,6 @@ void cpu::step()
 			b->getMMU()->setMMR2(instruction_start);
 
 		uint16_t instr = b->read_word(instruction_start);
-
 		add_register(7, 2);
 
 		if (double_operand_instructions(instr))
