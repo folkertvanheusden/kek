@@ -138,7 +138,7 @@ int run_cpu_validation(console *const cnsl, const std::string & filename)
 
 		// DO!
 		c->emulation_start();
-		disassemble(c, cnsl, c->getPC(), false);
+		disassemble(c, nullptr, c->getPC(), false);
 		c->step();
 
 		// VERIFY
