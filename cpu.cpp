@@ -98,10 +98,8 @@ uint64_t cpu::get_instructions_executed_count() const
 std::tuple<double, double, uint64_t, uint32_t, double> cpu::get_mips_rel_speed(const std::optional<uint64_t> & instruction_count, const std::optional<uint64_t> & t_diff_in) const
 {
 	uint64_t instr_count = instruction_count.has_value() ? instruction_count.value() : get_instructions_executed_count();
-
-        uint64_t t_diff = t_diff_in.has_value() ? t_diff_in.value() : (get_us() - running_since - wait_time);
-
-        double mips = t_diff ? instr_count / double(t_diff) : 0;
+        uint64_t t_diff      = t_diff_in.has_value() ? t_diff_in.value() : (get_us() - running_since - wait_time);
+        double   mips        = t_diff ? instr_count / double(t_diff) : 0;
 
 	return { mips, mips * 100 / pdp11_estimated_mips, instr_count, t_diff, wait_time };
 }
@@ -117,7 +115,6 @@ void cpu::add_to_stack_trace(const uint16_t p)
 	auto da = disassemble(p);
 
 	stacktrace.push_back({ p, da["instruction-text"][0] });
-
 	while (stacktrace.size() >= max_stacktrace_depth)
 		stacktrace.erase(stacktrace.begin());
 }
@@ -136,11 +133,14 @@ std::vector<std::pair<uint16_t, std::string> > cpu::get_stack_trace() const
 void cpu::reset()
 {
 	memset(regs0_5, 0x00, sizeof regs0_5);
-	memset(sp,      0x00, sizeof sp);
+	memset(sp,      0x00, sizeof sp     );
 	pc   = 0;
 	psw  = 0;  // 7 << 5;
 	fpsr = 0;
 	init_interrupt_queue();
+
+        it_is_a_trap          = false;
+	processing_trap_depth = 0;
 }
 
 uint16_t cpu::get_register(const int nr) const

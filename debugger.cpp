@@ -729,6 +729,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 	int32_t trace_start_addr = -1;
 	int     n_single_step    = 1;
 	bool    turbo            = false;
+	bool    marker           = false;
 	std::optional<int> t_rl;  // trace runlevel
 
 	cpu *const c = b->getCpu();
@@ -739,6 +740,9 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 	while(*stop_event != EVENT_TERMINATE) {
 		try {
+			if (marker)
+				cnsl->put_string_lf("---");
+				
 			std::string cmd   = cnsl->read_line(format("%d", stop_event->load()));
 			auto        parts = split(cmd, " ");
 			auto        kv    = split(parts, "=");
@@ -751,7 +755,9 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 				*stop_event = EVENT_NONE;
 			}
-			else if (parts[0] == "single" || parts[0] == "s") {
+			else if (cmd == "marker")
+				marker = !marker;
+			else if (parts[0] == "single" || parts[0] == "s" || parts[0] == "step") {
 				single_step = true;
 
 				if (parts.size() == 2)
@@ -856,6 +862,32 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 				}
 				else {
 					cnsl->put_string_lf("getreg requires a register");
+				}
+
+				continue;
+			}
+			else if (parts[0] == "setstack") {
+				if (parts.size() == 3) {
+					int      reg = std::stoi(parts.at(1));
+					uint16_t val = std::stoi(parts.at(2), nullptr, 8);
+					if (reg < 4) {
+						c->set_stackpointer(reg, val);
+						cnsl->put_string_lf(format("Set stack register %d to %06o", reg, val));
+					}
+				}
+				else {
+					cnsl->put_string_lf("setstack requires a register and an octal value");
+				}
+
+				continue;
+			}
+			else if (parts[0] == "getstack") {
+				if (parts.size() == 2) {
+					int reg = std::stoi(parts.at(1));
+					cnsl->put_string_lf(format("REG %d = %06o", reg, c->get_stackpointer(reg)));
+				}
+				else {
+					cnsl->put_string_lf("getreg requires a stack register");
 				}
 
 				continue;
@@ -1031,6 +1063,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 			else if (cmd == "reset" || cmd == "r") {
 				*stop_event = EVENT_NONE;
 				b->reset();
+				cnsl->put_string_lf("resetted");
 				continue;
 			}
 			else if (cmd == "cfgdisk") {
@@ -1285,6 +1318,8 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 					"getpc         -",
 					"setreg x y    - set register x to value y (octal)",
 					"getreg x      -",
+					"setstack x y  - set stack register x to value y (octal)",
+					"getstack x    -",
 					"setpsw x      - set PSW value y (octal)",
 					"getpsw        -",
 					"setmem ...    - set memory (a=) to value (v=), both in octal, one byte",

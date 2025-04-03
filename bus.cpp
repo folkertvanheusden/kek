@@ -269,7 +269,7 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 			return temp;
 		}
 		if (a == ADDR_KERNEL_SP) { // kernel SP
-			uint16_t temp = c->getStackPointer(0) & (word_mode == wm_byte ? 0xff : 0xffff);
+			uint16_t temp = c->get_stackpointer(0) & (word_mode == wm_byte ? 0xff : 0xffff);
 			TRACE("READ-I/O kernel SP: %06o", temp);
 			return temp;
 		}
@@ -279,12 +279,12 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 			return temp;
 		}
 		if (a == ADDR_SV_SP) { // supervisor SP
-			uint16_t temp = c->getStackPointer(1) & (word_mode == wm_byte ? 0xff : 0xffff);
+			uint16_t temp = c->get_stackpointer(1) & (word_mode == wm_byte ? 0xff : 0xffff);
 			TRACE("READ-I/O supervisor SP: %06o", temp);
 			return temp;
 		}
 		if (a == ADDR_USER_SP) { // user SP
-			uint16_t temp = c->getStackPointer(3) & (word_mode == wm_byte ? 0xff : 0xffff);
+			uint16_t temp = c->get_stackpointer(3) & (word_mode == wm_byte ? 0xff : 0xffff);
 			TRACE("READ-I/O user SP: %06o", temp);
 			return temp;
 		}
@@ -625,7 +625,7 @@ bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 			}
 			if (a == ADDR_KERNEL_SP) { // kernel SP
 				TRACE("WRITE-I/O kernel SP: %06o", value);
-				c->setStackPointer(0, value);
+				c->set_stackpointer(0, value);
 				return false;
 			}
 			if (a == ADDR_PC) { // PC
@@ -635,12 +635,12 @@ bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 			}
 			if (a == ADDR_SV_SP) { // supervisor SP
 				TRACE("WRITE-I/O supervisor sp: %06o", value);
-				c->setStackPointer(1, value);
+				c->set_stackpointer(1, value);
 				return false;
 			}
 			if (a == ADDR_USER_SP) { // user SP
 				TRACE("WRITE-I/O user sp: %06o", value);
-				c->setStackPointer(3, value);
+				c->set_stackpointer(3, value);
 				return false;
 			}
 
