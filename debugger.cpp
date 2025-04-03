@@ -830,6 +830,11 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 				continue;
 			}
+			else if (parts[0] == "getpc") {
+				cnsl->put_string_lf(format("PC = %06o", c->getPC()));
+
+				continue;
+			}
 			else if (parts[0] == "setreg") {
 				if (parts.size() == 3) {
 					int      reg = std::stoi(parts.at(1));
@@ -844,6 +849,17 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 				continue;
 			}
+			else if (parts[0] == "getreg") {
+				if (parts.size() == 2) {
+					int reg = std::stoi(parts.at(1));
+					cnsl->put_string_lf(format("REG %d = %06o", reg, c->get_register(reg)));
+				}
+				else {
+					cnsl->put_string_lf("getreg requires a register");
+				}
+
+				continue;
+			}
 			else if (parts[0] == "setpsw") {
 				if (parts.size() == 2) {
 					uint16_t val = std::stoi(parts.at(1), nullptr, 8);
@@ -853,6 +869,23 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 				}
 				else {
 					cnsl->put_string_lf("setpsw requires an octal value");
+				}
+
+				continue;
+			}
+			else if (parts[0] == "getpsw") {
+				cnsl->put_string_lf(format("PSW = %06o", c->getPSW()));
+
+				continue;
+			}
+			else if (parts[0] == "getmem") {
+				auto a_it = kv.find("a");
+
+				if (a_it == kv.end())
+					cnsl->put_string_lf("getmem: parameter missing?");
+				else {
+					uint16_t a = std::stoi(a_it->second, nullptr, 8);
+					cnsl->put_string_lf(format("MEM %06o = %03o", a, c->getBus()->read_byte(a)));
 				}
 
 				continue;
@@ -1249,9 +1282,13 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 					"mmures x      - resolve a virtual address",
 					"qi            - show queued interrupts",
 					"setpc x       - set PC to value (octal)",
+					"getpc         -",
 					"setreg x y    - set register x to value y (octal)",
+					"getreg x      -",
 					"setpsw x      - set PSW value y (octal)",
+					"getpsw        -",
 					"setmem ...    - set memory (a=) to value (v=), both in octal, one byte",
+					"getmem ...    - get memory (a=), in octal, one byte",
 					"toggle ...    - set switch (s=, 0...15 (decimal)) of the front panel to state (t=, 0 or 1)",
 					"setinthz x    - set KW11-L interrupt frequency (Hz)",
 					"cls           - clear screen",
