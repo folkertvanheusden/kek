@@ -830,19 +830,29 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 
 				continue;
 			}
-			else if (parts[0] == "toggle") {
-				auto s_it = kv.find("s");
-				auto t_it = kv.find("t");
+			else if (parts[0] == "setreg") {
+				if (parts.size() == 3) {
+					int      reg = std::stoi(parts.at(1));
+					uint16_t val = std::stoi(parts.at(2), nullptr, 8);
+					c->set_register(reg, val);
 
-				if (s_it == kv.end() || t_it == kv.end())
-					cnsl->put_string_lf(format("toggle: parameter missing? current switches states: 0o%06o", c->getBus()->get_console_switches()));
+					cnsl->put_string_lf(format("Set register %d to %06o", reg, val));
+				}
 				else {
-					int s = std::stoi(s_it->second, nullptr, 8);
-					int t = std::stoi(t_it->second, nullptr, 8);
+					cnsl->put_string_lf("setreg requires a register and an octal value");
+				}
 
-					c->getBus()->set_console_switch(s, t);
+				continue;
+			}
+			else if (parts[0] == "setpsw") {
+				if (parts.size() == 2) {
+					uint16_t val = std::stoi(parts.at(1), nullptr, 8);
+					c->lowlevel_psw_set(val);
 
-					cnsl->put_string_lf(format("Set switch %d to %d", s, t));
+					cnsl->put_string_lf(format("Set PSW to %06o", val));
+				}
+				else {
+					cnsl->put_string_lf("setpsw requires an octal value");
 				}
 
 				continue;
@@ -860,6 +870,23 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 					c->getBus()->write_byte(a, v);
 
 					cnsl->put_string_lf(format("Set %06o to %03o", a, v));
+				}
+
+				continue;
+			}
+			else if (parts[0] == "toggle") {
+				auto s_it = kv.find("s");
+				auto t_it = kv.find("t");
+
+				if (s_it == kv.end() || t_it == kv.end())
+					cnsl->put_string_lf(format("toggle: parameter missing? current switches states: 0o%06o", c->getBus()->get_console_switches()));
+				else {
+					int s = std::stoi(s_it->second, nullptr, 8);
+					int t = std::stoi(t_it->second, nullptr, 8);
+
+					c->getBus()->set_console_switch(s, t);
+
+					cnsl->put_string_lf(format("Set switch %d to %d", s, t));
 				}
 
 				continue;
@@ -1221,7 +1248,9 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 					"state x       - dump state of a device: rl02, rk05, rp06, mmu, tm11, kw11l or dc11",
 					"mmures x      - resolve a virtual address",
 					"qi            - show queued interrupts",
-					"setpc x       - set PC to value",
+					"setpc x       - set PC to value (octal)",
+					"setreg x y    - set register x to value y (octal)",
+					"setpsw x      - set PSW value y (octal)",
 					"setmem ...    - set memory (a=) to value (v=), both in octal, one byte",
 					"toggle ...    - set switch (s=, 0...15 (decimal)) of the front panel to state (t=, 0 or 1)",
 					"setinthz x    - set KW11-L interrupt frequency (Hz)",
