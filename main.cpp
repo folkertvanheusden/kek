@@ -1,6 +1,7 @@
-// (C) 2018-2024 by Folkert van Heusden
+// (C) 2018-2025 by Folkert van Heusden
 // Released under MIT license
 
+#include <ArduinoJson.h>
 #include <assert.h>
 #include <atomic>
 #include <cinttypes>
@@ -56,18 +57,51 @@ void sw_handler(int s)
 	}
 }
 
-int run_cpu_validation(const std::string & filename)
+std::vector<std::pair<uint32_t, uint8_t> > get_memory_settings(const JsonArrayConst & ja)
 {
-#if 0
-	json_error_t error;
-	json_t *json = json_load_file(filename.c_str(), JSON_REJECT_DUPLICATES, &error);
-	if (!json)
-		error_exit(false, "%s", error.text);
+	std::vector<std::pair<uint32_t, uint8_t> > out;
+	for(auto kv_dict: ja) {
+		// should be one element
+		for(const auto & kv: kv_dict.as<JsonObjectConst>()) {
+			uint32_t a = std::stoi(kv.key().c_str(), nullptr, 8);
+			uint16_t v = kv.value().as<int>();
+			out.push_back({ a, v & 255 });
+			out.push_back({ a + 1, v >> 8 });
+		}
+	}
+	return out;
+}
 
-	size_t n_ok = 0;
-	size_t array_size = json_array_size(json);
-	for(size_t i=0; i<array_size; i++) {
-		json_t *test = json_array_get(json, i);
+uint16_t get_register_value(const JsonObjectConst & o, const std::string & name)
+{
+	return o[name].as<int>();
+}
+
+bool compare_values(console *const cnsl, uint32_t v, uint32_t should_be, const std::string & name)
+{
+	if (v == should_be)
+		return true;
+
+	cnsl->put_string_lf(format("%s: %o (is) != %o (should be)", name.c_str(), v, should_be));
+
+	return false;
+}
+
+int run_cpu_validation(console *const cnsl, const std::string & filename)
+{
+	std::optional<JsonDocument> doc = deserialize_file(filename);
+	if (doc.has_value() == false)
+		return -1;
+
+	int n_tests               = 0;
+	int total_error_count      = 0;
+	int tests_with_error_count = 0;
+
+	JsonArray array = doc.value().as<JsonArray>();
+	for(JsonObjectConst test : array) {
+		n_tests++;
+
+		cnsl->put_string_lf(format("Test %d: %s", n_tests, test["id"].as<std::string>().c_str()));
 
 		// create environment
 		event = 0;
@@ -76,192 +110,67 @@ int run_cpu_validation(const std::string & filename)
 		cpu *c = new cpu(b, &event);
 		b->add_cpu(c);
 
-		uint16_t start_pc = 0;
+		// SET
+		{
+			auto before = test["before"];
 
-		{
-			// initialize
-			json_t *memory_before = json_object_get(test, "memory-before");
-			const char *key   = nullptr;
-			json_t     *value = nullptr;
-			json_object_foreach(memory_before, key, value) {
-				b->write_physical(atoi(key), json_integer_value(value));
-			}
-		}
+			// PC
+			c->setPC(get_register_value(before, "PC"));
 
-		json_t *const registers_before = json_object_get(test, "registers-before");
+			// PSW
+			c->setPSW(get_register_value(before, "PSW"), false);
 
-		{
-			const char *key   = nullptr;
-			json_t     *value = nullptr;
-			json_t *set0 = json_object_get(registers_before, "0");
-			json_object_foreach(set0, key, value) {
-				c->lowlevel_register_set(0, atoi(key), json_integer_value(value));
-			}
-			json_t *set1 = json_object_get(registers_before, "1");
-			json_object_foreach(set1, key, value) {
-				c->lowlevel_register_set(1, atoi(key), json_integer_value(value));
-			}
-		}
-		{
-			json_t *psw_reg = json_object_get(registers_before, "psw");
-			assert(psw_reg);
-			c->lowlevel_psw_set(json_integer_value(psw_reg));
-		}
-		{
-			json_t *b_pc = json_object_get(registers_before, "pc");
-			assert(b_pc);
-			start_pc = json_integer_value(b_pc);
-			c->setPC(start_pc);
-		}
-		{
-			json_t *b_sp = json_object_get(registers_before, "sp");
-			size_t sp_array_size = json_array_size(b_sp);
-			assert(sp_array_size == 4);
-			for(size_t i=0; i<sp_array_size; i++) {
-				json_t *temp = json_array_get(b_sp, i);
-				c->lowlevel_register_sp_set(i, json_integer_value(temp));
-			}
+			// stackpointers
+			for(int i=0; i<4; i++)
+				c->set_stackpointer(i, get_register_value(before, format("stack-%d", i)));
+
+			// registers
+			int set = 0;
+			for(int i=0; i<6; i++)
+				c->set_register(i, get_register_value(before, format("reg-%d.%d", i, set)));
+
+			// memory
+			auto memory_before = before["memory"];
+			auto memory_before_settings = get_memory_settings(memory_before);
+			for(auto & element: memory_before_settings)
+				b->write_physical(element.first, element.second);
 		}
 
-		{
-			json_t *a_mmr0 = json_object_get(test, "mmr0-before");
-			assert(a_mmr0);
-			b->getMMU()->setMMR0(json_integer_value(a_mmr0));
-		}
-
-		disassemble(c, nullptr, start_pc, false);
-		auto disas_data = c->disassemble(start_pc);
+		// DO!
+		c->emulation_start();
+		disassemble(c, cnsl, c->getPC(), false);
 		c->step();
 
-		uint16_t new_pc = c->getPC();
-
-		// validate
+		// VERIFY
+		int cur_n_errors = 0;
 		{
-			bool err = false;
-			{
-				json_t *memory_after = json_object_get(test, "memory-after");
-				const char *key   = nullptr;
-				json_t     *value = nullptr;
-				json_object_foreach(memory_after, key, value) {
-					int      key_v        = atoi(key);
-					uint16_t mem_contains = b->read_physical(key_v);
-					uint16_t should_be    = json_integer_value(value);
+			auto after = test["after"];
 
-					if (mem_contains != should_be) {
-						DOLOG(warning, true, "memory address %06o (%d) mismatch (is: %06o (%d), should be: %06o (%d))", key_v, key_v, mem_contains, mem_contains, should_be, should_be);
-						err = true;
-					}
-				}
-			}
+			cur_n_errors += !compare_values(cnsl, c->getPC(),  get_register_value(after, "PC" ), "PC" );
+			cur_n_errors += !compare_values(cnsl, c->getPSW(), get_register_value(after, "PSW"), "PSW");
 
-			uint16_t psw = c->getPSW();
+			for(int i=0; i<4; i++)
+				cur_n_errors += !compare_values(cnsl, c->get_stackpointer(i), get_register_value(after, format("stack-%d", i)), format("Stack pointer %d", i));
 
-			json_t *const registers_after = json_object_get(test, "registers-after");
-			{
-				int set_nr = (psw >> 11) & 1;
-				char set[] = { char('0' + set_nr), 0x00 };
+			int set = 0;
+			for(int i=0; i<6; i++)
+				cur_n_errors += !compare_values(cnsl, c->get_register(i), get_register_value(after, format("reg-%d.%d", i, set)), format("Register %d", i));
 
-				json_t *a_set = json_object_get(registers_after, set);
-				const char *key   = nullptr;
-				json_t     *value = nullptr;
-				json_object_foreach(a_set, key, value) {
-					uint16_t register_is = c->lowlevel_register_get(set_nr, atoi(key));
-					uint16_t should_be   = json_integer_value(value);
-
-					if (register_is != should_be) {
-						DOLOG(warning, true, "set %d register %s mismatch (is: %06o (%d), should be: %06o (%d))", set_nr, key, register_is, register_is, should_be, should_be);
-						err = true;
-					}
-				}
-			}
-
-			{
-				json_t *a_pc = json_object_get(registers_after, "pc");
-				assert(a_pc);
-				uint16_t should_be_pc = json_integer_value(a_pc);
-				if (new_pc != should_be_pc) {
-					DOLOG(warning, true, "PC register mismatch (is: %06o (%d), should be: %06o (%d))", new_pc, new_pc, should_be_pc, should_be_pc);
-					err = true;
-				}
-			}
-
-			{
-				json_t *a_sp = json_object_get(registers_after, "sp");
-				size_t sp_array_size = json_array_size(a_sp);
-				assert(sp_array_size == 4);
-				for(size_t i=0; i<sp_array_size; i++) {
-					json_t *temp = json_array_get(a_sp, i);
-					uint16_t sp = c->lowlevel_register_sp_get(i);
-					if (json_integer_value(temp) != sp) {
-						DOLOG(warning, true, "SP[%d] register mismatch (is: %06o (%d), should be: %06o (%d)) for %06o", i, sp, sp, json_integer_value(temp), json_integer_value(temp), b->read_physical(start_pc));
-						err = true;
-					}
-				}
-			}
-
-			{
-				json_t *a_psw = json_object_get(registers_after, "psw");
-				assert(a_psw);
-				uint16_t should_be_psw = json_integer_value(a_psw);
-				if ((should_be_psw & validation_psw_mask) != (psw & validation_psw_mask)) {
-					DOLOG(warning, true, "PSW register mismatch (is: %06o (%d), w/m %06o, should be: %06o (%d), w/m %06o)", psw, psw, psw & validation_psw_mask, should_be_psw, should_be_psw, should_be_psw & validation_psw_mask);
-					err = true;
-				}
-			}
-
-			for(int r=0; r<4; r++) {
-				json_t *a_mmr = json_object_get(test, format("mmr%d-after", r).c_str());
-				assert(a_mmr);
-				uint16_t should_be_mmr = json_integer_value(a_mmr);
-				uint16_t is_mmr = b->getMMU()->getMMR(r);
-				if (should_be_mmr != is_mmr) {
-					int is_d1 = is_mmr >> 11;
-					if (is_d1 & 16)
-						is_d1 = -(32 - is_d1);
-					int is_r1 = (is_mmr >> 8) & 7;
-					int is_d2 = (is_mmr >> 3) & 31;
-					if (is_d2 & 16)
-						is_d2 = -(32 - is_d2);
-					int is_r2 = is_mmr & 7;
-
-					int sb_d1 = should_be_mmr >> 11;
-					if (sb_d1 & 16)
-						sb_d1 = -(32 - sb_d1);
-					int sb_r1 = (should_be_mmr >> 8) & 7;
-					int sb_d2 = (should_be_mmr >> 3) & 31;
-					if (sb_d2 & 16)
-						sb_d2 = -(32 - sb_d2);
-					int sb_r2 = should_be_mmr & 7;
-					DOLOG(warning, true, "MMR%d register mismatch (is: %06o (%d / %02d,%02d - %02d,%02d), should be: %06o (%d / %02d,%02d - %02d,%02d))%s %s", r, is_mmr, is_mmr, is_d1, is_r1, is_d2, is_r2, should_be_mmr, should_be_mmr, sb_d1, sb_r1, sb_d2, sb_r2, c->is_it_a_trap() ? " TRAP": "", disas_data["instruction-text"].at(0).c_str());
-					err = true;
-				}
-			}
-
-			if (err) {
-				if (c->is_it_a_trap())
-					DOLOG(warning, true, "Error by TRAP %s", disas_data["instruction-text"].at(0).c_str());
-				else {
-					DOLOG(warning, true, "Error by instruction %s", disas_data["instruction-text"].at(0).c_str());
-				}
-
-				char *js = json_dumps(test, 0);
-				DOLOG(warning, true, "%s\n", js);  // also emit empty line(!)
-				free(js);
-			}
-			else {
-				DOLOG(info, true, "\n");  // \n!
-				n_ok++;
-			}
+			auto memory_after = after["memory"];
+			auto memory_after_settings = get_memory_settings(memory_after);
+			for(auto & element: memory_after_settings)
+				cur_n_errors += !compare_values(cnsl, b->read_physical_byte(element.first), element.second, format("Memory address %06o", element.first));
 		}
+
+		total_error_count      +=   cur_n_errors;
+		tests_with_error_count += !!cur_n_errors;
+		
 
 		// clean-up
 		delete b;
 	}
 
-	json_decref(json);
-
-	printf("# ok: %zu out of %zu\n", n_ok, array_size);
-#endif
+	cnsl->put_string_lf(format("test count: %d, tests with errors: %d, total error count: %d", n_tests, tests_with_error_count, total_error_count));
 
 	return 0;
 }
@@ -415,7 +324,7 @@ int main(int argc, char *argv[])
 					char *c = strchr(optarg, ',');
 					if (!c)
 						error_exit(false, "-s: parameter missing");
-					int bit = atoi(optarg);
+					int bit   = atoi(optarg);
 					int state = atoi(c + 1);
 
 					console_switches &= ~(1 << bit);
@@ -505,11 +414,6 @@ int main(int argc, char *argv[])
 
 	setlogfile(logfile, ll_file, ll_screen, timestamp);
 
-#if !defined(_WIN32)
-	if (validate_json.empty() == false)
-		return run_cpu_validation(validate_json);
-#endif
-
 	DOLOG(info, true, "PDP11 emulator, by Folkert van Heusden");
 
 	DOLOG(info, true, "Built on: " __DATE__ " " __TIME__);
@@ -525,6 +429,14 @@ int main(int argc, char *argv[])
 	}
 	else {
 		cnsl = new console_posix(&event);
+	}
+#endif
+
+#if !defined(_WIN32)
+	if (validate_json.empty() == false) {
+		int rc = run_cpu_validation(cnsl, validate_json);
+		delete cnsl;
+		return rc;
 	}
 #endif
 

@@ -129,6 +129,7 @@ public:
 	std::optional<uint16_t> peek_word(const int run_mode, const uint16_t a);
 	uint8_t  read_unibus_byte(const uint32_t a);
 	uint16_t read_physical(const uint32_t a);
+	uint16_t read_physical_byte(const uint32_t a);
 
 	bool     write(const uint16_t a, const word_mode_t word_mode, uint16_t value, const rm_selection_t mode_selection, const d_i_space_t s = i_space);
 	void     write_unibus_byte(const uint32_t a, const uint8_t value);

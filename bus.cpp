@@ -823,15 +823,26 @@ void bus::write_physical(const uint32_t a, const uint16_t value)
 uint16_t bus::read_physical(const uint32_t a)
 {
 	if (a >= m->get_memory_size()) {
-		TRACE("physicalREAD from %o: trap 004", a);
+		TRACE("read_physical from %o: trap 004", a);
 		c->trap(004);
 		throw 13;
 	}
 
 	uint16_t value = m->read_word(a);
+	TRACE("read_physical %06o from %o", value, a);
+	return value;
+}
 
-	TRACE("physicalREAD %06o from %o", value, a);
+uint16_t bus::read_physical_byte(const uint32_t a)
+{
+	if (a >= m->get_memory_size()) {
+		TRACE("read_physical_byte from %o: trap 004", a);
+		c->trap(004);
+		throw 13;
+	}
 
+	uint16_t value = m->read_byte(a);
+	TRACE("read_physical_byte %03o from %o", value, a);
 	return value;
 }
 
