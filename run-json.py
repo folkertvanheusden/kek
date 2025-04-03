@@ -1,18 +1,19 @@
 #! /usr/bin/python3
 
 import json
-from subprocess import Popen, PIPE
+from subprocess import Popen, PIPE, STDOUT
 import sys
 
-debug = False
+debug = True
 
 def docmd(p, str):
-    p.stdin.write((str + "\n").encode('ascii'))
+    print(f'SEND {str}')
+    p.stdin.write(str + "\n")
+    p.stdin.flush()
 
     pl = None
     while True:
-        line = p.stdout.readline()
-        line = line.decode('ascii', 'ignore').rstrip('\n').strip('\r')
+        line = p.stdout.readline().rstrip('\n').rstrip('\r')
         if debug:
             print(f'|{line}|')
 
@@ -21,7 +22,7 @@ def docmd(p, str):
 
         pl = line
 
-process = Popen(['./build/kek', '-d', '-L', 'emergency,debug', '-t', '-l', sys.argv[2]], stdin=PIPE, stdout=PIPE, stderr=PIPE, bufsize=0)
+process = Popen(['./build/kek', '-d', '-L', 'emergency,debug', '-l', sys.argv[2]], stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True, bufsize=1, universal_newlines=True, text=True)
 docmd(process, 'marker')
 
 test_file = sys.argv[1]
