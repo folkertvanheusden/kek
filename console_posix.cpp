@@ -19,16 +19,16 @@
 console_posix::console_posix(std::atomic_uint32_t *const stop_event): console(stop_event)
 {
 #if !defined(_WIN32)
-	if (tcgetattr(STDIN_FILENO, &org_tty_opts) == -1 && errno != ENOTTY)
-		error_exit(true, "console_posix: tcgetattr failed");
+	if (isatty(STDIN_FILENO)) {
+		if (tcgetattr(STDIN_FILENO, &org_tty_opts) == -1)
+			error_exit(true, "console_posix: tcgetattr failed");
 
-	struct termios tty_opts_raw { };
-	cfmakeraw(&tty_opts_raw);
+		struct termios tty_opts_raw { };
+		cfmakeraw(&tty_opts_raw);
 
-	if (tcsetattr(STDIN_FILENO, TCSANOW, &tty_opts_raw) == -1 && errno != ENOTTY)
-		error_exit(true, "console_posix: tcsetattr failed");
-
-	setvbuf(stdin, nullptr, _IONBF, 0);
+		if (tcsetattr(STDIN_FILENO, TCSANOW, &tty_opts_raw) == -1)
+			error_exit(true, "console_posix: tcsetattr failed");
+	}
 #endif
 }
 
@@ -37,7 +37,7 @@ console_posix::~console_posix()
 	stop_thread();
 
 #if !defined(_WIN32)
-	if (tcsetattr(STDIN_FILENO, TCSANOW, &org_tty_opts) == -1 && errno != ENOTTY)
+	if (isatty(STDIN_FILENO) && tcsetattr(STDIN_FILENO, TCSANOW, &org_tty_opts) == -1)
 		error_exit(true, "~console_posix: tcsetattr failed");
 #endif
 }
@@ -56,8 +56,11 @@ int console_posix::wait_for_char_ll(const short timeout)
 #else
 	struct pollfd fds[] = { { STDIN_FILENO, POLLIN, 0 } };
 
-	if (poll(fds, 1, timeout) == 1 && fds[0].revents)
-		return getchar();
+	if (poll(fds, 1, timeout) == 1 && fds[0].revents) {
+		char buffer = 0;
+		read(STDIN_FILENO, &buffer, 1);
+		return buffer;
+	}
 #endif
 
 	return -1;
