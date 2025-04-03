@@ -251,6 +251,15 @@ log_level_t parse_ll(const std::string & str)
 	if (str == "error")
 		return ll_error;
 
+	if (str == "critical")
+		return ll_critical;
+
+	if (str == "alert")
+		return ll_alert;
+
+	if (str == "emergency")
+		return ll_emerg;
+
 	if (str == "none")
 		return none;
 
