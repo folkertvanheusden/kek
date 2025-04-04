@@ -607,7 +607,6 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 
 		case 0b010: { // CMP/CMPB Compare Word/Byte
 				    gam_rc_t g_src = getGAM(src_mode, src_reg, word_mode);
-
 				    auto     g_dst = getGAM(dst_mode, dst_reg, word_mode);
 
 				    addToMMR1(g_dst);
@@ -625,7 +624,6 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 
 		case 0b011: { // BIT/BITB Bit Test Word/Byte
 				    gam_rc_t g_src  = getGAM(src_mode, src_reg, word_mode);
-
 				    auto     g_dst  = getGAM(dst_mode, dst_reg, word_mode);
 
 				    addToMMR1(g_dst);
@@ -732,7 +730,7 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 				    return true;
 			    }
 
-		case 0b111: { // ADD/SUB Add/Subtract Word
+		case 0b111: {
 			if (word_mode == wm_byte) [[unlikely]]
 				return false;
 
