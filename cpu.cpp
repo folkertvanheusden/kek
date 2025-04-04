@@ -834,18 +834,15 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 				else if (shift <= 15) {
 					R <<= shift;
 					setPSW_c(R & 0x10000);
-					setPSW_v(SIGN(oldR, wm_word) != SIGN(R, wm_word));
 				}
 				else if (shift < 32) {
 					setPSW_c((R << (shift - 16)) & 1);
 					R = 0;
-					setPSW_v(SIGN(oldR, wm_word) != SIGN(R, wm_word));
 				}
 				else if (shift == 32) {
 					R = -sign;
 
 					setPSW_c(sign);
-					setPSW_v(SIGN(R, wm_word) != SIGN(oldR, wm_word));
 				}
 				else {
                                         int      shift_n     = 64 - shift;
@@ -856,9 +853,9 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
                                                 R >>= 1;
                                                 R |= sign_extend;
                                         }
-
-					setPSW_v(SIGN(R, wm_word) != SIGN(oldR, wm_word));
 				}
+
+				setPSW_v(SIGN(oldR, wm_word) != SIGN(R, wm_word));
 
 				R &= 0xffff;
 
@@ -872,12 +869,11 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 
 		case 3: { // ASHC
 				uint32_t R0R1  = (uint32_t(get_register(reg)) << 16) | get_register(reg | 1);
+				bool     sign  = R0R1 & 0x80000000;
 
 			        auto     g_dst = getGAM(dst_mode, dst_reg, wm_word);
 			        addToMMR1(g_dst);
 				uint16_t shift = g_dst.value.value() & 077;
-
-				bool     sign  = R0R1 & 0x80000000;
 
 				setPSW_v(false);
 
