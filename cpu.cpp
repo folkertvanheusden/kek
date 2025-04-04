@@ -2467,7 +2467,7 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 	return out;
 }
 
-void cpu::step()
+bool cpu::step()
 {
 	it_is_a_trap = false;
 
@@ -2491,24 +2491,28 @@ void cpu::step()
 		add_register(7, 2);
 
 		if (double_operand_instructions(instr))
-			return;
+			return true;
 
 		if (conditional_branch_instructions(instr))
-			return;
+			return true;
 
 		if (condition_code_operations(instr))
-			return;
+			return true;
 
 		if (misc_operations(instr))
-			return;
+			return true;
 
 		DOLOG(warning, false, "UNHANDLED instruction %06o @ %06o", instr, instruction_start);
 
 		trap(010);  // floating point nog niet geimplementeerd
+
+		return false;
 	}
 	catch(const int exception_nr) {
 		TRACE("bus-trap during execution of command (%d)", exception_nr);
 	}
+
+	return true;
 }
 
 JsonDocument cpu::serialize()

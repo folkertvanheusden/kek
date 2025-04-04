@@ -136,14 +136,17 @@ int run_cpu_validation(console *const cnsl, const std::string & filename)
 				b->write_physical(element.first, element.second);
 		}
 
+		int cur_n_errors = 0;
+
 		// DO!
 		c->emulation_start();
 		disassemble(c, nullptr, c->getPC(), false);
-		c->step();
-
+		if (c->step() == false) {
+			cnsl->put_string_lf("Treated as an invalid instruction");
+			cur_n_errors++;
+		}
 		// VERIFY
-		int cur_n_errors = 0;
-		{
+		else {
 			auto after = test["after"];
 
 			cur_n_errors += !compare_values(cnsl, c->getPC(),  get_register_value(after, "PC" ), "PC" );

@@ -141,7 +141,7 @@ public:
 
 	void reset();
 
-	void step();
+	bool step();
 
 	void pushStack(const uint16_t v);
 	uint16_t popStack();
