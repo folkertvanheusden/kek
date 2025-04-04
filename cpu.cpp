@@ -831,18 +831,20 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 					setPSW_c(false);
 					setPSW_v(false);
 				}
-				else if (shift <= 15) {
-					R <<= shift;
-					setPSW_c(R & 0x10000);
-				}
 				else if (shift < 32) {
 					setPSW_c((R << (shift - 16)) & 1);
-					R = 0;
+					setPSW_v(false);
+					for(int i=0; i<shift; i++) {
+						R <<= 1;
+						if (SIGN(R, wm_word) != sign)
+							setPSW_v(true);
+					}
 				}
 				else if (shift == 32) {
 					R = -sign;
 
 					setPSW_c(sign);
+					setPSW_v(SIGN(oldR, wm_word) != SIGN(R, wm_word));
 				}
 				else {
                                         int      shift_n     = 64 - shift;
@@ -854,8 +856,6 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
                                                 R |= sign_extend;
                                         }
 				}
-
-				setPSW_v(SIGN(oldR, wm_word) != SIGN(R, wm_word));
 
 				R &= 0xffff;
 
@@ -917,7 +917,7 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 				set_register(reg, R0R1 >> 16);
 				set_register(reg | 1, R0R1 & 65535);
 
-				setPSW_n(R0R1 & 0x80000000);
+				setPSW_n(new_sign);
 				setPSW_z(R0R1 == 0);
 
 				return true;
