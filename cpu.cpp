@@ -1120,7 +1120,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						  setPSW_n(SIGN(v, word_mode));
 						  setPSW_z(IS_0(v, word_mode));
 						  setPSW_v(word_mode == wm_byte ? (v & 0xff) == 0x80 : v == 0x8000);
-						  setPSW_c(v);
+						  setPSW_c(v & (word_mode == wm_byte ? 0xff : 0xffff));
 
 						  set_register(dst_reg, v);
 					  }
@@ -1135,7 +1135,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 							  setPSW_n(SIGN(v, word_mode));
 							  setPSW_z(IS_0(v, word_mode));
 							  setPSW_v(word_mode == wm_byte ? (v & 0xff) == 0x80 : v == 0x8000);
-							  setPSW_c(v);
+							  setPSW_c(v & (word_mode == wm_byte ? 0xff : 0xffff));
 						  }
 					  }
 
