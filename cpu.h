@@ -19,9 +19,10 @@
 class breakpoint;
 class bus;
 
-constexpr const int initial_trap_delay   = 8;
-
-constexpr const int max_stacktrace_depth = 16;
+constexpr const int      initial_trap_delay   = 8;
+constexpr const int      max_stacktrace_depth = 16;
+constexpr const uint32_t B32_MSBSET = 0x80000000;
+constexpr const uint64_t B64_MSWSET = 0xffffffff00000000ll;
 
 typedef struct {
 	int      delta;

@@ -786,7 +786,7 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 
 					return true;
 				}
-				else if (divider == -1 && uint32_t(R0R1) == 0x80000000) {  // maximum negative value; too big
+				else if (divider == -1 && uint32_t(R0R1) == B32_MSBSET) {  // maximum negative value; too big
 					setPSW_n(false);
 					setPSW_z(false);
 					setPSW_v(true);
@@ -870,38 +870,43 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 
 		case 3: { // ASHC
 				uint32_t R0R1  = (uint32_t(get_register(reg)) << 16) | get_register(reg | 1);
-				bool     sign  = R0R1 & 0x80000000;
+				bool     sign  = R0R1 & B32_MSBSET;
 
 			        auto     g_dst = getGAM(dst_mode, dst_reg, wm_word);
 			        addToMMR1(g_dst);
 				uint16_t shift = g_dst.value.value() & 077;
+
+				TRACE("shift %012o (base-reg: R%d) with %d", R0R1, reg, shift);
 
 				setPSW_v(false);
 
 				if (shift == 0)
 					setPSW_c(false);
 				else if (shift < 32) {
-					R0R1 <<= shift - 1;
+					setPSW_c((R0R1 << (shift - 1)) & B32_MSBSET);
 
-					setPSW_c(R0R1 >> 31);
-
-					R0R1 <<= 1;
+                                        setPSW_v(false);
+                                        for(int i=0; i<shift; i++) {
+                                                R0R1 <<= 1;
+						if (bool(R0R1 & B32_MSBSET) != sign)
+							setPSW_v(true);
+					}
 				}
 				else if (shift == 32) {
 					R0R1 = -sign;
-
 					setPSW_c(sign);
+
+					bool new_sign = R0R1 & B32_MSBSET;
+					setPSW_v(sign != new_sign);
 				}
 				else {
 					int shift_n = (64 - shift) - 1;
 
 					// extend sign-bit
 					if (sign) {  // convert to unsigned 64b int & extend sign
-						R0R1 = (uint64_t(R0R1) | 0xffffffff00000000ll) >> shift_n;
-
+						R0R1 = (uint64_t(R0R1) | B64_MSWSET) >> shift_n;
 						setPSW_c(R0R1 & 1);
-
-						R0R1 = (uint64_t(R0R1) | 0xffffffff00000000ll) >> 1;
+						R0R1 = (uint64_t(R0R1) | B64_MSWSET) >> 1;
 					}
 					else {
 						R0R1 >>= shift_n;
@@ -910,15 +915,15 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 
 						R0R1 >>= 1;
 					}
+
+					bool new_sign = R0R1 & B32_MSBSET;
+					setPSW_v(sign != new_sign);
 				}
 
-				bool new_sign = R0R1 & 0x80000000;
-				setPSW_v(sign != new_sign);
-
-				set_register(reg, R0R1 >> 16);
+				set_register(reg,     R0R1 >> 16  );
 				set_register(reg | 1, R0R1 & 65535);
 
-				setPSW_n(new_sign);
+				setPSW_n(R0R1 & B32_MSBSET);
 				setPSW_z(R0R1 == 0);
 
 				return true;
