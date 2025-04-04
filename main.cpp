@@ -82,7 +82,13 @@ bool compare_values(console *const cnsl, uint32_t v, uint32_t should_be, const s
 	if (v == should_be)
 		return true;
 
-	cnsl->put_string_lf(format("%s: %o (is) != %o (should be)", name.c_str(), v, should_be));
+	int different_bits = v ^ should_be;
+	std::string different_bits_str;
+	do {
+		different_bits_str = std::to_string(different_bits & 1) + different_bits_str;
+	} while(different_bits >>= 1);
+
+	cnsl->put_string_lf(format("%s: %o (is) != %o (should be), different bits: %s", name.c_str(), v, should_be, different_bits_str.c_str()));
 
 	return false;
 }
