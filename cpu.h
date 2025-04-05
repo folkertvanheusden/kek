@@ -21,7 +21,9 @@ class bus;
 
 constexpr const int      initial_trap_delay   = 8;
 constexpr const int      max_stacktrace_depth = 16;
+constexpr const uint16_t B16_MSBSET = 0x8000;
 constexpr const uint32_t B32_MSBSET = 0x80000000;
+constexpr const uint32_t B32_MSWSET = 0xffff0000;
 constexpr const uint64_t B64_MSWSET = 0xffffffff00000000ll;
 
 typedef struct {
@@ -83,6 +85,8 @@ private:
 
 	bool     check_pending_interrupts() const;  // needs the 'qi_lock'-lock
 	bool     execute_any_pending_interrupt();
+
+	uint32_t shifter(uint32_t value, int shift, bool is32b);
 
 	uint16_t add_register(const int nr, const uint16_t value);
 

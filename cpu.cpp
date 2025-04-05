@@ -1,4 +1,4 @@
-// (C) 2018-2024 by Folkert van Heusden
+// (C) 2018-2025 by Folkert van Heusden
 // Released under MIT license
 
 #include <assert.h>
@@ -741,6 +741,59 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 	return false;
 }
 
+uint32_t cpu::shifter(uint32_t value, int shift, bool is32b)
+{
+	uint64_t sign_extend = is32b ? B64_MSWSET : (B64_MSWSET | B32_MSWSET);
+	uint32_t sign_mask   = is32b ? B32_MSBSET : B16_MSBSET;
+	uint32_t mask        = is32b ? 0xffffffff : 0xffff;
+	bool     sign        = value & sign_mask;
+
+	TRACE("shift %012o with %d", value, shift);
+
+	setPSW_v(false);
+
+	if (shift == 0)
+		setPSW_c(false);
+	else if (shift < 32) {
+		setPSW_c((value << (shift - 1)) & sign_mask);
+
+		for(int i=0; i<shift; i++) {
+			value <<= 1;
+			if (bool(value & sign_mask) != sign)
+				setPSW_v(true);
+		}
+	}
+	else if (shift == 32) {
+		value = -sign;
+		setPSW_c(sign);
+		setPSW_v(sign != bool(value & sign_mask));
+	}
+	else {
+		int shift_n = (64 - shift) - 1;
+
+		// extend sign-bit
+		if (sign) {  // convert to unsigned 64b int & extend sign
+			value = (uint64_t(value) | sign_extend) >> shift_n;
+			setPSW_c(value & 1);
+			value = (uint64_t(value) | sign_extend) >> 1;
+		}
+		else {
+			value >>= shift_n;
+			setPSW_c(value & 1);
+			value >>= 1;
+		}
+
+		bool new_sign = value & sign_mask;
+		setPSW_v(sign != new_sign);
+	}
+
+	value &= mask;
+	setPSW_n(value & sign_mask);
+	setPSW_z(value == 0);
+
+	return value;
+}
+
 bool cpu::additional_double_operand_instructions(const uint16_t instr)
 {
 	const uint8_t reg = (instr >> 6) & 7;
@@ -817,114 +870,28 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 			}
 
 		case 2: { // ASH
-				uint32_t R     = get_register(reg), oldR = R;
-
-			        auto     g_dst = getGAM(dst_mode, dst_reg, wm_word);
+				uint32_t R         = get_register(reg);
+			        auto     g_dst     = getGAM(dst_mode, dst_reg, wm_word);
 			        addToMMR1(g_dst);
-				uint16_t shift = g_dst.value.value() & 077;
+				int      shift     = g_dst.value.value() & 077;
 
-				TRACE("shift %06o with %d", R, shift);
+				uint32_t new_value = shifter(R, shift, false);
 
-				bool     sign  = SIGN(R, wm_word);
-
-				if (shift == 0) {
-					setPSW_c(false);
-					setPSW_v(false);
-				}
-				else if (shift < 32) {
-					if (shift > 15)
-						setPSW_c((R << (shift - 16)) & 1);
-					setPSW_v(false);
-					for(int i=0; i<shift; i++) {
-						R <<= 1;
-						if (SIGN(R, wm_word) != sign)
-							setPSW_v(true);
-					}
-					if (shift <= 15)
-						setPSW_c(R & 0x10000);
-				}
-				else if (shift == 32) {
-					R = -sign;
-
-					setPSW_c(sign);
-					setPSW_v(SIGN(oldR, wm_word) != SIGN(R, wm_word));
-				}
-				else {
-                                        int      shift_n     = 64 - shift;
-                                        uint32_t sign_extend = sign ? 0x8000 : 0;
-
-                                        for(int i=0; i<shift_n; i++) {
-                                                setPSW_c(R & 1);
-                                                R >>= 1;
-                                                R |= sign_extend;
-                                        }
-				}
-
-				setPSW_n(SIGN(R, wm_word));
-				setPSW_z((R & 0xffff) == 0);
-
-				set_register(reg, R);
+				set_register(reg, new_value);
 
 				return true;
 			}
 
 		case 3: { // ASHC
-				uint32_t R0R1  = (uint32_t(get_register(reg)) << 16) | get_register(reg | 1);
-				bool     sign  = R0R1 & B32_MSBSET;
-
-			        auto     g_dst = getGAM(dst_mode, dst_reg, wm_word);
+				uint32_t R0R1      = (uint32_t(get_register(reg)) << 16) | get_register(reg | 1);
+			        auto     g_dst     = getGAM(dst_mode, dst_reg, wm_word);
 			        addToMMR1(g_dst);
-				uint16_t shift = g_dst.value.value() & 077;
+				int      shift     = g_dst.value.value() & 077;
 
-				TRACE("shift %012o (base-reg: R%d) with %d", R0R1, reg, shift);
+				uint32_t new_value = shifter(R0R1, shift, true);
 
-				setPSW_v(false);
-
-				if (shift == 0)
-					setPSW_c(false);
-				else if (shift < 32) {
-					setPSW_c((R0R1 << (shift - 1)) & B32_MSBSET);
-
-                                        setPSW_v(false);
-                                        for(int i=0; i<shift; i++) {
-                                                R0R1 <<= 1;
-						if (bool(R0R1 & B32_MSBSET) != sign)
-							setPSW_v(true);
-					}
-				}
-				else if (shift == 32) {
-					R0R1 = -sign;
-					setPSW_c(sign);
-
-					bool new_sign = R0R1 & B32_MSBSET;
-					setPSW_v(sign != new_sign);
-				}
-				else {
-					int shift_n = (64 - shift) - 1;
-
-					// extend sign-bit
-					if (sign) {  // convert to unsigned 64b int & extend sign
-						R0R1 = (uint64_t(R0R1) | B64_MSWSET) >> shift_n;
-						setPSW_c(R0R1 & 1);
-						R0R1 = (uint64_t(R0R1) | B64_MSWSET) >> 1;
-					}
-					else {
-						R0R1 >>= shift_n;
-
-						setPSW_c(R0R1 & 1);
-
-						R0R1 >>= 1;
-					}
-
-					bool new_sign = R0R1 & B32_MSBSET;
-					setPSW_v(sign != new_sign);
-				}
-
-				set_register(reg,     R0R1 >> 16  );
-				set_register(reg | 1, R0R1 & 65535);
-
-				setPSW_n(R0R1 & B32_MSBSET);
-				setPSW_z(R0R1 == 0);
+				set_register(reg,     new_value >> 16  );
+				set_register(reg | 1, new_value & 65535);
 
 				return true;
 			}
