@@ -316,14 +316,10 @@ int cpu::getPSW_spl() const
 
 void cpu::setPSW(const uint16_t v, const bool limited)
 {
-	if (limited) {
-		// cannot replace the run-mode bits nor the set of registers
-		// psw = (psw & ~0340) | (v & 0174340);
-		psw = (psw & 0177400) | (v & 037777);
-	}
-	else {
-		psw = v;
-	}
+	if (limited)
+		psw = (psw & 0174340) | (v & 037);
+	else
+		psw = v & 0174377;  // mask off reserved bits
 }
 
 void cpu::setPSW_flags_nzv(const uint16_t value, const word_mode_t word_mode)
