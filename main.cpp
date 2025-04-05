@@ -131,9 +131,10 @@ int run_cpu_validation(console *const cnsl, const std::string & filename)
 				c->set_stackpointer(i, get_register_value(before, format("stack-%d", i)));
 
 			// registers
-			int set = 0;
-			for(int i=0; i<6; i++)
-				c->set_register(i, get_register_value(before, format("reg-%d.%d", i, set)));
+			for(int set=0; set<2; set++) {
+				for(int i=0; i<6; i++)
+					c->lowlevel_register_set(set, i, get_register_value(before, format("reg-%d.%d", i, set)));
+			}
 
 			// memory
 			auto memory_before = before["memory"];
@@ -161,9 +162,10 @@ int run_cpu_validation(console *const cnsl, const std::string & filename)
 			for(int i=0; i<4; i++)
 				cur_n_errors += !compare_values(cnsl, c->get_stackpointer(i), get_register_value(after, format("stack-%d", i)), format("Stack pointer %d", i));
 
-			int set = 0;
-			for(int i=0; i<6; i++)
-				cur_n_errors += !compare_values(cnsl, c->get_register(i), get_register_value(after, format("reg-%d.%d", i, set)), format("Register %d", i));
+			for(int set=0; set<2; set++) {
+				for(int i=0; i<6; i++)
+					cur_n_errors += !compare_values(cnsl, c->lowlevel_register_get(set, i), get_register_value(after, format("reg-%d.%d", i, set)), format("Register %d", i));
+			}
 
 			auto memory_after = after["memory"];
 			auto memory_after_settings = get_memory_settings(memory_after);
