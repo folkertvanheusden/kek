@@ -2203,6 +2203,8 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 		if (src_text.valid == false || dst_text.valid == false)
 			text += " (INV3)";
 
+		if (do_opcode == 0b110)
+			word_mode_str.clear();
 		text = name + word_mode_str + space + src_text.operand + comma + dst_text.operand;
 	}
 
