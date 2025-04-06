@@ -65,8 +65,9 @@ std::vector<std::pair<uint32_t, uint8_t> > get_memory_settings(const JsonArrayCo
 		for(const auto & kv: kv_dict.as<JsonObjectConst>()) {
 			uint32_t a = std::stoi(kv.key().c_str(), nullptr, 8);
 			uint16_t v = kv.value().as<int>();
-			out.push_back({ a, v & 255 });
-			out.push_back({ a + 1, v >> 8 });
+			out.push_back({ a, v });
+			if (a == 0 && v == 0)
+				printf("Suspect\n");
 		}
 	}
 	return out;
@@ -140,7 +141,7 @@ int run_cpu_validation(console *const cnsl, const std::string & filename)
 			auto memory_before = before["memory"];
 			auto memory_before_settings = get_memory_settings(memory_before);
 			for(auto & element: memory_before_settings)
-				b->write_physical(element.first, element.second);
+				b->write_unibus_byte(element.first, element.second);
 		}
 
 		int cur_n_errors = 0;
