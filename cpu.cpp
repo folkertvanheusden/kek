@@ -1854,8 +1854,11 @@ std::optional<cpu::operand_parameters> cpu::addressing_to_string(const uint8_t m
 
 	int         run_mode  = getPSW_runmode();
 	auto        temp      = b->peek_word(run_mode, pc & 65535);
-	if (temp.has_value() == false)
-		return { };
+	if (temp.has_value() == false) {
+		operand_parameters out;
+		out.error = "cannot read from memory";
+		return out;
+	}
 	uint16_t    next_word = temp.value();
 	int         reg       = mode_register & 7;
 	uint16_t    mask      = word_mode == wm_byte ? 0xff : 0xffff;
@@ -1871,108 +1874,110 @@ std::optional<cpu::operand_parameters> cpu::addressing_to_string(const uint8_t m
 	else
 		reg_name = format("R%d", reg);
 
-	switch(mode_register >> 3) {
+	std::optional<std::string> error;
+
+	int mode = mode_register >> 3;
+	switch(mode) {
 		case 0:
-			return { { reg_name, 2, -1, uint16_t(get_register(reg) & mask), true } };
+			return { { reg_name, 2, -1, uint16_t(get_register(reg) & mask), true, { } } };
 
 		case 1:
 			temp2 = b->peek_word(run_mode, get_register(reg));
 			if (temp2.has_value() == false)
-				temp2 = 0xffff, valid = false;
+				temp2 = 0xffff, valid = false, error = format("cannot fetch memory from %o", get_register(reg));
 
-			return { { format("(%s)", reg_name.c_str()), 2, -1, uint16_t(temp2.value() & mask), valid } };
+			return { { format("(%s)", reg_name.c_str()), 2, -1, uint16_t(temp2.value() & mask), valid, error } };
 
 		case 2:
 			if (reg == 7)
-				return { { format("#%06o", next_word), 4, int(next_word), uint16_t(next_word & mask), true } };
+				return { { format("#%06o", next_word), 4, int(next_word), uint16_t(next_word & mask), true, { } } };
 
 			temp2 = b->peek_word(run_mode, get_register(reg));
 			if (temp2.has_value() == false)
-				temp2 = 0xffff, valid = false;
+				temp2 = 0xffff, valid = false, error = format("cannot fetch memory from %o", get_register(reg));
 
-			return { { format("(%s)+", reg_name.c_str()), 2, -1, uint16_t(temp2.value() & mask), valid } };
+			return { { format("(%s)+", reg_name.c_str()), 2, -1, uint16_t(temp2.value() & mask), valid, error } };
 
 		case 3:
 			if (reg == 7) {
 				temp2 = b->peek_word(run_mode, next_word);
 				if (temp2.has_value() == false)
-					temp2 = 0xffff, valid = false;
+					temp2 = 0xffff, valid = false, error = format("cannot fetch memory from %o", next_word);
 
-				return { { format("@#%06o", next_word), 4, int(next_word), uint16_t(temp2.value() & mask), valid } };
+				return { { format("@#%06o", next_word), 4, int(next_word), uint16_t(temp2.value() & mask), valid, error } };
 			}
 
 			temp2 = b->peek_word(run_mode, get_register(reg));
 			if (temp2.has_value() == false)
-				temp2 = 0xffff, valid = false;
+				temp2 = 0xffff, valid = false, error = format("cannot fetch memory from %o", get_register(reg));
+			else {
+				uint16_t keep = temp2.value();
+				temp2 = b->peek_word(run_mode, temp2.value());
+				if (temp2.has_value() == false)
+					temp2 = 0xffff, valid = false, error = format("cannot fetch memory from %o", keep);
+			}
+
+			return { { format("@(%s)+", reg_name.c_str()), 2, -1, uint16_t(temp2.value() & mask), valid, error } };
+
+		case 4: {
+			uint16_t calculated_address = get_register(reg) - (word_mode == wm_word || reg >= 6 ? 2 : 1);
+			temp2 = b->peek_word(run_mode, calculated_address);
+			if (temp2.has_value() == false)
+				temp2 = 0xffff, valid = false, error = format("cannot fetch memory from %o", calculated_address);
+
+			return { { format("-(%s)", reg_name.c_str()), 2, -1, uint16_t(temp2.value() & mask), valid, error } };
+			}
+
+		case 5: {
+			uint16_t calculated_address = get_register(reg) - 2;
+			temp2 = b->peek_word(run_mode, calculated_address);
+			if (temp2.has_value() == false)
+				temp2 = 0xffff, valid = false, error = format("cannot fetch memory from %o", calculated_address);
 			else {
 				temp2 = b->peek_word(run_mode, temp2.value());
 				if (temp2.has_value() == false)
-					temp2 = 0xffff, valid = false;
+					temp2 = 0xffff, valid = false, error = format("cannot fetch memory from %o", temp2.value());
 			}
 
-			return { { format("@(%s)+", reg_name.c_str()), 2, -1, uint16_t(temp2.value() & mask), valid } };
-
-		case 4:
-			temp2 = b->peek_word(run_mode, get_register(reg) - (word_mode == wm_word || reg >= 6 ? 2 : 1));
-			if (temp2.has_value() == false)
-				temp2 = 0xffff, valid = false;
-
-			return { { format("-(%s)", reg_name.c_str()), 2, -1, uint16_t(temp2.value() & mask), valid } };
-
-		case 5:
-			temp2 = b->peek_word(run_mode, get_register(reg) - 2);
-			if (temp2.has_value() == false)
-				temp2 = 0xffff, valid = false;
-			else {
-				temp2 = b->peek_word(run_mode, temp2.value());
-				if (temp2.has_value() == false)
-					temp2 = 0xffff, valid = false;
+			return { { format("@-(%s)", reg_name.c_str()), 2, -1, uint16_t(temp2.value() & mask), valid, error } };
 			}
-
-			return { { format("@-(%s)", reg_name.c_str()), 2, -1, uint16_t(temp2.value() & mask), valid } };
 
 		case 6:
-			if (reg == 7) {
-				temp2 = b->peek_word(run_mode, get_register(reg) + next_word);
-				if (temp2.has_value() == false)
-					temp2 = 0xffff, valid = false;
-
-				return { { format("%06o", (pc + next_word + 2) & 65535), 4, int(next_word), uint16_t(temp2.value() & mask), valid } };
-			}
-
-			temp2 = b->peek_word(run_mode, get_register(reg) + next_word);
+			{
+			uint16_t calculated_address = get_register(reg) + next_word;
+			temp2 = b->peek_word(run_mode, calculated_address);
 			if (temp2.has_value() == false)
-				temp2 = 0xffff, valid = false;
+				temp2 = 0xffff, valid = false, error = format("cannot fetch memory from %o", calculated_address);
 
-			return { { format("%o(%s)", next_word, reg_name.c_str()), 4, int(next_word), uint16_t(temp2.value() & mask), valid } };
+			if (reg == 7)
+				return { { format("%06o", (pc + next_word + 2) & 65535), 4, int(next_word), uint16_t(temp2.value() & mask), valid, error } };
+
+			return { { format("%o(%s)", next_word, reg_name.c_str()), 4, int(next_word), uint16_t(temp2.value() & mask), valid, error } };
+			}
 
 		case 7:
-			if (reg == 7) {
-				temp2 = b->peek_word(run_mode, get_register(reg) + next_word);
-				if (temp2.has_value() == false)
-					temp2 = 0xffff, valid = false;
-				else {
-					temp2 = b->peek_word(run_mode, temp2.value());
-					if (temp2.has_value() == false)
-						temp2 = 0xffff, valid = false;
-				}
-
-				return { { format("@%06o", next_word), 4, int(next_word), uint16_t(temp2.value() & mask), valid } };
-			}
-
-			temp2 = b->peek_word(run_mode, get_register(reg) + next_word);
+			{
+			uint16_t calculated_address = get_register(reg) + next_word;
+			temp2 = b->peek_word(run_mode, calculated_address);
 			if (temp2.has_value() == false)
-				temp2 = 0xffff, valid = false;
+				temp2 = 0xffff, valid = false, error = format("cannot fetch memory from %o", calculated_address);
 			else {
 				temp2 = b->peek_word(run_mode, temp2.value());
 				if (temp2.has_value() == false)
-					temp2 = 0xffff, valid = false;
+					temp2 = 0xffff, valid = false, error = format("cannot fetch memory from %o", temp2.value());
 			}
 
-			return { { format("@%o(%s)", next_word, reg_name.c_str()), 4, int(next_word), uint16_t(temp2.value() & mask), valid } };
+			if (reg == 7)
+				return { { format("@%06o", next_word), 4, int(next_word), uint16_t(temp2.value() & mask), valid, error } };
+
+			return { { format("@%o(%s)", next_word, reg_name.c_str()), 4, int(next_word), uint16_t(temp2.value() & mask), valid, error } };
+			}
 	}
 
-	return { };
+	operand_parameters out;
+	out.error = format("unknown register mode %d", mode);
+
+	return out;
 }
 
 std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t addr) const
@@ -2354,6 +2359,9 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 
 			if (dst_text.valid == false)
 				text += " (INV4)";
+
+			if (addressing.value().error.has_value())
+				text += " " + addressing.value().error.value();
 		}
 
 		if ((instruction & 0b1111111000000000) == 0b0000100000000000) {

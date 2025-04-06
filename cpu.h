@@ -109,6 +109,7 @@ private:
 		int         instruction_part;
 		uint16_t    work_value;
 		bool        valid;
+		std::optional<std::string> error;
 	};
 
 	std::optional<operand_parameters> addressing_to_string(const uint8_t mode_register, const uint16_t pc, const word_mode_t word_mode) const;
