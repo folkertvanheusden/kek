@@ -252,7 +252,7 @@ void help()
 	printf("-X       do not include timestamp in logging\n");
 	printf("-J x     run validation suite x against the CPU emulation\n");
 	printf("-M       log metrics\n");
-	printf("-1 x     use x as device for DC-11\n");
+	printf("-1 x     use x as device for DC-11 (instead of 4 tcp-sockets starting at port 1100)\n");
 }
 
 int main(int argc, char *argv[])
