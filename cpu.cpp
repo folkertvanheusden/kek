@@ -2076,6 +2076,8 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 			case 0b000110100:
 				if (word_mode == wm_byte)
 					name = "MTPS";
+				else
+					name = "MARK";
 				break;
 
 			case 0b000110111:
@@ -2089,8 +2091,8 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 		if (text.empty() && name.empty() == false)
 			text = name + word_mode_str + space + dst_text.operand;
 
-		if (dst_text.valid == false)
-			text += " (INV)";
+		if (text.empty() == false && dst_text.valid == false)
+			text += " (INV1)";
 
 		if (text.empty() == false && next_word != -1)
 			instruction_words.push_back(next_word);
@@ -2137,7 +2139,7 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 				text = name + space + src_text + comma + dst_text.operand;  // TODO: swap for ASH, ASHC
 
 			if (dst_text.valid == false)
-				text += " (INV)";
+				text += " (INV2)";
 
 			if (text.empty() == false && next_word != -1)
 				instruction_words.push_back(next_word);
@@ -2194,7 +2196,7 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 		work_values.push_back(dst_text.work_value);
 
 		if (src_text.valid == false || dst_text.valid == false)
-			text += " (INV)";
+			text += " (INV3)";
 
 		text = name + word_mode_str + space + src_text.operand + comma + dst_text.operand;
 	}
@@ -2351,7 +2353,7 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 			text = std::string("JMP ") + dst_text.operand;
 
 			if (dst_text.valid == false)
-				text += " (INV)";
+				text += " (INV4)";
 		}
 
 		if ((instruction & 0b1111111000000000) == 0b0000100000000000) {
