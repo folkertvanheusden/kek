@@ -742,7 +742,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 		try {
 			if (marker)
 				cnsl->put_string_lf("---");
-				
+
 			std::string cmd   = cnsl->read_line(format("%d", stop_event->load()));
 			auto        parts = split(cmd, " ");
 			auto        kv    = split(parts, "=");
