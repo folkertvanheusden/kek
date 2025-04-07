@@ -144,17 +144,23 @@ int run_cpu_validation(console *const cnsl, const std::string & filename)
 				b->write_unibus_byte(element.first, element.second);
 		}
 
+		int run_n_instructions = test["before"]["run-n-instructions"].as<int>();
+
 		int cur_n_errors = 0;
 
 		// DO!
 		c->emulation_start();
-		disassemble(c, nullptr, c->getPC(), false);
-		if (c->step() == false) {
-			cnsl->put_string_lf("Treated as an invalid instruction");
-			cur_n_errors++;
+		for(int k=0; k<run_n_instructions; k++) {
+			disassemble(c, nullptr, c->getPC(), false);
+			if (c->step() == false) {
+				cnsl->put_string_lf("Treated as an invalid instruction");
+				cur_n_errors++;
+				break;
+			}
 		}
+
 		// VERIFY
-		else {
+		if (cur_n_errors == 0) {
 			auto after = test["after"];
 
 			cur_n_errors += !compare_values(cnsl, c->getPC(),  get_register_value(after, "PC" ), "PC" );
