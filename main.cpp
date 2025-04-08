@@ -158,6 +158,7 @@ int run_cpu_validation(console *const cnsl, const std::string & filename)
 				break;
 			}
 		}
+		disassemble(c, nullptr, c->getPC(), false);
 
 		// VERIFY
 		if (cur_n_errors == 0) {
