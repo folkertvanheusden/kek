@@ -172,30 +172,32 @@ std::optional<std::string> select_host_file(console *const cnsl)
 	for(;;) {
 		cnsl->flush_input();
 
-		std::string selected_file = cnsl->read_line("Enter filename (or empty to abort): ");
+		std::string selected_file = cnsl->read_line("Enter filename (\"dir\" for listing or empty to abort): ");
 
 		if (selected_file.empty())
 			return { };
 
-		cnsl->put_string("Opening file: ");
-		cnsl->put_string_lf(selected_file.c_str());
+		if (selected_file != "dir") {
+			cnsl->put_string("Opening file: ");
+			cnsl->put_string_lf(selected_file.c_str());
 
-		bool can_open_file = false;
+			bool can_open_file = false;
 
 #if IS_POSIX || defined(_WIN32)
-		struct stat st { };
-		can_open_file = ::stat(selected_file.c_str(), &st) == 0;
+			struct stat st { };
+			can_open_file = ::stat(selected_file.c_str(), &st) == 0;
 #else
-		File32 fh;
-		can_open_file = fh.open(selected_file.c_str(), O_RDWR);
-		if (can_open_file)
-			fh.close();
+			File32 fh;
+			can_open_file = fh.open(selected_file.c_str(), O_RDWR);
+			if (can_open_file)
+				fh.close();
 #endif
 
-		if (can_open_file)
-			return selected_file;
+			if (can_open_file)
+				return selected_file;
 
-		cnsl->put_string_lf("open failed");
+			cnsl->put_string_lf("open failed");
+		}
 
 		ls_l(cnsl);
 	}
