@@ -316,10 +316,14 @@ int cpu::getPSW_spl() const
 
 void cpu::setPSW(const uint16_t v, const bool limited)
 {
-	if (limited)
-		psw = (psw & 0174340) | (v & 037);
-	else
+	if (limited) {
+		int cur_mode  = std::max( v >> 14,       psw >> 14);
+		int prev_mode = std::max((v >> 12) & 3, (psw >> 12) & 3);
+		psw = (psw & 004340) | (v & 037) | (cur_mode << 14) | (prev_mode << 12);
+	}
+	else {
 		psw = v & 0174377;  // mask off reserved bits
+	}
 }
 
 void cpu::setPSW_flags_nzv(const uint16_t value, const word_mode_t word_mode)
