@@ -491,7 +491,8 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t wo
 			if (read_value)
 				g.value = b->read(g.addr.value(), word_mode, rm_cur, isR7_space);
 			add_register(reg, word_mode == wm_word || reg == 7 || reg == 6 ? 2 : 1);
-			g.mmr1_update = { word_mode == wm_word || reg == 7 || reg == 6 ? 2 : 1, reg };
+			if (reg != 7)
+				g.mmr1_update = { word_mode == wm_word || reg == 6 ? 2 : 1, reg };
 			break;
 		case 3:  // @(Rn)+  /  @#a
 			g.addr  = b->read(get_register(reg), wm_word, rm_cur, isR7_space);
