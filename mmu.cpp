@@ -126,6 +126,11 @@ void mmu::clearMMR0Bit(const int bit)
 	MMR0 &= ~(1 << bit);
 }
 
+void mmu::setMMR1(const uint16_t value) 
+{
+	MMR1 = value;
+}
+
 void mmu::setMMR2(const uint16_t value) 
 {
 	MMR2 = value;
