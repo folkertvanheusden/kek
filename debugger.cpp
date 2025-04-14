@@ -978,7 +978,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 					b->getTM11()->show_state(cnsl);
 				else if (parts[1] == "kw11l")
 					b->getKW11_L()->show_state(cnsl);
-				else if (parts[1] == "rp06")
+				else if (parts[1] == "rp06" || parts[1] == "rp07")
 					b->getRP06()->show_state(cnsl);
 				else
 					cnsl->put_string_lf(format("Device \"%s\" is not known", parts[1].c_str()));
@@ -1116,7 +1116,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 					set_boot_loader(b, BL_RK05);
 				else if (parts.at(1) == "rl02")
 					set_boot_loader(b, BL_RL02);
-				else if (parts.at(1) == "rp06")
+				else if (parts.at(1) == "rp06" || parts[1] == "rp07")
 					set_boot_loader(b, BL_RP06);
 				else
 					cnsl->put_string_lf("???");
@@ -1313,7 +1313,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 					"strace x      - start tracing from address - invoke without address to disable",
 					"trl x         - set trace run-level (0...3), empty for all",
 					"regdump       - dump register contents",
-					"state x       - dump state of a device: rl02, rk05, rp06, mmu, tm11, kw11l or dc11",
+					"state x       - dump state of a device: rl02, rk05, rp06, rp07, mmu, tm11, kw11l or dc11",
 					"mmures x      - resolve a virtual address",
 					"qi            - show queued interrupts",
 					"setpc x       - set PC to value (octal)",
@@ -1335,7 +1335,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 					"ult           - unload tape",
 					"stats         - show run statistics",
 					"ramsize x     - set ram size (page (8 kB) count, decimal)",
-					"bl            - set bootloader (rl02, rk05 or rp06)",
+					"bl            - set bootloader (rl02, rk05, rp06 or rp07)",
 					"cdc11         - configure DC11 device",
 					"serdc11       - store DC11 device settings",
 					"dserdc11      - load DC11 device settings",

@@ -253,7 +253,7 @@ void help()
 	printf("-B       run tape file as a unit test (for .BIC files)\n");
 	printf("-r d.img load file as a disk device\n");
 	printf("-N host:port  use NBD-server as disk device (like -r)\n");
-	printf("-R x     select disk type (rk05, rl02 or rp06)\n");
+	printf("-R x     select disk type (rk05, rl02, rp06 or rp07)\n");
 	printf("-p 123   set CPU start pointer to decimal(!) value\n");
 	printf("-b       enable bootloader (builtin)\n");
 	printf("-n       ncurses UI\n");
@@ -385,7 +385,7 @@ int main(int argc, char *argv[])
 
 			case 'R':
 				disk_type = optarg;
-				if (disk_type != "rk05" && disk_type != "rl02" && disk_type != "rp06")
+				if (disk_type != "rk05" && disk_type != "rl02" && disk_type != "rp06" && disk_type != "rp07")
 					error_exit(false, "Disk type not known");
 				break;
 
@@ -489,7 +489,7 @@ int main(int argc, char *argv[])
 		rl02_dev->begin();
 		b->add_rl02(rl02_dev);
 
-		auto rp06_dev = new rp06(b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag());
+		auto rp06_dev = new rp06(b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag(), disk_type == "rp07");
 		rp06_dev->begin();
 		b->add_RP06(rp06_dev);
 
@@ -505,7 +505,7 @@ int main(int argc, char *argv[])
 			for(auto & file: disk_files)
 				rl02_dev->access_disk_backends()->push_back(file);
 		}
-		else if (disk_type == "rp06") {
+		else if (disk_type == "rp06" || disk_type == "rp07") {
 			bootloader = BL_RP06;
 
 			for(auto & file: disk_files)
