@@ -65,6 +65,13 @@ add_executable(
   ${APP_SOURCES}
 )
 
+add_executable(
+  kek-native
+  ${APP_SOURCES}
+)
+
+target_compile_options(kek-native PRIVATE -march=native -mtune=native -O3)
+
 target_compile_options(kek-codecoverage PRIVATE -fprofile-arcs -ftest-coverage)
 target_link_options(kek-codecoverage PRIVATE -fprofile-arcs -ftest-coverage)
 
@@ -75,6 +82,9 @@ target_compile_options(kek PUBLIC ${NCURSES_CFLAGS_OTHER})
 target_link_libraries(kek-codecoverage ${NCURSES_LIBRARIES})
 target_include_directories(kek-codecoverage PUBLIC ${NCURSES_INCLUDE_DIRS})
 target_compile_options(kek-codecoverage PUBLIC ${NCURSES_CFLAGS_OTHER})
+target_link_libraries(kek-native ${NCURSES_LIBRARIES})
+target_include_directories(kek-native PUBLIC ${NCURSES_INCLUDE_DIRS})
+target_compile_options(kek-native PUBLIC ${NCURSES_CFLAGS_OTHER})
 
 pkg_check_modules(PANEL REQUIRED panel)
 target_link_libraries(kek ${PANEL_LIBRARIES})
@@ -83,6 +93,9 @@ target_compile_options(kek PUBLIC ${PANEL_CFLAGS_OTHER})
 target_link_libraries(kek-codecoverage ${PANEL_LIBRARIES})
 target_include_directories(kek-codecoverage PUBLIC ${PANEL_INCLUDE_DIRS})
 target_compile_options(kek-codecoverage PUBLIC ${PANEL_CFLAGS_OTHER})
+target_link_libraries(kek-native ${PANEL_LIBRARIES})
+target_include_directories(kek-native PUBLIC ${PANEL_INCLUDE_DIRS})
+target_compile_options(kek-native PUBLIC ${PANEL_CFLAGS_OTHER})
 endif (NOT WIN32)
 
 if (WIN32)
@@ -116,6 +129,7 @@ endif ()
 add_subdirectory(arduinojson)
 target_link_libraries(kek ArduinoJson)
 target_link_libraries(kek-codecoverage ArduinoJson)
+target_link_libraries(kek-native ArduinoJson)
 
 if (WIN32)
 target_link_libraries(kek-win32 ArduinoJson)
