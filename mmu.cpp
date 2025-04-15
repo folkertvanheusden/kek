@@ -150,6 +150,7 @@ bool mmu::get_use_data_space(const int run_mode) const
 
 void mmu::clearMMR1()
 {
+	TRACE("clear MMR1");
 	MMR1 = 0;
 }
 
@@ -376,20 +377,9 @@ void mmu::verify_page_access(const uint16_t virt_addr, const int run_mode, const
 		TRACE("MMR0: %06o", temp);
 	}
 
-	if (trap_action == T_TRAP_250) {
-		TRACE("Page access %d (for virtual address %06o): trap 0250", access_control, virt_addr);
-
-		c->trap(0250);  // trap
-
-		throw 5;
-	}
-	else {  // T_ABORT_4
-		TRACE("Page access %d (for virtual address %06o): trap 004", access_control, virt_addr);
-
-		c->trap(0250);  // abort
-
-		throw 5;
-	}
+	TRACE("Page access %d (for virtual address %06o): trap 0250", access_control, virt_addr);
+	c->trap(0250);  // abort
+	throw 5;
 }
 
 void mmu::verify_access_valid(const uint32_t m_offset, const int run_mode, const bool d, const int apf, const bool is_io, const bool is_write)
