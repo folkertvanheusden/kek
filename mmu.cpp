@@ -386,7 +386,7 @@ void mmu::verify_page_access(const uint16_t virt_addr, const int run_mode, const
 	else {  // T_ABORT_4
 		TRACE("Page access %d (for virtual address %06o): trap 004", access_control, virt_addr);
 
-		c->trap(004);  // abort
+		c->trap(0250);  // abort
 
 		throw 5;
 	}
@@ -415,7 +415,7 @@ void mmu::verify_access_valid(const uint32_t m_offset, const int run_mode, const
 		if (is_write)
 			set_page_trapped(run_mode, d, apf);
 
-		c->trap(04);
+		c->trap(0250);
 
 		throw 6;
 	}
