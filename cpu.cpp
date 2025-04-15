@@ -458,8 +458,8 @@ void cpu::queue_interrupt(const uint8_t level, const uint8_t vector)
 void cpu::addToMMR1(const gam_rc_t & g)
 {
 	if (b->getMMU()->isMMR1Locked() == false && g.mmr1_update.has_value() == true) {
+		TRACE("MMR1: add %d to register R%d", g.mmr1_update.value().delta, g.mmr1_update.value().reg);
 		assert(g.mmr1_update.value().delta);
-
 		b->getMMU()->addToMMR1(g.mmr1_update.value().delta, g.mmr1_update.value().reg);
 	}
 }
@@ -488,16 +488,16 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t wo
 			break;
 		case 2:  // (Rn)+  /  #n
 			g.addr  = get_register(reg);
-			if (read_value)
-				g.value = b->read(g.addr.value(), word_mode, rm_cur, isR7_space);
 			add_register(reg, word_mode == wm_word || reg == 7 || reg == 6 ? 2 : 1);
 			g.mmr1_update = { word_mode == wm_word || reg == 7 || reg == 6 ? 2 : 1, reg };
+			if (read_value)
+				g.value = b->read(g.addr.value(), word_mode, rm_cur, isR7_space);
 			break;
 		case 3:  // @(Rn)+  /  @#a
 			g.addr  = b->read(get_register(reg), wm_word, rm_cur, isR7_space);
 			g.mmr1_update = { 2, reg };
 			g.space = d_space;
-			// might be wrong: the adds should happen when the read is really performed, because of traps
+			// might be wrong: the adds should happen when the read is really performed(?), because of traps
 			add_register(reg, 2);
 			if (read_value)
 				g.value = b->read(g.addr.value(), word_mode, rm_cur, g.space);
@@ -587,16 +587,17 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 				    gam_rc_t g_src     = getGAM(src_mode, src_reg, word_mode);
 				    bool     set_flags = true;
 
-				    if (word_mode == wm_byte && dst_mode == 0)
+				    if (word_mode == wm_byte && dst_mode == 0) {
 					    set_register(dst_reg, int8_t(g_src.value.value()));  // int8_t: sign extension
+					    addToMMR1(g_src);
+				    }
 				    else {
 					    auto g_dst = getGAMAddress(dst_mode, dst_reg, word_mode);
 					    addToMMR1(g_dst);
+					    addToMMR1(g_src);
 
 					    set_flags = putGAM(g_dst, g_src.value.value());
 				    }
-
-				    addToMMR1(g_src);
 
 				    if (set_flags)
 					    setPSW_flags_nzv(g_src.value.value(), word_mode);
@@ -1799,13 +1800,8 @@ void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 				set_register(6, 04);
 			}
 			else {
-				b->getMMU()->clearMMR1();
-
 				before_psw = getPSW();
-
 				before_pc  = getPC();
-
-				// TODO set MMR2?
 			}
 
 			if (debug_mode)
@@ -2449,9 +2445,6 @@ bool cpu::step()
 {
 	it_is_a_trap = false;
 
-	if (!b->getMMU()->isMMR1Locked())
-		b->getMMU()->clearMMR1();
-
 	instruction_count++;
 
 	try {
@@ -2463,17 +2456,12 @@ bool cpu::step()
 		uint16_t instr = b->read_word(instruction_start);
 		add_register(7, 2);
 
-		if (double_operand_instructions(instr))
-			return true;
+		if (double_operand_instructions(instr) || conditional_branch_instructions(instr) || condition_code_operations(instr) || misc_operations(instr)) {
+			if (!b->getMMU()->isMMR1Locked())
+				b->getMMU()->clearMMR1();
 
-		if (conditional_branch_instructions(instr))
 			return true;
-
-		if (condition_code_operations(instr))
-			return true;
-
-		if (misc_operations(instr))
-			return true;
+		}
 
 		DOLOG(warning, false, "UNHANDLED instruction %06o @ %06o", instr, instruction_start);
 
@@ -2482,7 +2470,7 @@ bool cpu::step()
 		return false;
 	}
 	catch(const int exception_nr) {
-		TRACE("bus-trap during execution of command (%d)", exception_nr);
+		TRACE("trap during execution of command (%d)", exception_nr);
 	}
 
 	return true;
