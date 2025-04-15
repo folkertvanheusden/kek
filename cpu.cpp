@@ -457,7 +457,7 @@ void cpu::queue_interrupt(const uint8_t level, const uint8_t vector)
 
 void cpu::addToMMR1(const gam_rc_t & g)
 {
-	if (!b->getMMU()->isMMR1Locked() && g.mmr1_update.has_value()) {
+	if (b->getMMU()->isMMR1Locked() == false && g.mmr1_update.has_value() == true) {
 		assert(g.mmr1_update.value().delta);
 
 		b->getMMU()->addToMMR1(g.mmr1_update.value().delta, g.mmr1_update.value().reg);
@@ -495,10 +495,10 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t wo
 			break;
 		case 3:  // @(Rn)+  /  @#a
 			g.addr  = b->read(get_register(reg), wm_word, rm_cur, isR7_space);
-			// might be wrong: the adds should happen when the read is really performed, because of traps
-			add_register(reg, 2);
 			g.mmr1_update = { 2, reg };
 			g.space = d_space;
+			// might be wrong: the adds should happen when the read is really performed, because of traps
+			add_register(reg, 2);
 			if (read_value)
 				g.value = b->read(g.addr.value(), word_mode, rm_cur, g.space);
 			break;
@@ -584,9 +584,8 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 			return single_operand_instructions(instr);
 
 		case 0b001: { // MOV/MOVB Move Word/Byte
-				    gam_rc_t g_src = getGAM(src_mode, src_reg, word_mode);
-
-				    bool set_flags = true;
+				    gam_rc_t g_src     = getGAM(src_mode, src_reg, word_mode);
+				    bool     set_flags = true;
 
 				    if (word_mode == wm_byte && dst_mode == 0)
 					    set_register(dst_reg, int8_t(g_src.value.value()));  // int8_t: sign extension
@@ -2452,11 +2451,6 @@ bool cpu::step()
 
 	if (!b->getMMU()->isMMR1Locked())
 		b->getMMU()->clearMMR1();
-
-	if (any_queued_interrupts && execute_any_pending_interrupt()) {
-		if (!b->getMMU()->isMMR1Locked())
-			b->getMMU()->clearMMR1();
-	}
 
 	instruction_count++;
 
