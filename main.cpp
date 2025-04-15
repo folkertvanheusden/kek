@@ -258,6 +258,7 @@ void help()
 	printf("-b       enable bootloader (builtin)\n");
 	printf("-n       ncurses UI\n");
 	printf("-d       enable debugger\n");
+	printf("-f x     first process the commands from file x before entering the debugger\n");
 	printf("-S x     set ram size (in number of 8 kB pages)\n");
 	printf("-s x,y   set console switche state: set bit x (0...15) to y (0/1)\n");
 	printf("-t       enable tracing (disassemble to stderr, requires -d as well)\n");
@@ -276,7 +277,8 @@ int main(int argc, char *argv[])
 	std::vector<disk_backend *> disk_files;
 	std::string  disk_type = "rk05";
 
-	bool run_debugger = false;
+	bool          run_debugger  = false;
+	std::optional<std::string> debugger_init;
 
 	bool          enable_bootloader = false;
 	bootloader_t  bootloader        = BL_NONE;
@@ -311,12 +313,16 @@ int main(int argc, char *argv[])
 	std::optional<std::string> dc11_device;
 
 	int  opt          = -1;
-	while((opt = getopt(argc, argv, "hqD:MT:Br:R:p:ndtL:bl:s:Q:N:J:XS:P1:")) != -1)
+	while((opt = getopt(argc, argv, "hqD:MT:Br:R:p:ndf:tL:bl:s:Q:N:J:XS:P1:")) != -1)
 	{
 		switch(opt) {
 			case 'h':
 				help();
 				return 1;
+
+			case 'f':
+				debugger_init = optarg;
+				break;
 
 			case '1':
 				dc11_device = optarg;
@@ -612,7 +618,7 @@ int main(int argc, char *argv[])
 	if (is_bic)
 		run_bic(cnsl, b, &event, bic_start.value());
 	else if (run_debugger || (bootloader == BL_NONE && test.empty() && tape.empty()))
-		debugger(cnsl, b, &event);
+		debugger(cnsl, b, &event, debugger_init);
 	else if (benchmark) {
 		// FILL MEMORY
 		memory *m = b->getRAM();

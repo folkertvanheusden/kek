@@ -1,6 +1,7 @@
-// (C) 2018-2024 by Folkert van Heusden
+// (C) 2018-2025 by Folkert van Heusden
 // Released under MIT license
 
+#include <fstream>
 #include <optional>
 #include "gen.h"
 #if IS_POSIX || defined(_WIN32)
@@ -726,687 +727,717 @@ void set_kw11_l_interrupt_freq(console *const cnsl, bus *const b, const int freq
 		cnsl->put_string_lf("Frequency out of range");
 }
 
-void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const stop_event)
-{
-	int32_t trace_start_addr = -1;
-	int     n_single_step    = 1;
-	bool    turbo            = false;
-	bool    marker           = false;
+struct debugger_state {
+	int32_t trace_start_addr { -1    };
+	int     n_single_step    {  1    };
+	bool    turbo            { false };
+	bool    marker           { false };
 	std::optional<int> t_rl;  // trace runlevel
+	bool    single_step      { false };
+};
 
-	cpu *const c = b->getCpu();
+bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b, std::atomic_uint32_t *const stop_event, const std::string & cmd)
+{
+	cpu  *const c = b->getCpu();
+	auto parts    = split(cmd,   " ");
+	auto kv       = split(parts, "=");
+
+	if (parts.empty())
+		return true;
+
+	if (cmd == "go") {
+		state->single_step = false;
+
+		*stop_event = EVENT_NONE;
+	}
+	else if (cmd == "marker")
+		state->marker = !state->marker;
+	else if (parts[0] == "single" || parts[0] == "s" || parts[0] == "step") {
+		state->single_step = true;
+
+		if (parts.size() == 2)
+			state->n_single_step = std::stoi(parts[1]);
+		else
+			state->n_single_step = 1;
+
+		*stop_event = EVENT_NONE;
+	}
+	else if ((parts[0] == "sbp" || parts[0] == "cbp") && parts.size() >= 2){
+		if (parts[0] == "sbp") {
+			std::size_t space = cmd.find(" ");
+
+			std::pair<breakpoint *, std::optional<std::string> > rc = parse_breakpoint(b, cmd.substr(space + 1));
+
+			if (rc.first == nullptr) {
+				if (rc.second.has_value())
+					cnsl->put_string_lf(rc.second.value());
+				else
+					cnsl->put_string_lf("not set");
+			}
+			else {
+				int id = c->set_breakpoint(rc.first);
+
+				cnsl->put_string_lf(format("Breakpoint has id: %d", id));
+			}
+		}
+		else {
+			if (c->remove_breakpoint(std::stoi(parts[1])))
+				cnsl->put_string_lf("Breakpoint cleared");
+			else
+				cnsl->put_string_lf("Breakpoint not found");
+		}
+
+		return true;
+	}
+	else if (cmd == "lbp") {
+		auto bps = c->list_breakpoints();
+
+		cnsl->put_string_lf("Breakpoints:");
+
+		for(auto & a : bps)
+			cnsl->put_string_lf(format("%d: %s", a.first, a.second->emit().c_str()));
+
+		if (bps.empty())
+			cnsl->put_string_lf("(none)");
+
+		return true;
+	}
+	else if (parts[0] == "disassemble" || parts[0] == "dis") {
+		uint16_t pc = kv.find("pc") != kv.end() ? std::stoi(kv.find("pc")->second, nullptr, 8)  : c->getPC();
+		int n  = kv.find("n")  != kv.end() ? std::stoi(kv.find("n") ->second, nullptr, 10) : 1;
+
+		cnsl->put_string_lf(format("Disassemble %d instructions starting at %o", n, pc));
+
+		bool show_registers = kv.find("pc") == kv.end();
+
+		for(int i=0; i<n; i++) {
+			pc += disassemble(c, cnsl, pc, !show_registers);
+
+			show_registers = false;
+		}
+
+		return true;
+	}
+	else if (parts[0] == "D" && parts.size() == 3) {  // SIMH compatibility
+		uint16_t v = std::stoi(parts.at(2), nullptr, 8);
+		if (parts[1] == "PC")
+			c->setPC(v);
+		else {
+			uint16_t a = std::stoi(parts.at(1), nullptr, 8);
+			c->getBus()->write_word(a, v);
+		}
+	}
+	else if (parts[0] == "setpc") {
+		if (parts.size() == 2) {
+			uint16_t new_pc = std::stoi(parts.at(1), nullptr, 8);
+			c->setPC(new_pc);
+
+			cnsl->put_string_lf(format("Set PC to %06o", new_pc));
+		}
+		else {
+			cnsl->put_string_lf("setpc requires an (octal address as) parameter");
+		}
+
+		return true;
+	}
+	else if (parts[0] == "getpc") {
+		cnsl->put_string_lf(format("PC = %06o", c->getPC()));
+
+		return true;
+	}
+	else if (parts[0] == "setreg") {
+		if (parts.size() == 3) {
+			int      reg = std::stoi(parts.at(1));
+			uint16_t val = std::stoi(parts.at(2), nullptr, 8);
+			c->set_register(reg, val);
+
+			cnsl->put_string_lf(format("Set register %d to %06o", reg, val));
+		}
+		else {
+			cnsl->put_string_lf("setreg requires a register and an octal value");
+		}
+
+		return true;
+	}
+	else if (parts[0] == "getreg") {
+		if (parts.size() == 2) {
+			int reg = std::stoi(parts.at(1));
+			cnsl->put_string_lf(format("REG %d = %06o", reg, c->get_register(reg)));
+		}
+		else {
+			cnsl->put_string_lf("getreg requires a register");
+		}
+
+		return true;
+	}
+	else if (parts[0] == "setstack") {
+		if (parts.size() == 3) {
+			int      reg = std::stoi(parts.at(1));
+			uint16_t val = std::stoi(parts.at(2), nullptr, 8);
+			if (reg < 4) {
+				c->set_stackpointer(reg, val);
+				cnsl->put_string_lf(format("Set stack register %d to %06o", reg, val));
+			}
+		}
+		else {
+			cnsl->put_string_lf("setstack requires a register and an octal value");
+		}
+
+		return true;
+	}
+	else if (parts[0] == "getstack") {
+		if (parts.size() == 2) {
+			int reg = std::stoi(parts.at(1));
+			cnsl->put_string_lf(format("REG %d = %06o", reg, c->get_stackpointer(reg)));
+		}
+		else {
+			cnsl->put_string_lf("getreg requires a stack register");
+		}
+
+		return true;
+	}
+	else if (parts[0] == "setpsw") {
+		if (parts.size() == 2) {
+			uint16_t val = std::stoi(parts.at(1), nullptr, 8);
+			c->lowlevel_psw_set(val);
+
+			cnsl->put_string_lf(format("Set PSW to %06o", val));
+		}
+		else {
+			cnsl->put_string_lf("setpsw requires an octal value");
+		}
+
+		return true;
+	}
+	else if (parts[0] == "getpsw") {
+		cnsl->put_string_lf(format("PSW = %06o", c->getPSW()));
+
+		return true;
+	}
+	else if (parts[0] == "getmem") {
+		auto a_it = kv.find("a");
+
+		if (a_it == kv.end())
+			cnsl->put_string_lf("getmem: parameter missing?");
+		else {
+			uint16_t a = std::stoi(a_it->second, nullptr, 8);
+			cnsl->put_string_lf(format("MEM %06o = %03o", a, c->getBus()->read_byte(a)));
+		}
+
+		return true;
+	}
+	else if (parts[0] == "setmem") {
+		auto a_it = kv.find("a");
+		auto v_it = kv.find("v");
+
+		if (a_it == kv.end() || v_it == kv.end())
+			cnsl->put_string_lf("setmem: parameter missing?");
+		else {
+			uint16_t a = std::stoi(a_it->second, nullptr, 8);
+			uint8_t  v = std::stoi(v_it->second, nullptr, 8);
+
+			c->getBus()->write_byte(a, v);
+
+			cnsl->put_string_lf(format("Set %06o to %03o", a, v));
+		}
+
+		return true;
+	}
+	else if (parts[0] == "toggle") {
+		auto s_it = kv.find("s");
+		auto t_it = kv.find("t");
+
+		if (s_it == kv.end() || t_it == kv.end())
+			cnsl->put_string_lf(format("toggle: parameter missing? current switches states: 0o%06o", c->getBus()->get_console_switches()));
+		else {
+			int s = std::stoi(s_it->second, nullptr, 8);
+			int t = std::stoi(t_it->second, nullptr, 8);
+
+			c->getBus()->set_console_switch(s, t);
+
+			cnsl->put_string_lf(format("Set switch %d to %d", s, t));
+		}
+
+		return true;
+	}
+	else if (parts[0] == "trace" || parts[0] == "t") {
+		settrace(!gettrace());
+
+		cnsl->put_string_lf(format("Tracing set to %s", gettrace() ? "ON" : "OFF"));
+
+		return true;
+	}
+	else if (parts[0] == "state") {
+		if (parts[1] == "rl02")
+			b->getRL02()->show_state(cnsl);
+		else if (parts[1] == "mmu")
+			b->getMMU() ->show_state(cnsl);
+		else if (parts[1] == "rk05")
+			b->getRK05()->show_state(cnsl);
+		else if (parts[1] == "dc11")
+			b->getDC11()->show_state(cnsl);
+		else if (parts[1] == "tm11")
+			b->getTM11()->show_state(cnsl);
+		else if (parts[1] == "kw11l")
+			b->getKW11_L()->show_state(cnsl);
+		else if (parts[1] == "rp06" || parts[1] == "rp07")
+			b->getRP06()->show_state(cnsl);
+		else
+			cnsl->put_string_lf(format("Device \"%s\" is not known", parts[1].c_str()));
+
+		return true;
+	}
+	else if (parts[0] == "mmures") {
+		if (parts.size() == 2)
+			mmu_resolve(cnsl, b, std::stoi(parts[1], nullptr, 8));
+		else
+			cnsl->put_string_lf("Parameter missing");
+
+		return true;
+	}
+	else if (parts[0] == "regdump") {
+		reg_dump(cnsl, c);
+
+		return true;
+	}
+	else if (parts[0] == "strace") {
+		if (parts.size() != 2) {
+			state->trace_start_addr = -1;
+
+			cnsl->put_string_lf("Tracing start address reset");
+		}
+		else {
+			state->trace_start_addr = std::stoi(parts[1], nullptr, 8);
+
+			cnsl->put_string_lf(format("Tracing start address set to %06o", state->trace_start_addr));
+		}
+
+		return true;
+	}
+	else if (parts[0] == "examine" || parts[0] == "e") {
+		if (parts.size() < 3)
+			cnsl->put_string_lf("parameter missing");
+		else {
+			uint32_t addr = std::stoi(parts[1], nullptr, 8);
+			int      n    = parts.size() == 4 ? std::stoi(parts[3]) : 1;
+
+			if (parts[2] != "p" && parts[2] != "v") {
+				cnsl->put_string_lf("expected p (physical address) or v (virtual address)");
+
+				return true;
+			}
+
+			std::string out;
+
+			for(int i=0; i<n; i++) {
+				uint32_t cur_addr = addr + i * 2;
+				uint16_t val      = 0;
+
+				if (parts[2] == "v") {
+					auto v = b->peek_word(c->getPSW_runmode(), cur_addr);
+
+					if (v.has_value() == false) {
+						cnsl->put_string_lf(format("Can't read from %06o\n", cur_addr));
+						break;
+					}
+
+					val = v.value();
+				}
+				else {
+					val = b->read_physical(cur_addr);
+				}
+
+				if (n == 1)
+					cnsl->put_string_lf(format("value at %06o, octal: %o, hex: %x, dec: %d\n", cur_addr, val, val, val));
+
+				if (n > 1) {
+					if (i > 0)
+						out += " ";
+
+					out += format("%06o=%06o", cur_addr, val);
+				}
+			}
+
+			if (n > 1)
+				cnsl->put_string_lf(out);
+		}
+
+		return true;
+	}
+	else if (cmd == "reset" || cmd == "r") {
+		*stop_event = EVENT_NONE;
+		b->reset();
+		cnsl->put_string_lf("resetted");
+		return true;
+	}
+	else if (cmd == "cfgdisk") {
+		configure_disk(b, cnsl);
+
+		return true;
+	}
+#if defined(ESP32)
+	else if (cmd == "cfgnet") {
+		configure_network(cnsl);
+
+		return true;
+	}
+	else if (cmd == "chknet") {
+		check_network(cnsl);
+
+		return true;
+	}
+	else if (cmd == "startnet") {
+		start_network(cnsl);
+
+		return true;
+	}
+	else if (parts[0] == "pm" && parts.size() == 2) {
+		reinterpret_cast<console_esp32 *>(cnsl)->set_panel_mode(parts[1] == "bits" ? console_esp32::PM_BITS : console_esp32::PM_POINTER);
+
+		return true;
+	}
+#endif
+	else if (cmd == "stats") {
+		show_run_statistics(cnsl, c);
+
+		return true;
+	}
+	else if (parts[0] == "ramsize") {
+		if (parts.size() == 2)
+			b->set_memory_size(std::stoi(parts.at(1)));
+		else {
+			int n_pages = b->getRAM()->get_memory_size() / 8192;
+
+			cnsl->put_string_lf(format("Memory size: %u pages or %u kB (decimal)", n_pages, n_pages * 8192 / 1024));
+		}
+
+		return true;
+	}
+	else if (parts[0] == "bl" && parts.size() == 2) {
+		if (parts.at(1) == "rk05")
+			set_boot_loader(b, BL_RK05);
+		else if (parts.at(1) == "rl02")
+			set_boot_loader(b, BL_RL02);
+		else if (parts.at(1) == "rp06" || parts[1] == "rp07")
+			set_boot_loader(b, BL_RP06);
+		else
+			cnsl->put_string_lf("???");
+
+		return true;
+	}
+	else if (parts[0] == "trl") {
+		if (parts.size() == 1)
+			state->t_rl.reset();
+		else
+			state->t_rl = std::stoi(parts.at(1));
+
+		return true;
+	}
+	else if (cmd == "cls") {
+		const char cls[] = { 27, '[', '2', 'J', 27, '[', 'H', 12, 0 };
+
+		cnsl->put_string_lf(cls);
+
+		return true;
+	}
+	else if (cmd == "turbo") {
+		state->turbo = !state->turbo;
+
+		if (state->turbo)
+			c->set_debug(false);
+
+		cnsl->put_string_lf(format("Turbo set to %s", state->turbo ? "ON" : "OFF"));
+
+		return true;
+	}
+	else if (cmd == "debug") {
+		bool new_mode = !c->get_debug();
+		c->set_debug(new_mode);
+
+		cnsl->put_string_lf(format("Debug mode set to %s", new_mode ? "ON" : "OFF"));
+
+		return true;
+	}
+	else if (parts[0] == "setll" && parts.size() == 2) {
+		auto ll_parts = split(parts[1], ",");
+
+		if (ll_parts.size() != 2)
+			cnsl->put_string_lf("Loglevel for either screen or file missing");
+		else {
+			log_level_t ll_screen  = parse_ll(ll_parts[0]);
+			log_level_t ll_file    = parse_ll(ll_parts[1]);
+
+			setll(ll_screen, ll_file);
+		}
+	}
+	else if (parts[0] == "setll" && parts.size() == 2) {
+		auto ll_parts = split(parts[1], ",");
+
+		if (ll_parts.size() != 2)
+			cnsl->put_string_lf("Loglevel for either screen or file missing");
+		else {
+			log_level_t ll_screen  = parse_ll(ll_parts[0]);
+			log_level_t ll_file    = parse_ll(ll_parts[1]);
+
+			setll(ll_screen, ll_file);
+		}
+
+		return true;
+	}
+#if IS_POSIX
+	else if (parts[0] == "ser" && parts.size() == 2) {
+		serialize_state(cnsl, b, parts.at(1));
+		return true;
+	}
+#endif
+	else if (parts[0] == "setinthz" && parts.size() == 2) {
+		set_kw11_l_interrupt_freq(cnsl, b, std::stoi(parts.at(1)));
+		return true;
+	}
+	else if (parts[0] == "setsl" && parts.size() == 3) {
+		if (setloghost(parts.at(1).c_str(), parse_ll(parts[2])) == false)
+			cnsl->put_string_lf("Failed parsing IP address");
+		else
+			send_syslog(info, "Hello, world!");
+
+		return true;
+	}
+	else if (parts[0] == "pts" && parts.size() == 2) {
+		cnsl->enable_timestamp(std::stoi(parts[1]));
+
+		return true;
+	}
+	else if (cmd == "qi") {
+		show_queued_interrupts(cnsl, c);
+
+		return true;
+	}
+	else if (parts[0] == "log") {
+		DOLOG(info, true, cmd.c_str());
+
+		return true;
+	}
+	else if (parts[0] == "bic" && parts.size() == 2) {
+		auto rc = load_tape(b, parts[1].c_str());
+		if (rc.has_value()) {
+			c->setPC(rc.value());
+
+			cnsl->put_string_lf("BIC/LDA file loaded");
+		}
+		else {
+			cnsl->put_string_lf("BIC/LDA failed to load");
+		}
+
+		return true;
+	}
+	else if (parts[0] == "lt") {
+		if (parts.size() == 2)
+			tm11_load_tape(cnsl, b, parts[1]);
+		else
+			tm11_load_tape(cnsl, b, { });
+
+		return true;
+	}
+	else if (cmd == "dir" || cmd == "ls") {
+		ls_l(cnsl);
+
+		return true;
+	}
+	else if (cmd == "ult") {
+		tm11_unload_tape(b);
+
+		return true;
+	}
+	else if (parts[0] == "testdc11") {
+		b->getDC11()->test_ports(cmd);
+
+		return true;
+	}
+	else if (cmd == "dp") {
+		cnsl->stop_panel_thread();
+
+		return true;
+	}
+	else if (cmd == "cdc11") {
+		configure_comm(cnsl, *b->getDC11()->get_comm_interfaces());
+
+		return true;
+	}
+	else if (cmd == "serdc11") {
+		serdc11(cnsl, b);
+
+		return true;
+	}
+	else if (cmd == "dserdc11") {
+		deserdc11(cnsl, b);
+
+		return true;
+	}
+	else if (cmd == "bt") {
+		if (c->get_debug() == false)
+			cnsl->put_string_lf("Debug mode is disabled!");
+
+		auto backtrace = c->get_stack_trace();
+
+		for(auto & element: backtrace)
+			cnsl->put_string_lf(format("%06o %s", element.first, element.second.c_str()));
+
+		return true;
+	}
+	else if (cmd == "quit" || cmd == "q") {
+#if defined(ESP32)
+		ESP.restart();
+#endif
+		return false;
+	}
+	else if (cmd == "help" || cmd == "h" || cmd == "?") {
+		constexpr const char *const help[] = {
+			"dis[assemble] - show current instruction (pc=/n=)",
+			"go            - run until trap or ^e",
+#if !defined(ESP32)
+			"quit/q        - stop emulator",
+#endif
+			"examine/e     - show memory address (<octal address> <p|v> [<n>])",
+			"reset/r       - reset cpu/bus/etc",
+			"single/s      - run 1 instruction (implicit 'disassemble' command)",
+			"sbp/cbp/lbp   - set/clear/list breakpoint(s)",
+			"                e.g.: (pc=0123 and memwv[04000]=0200,0300 and (r4=07,05 or r5=0456))",
+			"                values seperated by ',', char after mem is w/b (word/byte), then",
+			"                follows v/p (virtual/physical), all octal values, mmr0-3 and psw are",
+			"                registers",
+			"trace/t       - toggle tracing",
+			"setll x,y     - set loglevel: terminal,file",
+			"setsl x,y     - set syslog target: requires a hostname and a loglevel",
+			"pts x         - enable (1) / disable (0) timestamps",
+			"turbo         - toggle turbo mode (cannot be interrupted)",
+			"debug         - enable CPU debug mode",
+			"bt            - show backtrace - need to enable debug first",
+			"strace x      - start tracing from address - invoke without address to disable",
+			"trl x         - set trace run-level (0...3), empty for all",
+			"regdump       - dump register contents",
+			"state x       - dump state of a device: rl02, rk05, rp06, rp07, mmu, tm11, kw11l or dc11",
+			"mmures x      - resolve a virtual address",
+			"qi            - show queued interrupts",
+			"setpc x       - set PC to value (octal)",
+			"getpc         -",
+			"setreg x y    - set register x to value y (octal)",
+			"getreg x      -",
+			"setstack x y  - set stack register x to value y (octal)",
+			"getstack x    -",
+			"setpsw x      - set PSW value y (octal)",
+			"getpsw        -",
+			"setmem ...    - set memory (a=) to value (v=), both in octal, one byte",
+			"getmem ...    - get memory (a=), in octal, one byte",
+			"toggle ...    - set switch (s=, 0...15 (decimal)) of the front panel to state (t=, 0 or 1)",
+			"setinthz x    - set KW11-L interrupt frequency (Hz)",
+			"cls           - clear screen",
+			"dir           - list files",
+			"bic x         - run BIC/LDA file",
+			"lt x          - load tape (parameter is filename)",
+			"ult           - unload tape",
+			"stats         - show run statistics",
+			"ramsize x     - set ram size (page (8 kB) count, decimal)",
+			"bl            - set bootloader (rl02, rk05, rp06 or rp07)",
+			"cdc11         - configure DC11 device",
+			"serdc11       - store DC11 device settings",
+			"dserdc11      - load DC11 device settings",
+#if IS_POSIX
+			"ser x         - serialize state to a file",
+			//					"dser          - deserialize state from a file",
+#endif
+			"dp            - disable panel",
+#if defined(ESP32)
+			"cfgnet        - configure network (e.g. WiFi)",
+			"startnet      - start network",
+			"chknet        - check network status",
+			"pm x          - panel mode (bits or address)",
+#endif
+			"testdc11      - test DC11",
+			"cfgdisk       - configure disk",
+			"log ...       - log a message to the logfile",
+			nullptr
+		};
+
+		size_t i=0;
+		while(help[i])
+			cnsl->put_string_lf(help[i++]);
+		return true;
+	}
+	else {
+		cnsl->put_string_lf("?");
+		return true;
+	}
+
+	c->emulation_start();
+
+	*cnsl->get_running_flag() = true;
+
+	bool reset_cpu = true;
+
+	if (state->turbo) {
+		while(*stop_event == EVENT_NONE)
+			c->step();
+	}
+	else {
+		reset_cpu = false;
+
+		while(*stop_event == EVENT_NONE) {
+			if (state->trace_start_addr != -1 && c->getPC() == state->trace_start_addr)
+				settrace(true);
+
+			if ((gettrace() || state->single_step) && (state->t_rl.has_value() == false || state->t_rl.value() == c->getPSW_runmode())) {
+				if (!state->single_step)
+					TRACE("---");
+
+				disassemble(c, state->single_step ? cnsl : nullptr, c->getPC(), false);
+			}
+
+			auto bp_result = c->check_breakpoint();
+			if (bp_result.has_value() && !state->single_step) {
+				cnsl->put_string_lf("Breakpoint: " + bp_result.value());
+				break;
+			}
+
+			c->step();
+
+			if (state->single_step && --state->n_single_step == 0)
+				break;
+		}
+	}
+
+	*cnsl->get_running_flag() = false;
+
+	if (reset_cpu)
+		c->reset();
+
+	return true;
+}
+
+void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const stop_event, const std::optional<std::string> & init)
+{
+	debugger_state state;
 
 	b->set_debug_mode();
 
-	bool single_step = false;
+	if (init.has_value()) {
+		std::string   line;
+		std::ifstream fh;
+		fh.open(init.value());
+		while(std::getline(fh, line)) {
+			if (debugger_do(&state, cnsl, b, stop_event, line) == false)
+				return;
+		}
+	}
 
 	while(*stop_event != EVENT_TERMINATE) {
 		try {
-			if (marker)
+			if (state.marker)
 				cnsl->put_string_lf("---");
 
-			std::string cmd   = cnsl->read_line(format("%d", stop_event->load()));
-			auto        parts = split(cmd, " ");
-			auto        kv    = split(parts, "=");
+			std::string cmd = cnsl->read_line(format("%d", stop_event->load()));
 
-			if (parts.empty())
-				continue;
-
-			if (cmd == "go") {
-				single_step = false;
-
-				*stop_event = EVENT_NONE;
-			}
-			else if (cmd == "marker")
-				marker = !marker;
-			else if (parts[0] == "single" || parts[0] == "s" || parts[0] == "step") {
-				single_step = true;
-
-				if (parts.size() == 2)
-					n_single_step = std::stoi(parts[1]);
-				else
-					n_single_step = 1;
-
-				*stop_event = EVENT_NONE;
-			}
-			else if ((parts[0] == "sbp" || parts[0] == "cbp") && parts.size() >= 2){
-				if (parts[0] == "sbp") {
-					std::size_t space = cmd.find(" ");
-
-					std::pair<breakpoint *, std::optional<std::string> > rc = parse_breakpoint(b, cmd.substr(space + 1));
-
-					if (rc.first == nullptr) {
-						if (rc.second.has_value())
-							cnsl->put_string_lf(rc.second.value());
-						else
-							cnsl->put_string_lf("not set");
-					}
-					else {
-						int id = c->set_breakpoint(rc.first);
-
-						cnsl->put_string_lf(format("Breakpoint has id: %d", id));
-					}
-				}
-				else {
-					if (c->remove_breakpoint(std::stoi(parts[1])))
-						cnsl->put_string_lf("Breakpoint cleared");
-					else
-						cnsl->put_string_lf("Breakpoint not found");
-				}
-
-				continue;
-			}
-			else if (cmd == "lbp") {
-				auto bps = c->list_breakpoints();
-
-				cnsl->put_string_lf("Breakpoints:");
-
-				for(auto & a : bps)
-					cnsl->put_string_lf(format("%d: %s", a.first, a.second->emit().c_str()));
-
-				if (bps.empty())
-					cnsl->put_string_lf("(none)");
-
-				continue;
-			}
-			else if (parts[0] == "disassemble" || parts[0] == "d") {
-				uint16_t pc = kv.find("pc") != kv.end() ? std::stoi(kv.find("pc")->second, nullptr, 8)  : c->getPC();
-				int n  = kv.find("n")  != kv.end() ? std::stoi(kv.find("n") ->second, nullptr, 10) : 1;
-
-				cnsl->put_string_lf(format("Disassemble %d instructions starting at %o", n, pc));
-
-				bool show_registers = kv.find("pc") == kv.end();
-
-				for(int i=0; i<n; i++) {
-					pc += disassemble(c, cnsl, pc, !show_registers);
-
-					show_registers = false;
-				}
-
-				continue;
-			}
-			else if (parts[0] == "setpc") {
-				if (parts.size() == 2) {
-					uint16_t new_pc = std::stoi(parts.at(1), nullptr, 8);
-					c->setPC(new_pc);
-
-					cnsl->put_string_lf(format("Set PC to %06o", new_pc));
-				}
-				else {
-					cnsl->put_string_lf("setpc requires an (octal address as) parameter");
-				}
-
-				continue;
-			}
-			else if (parts[0] == "getpc") {
-				cnsl->put_string_lf(format("PC = %06o", c->getPC()));
-
-				continue;
-			}
-			else if (parts[0] == "setreg") {
-				if (parts.size() == 3) {
-					int      reg = std::stoi(parts.at(1));
-					uint16_t val = std::stoi(parts.at(2), nullptr, 8);
-					c->set_register(reg, val);
-
-					cnsl->put_string_lf(format("Set register %d to %06o", reg, val));
-				}
-				else {
-					cnsl->put_string_lf("setreg requires a register and an octal value");
-				}
-
-				continue;
-			}
-			else if (parts[0] == "getreg") {
-				if (parts.size() == 2) {
-					int reg = std::stoi(parts.at(1));
-					cnsl->put_string_lf(format("REG %d = %06o", reg, c->get_register(reg)));
-				}
-				else {
-					cnsl->put_string_lf("getreg requires a register");
-				}
-
-				continue;
-			}
-			else if (parts[0] == "setstack") {
-				if (parts.size() == 3) {
-					int      reg = std::stoi(parts.at(1));
-					uint16_t val = std::stoi(parts.at(2), nullptr, 8);
-					if (reg < 4) {
-						c->set_stackpointer(reg, val);
-						cnsl->put_string_lf(format("Set stack register %d to %06o", reg, val));
-					}
-				}
-				else {
-					cnsl->put_string_lf("setstack requires a register and an octal value");
-				}
-
-				continue;
-			}
-			else if (parts[0] == "getstack") {
-				if (parts.size() == 2) {
-					int reg = std::stoi(parts.at(1));
-					cnsl->put_string_lf(format("REG %d = %06o", reg, c->get_stackpointer(reg)));
-				}
-				else {
-					cnsl->put_string_lf("getreg requires a stack register");
-				}
-
-				continue;
-			}
-			else if (parts[0] == "setpsw") {
-				if (parts.size() == 2) {
-					uint16_t val = std::stoi(parts.at(1), nullptr, 8);
-					c->lowlevel_psw_set(val);
-
-					cnsl->put_string_lf(format("Set PSW to %06o", val));
-				}
-				else {
-					cnsl->put_string_lf("setpsw requires an octal value");
-				}
-
-				continue;
-			}
-			else if (parts[0] == "getpsw") {
-				cnsl->put_string_lf(format("PSW = %06o", c->getPSW()));
-
-				continue;
-			}
-			else if (parts[0] == "getmem") {
-				auto a_it = kv.find("a");
-
-				if (a_it == kv.end())
-					cnsl->put_string_lf("getmem: parameter missing?");
-				else {
-					uint16_t a = std::stoi(a_it->second, nullptr, 8);
-					cnsl->put_string_lf(format("MEM %06o = %03o", a, c->getBus()->read_byte(a)));
-				}
-
-				continue;
-			}
-			else if (parts[0] == "setmem") {
-				auto a_it = kv.find("a");
-				auto v_it = kv.find("v");
-
-				if (a_it == kv.end() || v_it == kv.end())
-					cnsl->put_string_lf("setmem: parameter missing?");
-				else {
-					uint16_t a = std::stoi(a_it->second, nullptr, 8);
-					uint8_t  v = std::stoi(v_it->second, nullptr, 8);
-
-					c->getBus()->write_byte(a, v);
-
-					cnsl->put_string_lf(format("Set %06o to %03o", a, v));
-				}
-
-				continue;
-			}
-			else if (parts[0] == "toggle") {
-				auto s_it = kv.find("s");
-				auto t_it = kv.find("t");
-
-				if (s_it == kv.end() || t_it == kv.end())
-					cnsl->put_string_lf(format("toggle: parameter missing? current switches states: 0o%06o", c->getBus()->get_console_switches()));
-				else {
-					int s = std::stoi(s_it->second, nullptr, 8);
-					int t = std::stoi(t_it->second, nullptr, 8);
-
-					c->getBus()->set_console_switch(s, t);
-
-					cnsl->put_string_lf(format("Set switch %d to %d", s, t));
-				}
-
-				continue;
-			}
-			else if (parts[0] == "trace" || parts[0] == "t") {
-				settrace(!gettrace());
-
-				cnsl->put_string_lf(format("Tracing set to %s", gettrace() ? "ON" : "OFF"));
-
-				continue;
-			}
-			else if (parts[0] == "state") {
-				if (parts[1] == "rl02")
-					b->getRL02()->show_state(cnsl);
-				else if (parts[1] == "mmu")
-					b->getMMU() ->show_state(cnsl);
-				else if (parts[1] == "rk05")
-					b->getRK05()->show_state(cnsl);
-				else if (parts[1] == "dc11")
-					b->getDC11()->show_state(cnsl);
-				else if (parts[1] == "tm11")
-					b->getTM11()->show_state(cnsl);
-				else if (parts[1] == "kw11l")
-					b->getKW11_L()->show_state(cnsl);
-				else if (parts[1] == "rp06" || parts[1] == "rp07")
-					b->getRP06()->show_state(cnsl);
-				else
-					cnsl->put_string_lf(format("Device \"%s\" is not known", parts[1].c_str()));
-
-				continue;
-			}
-			else if (parts[0] == "mmures") {
-				if (parts.size() == 2)
-					mmu_resolve(cnsl, b, std::stoi(parts[1], nullptr, 8));
-				else
-					cnsl->put_string_lf("Parameter missing");
-
-				continue;
-			}
-			else if (parts[0] == "regdump") {
-				reg_dump(cnsl, c);
-
-				continue;
-			}
-			else if (parts[0] == "strace") {
-				if (parts.size() != 2) {
-					trace_start_addr = -1;
-
-					cnsl->put_string_lf("Tracing start address reset");
-				}
-				else {
-					trace_start_addr = std::stoi(parts[1], nullptr, 8);
-
-					cnsl->put_string_lf(format("Tracing start address set to %06o", trace_start_addr));
-				}
-
-				continue;
-			}
-			else if (parts[0] == "examine" || parts[0] == "e") {
-				if (parts.size() < 3)
-					cnsl->put_string_lf("parameter missing");
-				else {
-					uint32_t addr = std::stoi(parts[1], nullptr, 8);
-					int      n    = parts.size() == 4 ? std::stoi(parts[3]) : 1;
-
-					if (parts[2] != "p" && parts[2] != "v") {
-						cnsl->put_string_lf("expected p (physical address) or v (virtual address)");
-
-						continue;
-					}
-
-					std::string out;
-
-					for(int i=0; i<n; i++) {
-						uint32_t cur_addr = addr + i * 2;
-						uint16_t val      = 0;
-
-						if (parts[2] == "v") {
-							auto v = b->peek_word(c->getPSW_runmode(), cur_addr);
-
-							if (v.has_value() == false) {
-								cnsl->put_string_lf(format("Can't read from %06o\n", cur_addr));
-								break;
-							}
-
-							val = v.value();
-						}
-						else {
-							val = b->read_physical(cur_addr);
-						}
-
-						if (n == 1)
-							cnsl->put_string_lf(format("value at %06o, octal: %o, hex: %x, dec: %d\n", cur_addr, val, val, val));
-
-						if (n > 1) {
-							if (i > 0)
-								out += " ";
-
-							out += format("%06o=%06o", cur_addr, val);
-						}
-					}
-
-					if (n > 1)
-						cnsl->put_string_lf(out);
-				}
-
-				continue;
-			}
-			else if (cmd == "reset" || cmd == "r") {
-				*stop_event = EVENT_NONE;
-				b->reset();
-				cnsl->put_string_lf("resetted");
-				continue;
-			}
-			else if (cmd == "cfgdisk") {
-				configure_disk(b, cnsl);
-
-				continue;
-			}
-#if defined(ESP32)
-			else if (cmd == "cfgnet") {
-				configure_network(cnsl);
-
-				continue;
-			}
-			else if (cmd == "chknet") {
-				check_network(cnsl);
-
-				continue;
-			}
-			else if (cmd == "startnet") {
-				start_network(cnsl);
-
-				continue;
-			}
-			else if (parts[0] == "pm" && parts.size() == 2) {
-				reinterpret_cast<console_esp32 *>(cnsl)->set_panel_mode(parts[1] == "bits" ? console_esp32::PM_BITS : console_esp32::PM_POINTER);
-
-				continue;
-			}
-#endif
-			else if (cmd == "stats") {
-				show_run_statistics(cnsl, c);
-
-				continue;
-			}
-			else if (parts[0] == "ramsize") {
-				if (parts.size() == 2)
-					b->set_memory_size(std::stoi(parts.at(1)));
-				else {
-					int n_pages = b->getRAM()->get_memory_size() / 8192;
-
-					cnsl->put_string_lf(format("Memory size: %u pages or %u kB (decimal)", n_pages, n_pages * 8192 / 1024));
-				}
-
-				continue;
-			}
-			else if (parts[0] == "bl" && parts.size() == 2) {
-				if (parts.at(1) == "rk05")
-					set_boot_loader(b, BL_RK05);
-				else if (parts.at(1) == "rl02")
-					set_boot_loader(b, BL_RL02);
-				else if (parts.at(1) == "rp06" || parts[1] == "rp07")
-					set_boot_loader(b, BL_RP06);
-				else
-					cnsl->put_string_lf("???");
-
-				continue;
-			}
-			else if (parts[0] == "trl") {
-				if (parts.size() == 1)
-					t_rl.reset();
-				else
-					t_rl = std::stoi(parts.at(1));
-
-				continue;
-			}
-			else if (cmd == "cls") {
-				const char cls[] = { 27, '[', '2', 'J', 12, 0 };
-
-				cnsl->put_string_lf(cls);
-
-				continue;
-			}
-			else if (cmd == "turbo") {
-				turbo = !turbo;
-
-				if (turbo)
-					c->set_debug(false);
-
-				cnsl->put_string_lf(format("Turbo set to %s", turbo ? "ON" : "OFF"));
-
-				continue;
-			}
-			else if (cmd == "debug") {
-				bool new_mode = !c->get_debug();
-				c->set_debug(new_mode);
-
-				cnsl->put_string_lf(format("Debug mode set to %s", new_mode ? "ON" : "OFF"));
-
-				continue;
-			}
-			else if (parts[0] == "setll" && parts.size() == 2) {
-				auto ll_parts = split(parts[1], ",");
-
-				if (ll_parts.size() != 2)
-					cnsl->put_string_lf("Loglevel for either screen or file missing");
-				else {
-					log_level_t ll_screen  = parse_ll(ll_parts[0]);
-					log_level_t ll_file    = parse_ll(ll_parts[1]);
-
-					setll(ll_screen, ll_file);
-				}
-			}
-			else if (parts[0] == "setll" && parts.size() == 2) {
-				auto ll_parts = split(parts[1], ",");
-
-				if (ll_parts.size() != 2)
-					cnsl->put_string_lf("Loglevel for either screen or file missing");
-				else {
-					log_level_t ll_screen  = parse_ll(ll_parts[0]);
-					log_level_t ll_file    = parse_ll(ll_parts[1]);
-
-					setll(ll_screen, ll_file);
-				}
-
-				continue;
-			}
-#if IS_POSIX
-			else if (parts[0] == "ser" && parts.size() == 2) {
-				serialize_state(cnsl, b, parts.at(1));
-				continue;
-			}
-#endif
-			else if (parts[0] == "setinthz" && parts.size() == 2) {
-				set_kw11_l_interrupt_freq(cnsl, b, std::stoi(parts.at(1)));
-				continue;
-			}
-			else if (parts[0] == "setsl" && parts.size() == 3) {
-				if (setloghost(parts.at(1).c_str(), parse_ll(parts[2])) == false)
-					cnsl->put_string_lf("Failed parsing IP address");
-				else
-					send_syslog(info, "Hello, world!");
-
-				continue;
-			}
-			else if (parts[0] == "pts" && parts.size() == 2) {
-				cnsl->enable_timestamp(std::stoi(parts[1]));
-
-				continue;
-			}
-			else if (cmd == "qi") {
-				show_queued_interrupts(cnsl, c);
-
-				continue;
-			}
-			else if (parts[0] == "log") {
-				DOLOG(info, true, cmd.c_str());
-
-				continue;
-			}
-			else if (parts[0] == "bic" && parts.size() == 2) {
-				auto rc = load_tape(b, parts[1].c_str());
-				if (rc.has_value()) {
-					c->setPC(rc.value());
-
-					cnsl->put_string_lf("BIC/LDA file loaded");
-				}
-				else {
-					cnsl->put_string_lf("BIC/LDA failed to load");
-				}
-
-				continue;
-			}
-			else if (parts[0] == "lt") {
-				if (parts.size() == 2)
-					tm11_load_tape(cnsl, b, parts[1]);
-				else
-					tm11_load_tape(cnsl, b, { });
-
-				continue;
-			}
-			else if (cmd == "dir" || cmd == "ls") {
-				ls_l(cnsl);
-
-				continue;
-			}
-			else if (cmd == "ult") {
-				tm11_unload_tape(b);
-
-				continue;
-			}
-			else if (parts[0] == "testdc11") {
-				b->getDC11()->test_ports(cmd);
-
-				continue;
-			}
-			else if (cmd == "dp") {
-				cnsl->stop_panel_thread();
-
-				continue;
-			}
-			else if (cmd == "cdc11") {
-				configure_comm(cnsl, *b->getDC11()->get_comm_interfaces());
-
-				continue;
-			}
-			else if (cmd == "serdc11") {
-				serdc11(cnsl, b);
-
-				continue;
-			}
-			else if (cmd == "dserdc11") {
-				deserdc11(cnsl, b);
-
-				continue;
-			}
-			else if (cmd == "bt") {
-				if (c->get_debug() == false)
-					cnsl->put_string_lf("Debug mode is disabled!");
-
-				auto backtrace = c->get_stack_trace();
-
-				for(auto & element: backtrace)
-					cnsl->put_string_lf(format("%06o %s", element.first, element.second.c_str()));
-
-				continue;
-			}
-			else if (cmd == "quit" || cmd == "q") {
-#if defined(ESP32)
-				ESP.restart();
-#endif
+			if (debugger_do(&state, cnsl, b, stop_event, cmd) == false)
 				break;
-			}
-			else if (cmd == "help" || cmd == "h" || cmd == "?") {
-				constexpr const char *const help[] = {
-					"disassemble/d - show current instruction (pc=/n=)",
-					"go            - run until trap or ^e",
-#if !defined(ESP32)
-					"quit/q        - stop emulator",
-#endif
-					"examine/e     - show memory address (<octal address> <p|v> [<n>])",
-					"reset/r       - reset cpu/bus/etc",
-					"single/s      - run 1 instruction (implicit 'disassemble' command)",
-					"sbp/cbp/lbp   - set/clear/list breakpoint(s)",
-					"                e.g.: (pc=0123 and memwv[04000]=0200,0300 and (r4=07,05 or r5=0456))",
-					"                values seperated by ',', char after mem is w/b (word/byte), then",
-					"                follows v/p (virtual/physical), all octal values, mmr0-3 and psw are",
-					"                registers",
-					"trace/t       - toggle tracing",
-					"setll x,y     - set loglevel: terminal,file",
-					"setsl x,y     - set syslog target: requires a hostname and a loglevel",
-					"pts x         - enable (1) / disable (0) timestamps",
-					"turbo         - toggle turbo mode (cannot be interrupted)",
-					"debug         - enable CPU debug mode",
-					"bt            - show backtrace - need to enable debug first",
-					"strace x      - start tracing from address - invoke without address to disable",
-					"trl x         - set trace run-level (0...3), empty for all",
-					"regdump       - dump register contents",
-					"state x       - dump state of a device: rl02, rk05, rp06, rp07, mmu, tm11, kw11l or dc11",
-					"mmures x      - resolve a virtual address",
-					"qi            - show queued interrupts",
-					"setpc x       - set PC to value (octal)",
-					"getpc         -",
-					"setreg x y    - set register x to value y (octal)",
-					"getreg x      -",
-					"setstack x y  - set stack register x to value y (octal)",
-					"getstack x    -",
-					"setpsw x      - set PSW value y (octal)",
-					"getpsw        -",
-					"setmem ...    - set memory (a=) to value (v=), both in octal, one byte",
-					"getmem ...    - get memory (a=), in octal, one byte",
-					"toggle ...    - set switch (s=, 0...15 (decimal)) of the front panel to state (t=, 0 or 1)",
-					"setinthz x    - set KW11-L interrupt frequency (Hz)",
-					"cls           - clear screen",
-					"dir           - list files",
-					"bic x         - run BIC/LDA file",
-					"lt x          - load tape (parameter is filename)",
-					"ult           - unload tape",
-					"stats         - show run statistics",
-					"ramsize x     - set ram size (page (8 kB) count, decimal)",
-					"bl            - set bootloader (rl02, rk05, rp06 or rp07)",
-					"cdc11         - configure DC11 device",
-					"serdc11       - store DC11 device settings",
-					"dserdc11      - load DC11 device settings",
-#if IS_POSIX
-					"ser x         - serialize state to a file",
-//					"dser          - deserialize state from a file",
-#endif
-					"dp            - disable panel",
-#if defined(ESP32)
-					"cfgnet        - configure network (e.g. WiFi)",
-					"startnet      - start network",
-					"chknet        - check network status",
-					"pm x          - panel mode (bits or address)",
-#endif
-					"testdc11      - test DC11",
-					"cfgdisk       - configure disk",
-					"log ...       - log a message to the logfile",
-					nullptr
-				};
-
-				size_t i=0;
-				while(help[i])
-					cnsl->put_string_lf(help[i++]);
-				continue;
-			}
-			else {
-				cnsl->put_string_lf("?");
-				continue;
-			}
-
-			c->emulation_start();
-
-			*cnsl->get_running_flag() = true;
-
-			bool reset_cpu = true;
-
-			if (turbo) {
-				while(*stop_event == EVENT_NONE)
-					c->step();
-			}
-			else {
-				reset_cpu = false;
-
-				while(*stop_event == EVENT_NONE) {
-					if (trace_start_addr != -1 && c->getPC() == trace_start_addr)
-						settrace(true);
-
-					if ((gettrace() || single_step) && (t_rl.has_value() == false || t_rl.value() == c->getPSW_runmode())) {
-						if (!single_step)
-							TRACE("---");
-
-						disassemble(c, single_step ? cnsl : nullptr, c->getPC(), false);
-					}
-
-					auto bp_result = c->check_breakpoint();
-					if (bp_result.has_value() && !single_step) {
-						cnsl->put_string_lf("Breakpoint: " + bp_result.value());
-						break;
-					}
-
-					c->step();
-
-					if (single_step && --n_single_step == 0)
-						break;
-				}
-			}
-
-			*cnsl->get_running_flag() = false;
-
-			if (reset_cpu)
-				c->reset();
 		}
 		catch(const std::exception & e) {
 			cnsl->put_string_lf(format("Exception caught: %s", e.what()));
