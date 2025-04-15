@@ -2445,6 +2445,9 @@ bool cpu::step()
 {
 	it_is_a_trap = false;
 
+	if (any_queued_interrupts)
+		execute_any_pending_interrupt();
+
 	instruction_count++;
 
 	try {
