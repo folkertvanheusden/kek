@@ -1658,7 +1658,6 @@ bool cpu::misc_operations(const uint16_t instr)
 				pop_from_stack_trace();
 			setPC(popStack());
 			setPSW(popStack(), !!getPSW_runmode());
-			psw &= ~020;  // disable TRAP flag
 			return true;
 
 		case 0b0000000000000011: // BPT
