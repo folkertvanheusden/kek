@@ -113,7 +113,7 @@ int run_cpu_validation(console *const cnsl, const std::string & filename)
 		// create environment
 		event = 0;
 		bus *b = new bus();
-		b->set_memory_size(DEFAULT_N_PAGES * 8192l);
+		b->set_memory_size(DEFAULT_N_PAGES);
 		cpu *c = new cpu(b, &event);
 		b->add_cpu(c);
 
@@ -480,7 +480,7 @@ int main(int argc, char *argv[])
 		if (set_ram_size.has_value())
 			b->set_memory_size(set_ram_size.value());
 		else
-			b->set_memory_size(DEFAULT_N_PAGES * 8192l);
+			b->set_memory_size(DEFAULT_N_PAGES);
 
 		b->set_console_switches(console_switches);
 

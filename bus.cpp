@@ -139,7 +139,7 @@ void bus::set_memory_size(const int n_pages)
 
 	mmu_->begin(m, c);
 
-	TRACE("Memory is now %u kB in size", n_bytes / 1024);
+	TRACE("Memory is now %u kB (%d pages)", n_bytes / 1024, n_pages);
 }
 
 void bus::reset()
