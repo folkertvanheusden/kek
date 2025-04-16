@@ -1599,8 +1599,8 @@ bool cpu::condition_code_operations(const uint16_t instr)
 
 void cpu::pushStack(const uint16_t v)
 {
-	if (get_register(6) == stackLimitRegister) {
-		TRACE("stackLimitRegister reached %06o while pushing %06o", stackLimitRegister, v);
+	if (get_register(6) == stack_limit_register) {
+		TRACE("stack_limit_register reached %06o while pushing %06o", stack_limit_register, v);
 
 		trap(04, 7);
 	}
@@ -2494,7 +2494,7 @@ JsonDocument cpu::serialize()
         j["instruction_start"]     = instruction_start;
         j["psw"]                   = psw;
         j["fpsr"]                  = fpsr;
-        j["stackLimitRegister"]    = stackLimitRegister;
+        j["stack_limit_register"]    = stack_limit_register;
         j["processing_trap_depth"] = processing_trap_depth;
         j["instruction_count"]     = instruction_count;
         j["running_since"]         = running_since;
@@ -2538,7 +2538,7 @@ cpu *cpu::deserialize(const JsonVariantConst j, bus *const b, std::atomic_uint32
         c->instruction_start     = j["instruction_start"];
         c->psw                   = j["psw"];
         c->fpsr                  = j["fpsr"];
-        c->stackLimitRegister    = j["stackLimitRegister"];
+        c->stack_limit_register    = j["stack_limit_register"];
         c->processing_trap_depth = j["processing_trap_depth"];
         c->instruction_count     = j["instruction_count"];
         c->running_since         = get_us();
