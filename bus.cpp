@@ -385,12 +385,12 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 				return temp;
 			}
 			if (a == ADDR_STACKLIM) { // stack limit register
-				uint8_t temp = c->getStackLimitRegister();
+				uint8_t temp = c->get_stack_limit_register();
 				TRACE("READ-I/O stack limit register (low): %03o", temp);
 				return temp;
 			}
 			if (a == ADDR_STACKLIM + 1) { // stack limit register
-				uint8_t temp = c->getStackLimitRegister() >> 8;
+				uint8_t temp = c->get_stack_limit_register() >> 8;
 				TRACE("READ-I/O stack limit register (high): %03o", temp);
 				return temp;
 			}
@@ -449,7 +449,7 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 			}
 
 			if (a == ADDR_STACKLIM) { // stack limit register
-				uint16_t temp = c->getStackLimitRegister();
+				uint16_t temp = c->get_stack_limit_register();
 				TRACE("READ-I/O stack limit register: %06o", temp);
 				return temp;
 			}
@@ -556,11 +556,8 @@ bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 				TRACE("WRITE-I/O PSW %s: %03o", a & 1 ? "MSB" : "LSB", value);
 
 				uint16_t vtemp = c->getPSW();
-
 				update_word(&vtemp, a & 1, value);
-
 				vtemp &= ~16;  // cannot set T bit via this
-
 				c->setPSW(vtemp, false);
 
 				return true;
@@ -569,13 +566,10 @@ bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 			if (a == ADDR_STACKLIM || a == ADDR_STACKLIM + 1) { // stack limit register
 				TRACE("WRITE-I/O stack limit register %s: %03o", a & 1 ? "MSB" : "LSB", value);
 
-				uint16_t v = c->getStackLimitRegister();
-
+				uint16_t v = c->get_stack_limit_register();
 				update_word(&v, a & 1, value);
-
-				v |= 0377;
-
-				c->setStackLimitRegister(v);
+				v &= 0xff00;
+				c->set_stack_limit_register(v);
 
 				return false;
 			}
@@ -607,7 +601,7 @@ bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 
 			if (a == ADDR_STACKLIM) { // stack limit register
 				TRACE("WRITE-I/O stack limit register: %06o", value);
-				c->setStackLimitRegister(value & 0xff00);
+				c->set_stack_limit_register(value & 0xff00);
 				return false;
 			}
 

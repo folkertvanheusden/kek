@@ -55,7 +55,7 @@ private:
 	uint16_t instruction_start  { 0     };
 	uint16_t psw                { 0     };
 	uint16_t fpsr               { 0     };
-	uint16_t stack_limit_register { 0377  };
+	uint16_t stack_limit_register { 0400 };
 	int      processing_trap_depth { 0  };
 	uint64_t instruction_count  { 0     };
 	uint64_t running_since      { 0     };
@@ -180,10 +180,10 @@ public:
 	void setPSW_flags_nzv(const uint16_t value, const word_mode_t word_mode);
 
 	uint16_t getPSW() const { return psw; }
-	void setPSW(const uint16_t v, const bool limited);
+	void     setPSW(const uint16_t v, const bool limited);
 
-	uint16_t getStackLimitRegister() { return stack_limit_register; }
-	void setStackLimitRegister(const uint16_t v) { stack_limit_register = v; }
+	uint16_t get_stack_limit_register() { return stack_limit_register; }
+	void     set_stack_limit_register(const uint16_t v) { stack_limit_register = v; }
 
 	uint16_t get_stackpointer(const int which) const { assert(which >= 0 && which < 4); return sp[which]; }
 	uint16_t getPC() const { return pc; }
