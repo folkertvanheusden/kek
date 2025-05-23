@@ -149,8 +149,8 @@ public:
 
 	bool step();
 
-	void pushStack(const uint16_t v);
-	uint16_t popStack();
+	void     push_stack(const uint16_t v);
+	uint16_t pop_stack();
 
 	void init_interrupt_queue();
 	void queue_interrupt(const uint8_t level, const uint8_t vector);

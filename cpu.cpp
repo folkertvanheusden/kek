@@ -1385,7 +1385,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					 setPSW_flags_nzv(v, wm_word);
 
 					 // put on current stack
-					 pushStack(v);
+					 push_stack(v);
 					 break;
 				 }
 
@@ -1393,7 +1393,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					 // always words: word_mode-bit is to select between MTPI and MTPD
 
 					 // retrieve word from '15/14'-stack
-					 uint16_t v             = popStack();
+					 uint16_t v             = pop_stack();
 					 bool     set_flags     = true;
 
 					 if (dst_mode == 0) {
@@ -1433,7 +1433,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 					 setPC(get_register(5));
 
-					 set_register(5, popStack());
+					 set_register(5, pop_stack());
 				 }
 				 break;
 
@@ -1597,25 +1597,27 @@ bool cpu::condition_code_operations(const uint16_t instr)
 	return false;
 }
 
-void cpu::pushStack(const uint16_t v)
+void cpu::push_stack(const uint16_t v)
 {
-	/*
 	if (getPSW_runmode() == 0) {
 		uint16_t use_limit = stack_limit_register == 0 ? 0400 : stack_limit_register;
 		uint16_t sp        = get_register(6);
 
 		if (sp < use_limit) {
+			if (sp >= use_limit - 32) {  // yellow zone
+				uint16_t a = add_register(6, -2);
+				b->write_word(a, v, d_space);
+			}
+			else {
+				set_register(6, 4);  // red zone
+			}
 
+			trap(04, 7);
 		}
-	}
-*/
-	if ((get_register(6) <= stack_limit_register || (stack_limit_register == 0 && get_register(6) < 0400)) && getPSW_runmode() == 0) {
-		TRACE("kernel stack_limit_register reached %06o while pushing %06o", stack_limit_register, v);
-		trap(04, 7);
-	}
-	else if (getPSW_runmode() == 3 && get_register(6) < 0400) {
-		TRACE("user stack_limit_register reached 0400 while pushing %06o", v);
-		trap(04, 7);
+		else {
+			uint16_t a = add_register(6, -2);
+			b->write_word(a, v, d_space);
+		}
 	}
 	else {
 		uint16_t a = add_register(6, -2);
@@ -1623,7 +1625,7 @@ void cpu::pushStack(const uint16_t v)
 	}
 }
 
-uint16_t cpu::popStack()
+uint16_t cpu::pop_stack()
 {
 	uint16_t a    = get_register(6);
 	uint16_t temp = b->read_word(a, d_space);
@@ -1668,8 +1670,8 @@ bool cpu::misc_operations(const uint16_t instr)
 		case 0b0000000000000010: // RTI
 			if (debug_mode)
 				pop_from_stack_trace();
-			setPC(popStack());
-			setPSW(popStack(), !!getPSW_runmode());
+			setPC(pop_stack());
+			setPSW(pop_stack(), !!getPSW_runmode());
 			return true;
 
 		case 0b0000000000000011: // BPT
@@ -1683,8 +1685,8 @@ bool cpu::misc_operations(const uint16_t instr)
 		case 0b0000000000000110: // RTT
 			if (debug_mode)
 				pop_from_stack_trace();
-			setPC(popStack());
-			setPSW(popStack(), !!getPSW_runmode());
+			setPC(pop_stack());
+			setPSW(pop_stack(), !!getPSW_runmode());
 			return true;
 
 		case 0b0000000000000111: // MFPT
@@ -1741,7 +1743,7 @@ bool cpu::misc_operations(const uint16_t instr)
 		int  link_reg  = (instr >> 6) & 7;
 
 		// PUSH link
-		pushStack(get_register(link_reg));
+		push_stack(get_register(link_reg));
 		if (!b->getMMU()->isMMR1Locked()) {
 			b->getMMU()->addToMMR1(-2, 6);
 
@@ -1835,8 +1837,8 @@ void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 
 			uint16_t prev_sp = get_register(6);
 			try {
-				pushStack(before_psw);
-				pushStack(before_pc);
+				push_stack(before_psw);
+				push_stack(before_pc);
 			}
 			catch(const int exception) {
 				// recover stack
