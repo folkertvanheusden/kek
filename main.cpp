@@ -287,6 +287,7 @@ int main(int argc, char *argv[])
 	log_level_t  ll_screen = none;
 	log_level_t  ll_file   = none;
 	bool         timestamp = true;
+	bool         ll_set    = false;
 
 	uint16_t     start_addr= 01000;
 	bool         sa_set    = false;
@@ -421,6 +422,7 @@ int main(int argc, char *argv[])
 
 					ll_screen  = parse_ll(parts[0]);
 					ll_file    = parse_ll(parts[1]);
+					ll_set     = true;
 				  }
 				break;
 
@@ -444,6 +446,8 @@ int main(int argc, char *argv[])
 
 	console *cnsl = nullptr;
 
+	if (ll_set == false && withUI)
+		ll_screen = notice;
 	setlogfile(logfile, ll_file, ll_screen, timestamp);
 
 	DOLOG(info, true, "PDP11 emulator, by Folkert van Heusden");
