@@ -199,7 +199,8 @@ public:
 	void lowlevel_psw_set(const uint16_t value) { psw = value; }
 	uint16_t lowlevel_register_sp_get(const uint8_t nr) const { return sp[nr]; }
 
-	uint16_t get_register(const int nr) const;
+	uint16_t  get_register        (const int nr) const;
+	uint16_t *get_register_pointer(const int nr);
 
 	bool put_result(const gam_rc_t & g, const uint16_t value);
 };

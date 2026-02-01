@@ -145,6 +145,7 @@ void cpu::reset()
 
 uint16_t cpu::get_register(const int nr) const
 {
+	assert(nr >= 0 && nr < 8);
 	if (nr < 6) {
 		int set = get_register_set();
 
@@ -154,13 +155,26 @@ uint16_t cpu::get_register(const int nr) const
 	if (nr == 6)
 		return sp[getPSW_runmode()];
 
-	assert(nr == 7);
-
 	return pc;
+}
+
+uint16_t *cpu::get_register_pointer(const int nr)
+{
+	assert(nr >= 0 && nr < 8);
+	if (nr < 6) {
+		int set = get_register_set();
+		return &regs0_5[set][nr];
+	}
+
+	if (nr == 6)
+		return &sp[getPSW_runmode()];
+
+	return &pc;
 }
 
 void cpu::set_register(const int nr, const uint16_t value)
 {
+	assert(nr >= 0 && nr < 8);
 	if (nr < 6) {
 		int set = get_register_set();
 
@@ -169,7 +183,6 @@ void cpu::set_register(const int nr, const uint16_t value)
 	else if (nr == 6)
 		sp[getPSW_runmode()] = value;
 	else {
-		assert(nr == 7);
 		pc = value;
 	}
 }
@@ -177,14 +190,10 @@ void cpu::set_register(const int nr, const uint16_t value)
 void cpu::set_registerLowByte(const int nr, const word_mode_t word_mode, const uint16_t value)
 {
 	if (word_mode == wm_byte) {
-		uint16_t v = get_register(nr);
-
-		v &= 0xff00;
-
 		assert(value < 256);
-		v |= value;
-
-		set_register(nr, v);
+		uint16_t *const vp = get_register_pointer(nr);
+		(*vp) &= 0xff00;
+		(*vp) |= value;
 	}
 	else {
 		set_register(nr, value);
