@@ -540,7 +540,6 @@ int main(int argc, char *argv[])
 
 	if (b->getTty() == nullptr) {
 		tty *tty_ = new tty(cnsl, b);
-
 		b->add_tty(tty_);
 	}
 

@@ -64,10 +64,8 @@ void tty::reset()
 uint8_t tty::read_byte(const uint16_t addr)
 {
 	uint16_t v = read_word(addr & ~1);
-
 	if (addr & 1)
 		return v >> 8;
-
 	return v;
 }
 
@@ -179,9 +177,7 @@ void tty::write_word(const uint16_t addr, uint16_t v)
 
 	if (addr == PDP11TTY_TPB) {
 		char ch = v & 127;
-
 		TRACE("PDP11TTY print '%c'", ch);
-
 		c->put_char(ch);
 
 		registers[(PDP11TTY_TPS - PDP11TTY_BASE) / 2] |= 128;
