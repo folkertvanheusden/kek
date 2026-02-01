@@ -475,8 +475,8 @@ void cpu::addToMMR1(const gam_rc_t & g)
 // GAM = general addressing modes
 gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t word_mode, const bool read_value)
 {
-	gam_rc_t g { word_mode, rm_cur, i_space, mode, { }, { }, { }, { } };
-
+	gam_rc_t    g { word_mode, rm_cur, i_space, mode, { }, { }, { }, { } };
+        uint16_t    temp = 0;
 	d_i_space_t isR7_space = reg == 7 ? i_space : (b->getMMU()->get_use_data_space(getPSW_runmode()) ? d_space : i_space);
 	//                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ always d_space here? TODO
 
@@ -511,17 +511,17 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t wo
 				g.value = b->read(g.addr.value(), word_mode, rm_cur, g.space);
 			break;
 		case 4:  // -(Rn)
-			add_register(reg, word_mode == wm_word || reg == 7 || reg == 6 ? -2 : -1);
+			temp    = add_register(reg, word_mode == wm_word || reg == 7 || reg == 6 ? -2 : -1);
 			g.mmr1_update = { word_mode == wm_word || reg == 7 || reg == 6 ? -2 : -1, reg };
 			g.space = d_space;
-			g.addr  = get_register(reg);
+			g.addr  = temp;
 			if (read_value)
 				g.value = b->read(g.addr.value(), word_mode, rm_cur, isR7_space);
 			break;
 		case 5:  // @-(Rn)
-			add_register(reg, -2);
+			temp    = add_register(reg, -2);
 			g.mmr1_update = { -2, reg };
-			g.addr  = b->read(get_register(reg), wm_word, rm_cur, isR7_space);
+			g.addr  = b->read(temp, wm_word, rm_cur, isR7_space);
 			g.space = d_space;
 			if (read_value)
 				g.value = b->read(g.addr.value(), word_mode, rm_cur, g.space);
