@@ -46,6 +46,9 @@ text_finished: .ascii "Finished: "
 text_crlf: .ascii "\r\n"
 	.db 0
 
+trap_isr:
+	rti
+
 kw11l_isr:
 	mov R0,(kw11l_temp)
 	mov R1,(kw11l_temp+2)
@@ -69,12 +72,16 @@ start:
 	mov     #0177546,R0
 	MOV     #0101,(R0)          ; enable KW11-L interrupts
 
+	; setup TRAP
+	MOV     #trap_isr, @#34
+        MOV     #0300,     @#36
+
 	spl 0
 
 	mov #text_go,R2
 	JSR PC,PRINT
 
-loop:
+loop_:
 	; statistics
 	add #1,(run_counter)
 	adc (run_counter_mw)
@@ -122,7 +129,7 @@ bne_hit:
 beq_hit:
 
 	; addressing modes
-	mov #400, R5
+	mov #20, R5
 addr_move_loop:
 	;mov #scratch2,(#scratch)
 
@@ -140,8 +147,58 @@ addr_move_loop:
 	DEC R5
 	BNE addr_move_loop
 
+; misc
+	clr  R0
+	clrb R0
+	dec  R0
+	decb R0
+	inc  R0
+	incb R0
+	neg  R0
+	negb R0
+	tst  R0
+	tstb R0
+	com  R0
+	comb R0
+	asr  R0
+	asrb R0
+	asl  R0
+	aslb R0
+	ash  #2,R0
+	ash #-15,R0
+	ashc R2,R0
+	adc  R0
+	adcb R0
+	sbc  R0
+	sxt  R0
+	rol  R0
+	rolb R0
+	ror  R0
+	rorb R0
+	swab R0
+	add  #1234,R0
+	sub  #1234,R0
+	xor  R0,R2
+	bis  #123,R0
+	bisb #123,R0
+	bic  #123,R0
+	bicb #123,R0
+	bit  #123,R0
+	bitb #123,R0
+	br   next_instr
+next_instr:
+	beq  next_instr2
+next_instr2:
+	jsr  pc,my_routine
+	jmp  after_my_routine
+my_routine:
+	ret
+after_my_routine:
+	TRAP #0
 
-	jmp loop
+	;
+
+	jmp loop_
 
 print_results:                     ; print results
 	spl 7             ; stop increasing counter
