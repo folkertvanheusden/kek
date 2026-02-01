@@ -88,7 +88,7 @@ loop_:
 	adc (run_counter_hw)
 
 	; finished?
-	cmp #310,(kw11l_counter)   ; 50 Hz, 4 seconds
+	cmp #764,(kw11l_counter)   ; 50 Hz, 10 seconds
 	ble  print_results
 
 	; access to registers
