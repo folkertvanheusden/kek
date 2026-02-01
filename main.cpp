@@ -676,7 +676,6 @@ int main(int argc, char *argv[])
 	cnsl->stop_thread();
 
 	delete b;
-
 	delete cnsl;
 
 	return 0;
