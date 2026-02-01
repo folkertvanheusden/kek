@@ -194,7 +194,7 @@ next_instr2:
 my_routine:
 	ret
 after_my_routine:
-	TRAP #0
+	TRAP 0
 
 	;
 
