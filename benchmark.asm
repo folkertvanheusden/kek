@@ -1,3 +1,5 @@
+; written by Folkert van Heusden <folkert@komputilo.nl>
+
         .link 1000
 init:
         mov #init, sp
