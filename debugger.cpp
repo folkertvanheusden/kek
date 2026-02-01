@@ -727,6 +727,11 @@ void set_kw11_l_interrupt_freq(console *const cnsl, bus *const b, const int freq
 		cnsl->put_string_lf("Frequency out of range");
 }
 
+void set_kw11_l_tick_mode(console *const cnsl, bus *const b, const bool wall_clock)
+{
+	b->getKW11_L()->set_wall_clock(wall_clock);
+}
+
 struct debugger_state {
 	int32_t trace_start_addr { -1    };
 	int     n_single_step    {  1    };
@@ -1192,6 +1197,12 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 #endif
 	else if (parts[0] == "setinthz" && parts.size() == 2) {
 		set_kw11_l_interrupt_freq(cnsl, b, std::stoi(parts.at(1)));
+		return true;
+	}
+	else if (parts[0] == "intwallclock" && parts.size() == 2) {
+		bool new_mode = std::stoi(parts.at(1));
+		set_kw11_l_tick_mode(cnsl, b, new_mode);
+		cnsl->put_string_lf(format("New interrupt mode: %s", new_mode ? "wall clock" : "cycle count relative"));
 		return true;
 	}
 	else if (parts[0] == "setsl" && parts.size() == 3) {

@@ -95,44 +95,50 @@ void kw11_l::operator()()
 
 	while(!stop_flag) {
 		if (*cnsl->get_running_flag()) {
-			myusleep(1000000 / 100);  // 100 Hz
-
-			int cur_int_freq = 1;
-
-			{
-#if defined(BUILD_FOR_RP2040)
-				xSemaphoreTake(lf_csr_lock, portMAX_DELAY);
-#else
-				std::unique_lock<std::mutex> lck(lf_csr_lock);
-#endif
-
-				cur_int_freq = int_frequency;
-
-#if defined(BUILD_FOR_RP2040)
-				xSemaphoreGive(lf_csr_lock);
-#endif
-			}
-
-			uint64_t current_cycle_count = b->getCpu()->get_instructions_executed_count();
-			uint32_t took_ms = b->getCpu()->get_effective_run_time(current_cycle_count - prev_cycle_count);
-			auto     now     = get_ms();
-
-			// - 50 Hz depending on instruction count ('cur_int_freq')
-			// - nothing executed in interval
-			// - 2 Hz minimum
-			auto t_diff = now - prev_tick;
-			if (took_ms >= 1000 / cur_int_freq || current_cycle_count - interval_prev_cycle_count == 0 || t_diff >= 500) {
+			if (wall_clock) {
+				myusleep(1000000 / 50);  // 50 Hz
 				do_interrupt();
-
-				prev_cycle_count = current_cycle_count;
-
-				t_diff_sum      += t_diff;
-				n_t_diff++;
-
-				prev_tick        = now;
 			}
+			else {
+				myusleep(1000000 / 100);  // 100 Hz
 
-			interval_prev_cycle_count = current_cycle_count;
+				int cur_int_freq = 1;
+
+				{
+#if defined(BUILD_FOR_RP2040)
+					xSemaphoreTake(lf_csr_lock, portMAX_DELAY);
+#else
+					std::unique_lock<std::mutex> lck(lf_csr_lock);
+#endif
+
+					cur_int_freq = int_frequency;
+
+#if defined(BUILD_FOR_RP2040)
+					xSemaphoreGive(lf_csr_lock);
+#endif
+				}
+
+				uint64_t current_cycle_count = b->getCpu()->get_instructions_executed_count();
+				uint32_t took_ms = b->getCpu()->get_effective_run_time(current_cycle_count - prev_cycle_count);
+				auto     now     = get_ms();
+
+				// - 50 Hz depending on instruction count ('cur_int_freq')
+				// - nothing executed in interval
+				// - 2 Hz minimum
+				auto t_diff = now - prev_tick;
+				if (took_ms >= 1000 / cur_int_freq || current_cycle_count - interval_prev_cycle_count == 0 || t_diff >= 500) {
+					do_interrupt();
+
+					prev_cycle_count = current_cycle_count;
+
+					t_diff_sum      += t_diff;
+					n_t_diff++;
+
+					prev_tick        = now;
+				}
+
+				interval_prev_cycle_count = current_cycle_count;
+			}
 		}
 		else {
 			myusleep(1000000 / 10);  // 10 Hz
@@ -260,18 +266,19 @@ uint8_t kw11_l::get_lf_crs()
 JsonDocument kw11_l::serialize()
 {
 	JsonDocument j;
-
-	j["CSR"] = lf_csr;
-
+	j["CSR"       ] = lf_csr;
+	j["wall-clock"] = wall_clock;
 	return j;
 }
 
 kw11_l *kw11_l::deserialize(const JsonVariantConst j, bus *const b, console *const cnsl)
 {
-	uint16_t CSR = j["CSR"];
+	uint16_t CSR        = j["CSR"       ];
+	bool     wall_clock = j["wall-clock"];
 
 	kw11_l *out  = new kw11_l(b);
-	out->lf_csr  = CSR;
+	out->lf_csr     = CSR;
+	out->wall_clock = wall_clock;
 	out->begin(cnsl);
 
 	return out;
