@@ -16,6 +16,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 include(FindPkgConfig)
 
+if (TURBO EQUAL 1)
+	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DTURBO=1")
+	MESSAGE("TURBO BUILD")
+else()
+	MESSAGE("normal build")
+endif()
+
 set(APP_SOURCES
   breakpoint.cpp
   breakpoint_and.cpp
