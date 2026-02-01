@@ -62,6 +62,7 @@ private:
 	uint64_t wait_time          { 0     };
 	bool     it_is_a_trap       { false };
 	std::optional<int> trap_delay { 0   };
+	std::optional<int> delayed_trap {   };  // invoked after completion of the instruction
 	bool     debug_mode         { false };
 	std::vector<std::pair<uint16_t, std::string> > stacktrace;
 
@@ -124,9 +125,9 @@ public:
 	JsonDocument serialize();
 	static cpu *deserialize(const JsonVariantConst j, bus *const b, std::atomic_uint32_t *const event);
 
-	std::optional<std::string> check_breakpoint();
-	int set_breakpoint(breakpoint *const bp);
-	bool remove_breakpoint(const int bp_id);
+	std::optional<std::string>  check_breakpoint();
+	int                         set_breakpoint(breakpoint *const bp);
+	bool                        remove_breakpoint(const int bp_id);
 	std::map<int, breakpoint *> list_breakpoints();
 
 	void disassemble(void) const;
@@ -134,20 +135,19 @@ public:
 
 	bus *getBus() { return b; }
 
-	void emulation_start();
+	void     emulation_start();
 	uint64_t get_instructions_executed_count() const;
 	uint64_t get_wait_time() const { return wait_time; }
 	std::tuple<double, double, uint64_t, uint32_t, double> get_mips_rel_speed(const std::optional<uint64_t> & instruction_count, const std::optional<uint64_t> & t_diff_1s) const;
 	// how many ms would've really passed when executing `instruction_count` instructions
 	uint32_t get_effective_run_time(const uint64_t instruction_count) const;
 
-	bool get_debug() const { return debug_mode; }
-	void set_debug(const bool d) { debug_mode = d; stacktrace.clear(); }
+	bool     get_debug() const { return debug_mode; }
+	void     set_debug(const bool d) { debug_mode = d; stacktrace.clear(); }
 	std::vector<std::pair<uint16_t, std::string> > get_stack_trace() const;
 
-	void reset();
-
-	bool step();
+	void     reset();
+	bool     step();
 
 	void     push_stack(const uint16_t v);
 	uint16_t pop_stack();

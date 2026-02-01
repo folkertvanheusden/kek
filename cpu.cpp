@@ -148,7 +148,6 @@ uint16_t cpu::get_register(const int nr) const
 	assert(nr >= 0 && nr < 8);
 	if (nr < 6) {
 		int set = get_register_set();
-
 		return regs0_5[set][nr];
 	}
 
@@ -1616,12 +1615,12 @@ void cpu::push_stack(const uint16_t v)
 			if (sp >= use_limit - 32) {  // yellow zone
 				uint16_t a = add_register(6, -2);
 				b->write_word(a, v, d_space);
+				delayed_trap = 04;
 			}
 			else {
 				set_register(6, 4);  // red zone
+				trap(04, 7);
 			}
-
-			trap(04, 7);
 		}
 		else {
 			uint16_t a = add_register(6, -2);
@@ -2485,6 +2484,11 @@ bool cpu::step()
 			if (!b->getMMU()->isMMR1Locked())
 				b->getMMU()->clearMMR1();
 
+			if (delayed_trap.has_value()) {
+				trap(delayed_trap.value(), 7);
+				delayed_trap.reset();
+			}
+
 			return true;
 		}
 
@@ -2527,6 +2531,9 @@ JsonDocument cpu::serialize()
 
 	if (trap_delay.has_value())
 		j["trap_delay"] = trap_delay.value();
+
+	if (delayed_trap.has_value())
+		j["delayed_trap"] = delayed_trap.value();
 
 	JsonVariant j_queued_interrupts;
 	for(auto & il: queued_interrupts) {
@@ -2573,6 +2580,11 @@ cpu *cpu::deserialize(const JsonVariantConst j, bus *const b, std::atomic_uint32
 		c->trap_delay    = j["trap_delay"];
 	else
 		c->trap_delay.reset();
+
+	if (j.containsKey("delayed_trap"))
+		c->delayed_trap  = j["delayed_trap"];
+	else
+		c->delayed_trap.reset();
 
 	c->any_queued_interrupts = j["any_queued_interrupts"].as<bool>();
 
