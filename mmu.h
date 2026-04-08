@@ -120,6 +120,7 @@ public:
 
 	uint16_t getCPUERR() const { return CPUERR; }
 	void     setCPUERR(const uint16_t v) { CPUERR = v; }
+	void     setCPUERRBit(const int bit) { CPUERR |= 1 << bit; }
 
 	uint16_t getPIR() const { return PIR; };
 	void     setPIR(const uint16_t v) { PIR = v; }

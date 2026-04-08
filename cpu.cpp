@@ -1618,6 +1618,7 @@ void cpu::push_stack(const uint16_t v)
 				uint16_t a = add_register(6, -2);
 				b->write_word(a, v, d_space);
 				delayed_trap = 04;
+				b->getMMU()->setCPUERRBit(010);
 			}
 			else {
 				set_register(6, 4);  // red zone
