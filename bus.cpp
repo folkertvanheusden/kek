@@ -487,6 +487,8 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 
 		// LO size register field must be all 1s, so subtract 1
 		uint32_t system_size = m->get_memory_size() / 64 - 1;
+		if (system_size == 0177777)
+			system_size = 0167777;
 
 		if (a == ADDR_SYSSIZE + 2) {  // system size HI
 			uint16_t temp = system_size >> 16;
