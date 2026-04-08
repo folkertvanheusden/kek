@@ -855,6 +855,9 @@ std::optional<uint16_t> bus::peek_word(const int run_mode, const uint16_t a)
 	if (meta.physical_instruction >= io_base)
 		return { };
 
+	if (meta.physical_instruction >= m->get_memory_size())
+		return { };
+
 	return m->read_word(meta.physical_instruction);
 }
 
