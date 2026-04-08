@@ -278,6 +278,8 @@ void mmu::trap_if_odd(const uint16_t a, const int run_mode, const d_i_space_t sp
 
 	MMR0 &= ~(7 << 1);
 	MMR0 |= page << 1;
+
+	CPUERR |= 0100;
 }
 
 memory_addresses_t mmu::calculate_physical_address(const int run_mode, const uint16_t a) const
