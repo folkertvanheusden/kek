@@ -1622,6 +1622,8 @@ void cpu::push_stack(const uint16_t v)
 			else {
 				set_register(6, 4);  // red zone
 				trap(04, 7);
+				delayed_trap = 04;
+				processing_trap_depth = 127;  // double trap so halt
 			}
 		}
 		else {
