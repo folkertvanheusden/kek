@@ -31,7 +31,7 @@ dz11::dz11(bus *const b, const std::vector<comm *> & comm_interfaces):
 	b(b),
 	comm_interfaces(comm_interfaces)
 {
-	connected.resize(sizeof comm_interfaces);
+	connected.resize(comm_interfaces.size());
 
 	reset();
 	registers[0] = 0x8000;
@@ -123,6 +123,9 @@ void dz11::operator()()
 				// data set control logic does not interrupt the POP-II processor when a carrier or ring signal changes
 				// state. The program should periodically sample these registers to determine the current status. Sampling at a high rate is not necessary."
 				// (3.3.8)
+
+				if (is_connected)
+					tx_scanner(line_nr);
 			}
 
 			// receive data
@@ -175,9 +178,6 @@ uint16_t dz11::read_word(const uint16_t addr)
 		if (registers[reg] & 0x10)  // CLR
 			reset();  // vtemp is not affected so will be ...1. once when read
 
-		if (vtemp & 0x8000)
-			vtemp |= 0x700;  // set transmit ready bits
-
 		for(int i=0; i<dz11_n_lines; i++) {
 			if (recv_buffers[i].empty() == false && (registers[(DZ11_TCR - DZ11_BASE) / 2] & (1 << i))) {
 				vtemp |= 128;  // RDONE
@@ -197,7 +197,7 @@ uint16_t dz11::read_word(const uint16_t addr)
 		}
 	}
 	else if (addr == DZ11_TCR) {
-		vtemp = registers[reg];  // DTR, line enable
+		/* as is */ // DTR, line enable
 	}
 	else if (addr == DZ11_MSR) {
 		TRACE("msr start: %06o", registers[reg]);
@@ -236,6 +236,33 @@ void dz11::write_byte(const uint16_t addr, const uint8_t v)
 	write_word(addr, vtemp);
 }
 
+void dz11::tx_scanner(const std::optional<int> line)
+{
+	size_t use_line_nr = 255;
+
+	if (line.has_value())
+		use_line_nr = line.value();
+	else {
+		scanner_line_nr = (scanner_line_nr + 1) % comm_interfaces.size();
+		use_line_nr     = scanner_line_nr;
+	}
+
+	for(size_t i=0; i<comm_interfaces.size(); i++) {
+		if ((registers[2] & (1 << i)) == 0)
+			continue;
+
+		registers[0] &= ~0x700;
+		registers[0] |= ((use_line_nr + i) & 7) << 8;  // set transmit ready bits
+
+		registers[0] |= 0x8000;  // TRDY
+
+		if (is_tx_interrupt_enabled()) {
+			TRACE("DZ11 TX INTERRUPT for line %zu", (use_line_nr + i) & 7);
+			trigger_interrupt(true);
+		}
+	}
+}
+
 void dz11::write_word(const uint16_t addr, const uint16_t v)
 {
 	int      reg   = (addr - DZ11_BASE) / 2;
@@ -248,6 +275,8 @@ void dz11::write_word(const uint16_t addr, const uint16_t v)
 			reset();
 			trigger_interrupt(false);
 		}
+
+		tx_scanner({ });
 	}
 	else if (addr == DZ11_TDR) {
 		size_t line_nr = registers[reg] & 7;
@@ -257,10 +286,10 @@ void dz11::write_word(const uint16_t addr, const uint16_t v)
 			TRACE("DZ11 TRANSMIT %c (%d)", c, v);
 		}
 
-		if (is_tx_interrupt_enabled()) {
-			TRACE("DZ11 INTERRUPT");
-			trigger_interrupt(true);
-		}
+		tx_scanner(line_nr);
+	}
+	else if (addr == DZ11_TCR) {
+		tx_scanner({ });
 	}
 
 	registers[reg] = v_set;

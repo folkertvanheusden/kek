@@ -40,6 +40,7 @@ private:
 	std::atomic_bool  stop_flag    { false   };
 	std::thread      *th           { nullptr };
 	bool              flipflop_txd { false   };
+	size_t            scanner_line_nr { 0    };
 
 	std::vector<comm *> comm_interfaces;
 	std::vector<bool  > connected;
@@ -50,6 +51,7 @@ private:
 	void trigger_interrupt(const bool is_tx);
 	bool is_rx_interrupt_enabled() const;
 	bool is_tx_interrupt_enabled() const;
+	void tx_scanner(const std::optional<int> line);
 
 public:
 	dz11(bus *const b, const std::vector<comm *> & comm_interfaces);
