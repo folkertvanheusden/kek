@@ -32,6 +32,8 @@ dz11::dz11(bus *const b, const std::vector<comm *> & comm_interfaces):
 	comm_interfaces(comm_interfaces)
 {
 	connected.resize(sizeof comm_interfaces);
+
+	reset();
 }
 
 dz11::~dz11()
@@ -140,6 +142,9 @@ void dz11::operator()()
 
 void dz11::reset()
 {
+	for(int i=1; i<4; i++)
+		registers[i] = 0;
+	registers[0] = 0x8000;
 }
 
 bool dz11::is_rx_interrupt_enabled() const
@@ -239,10 +244,8 @@ void dz11::write_word(const uint16_t addr, const uint16_t v)
 	std::unique_lock<std::mutex> lck(input_lock);
 	if (addr == DZ11_CSR) {
 		if (v & 16) {  // CLR
-			// reset
+			reset();
 			trigger_interrupt(false);
-			trigger_interrupt(true);
-			v_set &= ~16;
 		}
 	}
 	else if (addr == DZ11_TDR) {
