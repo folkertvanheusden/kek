@@ -225,15 +225,15 @@ void dz11::write_byte(const uint16_t addr, const uint8_t v)
 	uint16_t vtemp = registers[(addr - DZ11_BASE) / 2];
 
 	if (addr & 1) {
-		vtemp &= ~0xff00;
+		vtemp &= 0x00ff;
 		vtemp |= v << 8;
 	}
 	else {
-		vtemp &= ~0x00ff;
+		vtemp &= 0xff00;
 		vtemp |= v;
 	}
 
-	write_word(addr, vtemp);
+	write_word(addr & ~1, vtemp);
 }
 
 void dz11::tx_scanner(const std::optional<int> line)
