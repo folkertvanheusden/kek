@@ -57,7 +57,7 @@ void start_network(console *const cnsl);
 extern SdFs SD;
 #endif
 
-#define SERIAL_CFG_FILE "dc11.json"
+#define SERIAL_CFG_FILE "dz11.json"
 
 #if !defined(BUILD_FOR_RP2040)
 std::optional<disk_backend *> select_nbd_server(console *const cnsl)
@@ -666,11 +666,11 @@ void tm11_unload_tape(bus *const b)
 	b->getTM11()->unload();
 }
 
-void serdc11(console *const cnsl, bus *const b)
+void serdz11(console *const cnsl, bus *const b)
 {
-	dc11         *d = b->getDC11();
+	dz11         *d = b->getDZ11();
 	if (!d) {
-		cnsl->put_string_lf("No DC11 configured");
+		cnsl->put_string_lf("No DZ11 configured");
 		return;
 	}
 
@@ -700,7 +700,7 @@ void serdc11(console *const cnsl, bus *const b)
 	cnsl->put_string_lf(format("Serialize to " SERIAL_CFG_FILE ": %s", ok ? "OK" : "failed"));
 }
 
-void deserdc11(console *const cnsl, bus *const b)
+void deserdz11(console *const cnsl, bus *const b)
 {
 #if defined(ESP32)
 	auto rc = deserialize_file("/" SERIAL_CFG_FILE);
@@ -712,9 +712,9 @@ void deserdc11(console *const cnsl, bus *const b)
 		return;
 	}
 
-	b->del_DC11();
+	b->del_DZ11();
 
-	b->add_DC11(dc11::deserialize(rc.value(), b));
+	b->add_DZ11(dz11::deserialize(rc.value(), b));
 
 	cnsl->put_string_lf(format("Deserialized " SERIAL_CFG_FILE));
 }
@@ -750,7 +750,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 	if (parts.empty())
 		return true;
 
-	if (cmd == "go") {
+	if (cmd == "go" || cmd == "fg") {
 		state->single_step = false;
 
 		*stop_event = EVENT_NONE;
@@ -979,8 +979,8 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			b->getMMU() ->show_state(cnsl);
 		else if (parts[1] == "rk05")
 			b->getRK05()->show_state(cnsl);
-		else if (parts[1] == "dc11")
-			b->getDC11()->show_state(cnsl);
+		else if (parts[1] == "dz11")
+			b->getDZ11()->show_state(cnsl);
 		else if (parts[1] == "tm11")
 			b->getTM11()->show_state(cnsl);
 		else if (parts[1] == "kw11l")
@@ -1259,8 +1259,8 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 
 		return true;
 	}
-	else if (parts[0] == "testdc11") {
-		b->getDC11()->test_ports(cmd);
+	else if (parts[0] == "testdz11") {
+		b->getDZ11()->test_ports(cmd);
 
 		return true;
 	}
@@ -1269,18 +1269,18 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 
 		return true;
 	}
-	else if (cmd == "cdc11") {
-		configure_comm(cnsl, *b->getDC11()->get_comm_interfaces());
+	else if (cmd == "cdz11") {
+		configure_comm(cnsl, *b->getDZ11()->get_comm_interfaces());
 
 		return true;
 	}
-	else if (cmd == "serdc11") {
-		serdc11(cnsl, b);
+	else if (cmd == "serdz11") {
+		serdz11(cnsl, b);
 
 		return true;
 	}
-	else if (cmd == "dserdc11") {
-		deserdc11(cnsl, b);
+	else if (cmd == "dserdz11") {
+		deserdz11(cnsl, b);
 
 		return true;
 	}
@@ -1326,7 +1326,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			"strace x      - start tracing from address - invoke without address to disable",
 			"trl x         - set trace run-level (0...3), empty for all",
 			"regdump       - dump register contents",
-			"state x       - dump state of a device: rl02, rk05, rp06, rp07, mmu, tm11, kw11l or dc11",
+			"state x       - dump state of a device: rl02, rk05, rp06, rp07, mmu, tm11, kw11l or dz11",
 			"mmures x      - resolve a virtual address",
 			"qi            - show queued interrupts",
 			"setpc x       - set PC to value (octal)",
@@ -1349,9 +1349,9 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			"stats         - show run statistics",
 			"ramsize x     - set ram size (page (8 kB) count, decimal)",
 			"bl            - set bootloader (rl02, rk05, rp06 or rp07)",
-			"cdc11         - configure DC11 device",
-			"serdc11       - store DC11 device settings",
-			"dserdc11      - load DC11 device settings",
+			"cdz11         - configure DZ11 device",
+			"serdz11       - store DZ11 device settings",
+			"dserdz11      - load DZ11 device settings",
 #if IS_POSIX
 			"ser x         - serialize state to a file",
 			//					"dser          - deserialize state from a file",
@@ -1363,7 +1363,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			"chknet        - check network status",
 			"pm x          - panel mode (bits or address)",
 #endif
-			"testdc11      - test DC11",
+			"testdz11      - test DZ11",
 			"cfgdisk       - configure disk",
 			"log ...       - log a message to the logfile",
 			nullptr

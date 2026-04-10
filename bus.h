@@ -11,7 +11,7 @@
 #include <stdio.h>
 
 #include "device.h"
-#include "dc11.h"
+#include "dz11.h"
 #include "mmu.h"
 #include "rk05.h"
 #include "rl02.h"
@@ -70,7 +70,7 @@ private:
 	kw11_l  *kw11_l_ { nullptr };
 	mmu     *mmu_    { nullptr };
 	memory  *m       { nullptr };
-	dc11    *dc11_   { nullptr };
+	dz11    *dz11_   { nullptr };
 	rp06    *rp06_   { nullptr };
 
 	uint16_t microprogram_break_register { 0 };
@@ -106,9 +106,9 @@ public:
 	void add_rl02  (rl02   *const rl02_  );
 	void add_tty   (tty    *const tty_   );
 	void add_KW11_L(kw11_l *const kw11_l_);
-	void add_DC11  (dc11   *const dc11_  );
+	void add_DZ11  (dz11   *const dz11_  );
 	// required to release devices when doing a reload
-	void del_DC11  ();
+	void del_DZ11  ();
 	void add_RP06  (rp06   *const rp06_  );
 
 	memory *getRAM()    { return m;       }
@@ -118,7 +118,7 @@ public:
 	mmu    *getMMU()    { return mmu_;    }
 	rk05   *getRK05()   { return rk05_;   }
 	rl02   *getRL02()   { return rl02_;   }
-	dc11   *getDC11()   { return dc11_;   }
+	dz11   *getDZ11()   { return dz11_;   }
 	tm_11  *getTM11()   { return tm11;    }
 	rp06   *getRP06()   { return rp06_;   }
 

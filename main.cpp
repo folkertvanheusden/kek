@@ -24,7 +24,7 @@
 #include "disk_backend.h"
 #include "disk_backend_file.h"
 #include "disk_backend_nbd.h"
-#include "dc11.h"
+#include "dz11.h"
 #include "gen.h"
 #include "kw11-l.h"
 #include "loaders.h"
@@ -267,7 +267,7 @@ void help()
 	printf("-X       do not include timestamp in logging\n");
 	printf("-J x     run validation suite x against the CPU emulation\n");
 	printf("-M       log metrics\n");
-	printf("-1 x     use x as device for DC-11 (instead of 4 tcp-sockets starting at port 1100)\n");
+	printf("-1 x     use x as device for DZ-11 (instead of 8 tcp-sockets starting at port 1100)\n");
 }
 
 int main(int argc, char *argv[])
@@ -311,7 +311,7 @@ int main(int argc, char *argv[])
 
 	bool         benchmark = false;
 
-	std::optional<std::string> dc11_device;
+	std::optional<std::string> dz11_device;
 
 	int  opt          = -1;
 	while((opt = getopt(argc, argv, "hqD:MT:Br:R:p:ndf:tL:bl:s:Q:N:J:XS:P1:")) != -1)
@@ -326,7 +326,7 @@ int main(int argc, char *argv[])
 				break;
 
 			case '1':
-				dc11_device = optarg;
+				dz11_device = optarg;
 				break;
 
 			case 'D':
@@ -546,19 +546,19 @@ int main(int argc, char *argv[])
 	cnsl->set_bus(b);
 	cnsl->begin();
 
-	//// DC11
+	//// DZ11
 	constexpr const int bitrate = 38400;
 
 	std::vector<comm *> comm_interfaces;
-	if (dc11_device.has_value()) {
-		DOLOG(info, false, "Configuring DC11 device for TTY on %s (%d bps)", dc11_device.value().c_str(), bitrate);
-		comm_interfaces.push_back(new comm_posix_tty(dc11_device.value(), bitrate));
+	if (dz11_device.has_value()) {
+		DOLOG(info, false, "Configuring DZ11 device for TTY on %s (%d bps)", dz11_device.value().c_str(), bitrate);
+		comm_interfaces.push_back(new comm_posix_tty(dz11_device.value(), bitrate));
 	}
 
 	for(size_t i=comm_interfaces.size(); i<4; i++) {
 		int port = 1100 + i;
 		comm_interfaces.push_back(new comm_tcp_socket_server(port));
-		DOLOG(info, false, "Configuring DC11 device for TCP socket on port %d", port);
+		DOLOG(info, false, "Configuring DZ11 device for TCP socket on port %d", port);
 	}
 
 	for(auto & c: comm_interfaces) {
@@ -566,9 +566,9 @@ int main(int argc, char *argv[])
 			DOLOG(warning, false, "Failed to configure %s", c->get_identifier().c_str());
 	}
 
-	dc11 *dc11_ = new dc11(b, comm_interfaces);
-	dc11_->begin();
-	b->add_DC11(dc11_);
+	dz11 *dz11_ = new dz11(b, comm_interfaces);
+	dz11_->begin();
+	b->add_DZ11(dz11_);
 	//
 
 	tm_11 *tm_11_ = new tm_11(b);

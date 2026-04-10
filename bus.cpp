@@ -9,7 +9,7 @@
 
 #include "bus.h"
 #include "cpu.h"
-#include "dc11.h"
+#include "dz11.h"
 #include "kw11-l.h"
 #include "log.h"
 #include "memory.h"
@@ -41,7 +41,7 @@ bus::~bus()
 	delete tty_;
 	delete mmu_;
 	delete m;
-	delete dc11_;
+	delete dz11_;
 	delete rp06_;
 }
 
@@ -70,8 +70,8 @@ JsonDocument bus::serialize() const
 	if (rk05_)
 		j_out["rk05"]   = rk05_->serialize();
 
-	if (dc11_)
-		j_out["dc11"]   = dc11_->serialize();
+	if (dz11_)
+		j_out["dz11"]   = dz11_->serialize();
 
 	if (rp06_)
 		j_out["rp06"]   = rp06_->serialize();
@@ -112,8 +112,8 @@ bus *bus::deserialize(const JsonDocument j, console *const cnsl, std::atomic_uin
 	if (j.containsKey("kw11-l"))
 		b->add_KW11_L(kw11_l::deserialize(j["kw11-l"], b, cnsl));
 
-	if (j.containsKey("dc11"))
-		b->add_DC11(dc11::deserialize(j["dc11"], b));
+	if (j.containsKey("dz11"))
+		b->add_DZ11(dz11::deserialize(j["dz11"], b));
 
 	if (j.containsKey("rp06"))
 		b->add_RP06(rp06::deserialize(j["rp06"], b));
@@ -160,8 +160,8 @@ void bus::reset()
 		tty_->reset();
 	if (kw11_l_)
 		kw11_l_->reset();
-	if (dc11_)
-		dc11_->reset();
+	if (dz11_)
+		dz11_->reset();
 	if (rp06_)
 		rp06_->reset();
 }
@@ -227,16 +227,16 @@ void bus::add_tty(tty *const tty_)
 	this->tty_ = tty_;
 }
 
-void bus::add_DC11(dc11 *const dc11_)
+void bus::add_DZ11(dz11 *const dz11_)
 {
-	delete this->dc11_;
-	this->dc11_ = dc11_;
+	delete this->dz11_;
+	this->dz11_ = dz11_;
 }
 
-void bus::del_DC11()
+void bus::del_DZ11()
 {
-	delete dc11_;
-	dc11_ = nullptr;
+	delete dz11_;
+	dz11_ = nullptr;
 }
 
 void bus::init()
@@ -479,8 +479,8 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 		if (tty_ && a >= PDP11TTY_BASE && a < PDP11TTY_END)
 			return word_mode == wm_byte ? tty_->read_byte(a) : tty_->read_word(a);
 
-		if (dc11_ && a >= DC11_BASE && a < DC11_END)
-			return word_mode == wm_byte ? dc11_->read_byte(a) : dc11_->read_word(a);
+		if (dz11_ && a >= DZ11_BASE && a < DZ11_END)
+			return word_mode == wm_byte ? dz11_->read_byte(a) : dz11_->read_word(a);
 
 		if (rp06_ && a >= RP06_BASE && a < RP06_END)
 			return word_mode == wm_byte ? rp06_->read_byte(a) : rp06_->read_word(a);
@@ -713,8 +713,8 @@ bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 			return false;
 		}
 
-		if (dc11_ && a >= DC11_BASE && a < DC11_END) {
-			word_mode == wm_byte ? dc11_->write_byte(a, value) : dc11_->write_word(a, value);
+		if (dz11_ && a >= DZ11_BASE && a < DZ11_END) {
+			word_mode == wm_byte ? dz11_->write_byte(a, value) : dz11_->write_word(a, value);
 			return false;
 		}
 
