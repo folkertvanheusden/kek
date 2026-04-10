@@ -1174,18 +1174,6 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 
 			setll(ll_screen, ll_file);
 		}
-	}
-	else if (parts[0] == "setll" && parts.size() == 2) {
-		auto ll_parts = split(parts[1], ",");
-
-		if (ll_parts.size() != 2)
-			cnsl->put_string_lf("Loglevel for either screen or file missing");
-		else {
-			log_level_t ll_screen  = parse_ll(ll_parts[0]);
-			log_level_t ll_file    = parse_ll(ll_parts[1]);
-
-			setll(ll_screen, ll_file);
-		}
 
 		return true;
 	}
