@@ -184,6 +184,8 @@ uint16_t dz11::read_word(const uint16_t addr)
 				break;
 			}
 		}
+
+		vtemp &= ~7;  // mask off at least bit 0 off (used for DZ32 mode in BSD 2.11)
 	}
 	else if (addr == DZ11_RBUF) {
 		vtemp = 0;
@@ -223,8 +225,8 @@ uint16_t dz11::read_word(const uint16_t addr)
 void dz11::write_byte(const uint16_t addr, const uint8_t v)
 {
 	uint16_t vtemp = registers[(addr - DZ11_BASE) / 2];
-
 	if (addr & 1) {
+		TRACE("DZ11 write byte %03o at odd address %06o", v, addr);
 		vtemp &= 0x00ff;
 		vtemp |= v << 8;
 	}
@@ -232,7 +234,6 @@ void dz11::write_byte(const uint16_t addr, const uint8_t v)
 		vtemp &= 0xff00;
 		vtemp |= v;
 	}
-
 	write_word(addr & ~1, vtemp);
 }
 
