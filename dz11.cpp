@@ -34,6 +34,7 @@ dz11::dz11(bus *const b, const std::vector<comm *> & comm_interfaces):
 	connected.resize(sizeof comm_interfaces);
 
 	reset();
+	registers[0] = 0x8000;
 }
 
 dz11::~dz11()
@@ -142,9 +143,8 @@ void dz11::operator()()
 
 void dz11::reset()
 {
-	for(int i=1; i<4; i++)
+	for(int i=0; i<4; i++)
 		registers[i] = 0;
-	registers[0] = 0x8000;
 }
 
 bool dz11::is_rx_interrupt_enabled() const
@@ -172,10 +172,11 @@ uint16_t dz11::read_word(const uint16_t addr)
 	uint16_t vtemp = registers[reg];
 
 	if (addr == DZ11_CSR) {
-		vtemp &= ~04033;
-		if (flipflop_txd)
-			vtemp |= 0x8700;  // set transmit ready bits
-		flipflop_txd = !flipflop_txd;
+		if (registers[reg] & 0x10)  // CLR
+			reset();  // vtemp is not affected so will be ...1. once when read
+
+		if (vtemp & 0x8000)
+			vtemp |= 0x700;  // set transmit ready bits
 
 		for(int i=0; i<dz11_n_lines; i++) {
 			if (recv_buffers[i].empty() == false && (registers[(DZ11_TCR - DZ11_BASE) / 2] & (1 << i))) {
