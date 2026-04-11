@@ -412,6 +412,10 @@ TEST(dz11, dz11tests) {
 	// at start, TRDY must be set for BSD2.11 to acknowledge the port
 	EXPECT_EQ(d.read_word(0160100), 0x8000);
 
+	// see if setting the protected bits change them
+	d.write_word(0160100, 027607);
+	EXPECT_EQ(d.read_word(0160100) & 0x7fff, 0);  // should not change them (ignore TRDY)
+
 	// reset device
 	d.write_word(0160100, 020);  // 'CLR' (= reset)
 	EXPECT_EQ(d.read_word(0160100) & 020, 020);
@@ -433,7 +437,6 @@ TEST(dz11, dz11tests) {
 	EXPECT_EQ(has_irq(c, 5, 0310), false);  // RX
 
 	d.write_word(0160100, 0x4060);  // TIE/RIE/MSE
-	fprintf(stderr, "%06o\n", d.read_word(0160100));
 
 	// data RX
 	d.write_word(0160104, 3);  // enable line 0 & 1
