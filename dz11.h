@@ -60,6 +60,11 @@ public:
 
 	bool begin();
 
+#ifdef UNIT_TEST
+	void wait_connected(const int line_nr) const;
+	void wait_have_data(const int line_nr) const;
+#endif
+
 	JsonDocument serialize() const;
 	static dz11 *deserialize(const JsonVariantConst j, bus *const b);
 

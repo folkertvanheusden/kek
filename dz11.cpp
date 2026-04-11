@@ -94,6 +94,30 @@ void dz11::trigger_interrupt(const bool is_tx)
 	b->getCpu()->queue_interrupt(5, is_tx ? DZ11_INTERRUPT_VECTOR_TX : DZ11_INTERRUPT_VECTOR_RX);
 }
 
+#ifdef UNIT_TEST
+void dz11::wait_connected(const int line_nr) const
+{
+	for(;;) {
+		usleep(1000);
+
+		std::unique_lock<std::mutex> lck(input_lock);
+		if (connected[line_nr])
+			break;
+	}
+}
+
+void dz11::wait_have_data(const int line_nr) const
+{
+	for(;;) {
+		usleep(1000);
+
+		std::unique_lock<std::mutex> lck(input_lock);
+		if (recv_buffers[line_nr].empty() == false)
+			break;
+	}
+}
+#endif
+
 void dz11::operator()()
 {
 	set_thread_name("kek:DZ11");
@@ -179,8 +203,10 @@ uint16_t dz11::read_word(const uint16_t addr)
 		if (registers[reg] & 0x10)  // CLR
 			reset();  // vtemp is not affected so will be ...1. once when read
 
+		vtemp &= ~128;
 		for(int i=0; i<dz11_n_lines; i++) {
 			if (recv_buffers[i].empty() == false && (registers[(DZ11_TCR - DZ11_BASE) / 2] & (1 << i))) {
+				TRACE("DZ11 CSR: line %d has data", i);
 				vtemp |= 128;  // RDONE
 				break;
 			}
@@ -209,9 +235,9 @@ uint16_t dz11::read_word(const uint16_t addr)
 		TRACE("DZ11: msr start: %06o", registers[reg]);
 		vtemp = registers[reg] & 0x00ff;  // keep ring indicator
 
-		// add carrier detected bits
+		// add carrier detected bits (when DTR is set)
 		for(size_t i=0; i<dz11_n_lines; i++) {
-			if ((registers[(DZ11_TCR - DZ11_BASE) / 2] & (1 << i)) && (i < comm_interfaces.size() && connected[i]))
+			if (i < comm_interfaces.size() && connected[i])
 				vtemp |= 1 << (8 + i);
 		}
 
@@ -264,6 +290,7 @@ void dz11::tx_scanner(const std::optional<int> line, const bool force)
 		TRACE("DZ11 specific line interrupt: %zu", use_line_nr);
 		tx_scanner_do(use_line_nr, force);
 	}
+	/*
 	else {
 		scanner_line_nr = (scanner_line_nr + 1) % comm_interfaces.size();
 
@@ -274,7 +301,7 @@ void dz11::tx_scanner(const std::optional<int> line, const bool force)
 				break;
 			}
 		}
-	}
+	}*/
 }
 
 void dz11::write_word(const uint16_t addr, const uint16_t v)
@@ -285,13 +312,16 @@ void dz11::write_word(const uint16_t addr, const uint16_t v)
 
 	std::unique_lock<std::mutex> lck(input_lock);
 	if (addr == DZ11_CSR) {
-		if (v & 16) {  // CLR
+		bool clr = v & 16;
+
+		if (clr) {  // CLR
 			reset();
+			registers[0] &= ~16;
 			trigger_interrupt(false);
 		}
 
 		// certain bits are read only
-		v_set = (registers[0] & ~0x5078) | (v & 0x5708);
+		v_set = (registers[0] & ~0x5078) | (v & 0x5708) | (clr ? 16 : 0);
 
 		tx_scanner({ });
 	}
@@ -344,3 +374,76 @@ dz11 *dz11::deserialize(const JsonVariantConst j, bus *const b)
 
 	return r;
 }
+
+#if defined(UNIT_TEST)
+#include <stdexcept>
+#include <gtest/gtest.h>
+
+#include "comm_unittest_helper.h"
+
+TEST(dz11, dz11tests) {
+	settrace(true);
+	setlogfile("dz11-test.log", debug, debug, true);
+
+	bus  b;
+	std::atomic_uint32_t event { 0 };
+	cpu *c = new cpu(&b, &event);
+	b.add_cpu(c);
+
+	comm_unittest_helper *tty1 = new comm_unittest_helper();
+	comm_unittest_helper *tty2 = new comm_unittest_helper();
+	dz11 d(&b, { tty1, tty2 });
+
+	// object init test
+	EXPECT_EQ(d.begin(), true);
+
+	// at start, TRDY must be set for BSD2.11 to acknowledge the port
+	EXPECT_EQ(d.read_word(0160100), 0x8000);
+
+	// reset device
+	d.write_word(0160100, 020);  // 'CLR' (= reset)
+	EXPECT_EQ(d.read_word(0160100) & 020, 020);
+	EXPECT_EQ(d.read_word(0160100) & 020, 0);
+
+	// check CO in MSR for a new connection
+	tty1->set_connected(true);
+	d.wait_connected(0);  // wait for thread to notice the "incoming connection"
+	EXPECT_EQ(d.read_word(0160106), 0x101);  // RING
+	EXPECT_EQ(d.read_word(0160106), 0x100);  // CO (carrier detected)
+	tty2->set_connected(true);
+	d.wait_connected(1);  // wait for thread to notice the "incoming connection"
+	EXPECT_EQ(d.read_word(0160106), 0x302);  // RING
+	EXPECT_EQ(d.read_word(0160106), 0x300);  // CO (carrier detected)
+
+	// data RX
+	d.write_word(0160104, 3);  // enable line 0 & 1
+	tty1->set_data({ 0x99 });
+	d.wait_have_data(0);
+	EXPECT_EQ(d.read_word(0160100) & 128, 128);  // RDONE
+	uint16_t rbuf1 = d.read_word(0160102);
+	EXPECT_EQ((rbuf1 >> 8) & 7, 0);  // RX LINE
+	EXPECT_EQ(rbuf1 & 0x8000, 0x8000);  // DATA VALID
+	EXPECT_EQ(rbuf1 & 255, 0x99);  // RBUF
+	// is now empty
+	rbuf1 = d.read_word(0160100);
+	EXPECT_EQ(rbuf1 & 0x80, 0);  // DATA VALID / RDONE
+	EXPECT_EQ(d.read_word(0160102) & 0x80ff, 0);  // DATA VALID, RBUF
+	// test line2
+	tty2->set_data({ 0xaa });
+	d.wait_have_data(1);
+	EXPECT_EQ(d.read_word(0160100) & 128, 128);  // RDONE
+	uint16_t rbuf2 = d.read_word(0160102);
+	EXPECT_EQ((rbuf2 >> 8) & 7, 1);  // RX LINE
+	EXPECT_EQ(rbuf2 & 0x8000, 0x8000);  // DATA VALID
+	EXPECT_EQ(rbuf2 & 255, 0xaa);  // RBUF
+	// is now empty
+	EXPECT_EQ(d.read_word(0160100) & 128, 0);  // RDONE
+	EXPECT_EQ(d.read_word(0160102) & 0x80ff, 0);  // DATA VALID / RBUF
+	// data on a disabled line
+	d.write_word(0160104, 1);  // enable line 0 (1 disabled)
+	tty2->set_data({ 123 });
+	d.wait_have_data(1);
+	EXPECT_EQ(d.read_word(0160100) & 128, 0);  // RDONE
+	EXPECT_EQ(d.read_word(0160102) & 0x87ff, 0);  // DATA VALID, RX LINE, RBUF
+}
+#endif

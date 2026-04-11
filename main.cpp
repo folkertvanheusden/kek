@@ -2,8 +2,8 @@
 // Released under MIT license
 
 #include <ArduinoJson.h>
-#include <assert.h>
 #include <atomic>
+#include <cassert>
 #include <cinttypes>
 #include <signal.h>
 #include <stdlib.h>
