@@ -186,6 +186,9 @@ uint16_t dz11::read_word(const uint16_t addr)
 			}
 		}
 
+		vtemp &= 0xf8ff;  // add current tx line
+		vtemp |= scanner_line_nr << 8;
+
 		vtemp &= ~7;  // mask off at least bit 0 off (used for DZ32 mode in BSD 2.11)
 	}
 	else if (addr == DZ11_RBUF) {
@@ -203,7 +206,7 @@ uint16_t dz11::read_word(const uint16_t addr)
 		/* as is */ // DTR, line enable
 	}
 	else if (addr == DZ11_MSR) {
-		TRACE("msr start: %06o", registers[reg]);
+		TRACE("DZ11: msr start: %06o", registers[reg]);
 		vtemp = registers[reg] & 0x00ff;  // keep ring indicator
 
 		// add carrier detected bits
@@ -214,7 +217,7 @@ uint16_t dz11::read_word(const uint16_t addr)
 
 		 // next read: no more RI
 		registers[reg] &= 0xff00;
-		TRACE("msr end: %06o, vtemp: %06o", registers[reg], vtemp);
+		TRACE("DZ11: msr end: %06o, vtemp: %06o", registers[reg], vtemp);
 	}
 
 	TRACE("DZ11: read %06o from register %06o (\"%s\", %d)", vtemp, addr, dz11_register_names[reg], reg);
@@ -238,30 +241,38 @@ void dz11::write_byte(const uint16_t addr, const uint8_t v)
 	write_word(addr & ~1, vtemp);
 }
 
-void dz11::tx_scanner(const std::optional<int> line)
+void dz11::tx_scanner_do(const int line)
 {
-	size_t use_line_nr = 255;
+	registers[0] &= ~0x700;
+	registers[0] |= line << 8;  // set transmit ready bits
+	scanner_line_nr = line;
 
-	if (line.has_value())
-		use_line_nr = line.value();
-	else {
-		scanner_line_nr = (scanner_line_nr + 1) % comm_interfaces.size();
-		use_line_nr     = scanner_line_nr;
+	registers[0] |= 0x8000;  // TRDY
+
+	if (is_tx_interrupt_enabled()) {
+		TRACE("DZ11 TX INTERRUPT for line %zu", line);
+		trigger_interrupt(true);
 	}
 
-	for(size_t i=0; i<comm_interfaces.size(); i++) {
-		int offsetted = (use_line_nr + i) & 7;
-		if ((registers[2] & (1 << offsetted)) == 0)
-			continue;
+//	registers[0] &= ~0x4000;  //  unset TIE
+}
 
-		registers[0] &= ~0x700;
-		registers[0] |= offsetted << 8;  // set transmit ready bits
+void dz11::tx_scanner(const std::optional<int> line)
+{
+	if (line.has_value()) {
+		int use_line_nr = line.value();
+		TRACE("DZ11 specific line interrupt: %zu", use_line_nr);
+		tx_scanner_do(use_line_nr);
+	}
+	else {
+		scanner_line_nr = (scanner_line_nr + 1) % comm_interfaces.size();
 
-		registers[0] |= 0x8000;  // TRDY
-
-		if (is_tx_interrupt_enabled()) {
-			TRACE("DZ11 TX INTERRUPT for line %zu", offsetted);
-			trigger_interrupt(true);
+		for(size_t i=0; i<comm_interfaces.size(); i++) {
+			int offsetted = (scanner_line_nr + i) & 7;
+			if ((registers[2] & (1 << offsetted)) == 0)
+				continue;
+			tx_scanner_do(offsetted);
+			break;
 		}
 	}
 }
@@ -279,14 +290,17 @@ void dz11::write_word(const uint16_t addr, const uint16_t v)
 			trigger_interrupt(false);
 		}
 
+		// certain bits are read only
+		v_set = (registers[0] & ~0x5078) | (v & 0x5708);
+
 		tx_scanner({ });
 	}
 	else if (addr == DZ11_TDR) {
-		size_t line_nr = registers[reg] & 7;
+		size_t line_nr = (registers[0] >> 8) & 7;
 		if (line_nr < comm_interfaces.size()) {
 			char c = v & 127;  // mask off parity
 			comm_interfaces.at(line_nr)->send_data(reinterpret_cast<const uint8_t *>(&c), 1);
-			TRACE("DZ11 TRANSMIT %c (%d)", c, v);
+			TRACE("DZ11 TRANSMIT %c (%d) on line %d", c, v, line_nr);
 		}
 
 		tx_scanner(line_nr);
