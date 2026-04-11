@@ -51,8 +51,8 @@ private:
 	void trigger_interrupt(const bool is_tx);
 	bool is_rx_interrupt_enabled() const;
 	bool is_tx_interrupt_enabled() const;
-	void tx_scanner_do(const int line);
-	void tx_scanner(const std::optional<int> line);
+	void tx_scanner_do(const int line, const bool force = false);
+	void tx_scanner(const std::optional<int> line, const bool force = false);
 
 public:
 	dz11(bus *const b, const std::vector<comm *> & comm_interfaces);

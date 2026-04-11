@@ -126,7 +126,7 @@ void dz11::operator()()
 				// (3.3.8)
 
 				if (is_connected)
-					tx_scanner(line_nr);
+					tx_scanner(line_nr, true);
 			}
 
 			// receive data
@@ -241,7 +241,7 @@ void dz11::write_byte(const uint16_t addr, const uint8_t v)
 	write_word(addr & ~1, vtemp);
 }
 
-void dz11::tx_scanner_do(const int line)
+void dz11::tx_scanner_do(const int line, const bool force)
 {
 	registers[0] &= ~0x700;
 	registers[0] |= line << 8;  // set transmit ready bits
@@ -249,7 +249,7 @@ void dz11::tx_scanner_do(const int line)
 
 	registers[0] |= 0x8000;  // TRDY
 
-	if (is_tx_interrupt_enabled()) {
+	if (is_tx_interrupt_enabled() || force) {
 		TRACE("DZ11 TX INTERRUPT for line %zu", line);
 		trigger_interrupt(true);
 	}
@@ -257,22 +257,22 @@ void dz11::tx_scanner_do(const int line)
 //	registers[0] &= ~0x4000;  //  unset TIE
 }
 
-void dz11::tx_scanner(const std::optional<int> line)
+void dz11::tx_scanner(const std::optional<int> line, const bool force)
 {
 	if (line.has_value()) {
 		int use_line_nr = line.value();
 		TRACE("DZ11 specific line interrupt: %zu", use_line_nr);
-		tx_scanner_do(use_line_nr);
+		tx_scanner_do(use_line_nr, force);
 	}
 	else {
 		scanner_line_nr = (scanner_line_nr + 1) % comm_interfaces.size();
 
 		for(size_t i=0; i<comm_interfaces.size(); i++) {
 			int offsetted = (scanner_line_nr + i) & 7;
-			if ((registers[2] & (1 << offsetted)) == 0)
-				continue;
-			tx_scanner_do(offsetted);
-			break;
+			if (registers[2] & (1 << offsetted)) {
+				tx_scanner_do(offsetted, force);
+				break;
+			}
 		}
 	}
 }
