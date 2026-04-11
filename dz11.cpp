@@ -57,14 +57,15 @@ dz11::~dz11()
 void dz11::show_state(console *const cnsl) const
 {
 	for(size_t i=0; i<comm_interfaces.size(); i++) {
-		cnsl->put_string_lf(format("* LINE %zu", i + 1));
-
 		std::unique_lock<std::mutex> lck(input_lock);
-		cnsl->put_string_lf(format(" Characters in buffer: %zu", recv_buffers[i].size()));
+		cnsl->put_string_lf(format(" line %zu: characters in buffer: %zu", i + 1, recv_buffers[i].size()));
 	}
 
 	cnsl->put_string_lf(format(" RX interrupt enabled: %s", is_rx_interrupt_enabled() ? "true": "false" ));
 	cnsl->put_string_lf(format(" TX interrupt enabled: %s", is_tx_interrupt_enabled() ? "true": "false" ));
+
+	for(int i=0; i<4; i++)
+		cnsl->put_string_lf(format(" register %d: %06o", i, registers[i]));
 }
 
 bool dz11::begin()
