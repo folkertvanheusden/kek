@@ -249,16 +249,17 @@ void dz11::tx_scanner(const std::optional<int> line)
 	}
 
 	for(size_t i=0; i<comm_interfaces.size(); i++) {
-		if ((registers[2] & (1 << i)) == 0)
+		int offsetted = (use_line_nr + i) & 7;
+		if ((registers[2] & (1 << offsetted)) == 0)
 			continue;
 
 		registers[0] &= ~0x700;
-		registers[0] |= ((use_line_nr + i) & 7) << 8;  // set transmit ready bits
+		registers[0] |= offsetted << 8;  // set transmit ready bits
 
 		registers[0] |= 0x8000;  // TRDY
 
 		if (is_tx_interrupt_enabled()) {
-			TRACE("DZ11 TX INTERRUPT for line %zu", (use_line_nr + i) & 7);
+			TRACE("DZ11 TX INTERRUPT for line %zu", offsetted);
 			trigger_interrupt(true);
 		}
 	}
