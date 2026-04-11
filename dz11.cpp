@@ -161,8 +161,15 @@ void dz11::operator()()
 				have_data = true;
 			}
 
-			if (have_data && is_rx_interrupt_enabled())
-				trigger_interrupt(false);
+			if (have_data) {
+				if (is_rx_interrupt_enabled()) {
+					TRACE("DZ11: have data, trigger interrupt");
+					trigger_interrupt(false);
+				}
+				else {
+					TRACE("DZ11: have data, interrupt disabled! (%06o)", registers[0]);
+				}
+			}
 		}
 	}
 
@@ -177,7 +184,7 @@ void dz11::reset()
 
 bool dz11::is_rx_interrupt_enabled() const
 {
-	return (registers[0] & 64) && (registers[0] & 32);
+	return (registers[0] & 0x0040) && (registers[0] & 32);
 }
 
 bool dz11::is_tx_interrupt_enabled() const
@@ -232,7 +239,6 @@ uint16_t dz11::read_word(const uint16_t addr)
 		/* as is */ // DTR, line enable
 	}
 	else if (addr == DZ11_MSR) {
-		TRACE("DZ11: msr start: %06o", registers[reg]);
 		vtemp = registers[reg] & 0x00ff;  // keep ring indicator
 
 		// add carrier detected bits (when DTR is set)
@@ -243,7 +249,6 @@ uint16_t dz11::read_word(const uint16_t addr)
 
 		 // next read: no more RI
 		registers[reg] &= 0xff00;
-		TRACE("DZ11: msr end: %06o, vtemp: %06o", registers[reg], vtemp);
 	}
 
 	TRACE("DZ11: read %06o from register %06o (\"%s\", %d)", vtemp, addr, dz11_register_names[reg], reg);
@@ -321,7 +326,7 @@ void dz11::write_word(const uint16_t addr, const uint16_t v)
 		}
 
 		// certain bits are read only
-		v_set = (registers[0] & ~0x5078) | (v & 0x5708) | (clr ? 16 : 0);
+		v_set = (registers[0] & ~0x5078) | (v & 0x5078) | (clr ? 16 : 0);
 
 		tx_scanner({ });
 	}
@@ -381,6 +386,12 @@ dz11 *dz11::deserialize(const JsonVariantConst j, bus *const b)
 
 #include "comm_unittest_helper.h"
 
+bool has_irq(cpu *const c, const int level, const uint16_t vector)
+{
+	auto irqs_for_level = c->get_queued_interrupts().find(level);
+	return irqs_for_level->second.find(vector) != irqs_for_level->second.end();
+}
+
 TEST(dz11, dz11tests) {
 	settrace(true);
 	setlogfile("dz11-test.log", debug, debug, true);
@@ -389,6 +400,7 @@ TEST(dz11, dz11tests) {
 	std::atomic_uint32_t event { 0 };
 	cpu *c = new cpu(&b, &event);
 	b.add_cpu(c);
+	c->setPSW_spl(7);  // allow IRQs from DZ11 (level 5)
 
 	comm_unittest_helper *tty1 = new comm_unittest_helper();
 	comm_unittest_helper *tty2 = new comm_unittest_helper();
@@ -404,6 +416,10 @@ TEST(dz11, dz11tests) {
 	d.write_word(0160100, 020);  // 'CLR' (= reset)
 	EXPECT_EQ(d.read_word(0160100) & 020, 020);
 	EXPECT_EQ(d.read_word(0160100) & 020, 0);
+	// sources say: no interrupt on CLR (RX/TX) yet BSD 2.11 expects an RX irq
+	EXPECT_EQ(has_irq(c, 5, 0310), true);  // RX
+	EXPECT_EQ(has_irq(c, 5, 0314), false);  // TX
+	c->init_interrupt_queue();  // clear pending interrupt
 
 	// check CO in MSR for a new connection
 	tty1->set_connected(true);
@@ -414,6 +430,10 @@ TEST(dz11, dz11tests) {
 	d.wait_connected(1);  // wait for thread to notice the "incoming connection"
 	EXPECT_EQ(d.read_word(0160106), 0x302);  // RING
 	EXPECT_EQ(d.read_word(0160106), 0x300);  // CO (carrier detected)
+	EXPECT_EQ(has_irq(c, 5, 0310), false);  // RX
+
+	d.write_word(0160100, 0x4060);  // TIE/RIE/MSE
+	fprintf(stderr, "%06o\n", d.read_word(0160100));
 
 	// data RX
 	d.write_word(0160104, 3);  // enable line 0 & 1
@@ -424,10 +444,12 @@ TEST(dz11, dz11tests) {
 	EXPECT_EQ((rbuf1 >> 8) & 7, 0);  // RX LINE
 	EXPECT_EQ(rbuf1 & 0x8000, 0x8000);  // DATA VALID
 	EXPECT_EQ(rbuf1 & 255, 0x99);  // RBUF
+	EXPECT_EQ(has_irq(c, 5, 0310), true);  // RX
 	// is now empty
 	rbuf1 = d.read_word(0160100);
 	EXPECT_EQ(rbuf1 & 0x80, 0);  // DATA VALID / RDONE
 	EXPECT_EQ(d.read_word(0160102) & 0x80ff, 0);  // DATA VALID, RBUF
+	EXPECT_EQ(has_irq(c, 5, 0310), true);  // RX (not cleared)
 	// test line2
 	tty2->set_data({ 0xaa });
 	d.wait_have_data(1);
@@ -436,14 +458,27 @@ TEST(dz11, dz11tests) {
 	EXPECT_EQ((rbuf2 >> 8) & 7, 1);  // RX LINE
 	EXPECT_EQ(rbuf2 & 0x8000, 0x8000);  // DATA VALID
 	EXPECT_EQ(rbuf2 & 255, 0xaa);  // RBUF
+	EXPECT_EQ(has_irq(c, 5, 0310), true);  // RX
 	// is now empty
 	EXPECT_EQ(d.read_word(0160100) & 128, 0);  // RDONE
 	EXPECT_EQ(d.read_word(0160102) & 0x80ff, 0);  // DATA VALID / RBUF
+	EXPECT_EQ(has_irq(c, 5, 0310), true);  // RX (not cleared)
+	c->init_interrupt_queue();  // clear pending interrupts
 	// data on a disabled line
 	d.write_word(0160104, 1);  // enable line 0 (1 disabled)
 	tty2->set_data({ 123 });
 	d.wait_have_data(1);
 	EXPECT_EQ(d.read_word(0160100) & 128, 0);  // RDONE
 	EXPECT_EQ(d.read_word(0160102) & 0x87ff, 0);  // DATA VALID, RX LINE, RBUF
+	EXPECT_EQ(has_irq(c, 5, 0310), false);  // RX
+
+	// data TX
+	d.write_word(0160104, 3);  // enable line 0 & 1
+	int line = (d.read_word(0160100) >> 8) & 7;
+	d.write_word(0160106, 0x44);  // TBUF
+	std::vector<uint8_t> data_tx[] { tty1->get_tx_data(), tty2->get_tx_data() };
+	EXPECT_EQ(data_tx[line].size(), 1);  // has data
+	EXPECT_EQ(data_tx[1 - line].size(), 0);  // has no data
+	EXPECT_EQ(has_irq(c, 5, 0314), true);  // TX
 }
 #endif
