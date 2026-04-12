@@ -441,6 +441,7 @@ TEST(dz11, dz11tests) {
 	EXPECT_EQ(d.read_word(0160106), 0x302);  // RING
 	EXPECT_EQ(d.read_word(0160106), 0x300);  // CO (carrier detected)
 	EXPECT_EQ(has_irq(c, 5, 0310), false);  // RX
+	EXPECT_EQ(has_irq(c, 5, 0314), false);  // TX
 
 	d.write_word(0160100, 0x4060);  // TIE/RIE/MSE
 
