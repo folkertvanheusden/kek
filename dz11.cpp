@@ -154,7 +154,14 @@ void dz11::operator()()
 				connected[line_nr] = is_connected ? PENDING : NOT_CONNECTED;
 
 				// set CO & RI(NG)
-				registers[(DZ11_MSR - DZ11_BASE) / 2] |= (1 << line_nr) | (1 << (line_nr + 8));
+				uint16_t mask1 = 1 << line_nr;
+				uint16_t mask2 = 1 << (line_nr + 8);
+				if (is_connected)
+					registers[3] |= mask1 | mask2;
+				else {
+					registers[3] &= ~(mask1 | mask2);
+					registers[2] &= ~mask2;
+				}
 				// NO INTERRUPT
 				// "The DZ11
 				// data set control logic does not interrupt the POP-II processor when a carrier or ring signal changes
