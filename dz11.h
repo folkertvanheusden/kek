@@ -42,8 +42,9 @@ private:
 	bool              flipflop_txd { false   };
 	size_t            scanner_line_nr { 0    };
 
+	enum cstate { NOT_CONNECTED = 0, PENDING, CONNECTED };
 	std::vector<comm *> comm_interfaces;
-	std::vector<bool  > connected;
+	std::vector<cstate> connected;
 
 	std::vector<char>   recv_buffers[dz11_n_lines];
         mutable std::mutex  input_lock;

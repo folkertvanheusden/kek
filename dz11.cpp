@@ -101,7 +101,7 @@ void dz11::wait_connected(const int line_nr) const
 		usleep(1000);
 
 		std::unique_lock<std::mutex> lck(input_lock);
-		if (connected[line_nr])
+		if (connected[line_nr] != NOT_CONNECTED)
 			break;
 	}
 }
@@ -131,15 +131,16 @@ void dz11::operator()()
 			std::unique_lock<std::mutex> lck(input_lock);
 
 			// (dis-)connected?
-			bool is_connected = comm_interfaces.at(line_nr)->is_connected();
+			bool is_connected  = comm_interfaces.at(line_nr)->is_connected();
+			bool was_connected = connected[line_nr] != NOT_CONNECTED;
 
-			if (is_connected != connected[line_nr]) {
+			if (is_connected != was_connected) {
 				DOLOG(debug, false, "DZ11 line %d state changed to %d", line_nr, is_connected);
 #if defined(ESP32)
 				Serial.printf("DZ11 line %d state changed to %d\r\n", line_nr, is_connected);
 #endif
 
-				connected[line_nr] = is_connected;
+				connected[line_nr] = is_connected ? PENDING : NOT_CONNECTED;
 
 				// set CO & RI(NG)
 				registers[(DZ11_MSR - DZ11_BASE) / 2] |= (1 << line_nr) | (1 << (line_nr + 8));
@@ -148,9 +149,6 @@ void dz11::operator()()
 				// data set control logic does not interrupt the POP-II processor when a carrier or ring signal changes
 				// state. The program should periodically sample these registers to determine the current status. Sampling at a high rate is not necessary."
 				// (3.3.8)
-
-				if (is_connected)
-					tx_scanner(line_nr, true);
 			}
 
 			// receive data
@@ -342,7 +340,14 @@ void dz11::write_word(const uint16_t addr, const uint16_t v)
 		tx_scanner(line_nr);
 	}
 	else if (addr == DZ11_TCR) {
-		tx_scanner({ });
+		for(size_t i=0; i<connected.size(); i++) {
+			if ((v & (1 << i)) == 0)
+				continue;
+			if (connected[i] == PENDING) {
+				tx_scanner(i, true);
+				connected[i] = CONNECTED;
+			}
+		}
 	}
 
 	registers[reg] = v_set;
