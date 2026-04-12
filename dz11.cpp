@@ -256,7 +256,7 @@ uint16_t dz11::read_word(const uint16_t addr)
 					p = !parity(c);
 				else if (parity_setting[i] == ODD_PARITY)
 					p = parity(c);
-				vtemp = 0x8000 | (i << 8) | c | p;
+				vtemp = 0x8000 | (i << 8) | c | (p << 7);
 				break;
 			}
 		}
