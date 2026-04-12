@@ -31,7 +31,9 @@ dz11::dz11(bus *const b, const std::vector<comm *> & comm_interfaces):
 	b(b),
 	comm_interfaces(comm_interfaces)
 {
-	connected.resize(comm_interfaces.size());
+	size_t n_interfaces = comm_interfaces.size();
+	connected     .resize(n_interfaces);
+	parity_setting.resize(n_interfaces);
 
 	reset();
 	registers[0] = 0x8000;
@@ -170,7 +172,7 @@ void dz11::operator()()
 
 			if (have_data) {
 				// registers[2]: LINE ENAB
-				if (is_rx_interrupt_enabled() && (registers[2] & (1 << line_nr))) {
+				if (is_rx_interrupt_enabled()) {
 					TRACE("DZ11: have data, trigger interrupt");
 					trigger_interrupt(false);
 				}
@@ -220,12 +222,16 @@ uint16_t dz11::read_word(const uint16_t addr)
 
 		vtemp &= ~128;
 		for(int i=0; i<dz11_n_lines; i++) {
-			if (recv_buffers[i].empty() == false && (registers[(DZ11_TCR - DZ11_BASE) / 2] & (1 << i))) {
+			if (recv_buffers[i].empty() == false) {
 				TRACE("DZ11 CSR: line %d has data", i);
 				vtemp |= 128;  // RDONE
 				break;
 			}
 		}
+
+		vtemp &= ~0x8000;  // TRDY
+		if (registers[2] & 0xff)
+			vtemp |= 0x8000;
 
 		vtemp &= 0xf8ff;  // add current tx line
 		vtemp |= scanner_line_nr << 8;
@@ -235,10 +241,15 @@ uint16_t dz11::read_word(const uint16_t addr)
 	else if (addr == DZ11_RBUF) {
 		vtemp = 0;
 		for(int i=0; i<dz11_n_lines; i++) {
-			if (recv_buffers[i].empty() == false && (registers[(DZ11_TCR - DZ11_BASE) / 2] & (1 << i))) {
+			if (recv_buffers[i].empty() == false) {
 				uint8_t c = recv_buffers[i].front();
 				recv_buffers[i].erase(recv_buffers[i].begin());
-				vtemp = 0x8000 | (i << 8) | c | (parity(c) << 7);
+				bool    p = false;
+				if (parity_setting[i] == EVEN_PARITY)
+					p = !parity(c);
+				else if (parity_setting[i] == ODD_PARITY)
+					p = parity(c);
+				vtemp = 0x8000 | (i << 8) | c | p;
 				break;
 			}
 		}
@@ -292,8 +303,6 @@ void dz11::tx_scanner_do(const int line, const bool force)
 		TRACE("DZ11 TX INTERRUPT for line %zu", line);
 		trigger_interrupt(true);
 	}
-
-//	registers[0] &= ~0x4000;  //  unset TIE
 }
 
 void dz11::tx_scanner(const std::optional<int> line, const bool force)
@@ -303,18 +312,6 @@ void dz11::tx_scanner(const std::optional<int> line, const bool force)
 		TRACE("DZ11 specific line interrupt: %zu", use_line_nr);
 		tx_scanner_do(use_line_nr, force);
 	}
-	/*
-	else {
-		scanner_line_nr = (scanner_line_nr + 1) % comm_interfaces.size();
-
-		for(size_t i=0; i<comm_interfaces.size(); i++) {
-			int offsetted = (scanner_line_nr + i) & 7;
-			if (registers[2] & (1 << offsetted)) {
-				tx_scanner_do(offsetted, force);
-				break;
-			}
-		}
-	}*/
 }
 
 void dz11::write_word(const uint16_t addr, const uint16_t v)
@@ -337,6 +334,15 @@ void dz11::write_word(const uint16_t addr, const uint16_t v)
 		v_set = (registers[0] & ~0x5078) | (v & 0x5078) | (clr ? 16 : 0);
 
 		tx_scanner({ });
+	}
+	else if (addr == DZ11_LPR) {
+		size_t line_nr = v & 7;
+		if (line_nr < parity_setting.size()) {
+			if (v & 64)  // parity enabled?
+				parity_setting[line_nr] = v & 128 ? ODD_PARITY : EVEN_PARITY;
+			else
+				parity_setting[line_nr] = NO_PARITY;
+		}
 	}
 	else if (addr == DZ11_TDR) {
 		size_t line_nr = (registers[0] >> 8) & 7;

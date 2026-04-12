@@ -46,6 +46,8 @@ private:
 	enum cstate { NOT_CONNECTED = 0, PENDING, CONNECTED };
 	std::vector<comm *> comm_interfaces;
 	std::vector<cstate> connected;
+	enum psetting { NO_PARITY = 0, ODD_PARITY, EVEN_PARITY };
+	std::vector<psetting> parity_setting;
 
 	std::vector<char>   recv_buffers[dz11_n_lines];
         mutable std::mutex  input_lock;
