@@ -162,7 +162,8 @@ void dz11::operator()()
 			}
 
 			if (have_data) {
-				if (is_rx_interrupt_enabled()) {
+				// registers[2]: LINE ENAB
+				if (is_rx_interrupt_enabled() && (registers[2] & (1 << line_nr))) {
 					TRACE("DZ11: have data, trigger interrupt");
 					trigger_interrupt(false);
 				}
