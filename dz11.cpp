@@ -347,7 +347,7 @@ void dz11::write_word(const uint16_t addr, const uint16_t v)
 	else if (addr == DZ11_TDR) {
 		size_t line_nr = (registers[0] >> 8) & 7;
 		if (line_nr < comm_interfaces.size()) {
-			char c = v & 127;  // mask off parity
+			char c = parity_setting[line_nr] != NO_PARITY ? v & 127 : v;  // mask off parity
 			comm_interfaces.at(line_nr)->send_data(reinterpret_cast<const uint8_t *>(&c), 1);
 			TRACE("DZ11 TRANSMIT %c (%d) on line %d", c, v, line_nr);
 		}
@@ -356,11 +356,12 @@ void dz11::write_word(const uint16_t addr, const uint16_t v)
 	}
 	else if (addr == DZ11_TCR) {
 		for(size_t i=0; i<connected.size(); i++) {
-			if ((v & (1 << i)) == 0)
-				continue;
-			if (connected[i] == PENDING) {
-				tx_scanner(i, true);
-				connected[i] = CONNECTED;
+			uint16_t mask = 1 << i;
+			if (v & mask) {
+				if (connected[i] == PENDING)
+					connected[i] = CONNECTED;
+				if (connected[i] == CONNECTED)
+					tx_scanner(i, true);
 			}
 		}
 
