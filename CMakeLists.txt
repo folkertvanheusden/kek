@@ -9,8 +9,6 @@ add_compile_options(-Wall -pedantic -Wextra)
 #add_compile_options(-fsanitize=address,undefined)
 #add_link_options(-fsanitize=address,undefined)
 
-#add_compile_options(-fanalyzer)
-
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
@@ -151,11 +149,11 @@ endif (WIN32)
 
 include(CheckIPOSupported)
 check_ipo_supported(RESULT supported)
-#set(CMAKE_BUILD_TYPE RelWithDebInfo)
+set(CMAKE_BUILD_TYPE RelWithDebInfo)
 cmake_policy(SET CMP0069 NEW)
 set(CMAKE_POLICY_DEFAULT_CMP0069 NEW)
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
-set(CMAKE_BUILD_TYPE Debug)
+#set(CMAKE_BUILD_TYPE Debug)
 
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 set(THREADS_PREFER_PTHREAD_FLAG TRUE)

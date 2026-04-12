@@ -1,4 +1,5 @@
 ; written by Folkert van Heusden <folkert@komputilo.nl>
+; (C) 2026, MIT license
 
         .link 1000
 init:
