@@ -399,7 +399,7 @@ bool cpu::execute_any_pending_interrupt()
 		if (interrupts->second.empty() == false) {
 			any_queued_interrupts = true;
 
-			if (i < start_level)  // at leas we know now that there's an interrupt scheduled
+			if (i < start_level)  // at least we know now that there's an interrupt scheduled
 				continue;
 
 			if (can_trigger == false) {
@@ -408,13 +408,10 @@ bool cpu::execute_any_pending_interrupt()
 			}
 
 			auto    vector = interrupts->second.begin();
-
 			uint8_t v      = *vector;
-
 			interrupts->second.erase(vector);
 
 			TRACE("Invoking interrupt vector %o (IPL %d, current: %d)", v, i, current_level);
-
 			trap(v, i, true);
 
 			// when there are more interrupts scheduled, invoke them asap
@@ -463,6 +460,23 @@ void cpu::queue_interrupt(const uint8_t level, const uint8_t vector)
 	any_queued_interrupts = true;
 
 	TRACE("Queueing interrupt vector %o (IPL %d, current: %d), n: %zu", vector, level, getPSW_spl(), it->second.size());
+}
+
+void cpu::unqueue_interrupt(const uint8_t level, const uint8_t vector)
+{
+#if defined(BUILD_FOR_RP2040)
+	xSemaphoreTake(qi_lock, portMAX_DELAY);
+#else
+	std::unique_lock<std::mutex> lck(qi_lock);
+#endif
+
+	auto it = queued_interrupts.find(level);
+	assert(it != queued_interrupts.end());
+	it->second.erase(vector);
+
+#if defined(BUILD_FOR_RP2040)
+	xSemaphoreGive(qi_lock);
+#endif
 }
 
 void cpu::addToMMR1(const gam_rc_t & g)

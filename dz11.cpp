@@ -58,7 +58,16 @@ void dz11::show_state(console *const cnsl) const
 {
 	for(size_t i=0; i<comm_interfaces.size(); i++) {
 		std::unique_lock<std::mutex> lck(input_lock);
-		cnsl->put_string_lf(format(" line %zu: characters in buffer: %zu", i + 1, recv_buffers[i].size()));
+		std::string out = format(" line %zu: %zu characters in buffer, ", i + 1, recv_buffers[i].size());
+		if (connected[i] == NOT_CONNECTED)
+			out += "not connected";
+		else if (connected[i] == PENDING)
+			out += "pending";
+		else if (connected[i] == CONNECTED)
+			out += "connected";
+		else
+			out += "?";
+		cnsl->put_string_lf(out);
 	}
 
 	cnsl->put_string_lf(format(" RX interrupt enabled: %s", is_rx_interrupt_enabled() ? "true": "false" ));
@@ -91,7 +100,7 @@ void dz11::test_ports(const std::string & txt) const
 void dz11::trigger_interrupt(const bool is_tx)
 {
 	TRACE("DZ11: %s interrupt", is_tx ? "TX" : "RX");
-	b->getCpu()->queue_interrupt(5, is_tx ? DZ11_INTERRUPT_VECTOR_TX : DZ11_INTERRUPT_VECTOR_RX);
+	b->getCpu()->queue_interrupt(DZ11_INTERRUPT_LEVEL, is_tx ? DZ11_INTERRUPT_VECTOR_TX : DZ11_INTERRUPT_VECTOR_RX);
 }
 
 #ifdef UNIT_TEST
@@ -348,6 +357,12 @@ void dz11::write_word(const uint16_t addr, const uint16_t v)
 				connected[i] = CONNECTED;
 			}
 		}
+
+		if ((v & 0xff) == 0) {
+			TRACE("DZ11: unqueuing any pending interrupts");
+			b->getCpu()->unqueue_interrupt(DZ11_INTERRUPT_LEVEL, DZ11_INTERRUPT_VECTOR_RX);
+			b->getCpu()->unqueue_interrupt(DZ11_INTERRUPT_LEVEL, DZ11_INTERRUPT_VECTOR_TX);
+		}
 	}
 
 	registers[reg] = v_set;
@@ -490,5 +505,7 @@ TEST(dz11, dz11tests) {
 	EXPECT_EQ(data_tx[line].size(), 1);  // has data
 	EXPECT_EQ(data_tx[1 - line].size(), 0);  // has no data
 	EXPECT_EQ(has_irq(c, 5, 0314), true);  // TX
+	b.getCpu()->unqueue_interrupt(DZ11_INTERRUPT_LEVEL, DZ11_INTERRUPT_VECTOR_TX);
+	EXPECT_EQ(has_irq(c, 5, 0314), false);  // TX
 }
 #endif

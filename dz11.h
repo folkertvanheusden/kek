@@ -23,6 +23,7 @@ constexpr const int n_dz11_registers = 7;
 
 #define DZ11_INTERRUPT_VECTOR_RX 0310
 #define DZ11_INTERRUPT_VECTOR_TX 0314
+#define DZ11_INTERRUPT_LEVEL 5
 #define DZ11_BASE 0160100
 #define DZ11_CSR   DZ11_BASE
 #define DZ11_RBUF (DZ11_BASE + 1 * 2)
