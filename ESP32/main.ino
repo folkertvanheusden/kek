@@ -51,7 +51,6 @@
 #include "tty.h"
 #include "utils.h"
 #include "version.h"
-#include "FvHNTP/FvHNTP.h"
 
 
 constexpr const char SERIAL_CFG_FILE[] = "/serial.json";
@@ -68,13 +67,8 @@ SdFs     SD;
 #endif
 
 std::atomic_uint32_t stop_event      { EVENT_NONE };
-
 std::atomic_bool    *running         { nullptr    };
-
 bool                 trace_output    { false      };
-
-ntp                 *ntp_            { nullptr    };
-
 comm                *cs              { nullptr    };  // Console Serial
 
 static void console_thread_wrapper_panel(void *const c)
@@ -206,17 +200,17 @@ void start_network(console *const c)
 	c->put_string_lf("");
 	c->put_string_lf(format("Local IP address: %s", WiFi.localIP().toString().c_str()));
 
-	static bool dc11_loaded = false;
-	if (!dc11_loaded) {
-		dc11_loaded = true;
+	static bool dz11_loaded = false;
+	if (!dz11_loaded) {
+		dz11_loaded = true;
 
-		cs->println("* Adding DC11");
+		cs->println("* Adding DZ11");
 		std::vector<comm *> comm_interfaces;
 
 #if !defined(BUILD_FOR_RP2040) && defined(TTY_SERIAL_RX)
 		uint32_t bitrate = load_serial_speed_configuration();
 
-		cs->println(format("* Init TTY (on DC11), baudrate: %d bps, RX: %d, TX: %d", bitrate, TTY_SERIAL_RX, TTY_SERIAL_TX));
+		cs->println(format("* Init TTY (on DZ11), baudrate: %d bps, RX: %d, TX: %d", bitrate, TTY_SERIAL_RX, TTY_SERIAL_TX));
 
 		comm_interfaces.push_back(new comm_esp32_hardwareserial(1, TTY_SERIAL_RX, TTY_SERIAL_TX, bitrate));
 #endif
@@ -224,7 +218,7 @@ void start_network(console *const c)
 		for(size_t i=comm_interfaces.size(); i<4; i++) {
 			int port = 1100 + i;
 			comm_interfaces.push_back(new comm_tcp_socket_server(port));
-			DOLOG(info, false, "Configuring DC11 device for TCP socket on port %d", port);
+			DOLOG(info, false, "Configuring DZ11 device for TCP socket on port %d", port);
 		}
 
 		for(auto & c: comm_interfaces) {
@@ -232,15 +226,12 @@ void start_network(console *const c)
 				DOLOG(warning, false, "Failed to configure %s", c->get_identifier().c_str());
 		}
 
-		dc11 *dc11_ = new dc11(b, comm_interfaces);
-		dc11_->begin();
-		b->add_DC11(dc11_);
+		dz11 *dz11_ = new dz11(b, comm_interfaces);
+		dz11_->begin();
+		b->add_DZ11(dz11_);
 
 		cs->println("* Starting (NTP-) clock");
-		ntp_ = new ntp("188.212.113.203");  // TODO configurable
-		ntp_->begin();
-
-		set_clock_reference(ntp_);
+		set_clock_reference("pool.ntp.org");
 	}
 }
 
@@ -350,7 +341,7 @@ void setup() {
 	rl02_dev->begin();
 	b->add_rl02(rl02_dev);
 
-	auto rp06_dev = new rp06(b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag());
+	auto rp06_dev = new rp06(b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag(), false);
 	rp06_dev->begin();
 	b->add_RP06(rp06_dev);
 
@@ -389,7 +380,7 @@ void setup() {
 
 void loop()
 {
-	debugger(cnsl, b, &stop_event);
+	debugger(cnsl, b, &stop_event, { });
 
 	c->reset();
 }

@@ -88,10 +88,10 @@ unsigned long get_ms()
 
 uint64_t get_us()
 {
-#if defined(ESP32) || defined(BUILD_FOR_RP2040)
+#if defined(BUILD_FOR_RP2040)
 	return micros();
 #else
-	timeval tv;
+	timeval tv { };
 
 	// TODO replace gettimeofday by clock_gettime
 	gettimeofday(&tv, NULL);

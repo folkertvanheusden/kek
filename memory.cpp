@@ -17,9 +17,7 @@ memory::memory(const uint32_t size): size(size)
 
 	if (psramFound()) {
 		DOLOG(info, false, "Using PSRAM");
-
 		m = reinterpret_cast<uint8_t *>(ps_malloc(size));
-
 		reset();
 	}
 	else {
