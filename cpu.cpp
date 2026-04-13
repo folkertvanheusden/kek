@@ -1,4 +1,4 @@
-// (C) 2018-2024 by Folkert van Heusden
+// (C) 2018-2025 by Folkert van Heusden
 // Released under MIT license
 
 #include <assert.h>
@@ -23,6 +23,8 @@ constexpr const double pdp11_clock_cycle = 150;  // ns, for the 11/70
 constexpr const double pdp11_MHz = 1000.0 / pdp11_clock_cycle;
 constexpr const double pdp11_avg_cycles_per_instruction = (1 + 5) / 2.0;
 constexpr const double pdp11_estimated_mips = pdp11_MHz / pdp11_avg_cycles_per_instruction;
+
+constexpr const uint16_t word_mode_mask[2] { 0xffff, 0xff };
 
 cpu::cpu(bus *const b, std::atomic_uint32_t *const event) : b(b), event(event)
 {
@@ -115,7 +117,6 @@ void cpu::add_to_stack_trace(const uint16_t p)
 	auto da = disassemble(p);
 
 	stacktrace.push_back({ p, da["instruction-text"][0] });
-
 	while (stacktrace.size() >= max_stacktrace_depth)
 		stacktrace.erase(stacktrace.begin());
 }
@@ -134,15 +135,19 @@ std::vector<std::pair<uint16_t, std::string> > cpu::get_stack_trace() const
 void cpu::reset()
 {
 	memset(regs0_5, 0x00, sizeof regs0_5);
-	memset(sp,      0x00, sizeof sp);
+	memset(sp,      0x00, sizeof sp     );
 	pc   = 0;
 	psw  = 0;  // 7 << 5;
 	fpsr = 0;
 	init_interrupt_queue();
+
+        it_is_a_trap          = false;
+	processing_trap_depth = 0;
 }
 
 uint16_t cpu::get_register(const int nr) const
 {
+	assert(nr >= 0 && nr < 8);
 	if (nr < 6) {
 		int set = get_register_set();
 		return regs0_5[set][nr];
@@ -151,13 +156,26 @@ uint16_t cpu::get_register(const int nr) const
 	if (nr == 6)
 		return sp[getPSW_runmode()];
 
-	assert(nr == 7);
-
 	return pc;
+}
+
+uint16_t *cpu::get_register_pointer(const int nr)
+{
+	assert(nr >= 0 && nr < 8);
+	if (nr < 6) {
+		int set = get_register_set();
+		return &regs0_5[set][nr];
+	}
+
+	if (nr == 6)
+		return &sp[getPSW_runmode()];
+
+	return &pc;
 }
 
 void cpu::set_register(const int nr, const uint16_t value)
 {
+	assert(nr >= 0 && nr < 8);
 	if (nr < 6) {
 		int set = get_register_set();
 
@@ -166,7 +184,6 @@ void cpu::set_register(const int nr, const uint16_t value)
 	else if (nr == 6)
 		sp[getPSW_runmode()] = value;
 	else {
-		assert(nr == 7);
 		pc = value;
 	}
 }
@@ -174,14 +191,10 @@ void cpu::set_register(const int nr, const uint16_t value)
 void cpu::set_registerLowByte(const int nr, const word_mode_t word_mode, const uint16_t value)
 {
 	if (word_mode == wm_byte) {
-		uint16_t v = get_register(nr);
-
-		v &= 0xff00;
-
 		assert(value < 256);
-		v |= value;
-
-		set_register(nr, v);
+		uint16_t *const vp = get_register_pointer(nr);
+		(*vp) &= 0xff00;
+		(*vp) |= value;
 	}
 	else {
 		set_register(nr, value);
@@ -314,12 +327,12 @@ int cpu::getPSW_spl() const
 void cpu::setPSW(const uint16_t v, const bool limited)
 {
 	if (limited) {
-		// cannot replace the run-mode bits nor the set of registers
-		// psw = (psw & ~0340) | (v & 0174340);
-		psw = (psw & 0177400) | (v & 037777);
+		int cur_mode  = std::max( v >> 14,       psw >> 14);
+		int prev_mode = std::max((v >> 12) & 3, (psw >> 12) & 3);
+		psw = (psw & 004340) | (v & 037) | (cur_mode << 14) | (prev_mode << 12);
 	}
 	else {
-		psw = v;
+		psw = v & 0174377;  // mask off reserved bits
 	}
 }
 
@@ -386,7 +399,7 @@ bool cpu::execute_any_pending_interrupt()
 		if (interrupts->second.empty() == false) {
 			any_queued_interrupts = true;
 
-			if (i < start_level)  // at leas we know now that there's an interrupt scheduled
+			if (i < start_level)  // at least we know now that there's an interrupt scheduled
 				continue;
 
 			if (can_trigger == false) {
@@ -395,13 +408,10 @@ bool cpu::execute_any_pending_interrupt()
 			}
 
 			auto    vector = interrupts->second.begin();
-
 			uint8_t v      = *vector;
-
 			interrupts->second.erase(vector);
 
 			TRACE("Invoking interrupt vector %o (IPL %d, current: %d)", v, i, current_level);
-
 			trap(v, i, true);
 
 			// when there are more interrupts scheduled, invoke them asap
@@ -452,11 +462,28 @@ void cpu::queue_interrupt(const uint8_t level, const uint8_t vector)
 	TRACE("Queueing interrupt vector %o (IPL %d, current: %d), n: %zu", vector, level, getPSW_spl(), it->second.size());
 }
 
+void cpu::unqueue_interrupt(const uint8_t level, const uint8_t vector)
+{
+#if defined(BUILD_FOR_RP2040)
+	xSemaphoreTake(qi_lock, portMAX_DELAY);
+#else
+	std::unique_lock<std::mutex> lck(qi_lock);
+#endif
+
+	auto it = queued_interrupts.find(level);
+	assert(it != queued_interrupts.end());
+	it->second.erase(vector);
+
+#if defined(BUILD_FOR_RP2040)
+	xSemaphoreGive(qi_lock);
+#endif
+}
+
 void cpu::addToMMR1(const gam_rc_t & g)
 {
-	if (!b->getMMU()->isMMR1Locked() && g.mmr1_update.has_value()) {
+	if (b->getMMU()->isMMR1Locked() == false && g.mmr1_update.has_value() == true) {
+		TRACE("MMR1: add %d to register R%d", g.mmr1_update.value().delta, g.mmr1_update.value().reg);
 		assert(g.mmr1_update.value().delta);
-
 		b->getMMU()->addToMMR1(g.mmr1_update.value().delta, g.mmr1_update.value().reg);
 	}
 }
@@ -464,8 +491,8 @@ void cpu::addToMMR1(const gam_rc_t & g)
 // GAM = general addressing modes
 gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t word_mode, const bool read_value)
 {
-	gam_rc_t g { word_mode, rm_cur, i_space, mode, { }, { }, { }, { } };
-
+	gam_rc_t    g { word_mode, rm_cur, i_space, mode, { }, { }, { }, { } };
+        uint16_t    temp = 0;
 	d_i_space_t isR7_space = reg == 7 ? i_space : (b->getMMU()->get_use_data_space(getPSW_runmode()) ? d_space : i_space);
 	//                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ always d_space here? TODO
 
@@ -476,7 +503,7 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t wo
 	switch(mode) {
 		case 0:  // Rn
 			g.reg   = reg;
-			g.value = get_register(reg) & (word_mode == wm_byte ? 0xff : 0xffff);
+			g.value = get_register(reg) & word_mode_mask[word_mode];
 			break;
 		case 1:  // (Rn)
 			g.addr  = get_register(reg);
@@ -485,32 +512,32 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t wo
 			break;
 		case 2:  // (Rn)+  /  #n
 			g.addr  = get_register(reg);
+			add_register(reg, word_mode == wm_word || reg >= 6 ? 2 : 1);
+			g.mmr1_update = { word_mode == wm_word || reg >= 6 ? 2 : 1, reg };
 			if (read_value)
 				g.value = b->read(g.addr.value(), word_mode, rm_cur, isR7_space);
-			add_register(reg, word_mode == wm_word || reg == 7 || reg == 6 ? 2 : 1);
-			g.mmr1_update = { word_mode == wm_word || reg == 7 || reg == 6 ? 2 : 1, reg };
 			break;
 		case 3:  // @(Rn)+  /  @#a
 			g.addr  = b->read(get_register(reg), wm_word, rm_cur, isR7_space);
-			// might be wrong: the adds should happen when the read is really performed, because of traps
-			add_register(reg, 2);
 			g.mmr1_update = { 2, reg };
 			g.space = d_space;
+			// might be wrong: the adds should happen when the read is really performed(?), because of traps
+			add_register(reg, 2);
 			if (read_value)
 				g.value = b->read(g.addr.value(), word_mode, rm_cur, g.space);
 			break;
 		case 4:  // -(Rn)
-			add_register(reg, word_mode == wm_word || reg == 7 || reg == 6 ? -2 : -1);
-			g.mmr1_update = { word_mode == wm_word || reg == 7 || reg == 6 ? -2 : -1, reg };
+			temp    = add_register(reg, word_mode == wm_word || reg >= 6 ? -2 : -1);
+			g.mmr1_update = { word_mode == wm_word || reg >= 6 ? -2 : -1, reg };
 			g.space = d_space;
-			g.addr  = get_register(reg);
+			g.addr  = temp;
 			if (read_value)
 				g.value = b->read(g.addr.value(), word_mode, rm_cur, isR7_space);
 			break;
 		case 5:  // @-(Rn)
-			add_register(reg, -2);
+			temp    = add_register(reg, -2);
 			g.mmr1_update = { -2, reg };
-			g.addr  = b->read(get_register(reg), wm_word, rm_cur, isR7_space);
+			g.addr  = b->read(temp, wm_word, rm_cur, isR7_space);
 			g.space = d_space;
 			if (read_value)
 				g.value = b->read(g.addr.value(), word_mode, rm_cur, g.space);
@@ -544,7 +571,6 @@ bool cpu::putGAM(const gam_rc_t & g, const uint16_t value)
 
 	if (g.addr.has_value()) {
 		auto rc = b->write(g.addr.value(), g.word_mode, value, g.mode_selection, g.space);
-
 		return rc == false;
 	}
 
@@ -582,20 +608,20 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 			return single_operand_instructions(instr);
 
 		case 0b001: { // MOV/MOVB Move Word/Byte
-				    gam_rc_t g_src = getGAM(src_mode, src_reg, word_mode);
+				    gam_rc_t g_src     = getGAM(src_mode, src_reg, word_mode);
+				    bool     set_flags = true;
 
-				    bool set_flags = true;
-
-				    if (word_mode == wm_byte && dst_mode == 0)
+				    if (word_mode == wm_byte && dst_mode == 0) {
 					    set_register(dst_reg, int8_t(g_src.value.value()));  // int8_t: sign extension
+					    addToMMR1(g_src);
+				    }
 				    else {
 					    auto g_dst = getGAMAddress(dst_mode, dst_reg, word_mode);
 					    addToMMR1(g_dst);
+					    addToMMR1(g_src);
 
 					    set_flags = putGAM(g_dst, g_src.value.value());
 				    }
-
-				    addToMMR1(g_src);
 
 				    if (set_flags)
 					    setPSW_flags_nzv(g_src.value.value(), word_mode);
@@ -605,13 +631,12 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 
 		case 0b010: { // CMP/CMPB Compare Word/Byte
 				    gam_rc_t g_src = getGAM(src_mode, src_reg, word_mode);
-
 				    auto     g_dst = getGAM(dst_mode, dst_reg, word_mode);
 
 				    addToMMR1(g_dst);
 				    addToMMR1(g_src);
 
-				    uint16_t temp  = (g_src.value.value() - g_dst.value.value()) & (word_mode == wm_byte ? 0xff : 0xffff);
+				    uint16_t temp  = (g_src.value.value() - g_dst.value.value()) & word_mode_mask[word_mode];
 
 				    setPSW_n(SIGN(temp, word_mode));
 				    setPSW_z(IS_0(temp, word_mode));
@@ -623,13 +648,12 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 
 		case 0b011: { // BIT/BITB Bit Test Word/Byte
 				    gam_rc_t g_src  = getGAM(src_mode, src_reg, word_mode);
-
 				    auto     g_dst  = getGAM(dst_mode, dst_reg, word_mode);
 
 				    addToMMR1(g_dst);
 				    addToMMR1(g_src);
 
-				    uint16_t result = (g_dst.value.value() & g_src.value.value()) & (word_mode == wm_byte ? 0xff : 0xffff);
+				    uint16_t result = (g_dst.value.value() & g_src.value.value()) & word_mode_mask[word_mode];
 
 				    setPSW_flags_nzv(result, word_mode);
 
@@ -699,7 +723,6 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 
 		case 0b110: { // ADD/SUB Add/Subtract Word
 				    auto     g_ssrc = getGAM(src_mode, src_reg, wm_word);
-
 				    auto     g_dst  = getGAM(dst_mode, dst_reg, wm_word);
 
 				    addToMMR1(g_dst);
@@ -707,41 +730,31 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 
 				    int16_t  result = 0;
 
-				    bool     set_flags  = true;
+				    if (instr & 0x8000)  // SUB
+					    result = g_dst.value.value() - g_ssrc.value.value();
+				    else  // ADD
+					    result = g_dst.value.value() + g_ssrc.value.value();
 
-				    if (g_dst.addr.has_value())
-					set_flags = !b->is_psw(g_dst.addr.value(), g_dst.mode_selection, g_dst.space);
+				    bool set_flags = putGAM(g_dst, result);
 
-				    if (instr & 0x8000) {  // SUB
-					    result = (g_dst.value.value() - g_ssrc.value.value()) & 0xffff;
-
-					    if (set_flags) {
+				    if (set_flags) {
+					    if (instr & 0x8000) {  // SUB
 						    setPSW_v(SIGN((g_dst.value.value() ^ g_ssrc.value.value()) & (~g_ssrc.value.value() ^ result), wm_word));
 						    setPSW_c(uint16_t(g_dst.value.value()) < uint16_t(g_ssrc.value.value()));
 					    }
-				    }
-				    else {  // ADD
-					    uint32_t temp = g_dst.value.value() + g_ssrc.value.value();
-
-					    result = temp;
-
-					    if (set_flags) {
-						    setPSW_v(SIGN((~g_ssrc.value.value() ^ g_dst.value.value()) & (g_ssrc.value.value() ^ (temp & 0xffff)), wm_word));
+					    else {
+						    setPSW_v(SIGN((~g_ssrc.value.value() ^ g_dst.value.value()) & (g_ssrc.value.value() ^ (result & 0xffff)), wm_word));
 						    setPSW_c(uint16_t(result) < uint16_t(g_ssrc.value.value()));
 					    }
-				    }
 
-				    if (set_flags) {
 					    setPSW_n(result < 0);
 					    setPSW_z(result == 0);
 				    }
 
-				    (void)putGAM(g_dst, result);
-
 				    return true;
 			    }
 
-		case 0b111: { // ADD/SUB Add/Subtract Word
+		case 0b111: {
 			if (word_mode == wm_byte) [[unlikely]]
 				return false;
 
@@ -750,6 +763,59 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 	}
 
 	return false;
+}
+
+uint32_t cpu::shifter(uint32_t value, int shift, bool is32b)
+{
+	uint64_t sign_extend = is32b ? B64_MSWSET : (B64_MSWSET | B32_MSWSET);
+	uint32_t sign_mask   = is32b ? B32_MSBSET : B16_MSBSET;
+	uint32_t mask        = is32b ? 0xffffffff : 0xffff;
+	bool     sign        = value & sign_mask;
+
+	TRACE("shift %012o with %d", value, shift);
+
+	setPSW_v(false);
+
+	if (shift == 0)
+		setPSW_c(false);
+	else if (shift < 32) {
+		setPSW_c((value << (shift - 1)) & sign_mask);
+
+		for(int i=0; i<shift; i++) {
+			value <<= 1;
+			if (bool(value & sign_mask) != sign)
+				setPSW_v(true);
+		}
+	}
+	else if (shift == 32) {
+		value = -sign;
+		setPSW_c(sign);
+		setPSW_v(sign != bool(value & sign_mask));
+	}
+	else {
+		int shift_n = (64 - shift) - 1;
+
+		// extend sign-bit
+		if (sign) {  // convert to unsigned 64b int & extend sign
+			value = (uint64_t(value) | sign_extend) >> shift_n;
+			setPSW_c(value & 1);
+			value = (uint64_t(value) | sign_extend) >> 1;
+		}
+		else {
+			value >>= shift_n;
+			setPSW_c(value & 1);
+			value >>= 1;
+		}
+
+		bool new_sign = value & sign_mask;
+		setPSW_v(sign != new_sign);
+	}
+
+	value &= mask;
+	setPSW_n(value & sign_mask);
+	setPSW_z(value == 0);
+
+	return value;
 }
 
 bool cpu::additional_double_operand_instructions(const uint16_t instr)
@@ -797,7 +863,7 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 
 					return true;
 				}
-				else if (divider == -1 && uint32_t(R0R1) == 0x80000000) {  // maximum negative value; too big
+				else if (divider == -1 && uint32_t(R0R1) == B32_MSBSET) {  // maximum negative value; too big
 					setPSW_n(false);
 					setPSW_z(false);
 					setPSW_v(true);
@@ -828,112 +894,28 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 			}
 
 		case 2: { // ASH
-				uint32_t R     = get_register(reg), oldR = R;
-
-			        auto     g_dst = getGAM(dst_mode, dst_reg, wm_word);
+				uint32_t R         = get_register(reg);
+			        auto     g_dst     = getGAM(dst_mode, dst_reg, wm_word);
 			        addToMMR1(g_dst);
-				uint16_t shift = g_dst.value.value() & 077;
+				int      shift     = g_dst.value.value() & 077;
 
-				TRACE("shift %06o with %d", R, shift);
+				uint32_t new_value = shifter(R, shift, false);
 
-				bool     sign  = SIGN(R, wm_word);
-
-				if (shift == 0) {
-					setPSW_c(false);
-					setPSW_v(false);
-				}
-				else if (shift <= 15) {
-					R <<= shift;
-					setPSW_c(R & 0x10000);
-					setPSW_v(SIGN(oldR, wm_word) != SIGN(R, wm_word));
-				}
-				else if (shift < 32) {
-					setPSW_c((R << (shift - 16)) & 1);
-					R = 0;
-					setPSW_v(SIGN(oldR, wm_word) != SIGN(R, wm_word));
-				}
-				else if (shift == 32) {
-					R = -sign;
-
-					setPSW_c(sign);
-					setPSW_v(SIGN(R, wm_word) != SIGN(oldR, wm_word));
-				}
-				else {
-                                        int      shift_n     = 64 - shift;
-                                        uint32_t sign_extend = sign ? 0x8000 : 0;
-
-                                        for(int i=0; i<shift_n; i++) {
-                                                setPSW_c(R & 1);
-                                                R >>= 1;
-                                                R |= sign_extend;
-                                        }
-
-					setPSW_v(SIGN(R, wm_word) != SIGN(oldR, wm_word));
-				}
-
-				R &= 0xffff;
-
-				setPSW_n(SIGN(R, wm_word));
-				setPSW_z(R == 0);
-
-				set_register(reg, R);
+				set_register(reg, new_value);
 
 				return true;
 			}
 
 		case 3: { // ASHC
-				uint32_t R0R1  = (uint32_t(get_register(reg)) << 16) | get_register(reg | 1);
-
-			        auto     g_dst = getGAM(dst_mode, dst_reg, wm_word);
+				uint32_t R0R1      = (uint32_t(get_register(reg)) << 16) | get_register(reg | 1);
+			        auto     g_dst     = getGAM(dst_mode, dst_reg, wm_word);
 			        addToMMR1(g_dst);
-				uint16_t shift = g_dst.value.value() & 077;
+				int      shift     = g_dst.value.value() & 077;
 
-				bool     sign  = R0R1 & 0x80000000;
+				uint32_t new_value = shifter(R0R1, shift, true);
 
-				setPSW_v(false);
-
-				if (shift == 0)
-					setPSW_c(false);
-				else if (shift < 32) {
-					R0R1 <<= shift - 1;
-
-					setPSW_c(R0R1 >> 31);
-
-					R0R1 <<= 1;
-				}
-				else if (shift == 32) {
-					R0R1 = -sign;
-
-					setPSW_c(sign);
-				}
-				else {
-					int shift_n = (64 - shift) - 1;
-
-					// extend sign-bit
-					if (sign) {  // convert to unsigned 64b int & extend sign
-						R0R1 = (uint64_t(R0R1) | 0xffffffff00000000ll) >> shift_n;
-
-						setPSW_c(R0R1 & 1);
-
-						R0R1 = (uint64_t(R0R1) | 0xffffffff00000000ll) >> 1;
-					}
-					else {
-						R0R1 >>= shift_n;
-
-						setPSW_c(R0R1 & 1);
-
-						R0R1 >>= 1;
-					}
-				}
-
-				bool new_sign = R0R1 & 0x80000000;
-				setPSW_v(sign != new_sign);
-
-				set_register(reg, R0R1 >> 16);
-				set_register(reg | 1, R0R1 & 65535);
-
-				setPSW_n(R0R1 & 0x80000000);
-				setPSW_z(R0R1 == 0);
+				set_register(reg,     new_value >> 16  );
+				set_register(reg | 1, new_value & 65535);
 
 				return true;
 			}
@@ -1060,7 +1042,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						  uint16_t v   = get_register(dst_reg);
 						  uint16_t add = word_mode == wm_byte ? v & 0xff00 : 0;
 
-						  v = (v + 1) & (word_mode == wm_byte ? 0xff : 0xffff);
+						  v = (v + 1) & word_mode_mask[word_mode];
 						  v |= add;
 
 						  setPSW_n(SIGN(v, word_mode));
@@ -1072,7 +1054,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					  else {
 						  auto    a         = getGAM(dst_mode, dst_reg, word_mode);
 						  addToMMR1(a);
-						  int32_t vl        = (a.value.value() + 1) & (word_mode == wm_byte ? 0xff : 0xffff);
+						  int32_t vl        = (a.value.value() + 1) & word_mode_mask[word_mode];
 
 						  bool    set_flags = b->write(a.addr.value(), a.word_mode, vl, a.mode_selection, a.space) == false;
 
@@ -1092,7 +1074,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						  uint16_t v   = get_register(dst_reg);
 						  uint16_t add = word_mode == wm_byte ? v & 0xff00 : 0;
 
-						  v = (v - 1) & (word_mode == wm_byte ? 0xff : 0xffff);
+						  v = (v - 1) & word_mode_mask[word_mode];
 						  v |= add;
 
 						  setPSW_n(SIGN(v, word_mode));
@@ -1104,7 +1086,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					  else {
 						  auto     a         = getGAM(dst_mode, dst_reg, word_mode);
 						  addToMMR1(a);
-						  int32_t  vl        = (a.value.value() - 1) & (word_mode == wm_byte ? 0xff : 0xffff);
+						  int32_t  vl        = (a.value.value() - 1) & word_mode_mask[word_mode];
 
 						  bool     set_flags = b->write(a.addr.value(), a.word_mode, vl, a.mode_selection, a.space) == false;
 
@@ -1123,13 +1105,13 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						  uint16_t v   = get_register(dst_reg);
 						  uint16_t add = word_mode == wm_byte ? v & 0xff00 : 0;
 
-						  v = (-v) & (word_mode == wm_byte ? 0xff : 0xffff);
+						  v = (-v) & word_mode_mask[word_mode];
 						  v |= add;
 
 						  setPSW_n(SIGN(v, word_mode));
 						  setPSW_z(IS_0(v, word_mode));
 						  setPSW_v(word_mode == wm_byte ? (v & 0xff) == 0x80 : v == 0x8000);
-						  setPSW_c(v);
+						  setPSW_c(v & word_mode_mask[word_mode]);
 
 						  set_register(dst_reg, v);
 					  }
@@ -1144,7 +1126,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 							  setPSW_n(SIGN(v, word_mode));
 							  setPSW_z(IS_0(v, word_mode));
 							  setPSW_v(word_mode == wm_byte ? (v & 0xff) == 0x80 : v == 0x8000);
-							  setPSW_c(v);
+							  setPSW_c(v & word_mode_mask[word_mode]);
 						  }
 					  }
 
@@ -1158,7 +1140,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						  uint16_t       add   = word_mode == wm_byte ? v & 0xff00 : 0;
 						  bool           org_c = getPSW_c();
 
-						  v = (v + org_c) & (word_mode == wm_byte ? 0xff : 0xffff);
+						  v = (v + org_c) & word_mode_mask[word_mode];
 						  v |= add;
 
 						  setPSW_n(SIGN(v, word_mode));
@@ -1195,7 +1177,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						  uint16_t       add   = word_mode == wm_byte ? v & 0xff00 : 0;
 						  bool           org_c = getPSW_c();
 
-						  v = (v - org_c) & (word_mode == wm_byte ? 0xff : 0xffff);
+						  v = (v - org_c) & word_mode_mask[word_mode];
 						  v |= add;
 
 						  setPSW_n(SIGN(v, word_mode));
@@ -1210,7 +1192,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						  addToMMR1(a);
 						  const uint16_t vo    = a.value.value();
 						  bool           org_c = getPSW_c();
-						  uint16_t       v     = (vo - org_c) & (word_mode == wm_byte ? 0xff : 0xffff);
+						  uint16_t       v     = (vo - org_c) & word_mode_mask[word_mode];
 
 						  bool set_flags = b->write(a.addr.value(), a.word_mode, v, a.mode_selection, a.space) == false;
 
@@ -1375,7 +1357,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 		case 0b00110011: { // ASL/ASLB
 					 if (dst_mode == 0) {
 						 uint16_t vl  = get_register(dst_reg);
-						 uint16_t v   = ((vl << 1) & (word_mode == wm_byte ? 0xff : 0xffff));
+						 uint16_t v   = ((vl << 1) & word_mode_mask[word_mode]);
 
 						 if (word_mode == wm_byte)
 							 v |= vl & 0xff00;
@@ -1391,7 +1373,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						 auto     a   = getGAM(dst_mode, dst_reg, word_mode);
 					         addToMMR1(a);
 						 uint16_t vl  = a.value.value();
-						 uint16_t v   = (vl << 1) & (word_mode == wm_byte ? 0xff : 0xffff);
+						 uint16_t v   = (vl << 1) & word_mode_mask[word_mode];
 
 						 bool set_flags = b->write(a.addr.value(), a.word_mode, v, a.mode_selection, a.space) == false;
 
@@ -1427,7 +1409,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					 setPSW_flags_nzv(v, wm_word);
 
 					 // put on current stack
-					 pushStack(v);
+					 push_stack(v);
 					 break;
 				 }
 
@@ -1435,7 +1417,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					 // always words: word_mode-bit is to select between MTPI and MTPD
 
 					 // retrieve word from '15/14'-stack
-					 uint16_t v             = popStack();
+					 uint16_t v             = pop_stack();
 					 bool     set_flags     = true;
 
 					 if (dst_mode == 0) {
@@ -1475,7 +1457,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 					 setPC(get_register(5));
 
-					 set_register(5, popStack());
+					 set_register(5, pop_stack());
 				 }
 				 break;
 
@@ -1639,21 +1621,38 @@ bool cpu::condition_code_operations(const uint16_t instr)
 	return false;
 }
 
-void cpu::pushStack(const uint16_t v)
+void cpu::push_stack(const uint16_t v)
 {
-	if (get_register(6) == stackLimitRegister) {
-		TRACE("stackLimitRegister reached %06o while pushing %06o", stackLimitRegister, v);
+	if (getPSW_runmode() == 0) {
+		uint16_t use_limit = stack_limit_register == 0 ? 0400 : stack_limit_register;
+		uint16_t sp        = get_register(6);
 
-		trap(04, 7);
+		if (sp < use_limit) {
+			if (sp >= use_limit - 32) {  // yellow zone
+				uint16_t a = add_register(6, -2);
+				b->write_word(a, v, d_space);
+				delayed_trap = 04;
+				b->getMMU()->setCPUERRBit(010);
+			}
+			else {
+				set_register(6, 4);  // red zone
+				trap(04, 7);
+				delayed_trap = 04;
+				processing_trap_depth = 127;  // double trap so halt
+			}
+		}
+		else {
+			uint16_t a = add_register(6, -2);
+			b->write_word(a, v, d_space);
+		}
 	}
 	else {
 		uint16_t a = add_register(6, -2);
-
 		b->write_word(a, v, d_space);
 	}
 }
 
-uint16_t cpu::popStack()
+uint16_t cpu::pop_stack()
 {
 	uint16_t a    = get_register(6);
 	uint16_t temp = b->read_word(a, d_space);
@@ -1698,9 +1697,8 @@ bool cpu::misc_operations(const uint16_t instr)
 		case 0b0000000000000010: // RTI
 			if (debug_mode)
 				pop_from_stack_trace();
-			setPC(popStack());
-			setPSW(popStack(), !!getPSW_runmode());
-			psw &= ~020;  // disable TRAP flag
+			setPC(pop_stack());
+			setPSW(pop_stack(), !!getPSW_runmode());
 			return true;
 
 		case 0b0000000000000011: // BPT
@@ -1714,8 +1712,8 @@ bool cpu::misc_operations(const uint16_t instr)
 		case 0b0000000000000110: // RTT
 			if (debug_mode)
 				pop_from_stack_trace();
-			setPC(popStack());
-			setPSW(popStack(), !!getPSW_runmode());
+			setPC(pop_stack());
+			setPSW(pop_stack(), !!getPSW_runmode());
 			return true;
 
 		case 0b0000000000000111: // MFPT
@@ -1772,7 +1770,7 @@ bool cpu::misc_operations(const uint16_t instr)
 		int  link_reg  = (instr >> 6) & 7;
 
 		// PUSH link
-		pushStack(get_register(link_reg));
+		push_stack(get_register(link_reg));
 		if (!b->getMMU()->isMMR1Locked()) {
 			b->getMMU()->addToMMR1(-2, 6);
 
@@ -1842,13 +1840,8 @@ void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 				set_register(6, 04);
 			}
 			else {
-				b->getMMU()->clearMMR1();
-
 				before_psw = getPSW();
-
 				before_pc  = getPC();
-
-				// TODO set MMR2?
 			}
 
 			if (debug_mode)
@@ -1871,8 +1864,8 @@ void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 
 			uint16_t prev_sp = get_register(6);
 			try {
-				pushStack(before_psw);
-				pushStack(before_pc);
+				push_stack(before_psw);
+				push_stack(before_pc);
 			}
 			catch(const int exception) {
 				// recover stack
@@ -1900,11 +1893,14 @@ std::optional<cpu::operand_parameters> cpu::addressing_to_string(const uint8_t m
 
 	int         run_mode  = getPSW_runmode();
 	auto        temp      = b->peek_word(run_mode, pc & 65535);
-	if (temp.has_value() == false)
-		return { };
+	if (temp.has_value() == false) {
+		operand_parameters out;
+		out.error = "cannot read from memory";
+		return out;
+	}
 	uint16_t    next_word = temp.value();
 	int         reg       = mode_register & 7;
-	uint16_t    mask      = word_mode == wm_byte ? 0xff : 0xffff;
+	uint16_t    mask      = word_mode_mask[word_mode];
 
 	std::optional<uint16_t> temp2;
 	bool        valid     = true;
@@ -1917,108 +1913,110 @@ std::optional<cpu::operand_parameters> cpu::addressing_to_string(const uint8_t m
 	else
 		reg_name = format("R%d", reg);
 
-	switch(mode_register >> 3) {
+	std::optional<std::string> error;
+
+	int mode = mode_register >> 3;
+	switch(mode) {
 		case 0:
-			return { { reg_name, 2, -1, uint16_t(get_register(reg) & mask), true } };
+			return { { reg_name, 2, -1, uint16_t(get_register(reg) & mask), true, { } } };
 
 		case 1:
 			temp2 = b->peek_word(run_mode, get_register(reg));
 			if (temp2.has_value() == false)
-				temp2 = 0xffff, valid = false;
+				temp2 = 0xffff, valid = false, error = format("cannot fetch memory from %o", get_register(reg));
 
-			return { { format("(%s)", reg_name.c_str()), 2, -1, uint16_t(temp2.value() & mask), valid } };
+			return { { format("(%s)", reg_name.c_str()), 2, -1, uint16_t(temp2.value() & mask), valid, error } };
 
 		case 2:
 			if (reg == 7)
-				return { { format("#%06o", next_word), 4, int(next_word), uint16_t(next_word & mask), true } };
+				return { { format("#%06o", next_word), 4, int(next_word), uint16_t(next_word & mask), true, { } } };
 
 			temp2 = b->peek_word(run_mode, get_register(reg));
 			if (temp2.has_value() == false)
-				temp2 = 0xffff, valid = false;
+				temp2 = 0xffff, valid = false, error = format("cannot fetch memory from %o", get_register(reg));
 
-			return { { format("(%s)+", reg_name.c_str()), 2, -1, uint16_t(temp2.value() & mask), valid } };
+			return { { format("(%s)+", reg_name.c_str()), 2, -1, uint16_t(temp2.value() & mask), valid, error } };
 
 		case 3:
 			if (reg == 7) {
 				temp2 = b->peek_word(run_mode, next_word);
 				if (temp2.has_value() == false)
-					temp2 = 0xffff, valid = false;
+					temp2 = 0xffff, valid = false, error = format("cannot fetch memory from %o", next_word);
 
-				return { { format("@#%06o", next_word), 4, int(next_word), uint16_t(temp2.value() & mask), valid } };
+				return { { format("@#%06o", next_word), 4, int(next_word), uint16_t(temp2.value() & mask), valid, error } };
 			}
 
 			temp2 = b->peek_word(run_mode, get_register(reg));
 			if (temp2.has_value() == false)
-				temp2 = 0xffff, valid = false;
+				temp2 = 0xffff, valid = false, error = format("cannot fetch memory from %o", get_register(reg));
+			else {
+				uint16_t keep = temp2.value();
+				temp2 = b->peek_word(run_mode, temp2.value());
+				if (temp2.has_value() == false)
+					temp2 = 0xffff, valid = false, error = format("cannot fetch memory from %o", keep);
+			}
+
+			return { { format("@(%s)+", reg_name.c_str()), 2, -1, uint16_t(temp2.value() & mask), valid, error } };
+
+		case 4: {
+			uint16_t calculated_address = get_register(reg) - (word_mode == wm_word || reg >= 6 ? 2 : 1);
+			temp2 = b->peek_word(run_mode, calculated_address);
+			if (temp2.has_value() == false)
+				temp2 = 0xffff, valid = false, error = format("cannot fetch memory from %o", calculated_address);
+
+			return { { format("-(%s)", reg_name.c_str()), 2, -1, uint16_t(temp2.value() & mask), valid, error } };
+			}
+
+		case 5: {
+			uint16_t calculated_address = get_register(reg) - 2;
+			temp2 = b->peek_word(run_mode, calculated_address);
+			if (temp2.has_value() == false)
+				temp2 = 0xffff, valid = false, error = format("cannot fetch memory from %o", calculated_address);
 			else {
 				temp2 = b->peek_word(run_mode, temp2.value());
 				if (temp2.has_value() == false)
-					temp2 = 0xffff, valid = false;
+					temp2 = 0xffff, valid = false, error = format("cannot fetch memory from %o", temp2.value());
 			}
 
-			return { { format("@(%s)+", reg_name.c_str()), 2, -1, uint16_t(temp2.value() & mask), valid } };
-
-		case 4:
-			temp2 = b->peek_word(run_mode, get_register(reg) - (word_mode == wm_word || reg >= 6 ? 2 : 1));
-			if (temp2.has_value() == false)
-				temp2 = 0xffff, valid = false;
-
-			return { { format("-(%s)", reg_name.c_str()), 2, -1, uint16_t(temp2.value() & mask), valid } };
-
-		case 5:
-			temp2 = b->peek_word(run_mode, get_register(reg) - 2);
-			if (temp2.has_value() == false)
-				temp2 = 0xffff, valid = false;
-			else {
-				temp2 = b->peek_word(run_mode, temp2.value());
-				if (temp2.has_value() == false)
-					temp2 = 0xffff, valid = false;
+			return { { format("@-(%s)", reg_name.c_str()), 2, -1, uint16_t(temp2.value() & mask), valid, error } };
 			}
-
-			return { { format("@-(%s)", reg_name.c_str()), 2, -1, uint16_t(temp2.value() & mask), valid } };
 
 		case 6:
-			if (reg == 7) {
-				temp2 = b->peek_word(run_mode, get_register(reg) + next_word);
-				if (temp2.has_value() == false)
-					temp2 = 0xffff, valid = false;
-
-				return { { format("%06o", (pc + next_word + 2) & 65535), 4, int(next_word), uint16_t(temp2.value() & mask), valid } };
-			}
-
-			temp2 = b->peek_word(run_mode, get_register(reg) + next_word);
+			{
+			uint16_t calculated_address = get_register(reg) + next_word;
+			temp2 = b->peek_word(run_mode, calculated_address);
 			if (temp2.has_value() == false)
-				temp2 = 0xffff, valid = false;
+				temp2 = 0xffff, valid = false, error = format("cannot fetch memory from %o", calculated_address);
 
-			return { { format("%o(%s)", next_word, reg_name.c_str()), 4, int(next_word), uint16_t(temp2.value() & mask), valid } };
+			if (reg == 7)
+				return { { format("%06o", (pc + next_word + 2) & 65535), 4, int(next_word), uint16_t(temp2.value() & mask), valid, error } };
+
+			return { { format("%o(%s)", next_word, reg_name.c_str()), 4, int(next_word), uint16_t(temp2.value() & mask), valid, error } };
+			}
 
 		case 7:
-			if (reg == 7) {
-				temp2 = b->peek_word(run_mode, get_register(reg) + next_word);
-				if (temp2.has_value() == false)
-					temp2 = 0xffff, valid = false;
-				else {
-					temp2 = b->peek_word(run_mode, temp2.value());
-					if (temp2.has_value() == false)
-						temp2 = 0xffff, valid = false;
-				}
-
-				return { { format("@%06o", next_word), 4, int(next_word), uint16_t(temp2.value() & mask), valid } };
-			}
-
-			temp2 = b->peek_word(run_mode, get_register(reg) + next_word);
+			{
+			uint16_t calculated_address = get_register(reg) + next_word;
+			temp2 = b->peek_word(run_mode, calculated_address);
 			if (temp2.has_value() == false)
-				temp2 = 0xffff, valid = false;
+				temp2 = 0xffff, valid = false, error = format("cannot fetch memory from %o", calculated_address);
 			else {
 				temp2 = b->peek_word(run_mode, temp2.value());
 				if (temp2.has_value() == false)
-					temp2 = 0xffff, valid = false;
+					temp2 = 0xffff, valid = false, error = format("cannot fetch memory from %o", temp2.value());
 			}
 
-			return { { format("@%o(%s)", next_word, reg_name.c_str()), 4, int(next_word), uint16_t(temp2.value() & mask), valid } };
+			if (reg == 7)
+				return { { format("@%06o", next_word), 4, int(next_word), uint16_t(temp2.value() & mask), valid, error } };
+
+			return { { format("@%o(%s)", next_word, reg_name.c_str()), 4, int(next_word), uint16_t(temp2.value() & mask), valid, error } };
+			}
 	}
 
-	return { };
+	operand_parameters out;
+	out.error = format("unknown register mode %d", mode);
+
+	return out;
 }
 
 std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t addr) const
@@ -2122,6 +2120,8 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 			case 0b000110100:
 				if (word_mode == wm_byte)
 					name = "MTPS";
+				else
+					name = "MARK";
 				break;
 
 			case 0b000110111:
@@ -2135,8 +2135,8 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 		if (text.empty() && name.empty() == false)
 			text = name + word_mode_str + space + dst_text.operand;
 
-		if (dst_text.valid == false)
-			text += " (INV)";
+		if (text.empty() == false && dst_text.valid == false)
+			text += " (INV1)";
 
 		if (text.empty() == false && next_word != -1)
 			instruction_words.push_back(next_word);
@@ -2183,7 +2183,7 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 				text = name + space + src_text + comma + dst_text.operand;  // TODO: swap for ASH, ASHC
 
 			if (dst_text.valid == false)
-				text += " (INV)";
+				text += " (INV2)";
 
 			if (text.empty() == false && next_word != -1)
 				instruction_words.push_back(next_word);
@@ -2240,8 +2240,10 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 		work_values.push_back(dst_text.work_value);
 
 		if (src_text.valid == false || dst_text.valid == false)
-			text += " (INV)";
+			text += " (INV3)";
 
+		if (do_opcode == 0b110)
+			word_mode_str.clear();
 		text = name + word_mode_str + space + src_text.operand + comma + dst_text.operand;
 	}
 
@@ -2397,7 +2399,10 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 			text = std::string("JMP ") + dst_text.operand;
 
 			if (dst_text.valid == false)
-				text += " (INV)";
+				text += " (INV4)";
+
+			if (addressing.value().error.has_value())
+				text += " " + addressing.value().error.value();
 		}
 
 		if ((instruction & 0b1111111000000000) == 0b0000100000000000) {
@@ -2476,17 +2481,12 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 	return out;
 }
 
-void cpu::step()
+bool cpu::step()
 {
 	it_is_a_trap = false;
 
-	if (!b->getMMU()->isMMR1Locked())
-		b->getMMU()->clearMMR1();
-
-	if (any_queued_interrupts && execute_any_pending_interrupt()) {
-		if (!b->getMMU()->isMMR1Locked())
-			b->getMMU()->clearMMR1();
-	}
+	if (any_queued_interrupts)
+		execute_any_pending_interrupt();
 
 	instruction_count++;
 
@@ -2497,28 +2497,31 @@ void cpu::step()
 			b->getMMU()->setMMR2(instruction_start);
 
 		uint16_t instr = b->read_word(instruction_start);
-
 		add_register(7, 2);
 
-		if (double_operand_instructions(instr))
-			return;
+		if (double_operand_instructions(instr) || conditional_branch_instructions(instr) || condition_code_operations(instr) || misc_operations(instr)) {
+			if (!b->getMMU()->isMMR1Locked())
+				b->getMMU()->clearMMR1();
 
-		if (conditional_branch_instructions(instr))
-			return;
+			if (delayed_trap.has_value()) {
+				trap(delayed_trap.value(), 7);
+				delayed_trap.reset();
+			}
 
-		if (condition_code_operations(instr))
-			return;
-
-		if (misc_operations(instr))
-			return;
+			return true;
+		}
 
 		DOLOG(warning, false, "UNHANDLED instruction %06o @ %06o", instr, instruction_start);
 
 		trap(010);  // floating point nog niet geimplementeerd
+
+		return false;
 	}
 	catch(const int exception_nr) {
-		TRACE("bus-trap during execution of command (%d)", exception_nr);
+		TRACE("trap during execution of command (%d)", exception_nr);
 	}
+
+	return true;
 }
 
 JsonDocument cpu::serialize()
@@ -2537,7 +2540,7 @@ JsonDocument cpu::serialize()
         j["instruction_start"]     = instruction_start;
         j["psw"]                   = psw;
         j["fpsr"]                  = fpsr;
-        j["stackLimitRegister"]    = stackLimitRegister;
+        j["stack_limit_register"]  = stack_limit_register;
         j["processing_trap_depth"] = processing_trap_depth;
         j["instruction_count"]     = instruction_count;
         j["running_since"]         = running_since;
@@ -2547,6 +2550,9 @@ JsonDocument cpu::serialize()
 
 	if (trap_delay.has_value())
 		j["trap_delay"] = trap_delay.value();
+
+	if (delayed_trap.has_value())
+		j["delayed_trap"] = delayed_trap.value();
 
 	JsonVariant j_queued_interrupts;
 	for(auto & il: queued_interrupts) {
@@ -2581,7 +2587,7 @@ cpu *cpu::deserialize(const JsonVariantConst j, bus *const b, std::atomic_uint32
         c->instruction_start     = j["instruction_start"];
         c->psw                   = j["psw"];
         c->fpsr                  = j["fpsr"];
-        c->stackLimitRegister    = j["stackLimitRegister"];
+        c->stack_limit_register  = j["stack_limit_register"];
         c->processing_trap_depth = j["processing_trap_depth"];
         c->instruction_count     = j["instruction_count"];
         c->running_since         = get_us();
@@ -2593,6 +2599,11 @@ cpu *cpu::deserialize(const JsonVariantConst j, bus *const b, std::atomic_uint32
 		c->trap_delay    = j["trap_delay"];
 	else
 		c->trap_delay.reset();
+
+	if (j.containsKey("delayed_trap"))
+		c->delayed_trap  = j["delayed_trap"];
+	else
+		c->delayed_trap.reset();
 
 	c->any_queued_interrupts = j["any_queued_interrupts"].as<bool>();
 

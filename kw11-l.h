@@ -25,6 +25,7 @@ private:
 #endif
 	int                int_frequency { 50   };
 	uint16_t           lf_csr     { 0       };
+	bool               wall_clock { true    };
 
 	int64_t            t_diff_sum { 0       };
 	uint64_t           n_t_diff   { 0       };
@@ -45,6 +46,8 @@ public:
 	void     show_state(console *const cnsl) const override;
 
 	void     set_interrupt_frequency(const int Hz);
+	void     set_wall_clock(const bool use_wall_clock) { wall_clock = use_wall_clock; }
+	bool     get_wall_clock()                          { return wall_clock;           }
 
 	JsonDocument serialize();
 	static kw11_l *deserialize(const JsonVariantConst j, bus *const b, console *const cnsl);

@@ -38,9 +38,9 @@ class bus;
 class rp06: public disk_device
 {
 private:
-	bus      *const b;
-
-	uint16_t registers[32] { };
+	bus     *const b       { nullptr };
+	bool     is_rp07       { false   };
+	uint16_t registers[32] {         };
 
 	std::atomic_bool *const disk_read_activity  { nullptr };
 	std::atomic_bool *const disk_write_activity { nullptr };
@@ -50,7 +50,7 @@ private:
 	uint32_t compute_offset() const;
 
 public:
-	rp06(bus *const b, std::atomic_bool *const disk_read_activity, std::atomic_bool *const disk_write_activity);
+	rp06(bus *const b, std::atomic_bool *const disk_read_activity, std::atomic_bool *const disk_write_activity, const bool is_rp07);
 	virtual ~rp06();
 
 	void begin() override;

@@ -53,38 +53,6 @@ void set_boot_loader(bus *const b, const bootloader_t which)
 			0005007
 		};
 
-#if 0
-		// from https://github.com/amakukha/PyPDP11.git
-		offset = 02000;
-		start  = 02002;
-
-		static uint16_t rk05_code[] = {
-			0042113,                        // "KD"
-			0012706, 02000,                // MOV #boot_start, SP
-			0012700, 0000000,              // MOV #unit, R0        ; unit number
-			0010003,                        // MOV R0, R3
-			0000303,                        // SWAB R3
-			0006303,                        // ASL R3
-			0006303,                        // ASL R3
-			0006303,                        // ASL R3
-			0006303,                        // ASL R3
-			0006303,                        // ASL R3
-			0012701, 0177412,              // MOV #RKDA, R1        ; csr
-			0010311,                        // MOV R3, (R1)         ; load da
-			0005041,                        // CLR -(R1)            ; clear ba
-			0012741, 0177000,              // MOV #-256.*2, -(R1)  ; load wc
-			0012741, 0000005,              // MOV #READ+GO, -(R1)  ; read & go
-			0005002,                        // CLR R2
-			0005003,                        // CLR R3
-			0012704, 02020,                // MOV #START+20, R4
-			0005005,                        // CLR R5
-			0105711,                        // TSTB (R1)
-			0100376,                        // BPL .-2
-			0105011,                        // CLRB (R1)
-			0005007                         // CLR PC
-		};
-#endif
-
 		bl = rk05_code;
 
 		size = sizeof(rk05_code)/sizeof(rk05_code[0]);
@@ -144,7 +112,7 @@ void set_boot_loader(bus *const b, const bootloader_t which)
 		start = offset = 02000;
 
 		static const uint16_t rp06_code[] = {
-			012700, 0176704, 012740, 0177000, 012740, 000071, 012700, 0, 000110, 000000
+			012701, 0176700, 012700, 0176704, 012740, 0177000, 012740, 000071, 012700, 0, 000110, 000000
 
 		};
 

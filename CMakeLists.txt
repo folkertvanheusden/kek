@@ -6,20 +6,22 @@ cmake_minimum_required(VERSION 3.9)
 
 add_compile_options(-Wall -pedantic -Wextra)
 
-#add_compile_options(-fsanitize=undefined)
-#add_link_options(-fsanitize=undefined)
-
-#add_compile_options(-fanalyzer)
+#add_compile_options(-fsanitize=address,undefined)
+#add_link_options(-fsanitize=address,undefined)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 include(FindPkgConfig)
 
-if (NOT WIN32)
+if (TURBO EQUAL 1)
+	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DTURBO=1")
+	MESSAGE("TURBO BUILD")
+else()
+	MESSAGE("normal build")
+endif()
 
-add_executable(
-  kek
+set(APP_SOURCES
   breakpoint.cpp
   breakpoint_and.cpp
   breakpoint_memory.cpp
@@ -35,7 +37,7 @@ add_executable(
   console_ncurses.cpp
   console_posix.cpp
   cpu.cpp
-  dc11.cpp
+  dz11.cpp  # dc11.cpp
   debugger.cpp
   device.cpp
   disk_backend.cpp
@@ -45,7 +47,6 @@ add_executable(
   kw11-l.cpp
   loaders.cpp
   log.cpp
-  main.cpp
   memory.cpp
   mmu.cpp
   rk05.cpp
@@ -57,64 +58,101 @@ add_executable(
   utils.cpp
 )
 
+if (NOT WIN32)
+add_executable(
+  kek
+  ${APP_SOURCES}
+  main.cpp
+)
+
+add_executable(
+  kek-codecoverage
+  ${APP_SOURCES}
+  main.cpp
+)
+
+add_executable(
+  kek-native
+  ${APP_SOURCES}
+  main.cpp
+)
+
+###
+include(FetchContent)
+FetchContent_Declare(
+  googletest
+  GIT_REPOSITORY https://github.com/google/googletest.git
+  GIT_TAG        v1.17.0
+)
+FetchContent_MakeAvailable(googletest)
+
+enable_testing()
+
+SET(LINKING_STUFF
+  GTest::gtest_main
+  Threads::Threads
+)
+
+add_executable(
+  dz11-test
+  ${APP_SOURCES}
+)
+
+target_link_libraries(
+  dz11-test
+  ${LINKING_STUFF}
+)
+target_compile_options(dz11-test PRIVATE -O1 -fno-inline -DUNIT_TEST)
+###
+
+target_compile_options(kek-native PRIVATE -march=native -mtune=native -O3)
+
+target_compile_options(kek-codecoverage PRIVATE -fprofile-arcs -ftest-coverage)
+target_link_options(kek-codecoverage PRIVATE -fprofile-arcs -ftest-coverage)
+
 pkg_check_modules(NCURSES REQUIRED ncurses)
 target_link_libraries(kek ${NCURSES_LIBRARIES})
 target_include_directories(kek PUBLIC ${NCURSES_INCLUDE_DIRS})
 target_compile_options(kek PUBLIC ${NCURSES_CFLAGS_OTHER})
+target_link_libraries(kek-codecoverage ${NCURSES_LIBRARIES})
+target_include_directories(kek-codecoverage PUBLIC ${NCURSES_INCLUDE_DIRS})
+target_compile_options(kek-codecoverage PUBLIC ${NCURSES_CFLAGS_OTHER})
+target_link_libraries(kek-native ${NCURSES_LIBRARIES})
+target_include_directories(kek-native PUBLIC ${NCURSES_INCLUDE_DIRS})
+target_compile_options(kek-native PUBLIC ${NCURSES_CFLAGS_OTHER})
+target_link_libraries(dz11-test ${NCURSES_LIBRARIES})
+target_include_directories(dz11-test PUBLIC ${NCURSES_INCLUDE_DIRS})
+target_compile_options(dz11-test PUBLIC ${NCURSES_CFLAGS_OTHER})
 
 pkg_check_modules(PANEL REQUIRED panel)
 target_link_libraries(kek ${PANEL_LIBRARIES})
 target_include_directories(kek PUBLIC ${PANEL_INCLUDE_DIRS})
 target_compile_options(kek PUBLIC ${PANEL_CFLAGS_OTHER})
-
+target_link_libraries(kek-codecoverage ${PANEL_LIBRARIES})
+target_include_directories(kek-codecoverage PUBLIC ${PANEL_INCLUDE_DIRS})
+target_compile_options(kek-codecoverage PUBLIC ${PANEL_CFLAGS_OTHER})
+target_link_libraries(kek-native ${PANEL_LIBRARIES})
+target_include_directories(kek-native PUBLIC ${PANEL_INCLUDE_DIRS})
+target_compile_options(kek-native PUBLIC ${PANEL_CFLAGS_OTHER})
+target_link_libraries(dz11-test ${PANEL_LIBRARIES})
+target_include_directories(dz11-test PUBLIC ${PANEL_INCLUDE_DIRS})
+target_compile_options(dz11-test PUBLIC ${PANEL_CFLAGS_OTHER})
 endif (NOT WIN32)
 
 if (WIN32)
-
 add_executable(
   kek-win32
-  breakpoint.cpp
-  breakpoint_and.cpp
-  breakpoint_memory.cpp
-  breakpoint_or.cpp
-  breakpoint_parser.cpp
-  breakpoint_register.cpp
-  bus.cpp
-  comm.cpp
-  comm_posix_tty.cpp
-  comm_tcp_socket_client.cpp
-  comm_tcp_socket_server.cpp
-  console.cpp
-  console_posix.cpp
-  cpu.cpp
-  dc11.cpp
-  debugger.cpp
-  device.cpp
-  disk_backend.cpp
-  disk_backend_file.cpp
-  disk_backend_nbd.cpp
-  error.cpp
-  kw11-l.cpp
-  loaders.cpp
-  log.cpp
-  main.cpp
-  memory.cpp
-  mmu.cpp
-  rk05.cpp
-  rl02.cpp
-  rp06.cpp
-  tm-11.cpp
-  tty.cpp
-  utils.cpp
+  ${APP_SOURCES}
   win32.cpp
 )
-
 endif (WIN32)
 
 include(CheckIPOSupported)
 check_ipo_supported(RESULT supported)
 set(CMAKE_BUILD_TYPE RelWithDebInfo)
-set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
+cmake_policy(SET CMP0069 NEW)
+set(CMAKE_POLICY_DEFAULT_CMP0069 NEW)
+set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 #set(CMAKE_BUILD_TYPE Debug)
 
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
@@ -122,6 +160,7 @@ set(THREADS_PREFER_PTHREAD_FLAG TRUE)
 find_package(Threads)
 if (NOT WIN32)
 target_link_libraries(kek Threads::Threads)
+target_link_libraries(kek-codecoverage Threads::Threads)
 else ()
 target_link_libraries(kek-win32 Threads::Threads)
 
@@ -130,7 +169,22 @@ endif ()
 
 add_subdirectory(arduinojson)
 target_link_libraries(kek ArduinoJson)
+target_link_libraries(kek-codecoverage ArduinoJson)
+target_link_libraries(kek-native ArduinoJson)
+target_link_libraries(dz11-test ArduinoJson)
 
 if (WIN32)
 target_link_libraries(kek-win32 ArduinoJson)
 endif ()
+
+add_custom_target(coverage
+    COMMAND ${CMAKE_COMMAND} -E remove_directory coverage
+    COMMAND ${CMAKE_COMMAND} -E make_directory coverage
+    COMMAND lcov --capture --directory . --output-file coverage.info
+    COMMAND genhtml coverage.info --output-directory coverage
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+)
+add_custom_target(coverage_reset
+    COMMAND lcov --directory . --zerocounters
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+)

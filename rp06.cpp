@@ -14,18 +14,22 @@
 #include "utils.h"
 
 
-constexpr const unsigned NSECT       = 22;               // sectors per track
-constexpr const unsigned NTRAC       = 19;               // tracks per cylinder
-constexpr const unsigned SECTOR_SIZE = 512;
+unsigned NSECT       = 22;               // sectors per track
+unsigned NTRAC       = 19;               // tracks per cylinder
+unsigned SECTOR_SIZE = 512;
 constexpr const uint16_t default_DS  = uint16_t(rp06::ds_bits::DPR) /* drive present */ | uint16_t(rp06::ds_bits::MOL) /* medium on-line */ | uint16_t(rp06::ds_bits::VV) /* volume valid */ | uint16_t(rp06::ds_bits::DRY) /* drive ready */;
 
 constexpr const char *regnames[] { "Control", "Status", "Error register 1", "Maintenance", "Attention summary", "Desired sector/track address", "Error register 1", "Look ahead", "Drive type", "Serial no", "Offset", "Desired cylinder address", "Current cylinder address", "Error register 2", "Error register 3", "ECC position", "ECC pattern" };
 
-rp06::rp06(bus *const b, std::atomic_bool *const disk_read_activity, std::atomic_bool *const disk_write_activity) :
+rp06::rp06(bus *const b, std::atomic_bool *const disk_read_activity, std::atomic_bool *const disk_write_activity, const bool is_rp07) :
 	b(b),
 	disk_read_activity (disk_read_activity ),
 	disk_write_activity(disk_write_activity)
 {
+	if (is_rp07) {
+		NSECT = 50;
+		NTRAC = 32;
+	}
 }
 
 rp06::~rp06()
@@ -51,13 +55,13 @@ void rp06::show_state(console *const cnsl) const
 JsonDocument rp06::serialize() const
 {
 	JsonDocument j;
-
+	j["is-rp07"] = is_rp07;
 	return j;
 }
 
 rp06 *rp06::deserialize(const JsonVariantConst j, bus *const b)
 {
-	rp06 *r = new rp06(b, nullptr, nullptr);
+	rp06 *r = new rp06(b, nullptr, nullptr,  j["is-rp07"].as<bool>());
 	r->begin();
 
 	return r;

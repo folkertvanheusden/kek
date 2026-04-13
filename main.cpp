@@ -1,8 +1,9 @@
-// (C) 2018-2024 by Folkert van Heusden
+// (C) 2018-2025 by Folkert van Heusden
 // Released under MIT license
 
-#include <assert.h>
+#include <ArduinoJson.h>
 #include <atomic>
+#include <cassert>
 #include <cinttypes>
 #include <signal.h>
 #include <stdlib.h>
@@ -23,7 +24,7 @@
 #include "disk_backend.h"
 #include "disk_backend_file.h"
 #include "disk_backend_nbd.h"
-#include "dc11.h"
+#include "dz11.h"
 #include "gen.h"
 #include "kw11-l.h"
 #include "loaders.h"
@@ -56,212 +57,146 @@ void sw_handler(int s)
 	}
 }
 
-int run_cpu_validation(const std::string & filename)
+std::vector<std::pair<uint32_t, uint8_t> > get_memory_settings(const JsonArrayConst & ja)
 {
-#if 0
-	json_error_t error;
-	json_t *json = json_load_file(filename.c_str(), JSON_REJECT_DUPLICATES, &error);
-	if (!json)
-		error_exit(false, "%s", error.text);
+	std::vector<std::pair<uint32_t, uint8_t> > out;
+	for(auto kv_dict: ja) {
+		// should be one element
+		for(const auto & kv: kv_dict.as<JsonObjectConst>()) {
+			uint32_t a = std::stoi(kv.key().c_str(), nullptr, 8);
+			uint16_t v = kv.value().as<int>();
+			out.push_back({ a, v });
+			if (a == 0 && v == 0)
+				printf("Suspect\n");
+		}
+	}
+	return out;
+}
 
-	size_t n_ok = 0;
-	size_t array_size = json_array_size(json);
-	for(size_t i=0; i<array_size; i++) {
-		json_t *test = json_array_get(json, i);
+uint16_t get_register_value(const JsonObjectConst & o, const std::string & name)
+{
+	return o[name].as<int>();
+}
+
+bool compare_values(console *const cnsl, uint32_t v, uint32_t should_be, const std::string & name)
+{
+	if (v == should_be)
+		return true;
+
+	int different_bits = v ^ should_be;
+	std::string different_bits_str;
+	do {
+		different_bits_str = std::to_string(different_bits & 1) + different_bits_str;
+	} while(different_bits >>= 1);
+
+	cnsl->put_string_lf(format("%s: %o (is) != %o (should be), different bits: %s", name.c_str(), v, should_be, different_bits_str.c_str()));
+
+	return false;
+}
+
+int run_cpu_validation(console *const cnsl, const std::string & filename)
+{
+	std::optional<JsonDocument> doc = deserialize_file(filename);
+	if (doc.has_value() == false)
+		return -1;
+
+	int n_tests               = 0;
+	int total_error_count      = 0;
+	int tests_with_error_count = 0;
+
+	JsonArray array = doc.value().as<JsonArray>();
+	for(JsonObjectConst test : array) {
+		n_tests++;
+
+		cnsl->put_string_lf(format("Test %d: %s", n_tests, test["id"].as<std::string>().c_str()));
 
 		// create environment
 		event = 0;
 		bus *b = new bus();
-		b->set_memory_size(DEFAULT_N_PAGES * 8192l);
+		b->set_memory_size(DEFAULT_N_PAGES);
 		cpu *c = new cpu(b, &event);
 		b->add_cpu(c);
 
-		uint16_t start_pc = 0;
-
+		// SET
 		{
-			// initialize
-			json_t *memory_before = json_object_get(test, "memory-before");
-			const char *key   = nullptr;
-			json_t     *value = nullptr;
-			json_object_foreach(memory_before, key, value) {
-				b->write_physical(atoi(key), json_integer_value(value));
+			auto before = test["before"];
+
+			// PC
+			c->setPC(get_register_value(before, "PC"));
+
+			// PSW
+			c->setPSW(get_register_value(before, "PSW"), false);
+
+			// stackpointers
+			for(int i=0; i<4; i++)
+				c->set_stackpointer(i, get_register_value(before, format("stack-%d", i)));
+
+			b->getMMU()->setMMR1(get_register_value(before, "mmr1"));
+			b->getMMU()->setMMR2(get_register_value(before, "mmr2"));
+
+			// registers
+			for(int set=0; set<2; set++) {
+				for(int i=0; i<6; i++)
+					c->lowlevel_register_set(set, i, get_register_value(before, format("reg-%d.%d", i, set)));
 			}
+
+			// memory
+			auto memory_before = before["memory"];
+			auto memory_before_settings = get_memory_settings(memory_before);
+			for(auto & element: memory_before_settings)
+				b->write_unibus_byte(element.first, element.second);
 		}
 
-		json_t *const registers_before = json_object_get(test, "registers-before");
+		int run_n_instructions = test["before"]["run-n-instructions"].as<int>();
 
-		{
-			const char *key   = nullptr;
-			json_t     *value = nullptr;
-			json_t *set0 = json_object_get(registers_before, "0");
-			json_object_foreach(set0, key, value) {
-				c->lowlevel_register_set(0, atoi(key), json_integer_value(value));
-			}
-			json_t *set1 = json_object_get(registers_before, "1");
-			json_object_foreach(set1, key, value) {
-				c->lowlevel_register_set(1, atoi(key), json_integer_value(value));
-			}
-		}
-		{
-			json_t *psw_reg = json_object_get(registers_before, "psw");
-			assert(psw_reg);
-			c->lowlevel_psw_set(json_integer_value(psw_reg));
-		}
-		{
-			json_t *b_pc = json_object_get(registers_before, "pc");
-			assert(b_pc);
-			start_pc = json_integer_value(b_pc);
-			c->setPC(start_pc);
-		}
-		{
-			json_t *b_sp = json_object_get(registers_before, "sp");
-			size_t sp_array_size = json_array_size(b_sp);
-			assert(sp_array_size == 4);
-			for(size_t i=0; i<sp_array_size; i++) {
-				json_t *temp = json_array_get(b_sp, i);
-				c->lowlevel_register_sp_set(i, json_integer_value(temp));
+		int cur_n_errors = 0;
+
+		// DO!
+		c->emulation_start();
+		for(int k=0; k<run_n_instructions; k++) {
+			disassemble(c, nullptr, c->getPC(), false);
+			if (c->step() == false) {
+				cnsl->put_string_lf("Treated as an invalid instruction");
+				cur_n_errors++;
+				break;
 			}
 		}
+		disassemble(c, nullptr, c->getPC(), false);
 
-		{
-			json_t *a_mmr0 = json_object_get(test, "mmr0-before");
-			assert(a_mmr0);
-			b->getMMU()->setMMR0(json_integer_value(a_mmr0));
+		// VERIFY
+		if (cur_n_errors == 0) {
+			auto after = test["after"];
+
+			cur_n_errors += !compare_values(cnsl, c->getPC(),  get_register_value(after, "PC" ), "PC" );
+			cur_n_errors += !compare_values(cnsl, c->getPSW(), get_register_value(after, "PSW"), "PSW");
+
+			for(int i=0; i<4; i++)
+				cur_n_errors += !compare_values(cnsl, c->get_stackpointer(i), get_register_value(after, format("stack-%d", i)), format("Stack pointer %d", i));
+
+			cur_n_errors += !compare_values(cnsl, b->getMMU()->getMMR1(), get_register_value(after, "mmr1"), "MMR1");
+			cur_n_errors += !compare_values(cnsl, b->getMMU()->getMMR2(), get_register_value(after, "mmr2"), "MMR2");
+
+			for(int set=0; set<2; set++) {
+				for(int i=0; i<6; i++)
+					cur_n_errors += !compare_values(cnsl, c->lowlevel_register_get(set, i), get_register_value(after, format("reg-%d.%d", i, set)), format("Register %d", i));
+			}
+
+			auto memory_after = after["memory"];
+			auto memory_after_settings = get_memory_settings(memory_after);
+			for(auto & element: memory_after_settings)
+				cur_n_errors += !compare_values(cnsl, b->read_physical_byte(element.first), element.second, format("Memory address %06o", element.first));
 		}
 
-		disassemble(c, nullptr, start_pc, false);
-		auto disas_data = c->disassemble(start_pc);
-		c->step();
+		total_error_count      +=   cur_n_errors;
+		tests_with_error_count += !!cur_n_errors;
 
-		uint16_t new_pc = c->getPC();
-
-		// validate
-		{
-			bool err = false;
-			{
-				json_t *memory_after = json_object_get(test, "memory-after");
-				const char *key   = nullptr;
-				json_t     *value = nullptr;
-				json_object_foreach(memory_after, key, value) {
-					int      key_v        = atoi(key);
-					uint16_t mem_contains = b->read_physical(key_v);
-					uint16_t should_be    = json_integer_value(value);
-
-					if (mem_contains != should_be) {
-						DOLOG(warning, true, "memory address %06o (%d) mismatch (is: %06o (%d), should be: %06o (%d))", key_v, key_v, mem_contains, mem_contains, should_be, should_be);
-						err = true;
-					}
-				}
-			}
-
-			uint16_t psw = c->getPSW();
-
-			json_t *const registers_after = json_object_get(test, "registers-after");
-			{
-				int set_nr = (psw >> 11) & 1;
-				char set[] = { char('0' + set_nr), 0x00 };
-
-				json_t *a_set = json_object_get(registers_after, set);
-				const char *key   = nullptr;
-				json_t     *value = nullptr;
-				json_object_foreach(a_set, key, value) {
-					uint16_t register_is = c->lowlevel_register_get(set_nr, atoi(key));
-					uint16_t should_be   = json_integer_value(value);
-
-					if (register_is != should_be) {
-						DOLOG(warning, true, "set %d register %s mismatch (is: %06o (%d), should be: %06o (%d))", set_nr, key, register_is, register_is, should_be, should_be);
-						err = true;
-					}
-				}
-			}
-
-			{
-				json_t *a_pc = json_object_get(registers_after, "pc");
-				assert(a_pc);
-				uint16_t should_be_pc = json_integer_value(a_pc);
-				if (new_pc != should_be_pc) {
-					DOLOG(warning, true, "PC register mismatch (is: %06o (%d), should be: %06o (%d))", new_pc, new_pc, should_be_pc, should_be_pc);
-					err = true;
-				}
-			}
-
-			{
-				json_t *a_sp = json_object_get(registers_after, "sp");
-				size_t sp_array_size = json_array_size(a_sp);
-				assert(sp_array_size == 4);
-				for(size_t i=0; i<sp_array_size; i++) {
-					json_t *temp = json_array_get(a_sp, i);
-					uint16_t sp = c->lowlevel_register_sp_get(i);
-					if (json_integer_value(temp) != sp) {
-						DOLOG(warning, true, "SP[%d] register mismatch (is: %06o (%d), should be: %06o (%d)) for %06o", i, sp, sp, json_integer_value(temp), json_integer_value(temp), b->read_physical(start_pc));
-						err = true;
-					}
-				}
-			}
-
-			{
-				json_t *a_psw = json_object_get(registers_after, "psw");
-				assert(a_psw);
-				uint16_t should_be_psw = json_integer_value(a_psw);
-				if ((should_be_psw & validation_psw_mask) != (psw & validation_psw_mask)) {
-					DOLOG(warning, true, "PSW register mismatch (is: %06o (%d), w/m %06o, should be: %06o (%d), w/m %06o)", psw, psw, psw & validation_psw_mask, should_be_psw, should_be_psw, should_be_psw & validation_psw_mask);
-					err = true;
-				}
-			}
-
-			for(int r=0; r<4; r++) {
-				json_t *a_mmr = json_object_get(test, format("mmr%d-after", r).c_str());
-				assert(a_mmr);
-				uint16_t should_be_mmr = json_integer_value(a_mmr);
-				uint16_t is_mmr = b->getMMU()->getMMR(r);
-				if (should_be_mmr != is_mmr) {
-					int is_d1 = is_mmr >> 11;
-					if (is_d1 & 16)
-						is_d1 = -(32 - is_d1);
-					int is_r1 = (is_mmr >> 8) & 7;
-					int is_d2 = (is_mmr >> 3) & 31;
-					if (is_d2 & 16)
-						is_d2 = -(32 - is_d2);
-					int is_r2 = is_mmr & 7;
-
-					int sb_d1 = should_be_mmr >> 11;
-					if (sb_d1 & 16)
-						sb_d1 = -(32 - sb_d1);
-					int sb_r1 = (should_be_mmr >> 8) & 7;
-					int sb_d2 = (should_be_mmr >> 3) & 31;
-					if (sb_d2 & 16)
-						sb_d2 = -(32 - sb_d2);
-					int sb_r2 = should_be_mmr & 7;
-					DOLOG(warning, true, "MMR%d register mismatch (is: %06o (%d / %02d,%02d - %02d,%02d), should be: %06o (%d / %02d,%02d - %02d,%02d))%s %s", r, is_mmr, is_mmr, is_d1, is_r1, is_d2, is_r2, should_be_mmr, should_be_mmr, sb_d1, sb_r1, sb_d2, sb_r2, c->is_it_a_trap() ? " TRAP": "", disas_data["instruction-text"].at(0).c_str());
-					err = true;
-				}
-			}
-
-			if (err) {
-				if (c->is_it_a_trap())
-					DOLOG(warning, true, "Error by TRAP %s", disas_data["instruction-text"].at(0).c_str());
-				else {
-					DOLOG(warning, true, "Error by instruction %s", disas_data["instruction-text"].at(0).c_str());
-				}
-
-				char *js = json_dumps(test, 0);
-				DOLOG(warning, true, "%s\n", js);  // also emit empty line(!)
-				free(js);
-			}
-			else {
-				DOLOG(info, true, "\n");  // \n!
-				n_ok++;
-			}
-		}
+		cnsl->put_string_lf(format("Test result for %d, %s: %s", n_tests, test["id"].as<std::string>().c_str(), cur_n_errors ? "FAILED":"OK"));
 
 		// clean-up
 		delete b;
 	}
 
-	json_decref(json);
-
-	printf("# ok: %zu out of %zu\n", n_ok, array_size);
-#endif
+	cnsl->put_string_lf(format("test count: %d, tests with errors: %d, total error count: %d", n_tests, tests_with_error_count, total_error_count));
 
 	return 0;
 }
@@ -318,11 +253,12 @@ void help()
 	printf("-B       run tape file as a unit test (for .BIC files)\n");
 	printf("-r d.img load file as a disk device\n");
 	printf("-N host:port  use NBD-server as disk device (like -r)\n");
-	printf("-R x     select disk type (rk05, rl02 or rp06)\n");
+	printf("-R x     select disk type (rk05, rl02, rp06 or rp07)\n");
 	printf("-p 123   set CPU start pointer to decimal(!) value\n");
 	printf("-b       enable bootloader (builtin)\n");
 	printf("-n       ncurses UI\n");
 	printf("-d       enable debugger\n");
+	printf("-f x     first process the commands from file x before entering the debugger\n");
 	printf("-S x     set ram size (in number of 8 kB pages)\n");
 	printf("-s x,y   set console switche state: set bit x (0...15) to y (0/1)\n");
 	printf("-t       enable tracing (disassemble to stderr, requires -d as well)\n");
@@ -331,7 +267,7 @@ void help()
 	printf("-X       do not include timestamp in logging\n");
 	printf("-J x     run validation suite x against the CPU emulation\n");
 	printf("-M       log metrics\n");
-	printf("-1 x     use x as device for DC-11\n");
+	printf("-1 x     use x as device for DZ-11 (instead of 8 tcp-sockets starting at port 1100)\n");
 }
 
 int main(int argc, char *argv[])
@@ -341,7 +277,8 @@ int main(int argc, char *argv[])
 	std::vector<disk_backend *> disk_files;
 	std::string  disk_type = "rk05";
 
-	bool run_debugger = false;
+	bool          run_debugger  = false;
+	std::optional<std::string> debugger_init;
 
 	bool          enable_bootloader = false;
 	bootloader_t  bootloader        = BL_NONE;
@@ -350,6 +287,7 @@ int main(int argc, char *argv[])
 	log_level_t  ll_screen = none;
 	log_level_t  ll_file   = none;
 	bool         timestamp = true;
+	bool         ll_set    = false;
 
 	uint16_t     start_addr= 01000;
 	bool         sa_set    = false;
@@ -371,18 +309,22 @@ int main(int argc, char *argv[])
 
 	std::string  deserialize;
 
-	std::optional<std::string> dc11_device;
+	std::optional<std::string> dz11_device;
 
 	int  opt          = -1;
-	while((opt = getopt(argc, argv, "hD:MT:Br:R:p:ndtL:bl:s:Q:N:J:XS:P1:")) != -1)
+	while((opt = getopt(argc, argv, "hD:MT:Br:R:p:ndf:tL:bl:s:Q:N:J:XS:P1:")) != -1)
 	{
 		switch(opt) {
 			case 'h':
 				help();
 				return 1;
 
+			case 'f':
+				debugger_init = optarg;
+				break;
+
 			case '1':
-				dc11_device = optarg;
+				dz11_device = optarg;
 				break;
 
 			case 'D':
@@ -409,7 +351,7 @@ int main(int argc, char *argv[])
 					char *c = strchr(optarg, ',');
 					if (!c)
 						error_exit(false, "-s: parameter missing");
-					int bit = atoi(optarg);
+					int bit   = atoi(optarg);
 					int state = atoi(c + 1);
 
 					console_switches &= ~(1 << bit);
@@ -444,7 +386,7 @@ int main(int argc, char *argv[])
 
 			case 'R':
 				disk_type = optarg;
-				if (disk_type != "rk05" && disk_type != "rl02" && disk_type != "rp06")
+				if (disk_type != "rk05" && disk_type != "rl02" && disk_type != "rp06" && disk_type != "rp07")
 					error_exit(false, "Disk type not known");
 				break;
 
@@ -474,6 +416,7 @@ int main(int argc, char *argv[])
 
 					ll_screen  = parse_ll(parts[0]);
 					ll_file    = parse_ll(parts[1]);
+					ll_set     = true;
 				  }
 				break;
 
@@ -497,12 +440,9 @@ int main(int argc, char *argv[])
 
 	console *cnsl = nullptr;
 
+	if (ll_set == false && withUI)
+		ll_screen = notice;
 	setlogfile(logfile, ll_file, ll_screen, timestamp);
-
-#if !defined(_WIN32)
-	if (validate_json.empty() == false)
-		return run_cpu_validation(validate_json);
-#endif
 
 	DOLOG(info, true, "PDP11 emulator, by Folkert van Heusden");
 
@@ -522,6 +462,14 @@ int main(int argc, char *argv[])
 	}
 #endif
 
+#if !defined(_WIN32)
+	if (validate_json.empty() == false) {
+		int rc = run_cpu_validation(cnsl, validate_json);
+		delete cnsl;
+		return rc;
+	}
+#endif
+
 	bus *b = nullptr;
 
 	if (deserialize.empty()) {
@@ -530,7 +478,7 @@ int main(int argc, char *argv[])
 		if (set_ram_size.has_value())
 			b->set_memory_size(set_ram_size.value());
 		else
-			b->set_memory_size(DEFAULT_N_PAGES * 8192l);
+			b->set_memory_size(DEFAULT_N_PAGES);
 
 		b->set_console_switches(console_switches);
 
@@ -545,7 +493,7 @@ int main(int argc, char *argv[])
 		rl02_dev->begin();
 		b->add_rl02(rl02_dev);
 
-		auto rp06_dev = new rp06(b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag());
+		auto rp06_dev = new rp06(b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag(), disk_type == "rp07");
 		rp06_dev->begin();
 		b->add_RP06(rp06_dev);
 
@@ -561,7 +509,7 @@ int main(int argc, char *argv[])
 			for(auto & file: disk_files)
 				rl02_dev->access_disk_backends()->push_back(file);
 		}
-		else if (disk_type == "rp06") {
+		else if (disk_type == "rp06" || disk_type == "rp07") {
 			bootloader = BL_RP06;
 
 			for(auto & file: disk_files)
@@ -586,26 +534,25 @@ int main(int argc, char *argv[])
 
 	if (b->getTty() == nullptr) {
 		tty *tty_ = new tty(cnsl, b);
-
 		b->add_tty(tty_);
 	}
 
 	cnsl->set_bus(b);
 	cnsl->begin();
 
-	//// DC11
+	//// DZ11
 	constexpr const int bitrate = 38400;
 
 	std::vector<comm *> comm_interfaces;
-	if (dc11_device.has_value()) {
-		DOLOG(info, false, "Configuring DC11 device for TTY on %s (%d bps)", dc11_device.value().c_str(), bitrate);
-		comm_interfaces.push_back(new comm_posix_tty(dc11_device.value(), bitrate));
+	if (dz11_device.has_value()) {
+		DOLOG(info, false, "Configuring DZ11 device for TTY on %s (%d bps)", dz11_device.value().c_str(), bitrate);
+		comm_interfaces.push_back(new comm_posix_tty(dz11_device.value(), bitrate));
 	}
 
 	for(size_t i=comm_interfaces.size(); i<4; i++) {
 		int port = 1100 + i;
 		comm_interfaces.push_back(new comm_tcp_socket_server(port));
-		DOLOG(info, false, "Configuring DC11 device for TCP socket on port %d", port);
+		DOLOG(info, false, "Configuring DZ11 device for TCP socket on port %d", port);
 	}
 
 	for(auto & c: comm_interfaces) {
@@ -613,9 +560,9 @@ int main(int argc, char *argv[])
 			DOLOG(warning, false, "Failed to configure %s", c->get_identifier().c_str());
 	}
 
-	dc11 *dc11_ = new dc11(b, comm_interfaces);
-	dc11_->begin();
-	b->add_DC11(dc11_);
+	dz11 *dz11_ = new dz11(b, comm_interfaces);
+	dz11_->begin();
+	b->add_DZ11(dz11_);
 	//
 
 	tm_11 *tm_11_ = new tm_11(b);
@@ -626,10 +573,8 @@ int main(int argc, char *argv[])
 	std::atomic_bool interrupt_emulation { false };
 
 	std::optional<uint16_t> bic_start;
-
 	if (tape.empty() == false) {
 		bic_start = load_tape(b, tape);
-
 		if (bic_start.has_value() == false)
 			return 1;  // fail
 
@@ -668,7 +613,7 @@ int main(int argc, char *argv[])
 	if (is_bic)
 		run_bic(cnsl, b, &event, bic_start.value());
 	else if (run_debugger || (bootloader == BL_NONE && test.empty() && tape.empty()))
-		debugger(cnsl, b, &event);
+		debugger(cnsl, b, &event, debugger_init);
 	else {
 		b->getCpu()->emulation_start();  // for statistics
 
@@ -681,7 +626,6 @@ int main(int argc, char *argv[])
 			*running = false;
 
 			uint32_t stop_event = event.exchange(EVENT_NONE);
-
 			if (stop_event == EVENT_HALT || stop_event == EVENT_INTERRUPT || stop_event == EVENT_TERMINATE)
 				break;
 		}
@@ -700,7 +644,6 @@ int main(int argc, char *argv[])
 	cnsl->stop_thread();
 
 	delete b;
-
 	delete cnsl;
 
 	return 0;

@@ -9,7 +9,7 @@
 
 #include "bus.h"
 #include "cpu.h"
-#include "dc11.h"
+#include "dz11.h"
 #include "kw11-l.h"
 #include "log.h"
 #include "memory.h"
@@ -41,7 +41,7 @@ bus::~bus()
 	delete tty_;
 	delete mmu_;
 	delete m;
-	delete dc11_;
+	delete dz11_;
 	delete rp06_;
 }
 
@@ -70,8 +70,8 @@ JsonDocument bus::serialize() const
 	if (rk05_)
 		j_out["rk05"]   = rk05_->serialize();
 
-	if (dc11_)
-		j_out["dc11"]   = dc11_->serialize();
+	if (dz11_)
+		j_out["dz11"]   = dz11_->serialize();
 
 	if (rp06_)
 		j_out["rp06"]   = rp06_->serialize();
@@ -112,8 +112,8 @@ bus *bus::deserialize(const JsonDocument j, console *const cnsl, std::atomic_uin
 	if (j.containsKey("kw11-l"))
 		b->add_KW11_L(kw11_l::deserialize(j["kw11-l"], b, cnsl));
 
-	if (j.containsKey("dc11"))
-		b->add_DC11(dc11::deserialize(j["dc11"], b));
+	if (j.containsKey("dz11"))
+		b->add_DZ11(dz11::deserialize(j["dz11"], b));
 
 	if (j.containsKey("rp06"))
 		b->add_RP06(rp06::deserialize(j["rp06"], b));
@@ -139,7 +139,7 @@ void bus::set_memory_size(const int n_pages)
 
 	mmu_->begin(m, c);
 
-	TRACE("Memory is now %u kB in size", n_bytes / 1024);
+	TRACE("Memory is now %u kB (%d pages)", n_bytes / 1024, n_pages);
 }
 
 void bus::reset()
@@ -160,8 +160,8 @@ void bus::reset()
 		tty_->reset();
 	if (kw11_l_)
 		kw11_l_->reset();
-	if (dc11_)
-		dc11_->reset();
+	if (dz11_)
+		dz11_->reset();
 	if (rp06_)
 		rp06_->reset();
 }
@@ -227,16 +227,16 @@ void bus::add_tty(tty *const tty_)
 	this->tty_ = tty_;
 }
 
-void bus::add_DC11(dc11 *const dc11_)
+void bus::add_DZ11(dz11 *const dz11_)
 {
-	delete this->dc11_;
-	this->dc11_ = dc11_;
+	delete this->dz11_;
+	this->dz11_ = dz11_;
 }
 
-void bus::del_DC11()
+void bus::del_DZ11()
 {
-	delete dc11_;
-	dc11_ = nullptr;
+	delete dz11_;
+	dz11_ = nullptr;
 }
 
 void bus::init()
@@ -269,7 +269,7 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 			return temp;
 		}
 		if (a == ADDR_KERNEL_SP) { // kernel SP
-			uint16_t temp = c->getStackPointer(0) & (word_mode == wm_byte ? 0xff : 0xffff);
+			uint16_t temp = c->get_stackpointer(0) & (word_mode == wm_byte ? 0xff : 0xffff);
 			TRACE("READ-I/O kernel SP: %06o", temp);
 			return temp;
 		}
@@ -279,12 +279,12 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 			return temp;
 		}
 		if (a == ADDR_SV_SP) { // supervisor SP
-			uint16_t temp = c->getStackPointer(1) & (word_mode == wm_byte ? 0xff : 0xffff);
+			uint16_t temp = c->get_stackpointer(1) & (word_mode == wm_byte ? 0xff : 0xffff);
 			TRACE("READ-I/O supervisor SP: %06o", temp);
 			return temp;
 		}
 		if (a == ADDR_USER_SP) { // user SP
-			uint16_t temp = c->getStackPointer(3) & (word_mode == wm_byte ? 0xff : 0xffff);
+			uint16_t temp = c->get_stackpointer(3) & (word_mode == wm_byte ? 0xff : 0xffff);
 			TRACE("READ-I/O user SP: %06o", temp);
 			return temp;
 		}
@@ -385,12 +385,12 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 				return temp;
 			}
 			if (a == ADDR_STACKLIM) { // stack limit register
-				uint8_t temp = c->getStackLimitRegister();
+				uint8_t temp = c->get_stack_limit_register();
 				TRACE("READ-I/O stack limit register (low): %03o", temp);
 				return temp;
 			}
 			if (a == ADDR_STACKLIM + 1) { // stack limit register
-				uint8_t temp = c->getStackLimitRegister() >> 8;
+				uint8_t temp = c->get_stack_limit_register() >> 8;
 				TRACE("READ-I/O stack limit register (high): %03o", temp);
 				return temp;
 			}
@@ -449,7 +449,7 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 			}
 
 			if (a == ADDR_STACKLIM) { // stack limit register
-				uint16_t temp = c->getStackLimitRegister();
+				uint16_t temp = c->get_stack_limit_register();
 				TRACE("READ-I/O stack limit register: %06o", temp);
 				return temp;
 			}
@@ -479,14 +479,16 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 		if (tty_ && a >= PDP11TTY_BASE && a < PDP11TTY_END)
 			return word_mode == wm_byte ? tty_->read_byte(a) : tty_->read_word(a);
 
-		if (dc11_ && a >= DC11_BASE && a < DC11_END)
-			return word_mode == wm_byte ? dc11_->read_byte(a) : dc11_->read_word(a);
+		if (dz11_ && a >= DZ11_BASE && a < DZ11_END)
+			return word_mode == wm_byte ? dz11_->read_byte(a) : dz11_->read_word(a);
 
 		if (rp06_ && a >= RP06_BASE && a < RP06_END)
 			return word_mode == wm_byte ? rp06_->read_byte(a) : rp06_->read_word(a);
 
 		// LO size register field must be all 1s, so subtract 1
 		uint32_t system_size = m->get_memory_size() / 64 - 1;
+		if (system_size == 0177777)
+			system_size = 0167777;
 
 		if (a == ADDR_SYSSIZE + 2) {  // system size HI
 			uint16_t temp = system_size >> 16;
@@ -516,6 +518,7 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 	}
 
 	if (m_offset >= m->get_memory_size()) {
+		mmu_->setCPUERRBit(040);
 		c->trap(004);  // no such RAM
 		throw 1;
 	}
@@ -529,19 +532,6 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 	TRACE("READ from %06o/%07o %c %c: %06o (%s)", addr_in, m_offset, space == d_space ? 'D' : 'I', word_mode == wm_byte ? 'B' : 'W', temp, mode_selection == rm_prev ? "prev" : "cur");
 
 	return temp;
-}
-
-bool bus::is_psw(const uint16_t addr, const int run_mode, const d_i_space_t space) const
-{
-	auto meta = mmu_->calculate_physical_address(run_mode, addr);
-
-	if (space == d_space && meta.physical_data_is_psw)
-		return true;
-
-	if (space == i_space && meta.physical_instruction_is_psw)
-		return true;
-
-	return false;
 }
 
 bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t value, const rm_selection_t mode_selection, const d_i_space_t space)
@@ -569,11 +559,8 @@ bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 				TRACE("WRITE-I/O PSW %s: %03o", a & 1 ? "MSB" : "LSB", value);
 
 				uint16_t vtemp = c->getPSW();
-
 				update_word(&vtemp, a & 1, value);
-
 				vtemp &= ~16;  // cannot set T bit via this
-
 				c->setPSW(vtemp, false);
 
 				return true;
@@ -582,13 +569,10 @@ bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 			if (a == ADDR_STACKLIM || a == ADDR_STACKLIM + 1) { // stack limit register
 				TRACE("WRITE-I/O stack limit register %s: %03o", a & 1 ? "MSB" : "LSB", value);
 
-				uint16_t v = c->getStackLimitRegister();
-
+				uint16_t v = c->get_stack_limit_register();
 				update_word(&v, a & 1, value);
-
-				v |= 0377;
-
-				c->setStackLimitRegister(v);
+				v &= 0xff00;
+				c->set_stack_limit_register(v);
 
 				return false;
 			}
@@ -620,7 +604,7 @@ bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 
 			if (a == ADDR_STACKLIM) { // stack limit register
 				TRACE("WRITE-I/O stack limit register: %06o", value);
-				c->setStackLimitRegister(value & 0xff00);
+				c->set_stack_limit_register(value & 0xff00);
 				return false;
 			}
 
@@ -638,7 +622,7 @@ bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 			}
 			if (a == ADDR_KERNEL_SP) { // kernel SP
 				TRACE("WRITE-I/O kernel SP: %06o", value);
-				c->setStackPointer(0, value);
+				c->set_stackpointer(0, value);
 				return false;
 			}
 			if (a == ADDR_PC) { // PC
@@ -648,12 +632,12 @@ bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 			}
 			if (a == ADDR_SV_SP) { // supervisor SP
 				TRACE("WRITE-I/O supervisor sp: %06o", value);
-				c->setStackPointer(1, value);
+				c->set_stackpointer(1, value);
 				return false;
 			}
 			if (a == ADDR_USER_SP) { // user SP
 				TRACE("WRITE-I/O user sp: %06o", value);
-				c->setStackPointer(3, value);
+				c->set_stackpointer(3, value);
 				return false;
 			}
 
@@ -729,8 +713,8 @@ bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 			return false;
 		}
 
-		if (dc11_ && a >= DC11_BASE && a < DC11_END) {
-			word_mode == wm_byte ? dc11_->write_byte(a, value) : dc11_->write_word(a, value);
+		if (dz11_ && a >= DZ11_BASE && a < DZ11_END) {
+			word_mode == wm_byte ? dz11_->write_byte(a, value) : dz11_->write_word(a, value);
 			return false;
 		}
 
@@ -807,6 +791,7 @@ bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 	TRACE("WRITE to %06o/%07o %c %c: %06o", addr_in, m_offset, space == d_space ? 'D' : 'I', word_mode == wm_byte ? 'B' : 'W', value);
 
 	if (m_offset >= m->get_memory_size()) {
+		mmu_->setCPUERRBit(040);
 		c->trap(004);  // no such RAM
 		throw 1;
 	}
@@ -836,15 +821,26 @@ void bus::write_physical(const uint32_t a, const uint16_t value)
 uint16_t bus::read_physical(const uint32_t a)
 {
 	if (a >= m->get_memory_size()) {
-		TRACE("physicalREAD from %o: trap 004", a);
+		TRACE("read_physical from %o: trap 004", a);
 		c->trap(004);
 		throw 13;
 	}
 
 	uint16_t value = m->read_word(a);
+	TRACE("read_physical %06o from %o", value, a);
+	return value;
+}
 
-	TRACE("physicalREAD %06o from %o", value, a);
+uint16_t bus::read_physical_byte(const uint32_t a)
+{
+	if (a >= m->get_memory_size()) {
+		TRACE("read_physical_byte from %o: trap 004", a);
+		c->trap(004);
+		throw 13;
+	}
 
+	uint16_t value = m->read_byte(a);
+	TRACE("read_physical_byte %03o from %o", value, a);
 	return value;
 }
 
@@ -859,6 +855,9 @@ std::optional<uint16_t> bus::peek_word(const int run_mode, const uint16_t a)
 
 	uint32_t io_base  = mmu_->get_io_base();
 	if (meta.physical_instruction >= io_base)
+		return { };
+
+	if (meta.physical_instruction >= m->get_memory_size())
 		return { };
 
 	return m->read_word(meta.physical_instruction);

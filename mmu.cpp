@@ -126,6 +126,11 @@ void mmu::clearMMR0Bit(const int bit)
 	MMR0 &= ~(1 << bit);
 }
 
+void mmu::setMMR1(const uint16_t value) 
+{
+	MMR1 = value;
+}
+
 void mmu::setMMR2(const uint16_t value) 
 {
 	MMR2 = value;
@@ -145,6 +150,7 @@ bool mmu::get_use_data_space(const int run_mode) const
 
 void mmu::clearMMR1()
 {
+	TRACE("clear MMR1");
 	MMR1 = 0;
 }
 
@@ -272,6 +278,8 @@ void mmu::trap_if_odd(const uint16_t a, const int run_mode, const d_i_space_t sp
 
 	MMR0 &= ~(7 << 1);
 	MMR0 |= page << 1;
+
+	CPUERR |= 0100;
 }
 
 memory_addresses_t mmu::calculate_physical_address(const int run_mode, const uint16_t a) const
@@ -308,42 +316,23 @@ memory_addresses_t mmu::calculate_physical_address(const int run_mode, const uin
 
 std::pair<trap_action_t, int> mmu::get_trap_action(const int run_mode, const bool d, const int apf, const bool is_write)
 {
-	const int     access_control = get_access_control(run_mode, d, apf);
+	const int access_control = get_access_control(run_mode, d, apf);
 
-	trap_action_t trap_action    = T_PROCEED;
+	constexpr const trap_action_t map[8][2] {
+			{ T_ABORT_4,  T_ABORT_4  },
+			{ T_TRAP_250, T_ABORT_4  },
+			{ T_PROCEED,  T_ABORT_4  },
+			{ T_ABORT_4,  T_ABORT_4  },
+			{ T_TRAP_250, T_TRAP_250 },
+			{ T_PROCEED,  T_TRAP_250 },
+			{ T_PROCEED,  T_PROCEED  },
+			{ T_ABORT_4,  T_ABORT_4  },
+	};
 
-	switch(access_control) {
-		case 0:
-			trap_action = T_ABORT_4;
-			break;
-		case 1:
-			trap_action = is_write ? T_ABORT_4 : T_TRAP_250;
-			break;
+	assert(map[1][false] == T_TRAP_250);
+	assert(map[1][true ] == T_ABORT_4 );
 
-		case 2:
-			if (is_write)
-				trap_action = T_ABORT_4;
-			break;
-		case 3:
-			trap_action = T_ABORT_4;
-			break;
-		case 4:
-			trap_action = T_TRAP_250;
-			break;
-		case 5:
-			if (is_write)
-				trap_action = T_TRAP_250;
-			break;
-		case 6:
-			// proceed
-			break;
-
-		case 7:
-			trap_action = T_ABORT_4;
-			break;
-	}
-
-	return { trap_action, access_control };
+	return { map[access_control][is_write], access_control };
 }
 
 void mmu::mmudebug(const uint16_t a)
@@ -360,7 +349,7 @@ void mmu::mmudebug(const uint16_t a)
 void mmu::verify_page_access(const uint16_t virt_addr, const int run_mode, const bool d, const int apf, const bool is_write)
 {
 	const auto [ trap_action, access_control ] = get_trap_action(run_mode, d, apf, is_write);
-	if (trap_action == T_PROCEED)
+	if (trap_action == T_PROCEED) [[likely]]
 		return;
 
 	if (is_write)
@@ -390,20 +379,9 @@ void mmu::verify_page_access(const uint16_t virt_addr, const int run_mode, const
 		TRACE("MMR0: %06o", temp);
 	}
 
-	if (trap_action == T_TRAP_250) {
-		TRACE("Page access %d (for virtual address %06o): trap 0250", access_control, virt_addr);
-
-		c->trap(0250);  // trap
-
-		throw 5;
-	}
-	else {  // T_ABORT_4
-		TRACE("Page access %d (for virtual address %06o): trap 004", access_control, virt_addr);
-
-		c->trap(004);  // abort
-
-		throw 5;
-	}
+	TRACE("Page access %d (for virtual address %06o): trap 0250", access_control, virt_addr);
+	c->trap(0250);  // abort
+	throw 5;
 }
 
 void mmu::verify_access_valid(const uint32_t m_offset, const int run_mode, const bool d, const int apf, const bool is_io, const bool is_write)
@@ -429,7 +407,7 @@ void mmu::verify_access_valid(const uint32_t m_offset, const int run_mode, const
 		if (is_write)
 			set_page_trapped(run_mode, d, apf);
 
-		c->trap(04);
+		c->trap(0250);
 
 		throw 6;
 	}
@@ -483,7 +461,6 @@ uint32_t mmu::calculate_physical_address(const int run_mode, const uint16_t a, c
 		bool     d        = space == d_space && get_use_data_space(run_mode);
 
 		uint16_t p_offset = a & 8191;  // page offset
-
 		uint8_t  apf      = a >> 13;  // active page field
 
 		m_offset  = get_physical_memory_offset(run_mode, d, apf);

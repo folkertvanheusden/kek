@@ -174,8 +174,7 @@ void escape_print_xy(NEWWIN *win, int y, int x, char *str)
 
 	for(loop=0; loop<len; loop++)
 	{
-		if (str[loop] == '^')
-		{
+		if (str[loop] == '^') {
 			if (!inv)
 				mywattron(win -> win, A_REVERSE);
 			else
@@ -183,8 +182,7 @@ void escape_print_xy(NEWWIN *win, int y, int x, char *str)
 
 			inv = 1 - inv;
 		}
-		else if (str[loop] == '_')
-		{
+		else if (str[loop] == '_') {
 			if (!underline)
 				mywattron(win -> win, A_UNDERLINE);
 			else
@@ -192,13 +190,11 @@ void escape_print_xy(NEWWIN *win, int y, int x, char *str)
 
 			underline = 1 - underline;
 		}
-		else if (str[loop] == '\n')
-		{
+		else if (str[loop] == '\n') {
 			cursor_x = 0;
 			y++;
 		}
-		else
-		{
+		else {
 			mvwprintw(win -> win, y, x + cursor_x++, "%c", str[loop]);
 		}
 	}
@@ -215,10 +211,8 @@ void escape_print(NEWWIN *win, const char *str, const char rev, const char un)
 	int loop, len = strlen(str);
 	bool inv = false, underline = false;
 
-	for(loop=0; loop<len; loop++)
-	{
-		if (str[loop] == rev)
-		{
+	for(loop=0; loop<len; loop++) {
+		if (str[loop] == rev) {
 			if (!inv)
 				mywattron(win -> win, A_REVERSE);
 			else
@@ -226,8 +220,7 @@ void escape_print(NEWWIN *win, const char *str, const char rev, const char un)
 
 			inv = 1 - inv;
 		}
-		else if (str[loop] == un)
-		{
+		else if (str[loop] == un) {
 			if (!underline)
 				mywattron(win -> win, A_UNDERLINE);
 			else
@@ -235,8 +228,7 @@ void escape_print(NEWWIN *win, const char *str, const char rev, const char un)
 
 			underline = 1 - underline;
 		}
-		else
-		{
+		else {
 			waddch(win -> win, str[loop]);
 		}
 	}
@@ -260,9 +252,7 @@ void create_win_border(int x, int y, int width, int height, const char *title, N
         *bwin = create_window_xy(y + 0, x + 0, height + 2 + wbb * 2, width + 2 + wbb * 2);
         *win  = create_window_xy(y + 1 + wbb, x + 1 + wbb, height + 0, width + 0);
 
-        mywattron((*bwin) -> win, A_REVERSE);
         box((*bwin) -> win, 0, 0);
-        mywattroff((*bwin) -> win, A_REVERSE);
 
 	mywattron((*bwin) -> win, A_STANDOUT);
 

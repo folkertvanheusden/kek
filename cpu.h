@@ -19,9 +19,12 @@
 class breakpoint;
 class bus;
 
-constexpr const int initial_trap_delay   = 8;
-
-constexpr const int max_stacktrace_depth = 16;
+constexpr const int      initial_trap_delay   = 8;
+constexpr const int      max_stacktrace_depth = 16;
+constexpr const uint16_t B16_MSBSET = 0x8000;
+constexpr const uint32_t B32_MSBSET = 0x80000000;
+constexpr const uint32_t B32_MSWSET = 0xffff0000;
+constexpr const uint64_t B64_MSWSET = 0xffffffff00000000ll;
 
 typedef struct {
 	int      delta;
@@ -52,13 +55,14 @@ private:
 	uint16_t instruction_start  { 0     };
 	uint16_t psw                { 0     };
 	uint16_t fpsr               { 0     };
-	uint16_t stackLimitRegister { 0377  };
+	uint16_t stack_limit_register { 0400 };
 	int      processing_trap_depth { 0  };
 	uint64_t instruction_count  { 0     };
 	uint64_t running_since      { 0     };
 	uint64_t wait_time          { 0     };
 	bool     it_is_a_trap       { false };
 	std::optional<int> trap_delay { 0   };
+	std::optional<int> delayed_trap {   };  // invoked after completion of the instruction
 	bool     debug_mode         { false };
 	std::vector<std::pair<uint16_t, std::string> > stacktrace;
 
@@ -83,6 +87,8 @@ private:
 	bool     check_pending_interrupts() const;  // needs the 'qi_lock'-lock
 	bool     execute_any_pending_interrupt();
 
+	uint32_t shifter(uint32_t value, int shift, bool is32b);
+
 	uint16_t add_register(const int nr, const uint16_t value);
 
 	void     addToMMR1(const gam_rc_t & g);
@@ -104,6 +110,7 @@ private:
 		int         instruction_part;
 		uint16_t    work_value;
 		bool        valid;
+		std::optional<std::string> error;
 	};
 
 	std::optional<operand_parameters> addressing_to_string(const uint8_t mode_register, const uint16_t pc, const word_mode_t word_mode) const;
@@ -118,9 +125,9 @@ public:
 	JsonDocument serialize();
 	static cpu *deserialize(const JsonVariantConst j, bus *const b, std::atomic_uint32_t *const event);
 
-	std::optional<std::string> check_breakpoint();
-	int set_breakpoint(breakpoint *const bp);
-	bool remove_breakpoint(const int bp_id);
+	std::optional<std::string>  check_breakpoint();
+	int                         set_breakpoint(breakpoint *const bp);
+	bool                        remove_breakpoint(const int bp_id);
 	std::map<int, breakpoint *> list_breakpoints();
 
 	void disassemble(void) const;
@@ -128,26 +135,26 @@ public:
 
 	bus *getBus() { return b; }
 
-	void emulation_start();
+	void     emulation_start();
 	uint64_t get_instructions_executed_count() const;
 	uint64_t get_wait_time() const { return wait_time; }
 	std::tuple<double, double, uint64_t, uint32_t, double> get_mips_rel_speed(const std::optional<uint64_t> & instruction_count, const std::optional<uint64_t> & t_diff_1s) const;
 	// how many ms would've really passed when executing `instruction_count` instructions
 	uint32_t get_effective_run_time(const uint64_t instruction_count) const;
 
-	bool get_debug() const { return debug_mode; }
-	void set_debug(const bool d) { debug_mode = d; stacktrace.clear(); }
+	bool     get_debug() const { return debug_mode; }
+	void     set_debug(const bool d) { debug_mode = d; stacktrace.clear(); }
 	std::vector<std::pair<uint16_t, std::string> > get_stack_trace() const;
 
-	void reset();
+	void     reset();
+	bool     step();
 
-	void step();
-
-	void pushStack(const uint16_t v);
-	uint16_t popStack();
+	void     push_stack(const uint16_t v);
+	uint16_t pop_stack();
 
 	void init_interrupt_queue();
 	void queue_interrupt(const uint8_t level, const uint8_t vector);
+	void unqueue_interrupt(const uint8_t level, const uint8_t vector);
 	std::map<uint8_t, std::set<uint8_t> > get_queued_interrupts() const { return queued_interrupts; }
 	std::optional<int> get_interrupt_delay_left() const { return trap_delay; }
 	bool check_if_interrupts_pending() const { return any_queued_interrupts; }
@@ -174,13 +181,15 @@ public:
 	void setPSW_flags_nzv(const uint16_t value, const word_mode_t word_mode);
 
 	uint16_t getPSW() const { return psw; }
-	void setPSW(const uint16_t v, const bool limited);
+	void     setPSW(const uint16_t v, const bool limited);
 
-	uint16_t getStackLimitRegister() { return stackLimitRegister; }
-	void setStackLimitRegister(const uint16_t v) { stackLimitRegister = v; }
+	uint16_t get_stack_limit_register() { return stack_limit_register; }
+	void     set_stack_limit_register(const uint16_t v) { stack_limit_register = v; }
 
-	uint16_t getStackPointer(const int which) const { assert(which >= 0 && which < 4); return sp[which]; }
+	uint16_t get_stackpointer(const int which) const { assert(which >= 0 && which < 4); return sp[which]; }
 	uint16_t getPC() const { return pc; }
+	void set_stackpointer(const int which, const uint16_t value) { assert(which >= 0 && which < 4); sp[which] = value; }
+	void setPC(const uint16_t value) { pc = value; }
 
 	void set_register(const int nr, const uint16_t value);
 	void set_registerLowByte(const int nr, const word_mode_t word_mode, const uint16_t value);
@@ -191,10 +200,8 @@ public:
 	void lowlevel_psw_set(const uint16_t value) { psw = value; }
 	uint16_t lowlevel_register_sp_get(const uint8_t nr) const { return sp[nr]; }
 
-	void setStackPointer(const int which, const uint16_t value) { assert(which >= 0 && which < 4); sp[which] = value; }
-	void setPC(const uint16_t value) { pc = value; }
-
-	uint16_t get_register(const int nr) const;
+	uint16_t  get_register        (const int nr) const;
+	uint16_t *get_register_pointer(const int nr);
 
 	bool put_result(const gam_rc_t & g, const uint16_t value);
 };

@@ -1,4 +1,4 @@
-// (C) 2018-2024 by Folkert van Heusden
+// (C) 2018-2026 by Folkert van Heusden
 // Released under MIT license
 
 #pragma once
@@ -6,9 +6,6 @@
 #include <string>
 
 #include "gen.h"
-#if defined(ESP32)
-#include "FvHNTP/FvHNTP.h"
-#endif
 
 
 class console;
@@ -26,7 +23,7 @@ void dolog(const log_level_t ll, const char *fmt, ...);
 void settrace(const bool on);
 bool gettrace();
 #if defined(ESP32)
-void set_clock_reference(ntp *const ntp_);
+void set_clock_reference(const char *const ntp_server);
 #endif
 void set_terminal(console *const cnsl);
 
