@@ -586,7 +586,7 @@ void reg_dump(console *const cnsl, cpu *const c)
 void show_run_statistics(console *const cnsl, cpu *const c)
 {
 #if defined(ESP32)
-	cnsl->println(format("Free RAM (decimal bytes): %d", ESP.getFreeHeap()));
+	cnsl->put_string_lf(format("Free RAM (decimal bytes): %d", ESP.getFreeHeap()));
 #endif
 
 	auto stats = c->get_mips_rel_speed({ }, { });
@@ -1256,7 +1256,10 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		return true;
 	}
 	else if (cmd == "cdz11") {
-		configure_comm(cnsl, b->getDZ11()->get_comm_interfaces());
+		if (b->getDZ11())
+			configure_comm(cnsl, b->getDZ11()->get_comm_interfaces());
+		else
+			cnsl->put_string_lf("DZ11 not started yet, first invoke \"startnet\"");
 
 		return true;
 	}
@@ -1421,8 +1424,13 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 		std::ifstream fh;
 		fh.open(init.value());
 		while(std::getline(fh, line)) {
-			if (debugger_do(&state, cnsl, b, stop_event, line) == false)
-				return;
+			try {
+				if (debugger_do(&state, cnsl, b, stop_event, line) == false)
+					return;
+			}
+			catch(...) {
+				cnsl->put_string_lf("Exception in debugger");
+			}
 		}
 	}
 
