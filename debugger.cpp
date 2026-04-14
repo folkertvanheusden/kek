@@ -597,6 +597,10 @@ void reg_dump(console *const cnsl, cpu *const c)
 
 void show_run_statistics(console *const cnsl, cpu *const c)
 {
+#if defined(ESP32)
+	cnsl->println(format("Free RAM (decimal bytes): %d", ESP.getFreeHeap()));
+#endif
+
 	auto stats = c->get_mips_rel_speed({ }, { });
 
 	cnsl->put_string_lf(format("Executed %zu instructions in %.2f ms of which %.2f ms idle", size_t(std::get<2>(stats)), std::get<3>(stats) / 1000., std::get<4>(stats) / 1000.));
