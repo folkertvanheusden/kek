@@ -204,29 +204,27 @@ void start_network(console *const c)
 	if (!dz11_loaded) {
 		dz11_loaded = true;
 
-		cs->println("* Adding DZ11");
-		std::vector<comm *> comm_interfaces;
+    comm_io dz11_channels(dz11_n_lines);
 
+		cs->println("* Adding DZ11");
 #if !defined(BUILD_FOR_RP2040) && defined(TTY_SERIAL_RX)
 		uint32_t bitrate = load_serial_speed_configuration();
 
 		cs->println(format("* Init TTY (on DZ11), baudrate: %d bps, RX: %d, TX: %d", bitrate, TTY_SERIAL_RX, TTY_SERIAL_TX));
-
-		comm_interfaces.push_back(new comm_esp32_hardwareserial(1, TTY_SERIAL_RX, TTY_SERIAL_TX, bitrate));
+    if (dz11_channels.set_device(0, new comm_esp32_hardwareserial(1, TTY_SERIAL_RX, TTY_SERIAL_TX, bitrate)) == false)
+				DOLOG(warning, false, "Failed to configure device");
 #endif
 
-		for(size_t i=comm_interfaces.size(); i<4; i++) {
+		for(size_t i=0; i<dz11_n_lines; i++) {
+      if (dz11_channels.is_defined(i))
+        continue;
 			int port = 1100 + i;
-			comm_interfaces.push_back(new comm_tcp_socket_server(port));
-			DOLOG(info, false, "Configuring DZ11 device for TCP socket on port %d", port);
+			DOLOG(info, false, "Configuring TCP socket on port %d for DZ11", port);
+			if (dz11_channels.set_device(i, new comm_tcp_socket_server(port)) == false)
+				DOLOG(warning, false, "Failed to configure device");
 		}
 
-		for(auto & c: comm_interfaces) {
-			if (c->begin() == false)
-				DOLOG(warning, false, "Failed to configure %s", c->get_identifier().c_str());
-		}
-
-		dz11 *dz11_ = new dz11(b, comm_interfaces);
+		dz11 *dz11_ = new dz11(b, dz11_channels);
 		dz11_->begin();
 		b->add_DZ11(dz11_);
 

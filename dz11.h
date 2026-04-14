@@ -44,13 +44,13 @@ private:
 	size_t            scanner_line_nr { 0    };
 
 	enum cstate { NOT_CONNECTED = 0, PENDING, CONNECTED };
-	std::vector<comm *> comm_interfaces;
-	std::vector<cstate> connected;
+	comm_io           io_channels;
+	std::vector<cstate>   connected;
 	enum psetting { NO_PARITY = 0, ODD_PARITY, EVEN_PARITY };
 	std::vector<psetting> parity_setting;
 
-	std::vector<char>   recv_buffers[dz11_n_lines];
-        mutable std::mutex  input_lock;
+	std::vector<char>     recv_buffers[dz11_n_lines];
+        mutable std::mutex    input_lock;
 
 	void trigger_interrupt(const bool is_tx);
 	bool is_rx_interrupt_enabled() const;
@@ -59,7 +59,7 @@ private:
 	void tx_scanner(const std::optional<int> line, const bool force = false);
 
 public:
-	dz11(bus *const b, const std::vector<comm *> & comm_interfaces);
+	dz11(bus *const b, const comm_io & io_channels);
 	virtual ~dz11();
 
 	bool begin();
@@ -72,7 +72,7 @@ public:
 	JsonDocument serialize() const;
 	static dz11 *deserialize(const JsonVariantConst j, bus *const b);
 
-	std::vector<comm *> *get_comm_interfaces() { return &comm_interfaces; }
+	comm_io * get_comm_interfaces() { return &io_channels; }
 
 	void reset() override;
 
