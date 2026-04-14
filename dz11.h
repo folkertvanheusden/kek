@@ -44,7 +44,7 @@ private:
 	size_t            scanner_line_nr { 0    };
 
 	enum cstate { NOT_CONNECTED = 0, PENDING, CONNECTED };
-	comm_io           io_channels;
+	comm_io          *const io_channels { nullptr };
 	std::vector<cstate>   connected;
 	enum psetting { NO_PARITY = 0, ODD_PARITY, EVEN_PARITY };
 	std::vector<psetting> parity_setting;
@@ -59,7 +59,7 @@ private:
 	void tx_scanner(const std::optional<int> line, const bool force = false);
 
 public:
-	dz11(bus *const b, const comm_io & io_channels);
+	dz11(bus *const b, comm_io *const io_channels);
 	virtual ~dz11();
 
 	bool begin();
@@ -72,7 +72,7 @@ public:
 	JsonDocument serialize() const;
 	static dz11 *deserialize(const JsonVariantConst j, bus *const b);
 
-	comm_io * get_comm_interfaces() { return &io_channels; }
+	comm_io * get_comm_interfaces() { return io_channels; }
 
 	void reset() override;
 

@@ -24,7 +24,7 @@
 
 const char *const dz11_register_names[] { "R0_CSR", "R2_RBUF_LPR", "R4_TCR", "R6_MSR_TDR" };
 
-dz11::dz11(bus *const b, const comm_io & io_channels):
+dz11::dz11(bus *const b, comm_io *const io_channels):
 	b(b),
 	io_channels(io_channels)
 {
@@ -45,6 +45,8 @@ dz11::~dz11()
 		th->join();
 		delete th;
 	}
+
+	delete io_channels;
 }
 
 void dz11::show_state(console *const cnsl) const
@@ -81,7 +83,7 @@ void dz11::test_port(const size_t nr, const std::string & txt) const
 {
 	DOLOG(info, false, "DZ11 test line %zu", nr);
 
-	io_channels.send_data(nr, reinterpret_cast<const uint8_t *>(txt.c_str()), txt.size());
+	io_channels->send_data(nr, reinterpret_cast<const uint8_t *>(txt.c_str()), txt.size());
 }
 
 void dz11::test_ports(const std::string & txt) const
@@ -133,7 +135,7 @@ void dz11::operator()()
 			std::unique_lock<std::mutex> lck(input_lock);
 
 			// (dis-)connected?
-			bool is_connected  = io_channels.is_connected(line_nr);
+			bool is_connected  = io_channels->is_connected(line_nr);
 			bool was_connected = connected[line_nr] != NOT_CONNECTED;
 
 			if (is_connected != was_connected) {
@@ -162,8 +164,8 @@ void dz11::operator()()
 
 			// receive data
 			bool have_data = false;
-			while(io_channels.has_data(line_nr)) {
-				uint8_t buffer = io_channels.get_byte(line_nr);
+			while(io_channels->has_data(line_nr)) {
+				uint8_t buffer = io_channels->get_byte(line_nr);
 				recv_buffers[line_nr].push_back(char(buffer));
 				have_data = true;
 			}
@@ -346,7 +348,7 @@ void dz11::write_word(const uint16_t addr, const uint16_t v)
 		int line_nr = (registers[0] >> 8) & 7;
 		if (line_nr < dz11_n_lines) {
 			char c = parity_setting[line_nr] != NO_PARITY ? v & 127 : v;  // mask off parity
-			io_channels.send_data(line_nr, reinterpret_cast<const uint8_t *>(&c), 1);
+			io_channels->send_data(line_nr, reinterpret_cast<const uint8_t *>(&c), 1);
 			TRACE("DZ11 TRANSMIT %c (%d) on line %d", c, v, line_nr);
 		}
 
@@ -376,7 +378,7 @@ void dz11::write_word(const uint16_t addr, const uint16_t v)
 JsonDocument dz11::serialize() const
 {
 	JsonDocument j;
-	j["interfaces"] = io_channels.serialize();
+	j["interfaces"] = io_channels->serialize();
 
 	for(int regnr=0; regnr<n_dz11_registers; regnr++)
 		j[format("register-%d", regnr)] = registers[regnr];
@@ -386,7 +388,7 @@ JsonDocument dz11::serialize() const
 
 dz11 * dz11::deserialize(const JsonVariantConst j, bus *const b)
 {
-	comm_io io_channels = comm_io::deserialize(j["interfaces"], b);
+	comm_io *io_channels = comm_io::deserialize(j["interfaces"], b);
 
 	dz11 *r = new dz11(b, io_channels);
 	r->begin();

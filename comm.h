@@ -53,6 +53,11 @@ struct comm_io
 		channels = std::move(input.channels);
 	}
 
+	~comm_io() {
+		for(auto & c: channels)
+			delete c;
+	}
+
 	JsonDocument serialize() const {
 		std::unique_lock<std::shared_mutex> lck(lock);
 
@@ -67,18 +72,20 @@ struct comm_io
 		return j_interfaces;
 	}
 
-	static comm_io deserialize(const JsonVariantConst j, bus *const b) {
+	static comm_io *deserialize(const JsonVariantConst j, bus *const b) {
 		std::vector<comm *> temp;
 		JsonArrayConst j_interfaces = j;
 		for(auto v: j_interfaces)
 			temp.push_back(comm::deserialize(v, b));
-		comm_io out(temp.size());
-		out.channels = temp;
+		comm_io *out = new comm_io(temp.size());
+		out->channels = temp;
 		return out;
 	}
 
 	bool set_device(const int idx, comm *const p) {
 		std::unique_lock<std::shared_mutex> lck(lock);
+		if (channels[idx])
+			delete channels[idx];
 		channels[idx] = p;
 		return p->begin();
 	}

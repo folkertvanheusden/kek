@@ -291,35 +291,27 @@ void configure_comm(console *const cnsl, comm_io *const device_list)
 			std::string temp_host = cnsl->read_line("host: ");
 			std::string temp_port = temp_host.empty() ? "" : cnsl->read_line("port: ");
 
-			if (temp_host.empty() == false && temp_port.empty() == false) {
-				device_list->unload_device(device_nr);
+			if (temp_host.empty() == false && temp_port.empty() == false)
 				rc = device_list->set_device(device_nr, new comm_tcp_socket_client(temp_host, std::stoi(temp_port)));
-			}
 		}
 		else if (ch_opt == '2') {
 			std::string temp = cnsl->read_line("port: ");
-			if (temp.empty() == false) {
-				device_list->unload_device(device_nr);
+			if (temp.empty() == false)
 				rc = device_list->set_device(device_nr, new comm_tcp_socket_server(std::stoi(temp)));
-			}
 		}
 		else if (ch_opt == '3') {
 #if IS_POSIX
 			std::string temp_dev = cnsl->read_line("device: ");
 			std::string temp_bitrate = cnsl->read_line("bitrate: ");
-			if (temp_dev.empty() == false && temp_bitrate.empty() == false) {
-				device_list->unload_device(device_nr);
+			if (temp_dev.empty() == false && temp_bitrate.empty() == false)
 				rc = device_list->set_device(device_nr, new comm_posix_tty(temp_dev, std::stoi(temp_bitrate)));
-			}
 #elif defined(ESP32)
 			std::string temp_dev = cnsl->read_line("Uart number (0...2): ");
 			std::string temp_rx  = cnsl->read_line("RX pin: ");
 			std::string temp_tx  = cnsl->read_line("TX pin: ");
 			std::string temp_bitrate = cnsl->read_line("bitrate: ");
-			if (temp_dev.empty() == false && temp_bitrate.empty() == false && temp_rx.empty() == false && temp_tx.empty() == false) {
-				device_list->unload_device(device_nr);
+			if (temp_dev.empty() == false && temp_bitrate.empty() == false && temp_rx.empty() == false && temp_tx.empty() == false)
 				rc = device_list->set_device(device_nr, new comm_esp32_hardwareserial(std::stoi(temp_dev), std::stoi(temp_rx), std::stoi(temp_tx), std::stoi(temp_bitrate)));
-			}
 #else
 			cnsl->put_string_lf("Not implemented yet on this platform");
 #endif
