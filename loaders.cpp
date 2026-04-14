@@ -241,12 +241,9 @@ void load_p11_x11(bus *const b, const std::string & file)
 
 		if (n) {
 			uint8_t byte = strtol(buffer, nullptr, 16);
-
 			b->write_byte(addr, byte);
-
-			n--;
-
 			addr++;
+			n--;
 		}
 		else {
 			std::vector<std::string> parts = split(buffer, " ");
