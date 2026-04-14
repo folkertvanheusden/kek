@@ -10,7 +10,7 @@
 #include "utils.h"
 
 
-comm_esp32_hardwareserial::comm_esp32_hardwareserial(const int uart_nr, const int rx_pin, const int tx_pin, const int bitrate) :
+comm_esp32_hardwareserial::comm_esp32_hardwareserial(const uart_port_t uart_nr, const int rx_pin, const int tx_pin, const int bitrate) :
 	uart_nr(uart_nr),
 	rx_pin(rx_pin), tx_pin(tx_pin),
 	bitrate(bitrate)
@@ -112,7 +112,7 @@ JsonDocument comm_esp32_hardwareserial::serialize() const
 
 comm_esp32_hardwareserial *comm_esp32_hardwareserial::deserialize(const JsonVariantConst j)
 {
-	comm_esp32_hardwareserial *r = new comm_esp32_hardwareserial(j["uart"].as<int>(), j["rx-pin"].as<int>(), j["tx-pin"].as<int>(), j["bitrate"].as<int>());
+	comm_esp32_hardwareserial *r = new comm_esp32_hardwareserial(uart_port_t(j["uart"].as<int>()), j["rx-pin"].as<int>(), j["tx-pin"].as<int>(), j["bitrate"].as<int>());
 	r->begin();  // TODO error checking
 
 	return r;

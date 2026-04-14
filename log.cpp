@@ -40,7 +40,7 @@ static FILE       *log_fh            = nullptr;
 static int         lf_uid            = -1;
 static int         lf_gid            = -1;
 static bool        l_timestamp       = true;
-static thread_local std::vector<char> log_buffer(64);
+char               dummy_buffer[2] { 0 };
 bool               log_trace_enabled = false;
 static console    *log_cnsl          = nullptr;
 
@@ -157,17 +157,14 @@ void dolog(const log_level_t ll, const char *fmt, ...)
 #endif
 	}
 
-	for(;;) {
-		auto begin_size = log_buffer.size();
-		va_list ap;
-		va_start(ap, fmt);
-		ssize_t needed_length = vsnprintf(log_buffer.data(), begin_size, fmt, ap);
-		va_end(ap);
-		if (needed_length <= ssize_t(begin_size))
-			break;
-
-		log_buffer.resize(begin_size * 2);
-	}
+	va_list ap;
+	va_start(ap, fmt);
+	ssize_t needed_length = vsnprintf(dummy_buffer, 1, fmt, ap);
+	va_end(ap);
+	std::vector<char> log_buffer(needed_length + 1);
+	va_start(ap, fmt);
+	vsnprintf(log_buffer.data(), log_buffer.size() - 1, fmt, ap);
+	va_end(ap);
 
 	if (l_timestamp) {
 		uint64_t now   = get_us();

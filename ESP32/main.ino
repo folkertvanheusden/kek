@@ -16,7 +16,7 @@
 #include <sys/types.h>
 #endif
 #if defined(ESP32)
-#include "esp_clk.h"
+#include "esp_clk_tree.h"
 #include "esp_heap_caps.h"
 #endif
 
@@ -63,7 +63,7 @@ console *cnsl = nullptr;
 uint16_t exec_addr = 0;
 
 #if !defined(BUILD_FOR_RP2040)
-SdFs     SD;
+SdFs     SDinstance;
 #endif
 
 std::atomic_uint32_t stop_event      { EVENT_NONE };
@@ -211,7 +211,7 @@ void start_network(console *const c)
 		uint32_t bitrate = load_serial_speed_configuration();
 
 		cs->println(format("* Init TTY (on DZ11), baudrate: %d bps, RX: %d, TX: %d", bitrate, TTY_SERIAL_RX, TTY_SERIAL_TX));
-    if (io_channels->set_device(0, new comm_esp32_hardwareserial(1, TTY_SERIAL_RX, TTY_SERIAL_TX, bitrate)) == false)
+    if (io_channels->set_device(0, new comm_esp32_hardwareserial(uart_port_t(1), TTY_SERIAL_RX, TTY_SERIAL_TX, bitrate)) == false)
 				DOLOG(warning, false, "Failed to configure device");
 #endif
 
@@ -248,7 +248,6 @@ void heap_caps_alloc_failed_hook(size_t requested_size, uint32_t caps, const cha
 {
 	printf("%s was called but failed to allocate %d bytes with 0x%X capabilities\r\n", function_name, requested_size, caps);
 }
-
 #endif
 
 void setup() {
@@ -256,18 +255,21 @@ void setup() {
 	while(!Serial)
 		delay(100);
 
+  heap_caps_check_integrity_all(true);
+
 	cs = new comm_arduino(&Serial, "Serial");
 
 	cs->println("PDP11 emulator, by Folkert van Heusden");
 	cs->println(format("GIT hash: %s", version_str));
 	cs->println("Build on: " __DATE__ " " __TIME__);
 
-	cs->println(format("# cores: %d, CPU frequency: %d Hz", SOC_CPU_CORES_NUM, esp_clk_cpu_freq()));
+  uint32_t freq = 0;
+  esp_clk_tree_src_get_freq_hz(SOC_MOD_CLK_CPU, ESP_CLK_TREE_SRC_FREQ_PRECISION_EXACT, &freq);
+	cs->println(format("# cores: %d, CPU frequency: %u Hz", SOC_CPU_CORES_NUM, freq));
 
 #if defined(ESP32)
 	heap_caps_register_failed_alloc_callback(heap_caps_alloc_failed_hook);
-#endif
-#if defined(ESP32)
+
 	set_hostname();
 #endif
 
@@ -277,7 +279,7 @@ void setup() {
 	SPI.setSCK(SCK);
 
 	for(int i=0; i<3; i++) {
-		if (SD.begin(false, SD_SCK_MHZ(10), SPI))
+		if (SDinstance.begin(false, SD_SCK_MHZ(10), SPI))
 			break;
 
 		cs->println("Cannot initialize SD card");

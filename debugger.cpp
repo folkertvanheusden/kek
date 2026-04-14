@@ -54,7 +54,7 @@ void start_network(console *const cnsl);
 #endif
 
 #if !defined(BUILD_FOR_RP2040) && !defined(linux) && !defined(_WIN32)
-extern SdFs SD;
+extern SdFs SDinstance;
 #endif
 
 #define SERIAL_CFG_FILE "dz11.json"
@@ -99,27 +99,27 @@ void start_disk(console *const cnsl)
 #endif
 
 #if defined(ESP32_WT_ETH01)
-	if (SD.begin(SdioConfig(FIFO_SDIO)))
+	if (SDinstance.begin(SdioConfig(FIFO_SDIO)))
 		disk_started = true;
 #elif defined(SHA2017)
 	cnsl->put_string_lf(format("SS  : %d", 21));
-	if (SD.begin(21, SD_SCK_MHZ(10)))
+	if (SDinstance.begin(21, SD_SCK_MHZ(10)))
 		disk_started = true;
 #elif defined(SEEED_XIAO_S3)
 	cnsl->put_string_lf(format("SS  : %d", 1));
-	if (SD.begin(1, SD_SCK_MHZ(10)))
+	if (SDinstance.begin(1, SD_SCK_MHZ(10)))
 		disk_started = true;
 #elif !defined(BUILD_FOR_RP2040)
 	cnsl->put_string_lf(format("SS  : %d", int(SS)));
-	if (SD.begin(SS, SD_SCK_MHZ(15)))
+	if (SDinstance.begin(SS, SD_SCK_MHZ(15)))
 		disk_started = true;
 #else
 #error What microcontroller is this?
 #endif
 	if (!disk_started) {
-		auto err = SD.sdErrorCode();
+		auto err = SDinstance.sdErrorCode();
 		if (err)
-			cnsl->put_string_lf(format("SDerror: 0x%x, data: 0x%x", err, SD.sdErrorData()));
+			cnsl->put_string_lf(format("SDerror: 0x%x, data: 0x%x", err, SDinstance.sdErrorData()));
 		else
 			cnsl->put_string_lf("Failed to initialize SD card");
 	}
@@ -153,7 +153,7 @@ void ls_l(console *const cnsl)
 
 	closedir(dir);
 #elif defined(BUILD_FOR_RP2040)
-	File root = SD.open("/");
+	File root = SDinstance.open("/");
 
 	for(;;) {
 		auto entry = root.openNextFile();
@@ -170,7 +170,7 @@ void ls_l(console *const cnsl)
 	}
 #elif defined(_WIN32)
 #else
-	SD.ls("/", LS_DATE | LS_SIZE | LS_R);
+	SDinstance.ls("/", LS_DATE | LS_SIZE | LS_R);
 #endif
 }
 
@@ -311,7 +311,7 @@ void configure_comm(console *const cnsl, comm_io *const device_list)
 			std::string temp_tx  = cnsl->read_line("TX pin: ");
 			std::string temp_bitrate = cnsl->read_line("bitrate: ");
 			if (temp_dev.empty() == false && temp_bitrate.empty() == false && temp_rx.empty() == false && temp_tx.empty() == false)
-				rc = device_list->set_device(device_nr, new comm_esp32_hardwareserial(std::stoi(temp_dev), std::stoi(temp_rx), std::stoi(temp_tx), std::stoi(temp_bitrate)));
+				rc = device_list->set_device(device_nr, new comm_esp32_hardwareserial(uart_port_t(std::stoi(temp_dev)), std::stoi(temp_rx), std::stoi(temp_tx), std::stoi(temp_bitrate)));
 #else
 			cnsl->put_string_lf("Not implemented yet on this platform");
 #endif
