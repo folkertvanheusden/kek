@@ -40,8 +40,7 @@ static FILE       *log_fh            = nullptr;
 static int         lf_uid            = -1;
 static int         lf_gid            = -1;
 static bool        l_timestamp       = true;
-static thread_local int   log_buffer_size = 128;
-static thread_local char *log_buffer = reinterpret_cast<char *>(malloc(log_buffer_size));
+static thread_local std::vector<char> log_buffer(64);
 bool               log_trace_enabled = false;
 static console    *log_cnsl          = nullptr;
 
@@ -159,16 +158,15 @@ void dolog(const log_level_t ll, const char *fmt, ...)
 	}
 
 	for(;;) {
+		auto begin_size = log_buffer.size();
 		va_list ap;
 		va_start(ap, fmt);
-		int needed_length = vsnprintf(log_buffer, log_buffer_size, fmt, ap);
+		ssize_t needed_length = vsnprintf(log_buffer.data(), begin_size, fmt, ap);
 		va_end(ap);
-
-		if (needed_length < log_buffer_size)
+		if (needed_length <= ssize_t(begin_size))
 			break;
 
-		log_buffer_size *= 2;
-		log_buffer = reinterpret_cast<char *>(realloc(log_buffer, log_buffer_size));
+		log_buffer.resize(begin_size * 2);
 	}
 
 	if (l_timestamp) {
@@ -191,35 +189,35 @@ void dolog(const log_level_t ll, const char *fmt, ...)
 				ll_names[ll], get_thread_name().c_str());
 
 		if (ll <= log_level_file && is_file == false)
-			send_syslog(ll, log_buffer);
+			send_syslog(ll, log_buffer.data());
 #if !defined(ESP32)
 		if (ll <= log_level_file && log_fh != nullptr)
-			fprintf(log_fh, "%s%s\n", ts_str, log_buffer);
+			fprintf(log_fh, "%s%s\n", ts_str, log_buffer.data());
 #endif
 
 		if (ll <= log_level_screen) {
 			if (log_cnsl) {
 				log_cnsl->put_string(ts_str);
-				log_cnsl->put_string_lf(log_buffer);
+				log_cnsl->put_string_lf(log_buffer.data());
 			}
 			else {
-				printf("%s%s\r\n", ts_str, log_buffer);
+				printf("%s%s\r\n", ts_str, log_buffer.data());
 			}
 		}
 	}
 	else {
 		if (ll <= log_level_file && is_file == false)
-			send_syslog(ll, log_buffer);
+			send_syslog(ll, log_buffer.data());
 #if !defined(ESP32)
 		if (ll <= log_level_file && log_fh != nullptr)
-			fprintf(log_fh, "%s\n", log_buffer);
+			fprintf(log_fh, "%s\n", log_buffer.data());
 #endif
 
 		if (ll <= log_level_screen) {
 			if (log_cnsl)
-				log_cnsl->put_string_lf(log_buffer);
+				log_cnsl->put_string_lf(log_buffer.data());
 			else
-				printf("%s\r\n", log_buffer);
+				printf("%s\r\n", log_buffer.data());
 		}
 	}
 #endif

@@ -541,26 +541,25 @@ int main(int argc, char *argv[])
 	cnsl->begin();
 
 	//// DZ11
+	comm_io *io_channels = new comm_io(dz11_n_lines);
 	constexpr const int bitrate = 38400;
 
-	std::vector<comm *> comm_interfaces;
 	if (dz11_device.has_value()) {
 		DOLOG(info, false, "Configuring DZ11 device for TTY on %s (%d bps)", dz11_device.value().c_str(), bitrate);
-		comm_interfaces.push_back(new comm_posix_tty(dz11_device.value(), bitrate));
+		if (io_channels->set_device(0, new comm_posix_tty(dz11_device.value(), bitrate)) == false)
+			DOLOG(warning, false, "Failed to configure device");
 	}
 
-	for(size_t i=comm_interfaces.size(); i<4; i++) {
+	for(size_t i=0; i<dz11_n_lines; i++) {
+		if (io_channels->is_defined(i))
+			continue;
 		int port = 1100 + i;
-		comm_interfaces.push_back(new comm_tcp_socket_server(port));
 		DOLOG(info, false, "Configuring DZ11 device for TCP socket on port %d", port);
+		if (io_channels->set_device(i, new comm_tcp_socket_server(port)) == false)
+			DOLOG(warning, false, "Failed to configure device");
 	}
 
-	for(auto & c: comm_interfaces) {
-		if (c->begin() == false)
-			DOLOG(warning, false, "Failed to configure %s", c->get_identifier().c_str());
-	}
-
-	dz11 *dz11_ = new dz11(b, comm_interfaces);
+	dz11 *dz11_ = new dz11(b, io_channels);
 	dz11_->begin();
 	b->add_DZ11(dz11_);
 	//

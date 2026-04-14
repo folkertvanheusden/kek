@@ -22,18 +22,14 @@
 
 #define ESP32_UART UART_NUM_1
 
-// this line is reserved for a serial port
-constexpr const int serial_line = 7;
-
 const char *const dz11_register_names[] { "R0_CSR", "R2_RBUF_LPR", "R4_TCR", "R6_MSR_TDR" };
 
-dz11::dz11(bus *const b, const std::vector<comm *> & comm_interfaces):
+dz11::dz11(bus *const b, comm_io *const io_channels):
 	b(b),
-	comm_interfaces(comm_interfaces)
+	io_channels(io_channels)
 {
-	size_t n_interfaces = comm_interfaces.size();
-	connected     .resize(n_interfaces);
-	parity_setting.resize(n_interfaces);
+	connected     .resize(dz11_n_lines);
+	parity_setting.resize(dz11_n_lines);
 
 	reset();
 	registers[0] = 0x8000;
@@ -50,15 +46,12 @@ dz11::~dz11()
 		delete th;
 	}
 
-	for(auto & c : comm_interfaces) {
-		DOLOG(debug, false, "Stopping %s", c->get_identifier().c_str());
-		delete c;
-	}
+	delete io_channels;
 }
 
 void dz11::show_state(console *const cnsl) const
 {
-	for(size_t i=0; i<comm_interfaces.size(); i++) {
+	for(size_t i=0; i<dz11_n_lines; i++) {
 		std::unique_lock<std::mutex> lck(input_lock);
 		std::string out = format(" line %zu: %zu characters in buffer, ", i + 1, recv_buffers[i].size());
 		if (connected[i] == NOT_CONNECTED)
@@ -90,12 +83,12 @@ void dz11::test_port(const size_t nr, const std::string & txt) const
 {
 	DOLOG(info, false, "DZ11 test line %zu", nr);
 
-	comm_interfaces.at(nr)->send_data(reinterpret_cast<const uint8_t *>(txt.c_str()), txt.size());
+	io_channels->send_data(nr, reinterpret_cast<const uint8_t *>(txt.c_str()), txt.size());
 }
 
 void dz11::test_ports(const std::string & txt) const
 {
-	for(size_t i=0; i<comm_interfaces.size(); i++)
+	for(int i=0; i<dz11_n_lines; i++)
 		test_port(i, txt);
 }
 
@@ -138,11 +131,11 @@ void dz11::operator()()
 	while(!stop_flag) {
 		myusleep(10000);  // TODO replace polling
 
-		for(size_t line_nr=0; line_nr<comm_interfaces.size(); line_nr++) {
+		for(int line_nr=0; line_nr<dz11_n_lines; line_nr++) {
 			std::unique_lock<std::mutex> lck(input_lock);
 
 			// (dis-)connected?
-			bool is_connected  = comm_interfaces.at(line_nr)->is_connected();
+			bool is_connected  = io_channels->is_connected(line_nr);
 			bool was_connected = connected[line_nr] != NOT_CONNECTED;
 
 			if (is_connected != was_connected) {
@@ -164,15 +157,15 @@ void dz11::operator()()
 				}
 				// NO INTERRUPT
 				// "The DZ11
-				// data set control logic does not interrupt the POP-II processor when a carrier or ring signal changes
+				// data set control logic does not interrupt the PDP-II processor when a carrier or ring signal changes
 				// state. The program should periodically sample these registers to determine the current status. Sampling at a high rate is not necessary."
 				// (3.3.8)
 			}
 
 			// receive data
 			bool have_data = false;
-			while(comm_interfaces.at(line_nr)->has_data()) {
-				uint8_t buffer = comm_interfaces.at(line_nr)->get_byte();
+			while(io_channels->has_data(line_nr)) {
+				uint8_t buffer = io_channels->get_byte(line_nr);
 				recv_buffers[line_nr].push_back(char(buffer));
 				have_data = true;
 			}
@@ -268,8 +261,8 @@ uint16_t dz11::read_word(const uint16_t addr)
 		vtemp = registers[reg] & 0x00ff;  // keep ring indicator
 
 		// add carrier detected bits (when DTR is set)
-		for(size_t i=0; i<dz11_n_lines; i++) {
-			if (i < comm_interfaces.size() && connected[i])
+		for(int i=0; i<dz11_n_lines; i++) {
+			if (i < dz11_n_lines && connected[i])
 				vtemp |= 1 << (8 + i);
 		}
 
@@ -343,8 +336,8 @@ void dz11::write_word(const uint16_t addr, const uint16_t v)
 		tx_scanner({ });
 	}
 	else if (addr == DZ11_LPR) {
-		size_t line_nr = v & 7;
-		if (line_nr < parity_setting.size()) {
+		int line_nr = v & 7;
+		if (line_nr < dz11_n_lines) {
 			if (v & 64)  // parity enabled?
 				parity_setting[line_nr] = v & 128 ? ODD_PARITY : EVEN_PARITY;
 			else
@@ -352,17 +345,17 @@ void dz11::write_word(const uint16_t addr, const uint16_t v)
 		}
 	}
 	else if (addr == DZ11_TDR) {
-		size_t line_nr = (registers[0] >> 8) & 7;
-		if (line_nr < comm_interfaces.size()) {
+		int line_nr = (registers[0] >> 8) & 7;
+		if (line_nr < dz11_n_lines) {
 			char c = parity_setting[line_nr] != NO_PARITY ? v & 127 : v;  // mask off parity
-			comm_interfaces.at(line_nr)->send_data(reinterpret_cast<const uint8_t *>(&c), 1);
+			io_channels->send_data(line_nr, reinterpret_cast<const uint8_t *>(&c), 1);
 			TRACE("DZ11 TRANSMIT %c (%d) on line %d", c, v, line_nr);
 		}
 
 		tx_scanner(line_nr);
 	}
 	else if (addr == DZ11_TCR) {
-		for(size_t i=0; i<connected.size(); i++) {
+		for(size_t i=0; i<dz11_n_lines; i++) {
 			uint16_t mask = 1 << i;
 			if (v & mask) {
 				if (connected[i] == PENDING)
@@ -385,12 +378,7 @@ void dz11::write_word(const uint16_t addr, const uint16_t v)
 JsonDocument dz11::serialize() const
 {
 	JsonDocument j;
-
-	JsonDocument j_interfaces;
-	JsonArray    j_interfaces_work = j_interfaces.to<JsonArray>();
-	for(auto & c: comm_interfaces)
-		j_interfaces_work.add(c->serialize());
-	j["interfaces"] = j_interfaces;
+	j["interfaces"] = io_channels->serialize();
 
 	for(int regnr=0; regnr<n_dz11_registers; regnr++)
 		j[format("register-%d", regnr)] = registers[regnr];
@@ -398,15 +386,11 @@ JsonDocument dz11::serialize() const
 	return j;
 }
 
-dz11 *dz11::deserialize(const JsonVariantConst j, bus *const b)
+dz11 * dz11::deserialize(const JsonVariantConst j, bus *const b)
 {
-	std::vector<comm *> interfaces;
+	comm_io *io_channels = comm_io::deserialize(j["interfaces"], b);
 
-	JsonArrayConst j_interfaces = j["interfaces"];
-	for(auto v: j_interfaces)
-		interfaces.push_back(comm::deserialize(v, b));
-
-	dz11 *r = new dz11(b, interfaces);
+	dz11 *r = new dz11(b, io_channels);
 	r->begin();
 
 	for(int regnr=0; regnr<n_dz11_registers; regnr++)
@@ -437,9 +421,12 @@ TEST(dz11, dz11tests) {
 	b.add_cpu(c);
 	c->setPSW_spl(7);  // allow IRQs from DZ11 (level 5)
 
+	comm_io io;
 	comm_unittest_helper *tty1 = new comm_unittest_helper();
 	comm_unittest_helper *tty2 = new comm_unittest_helper();
-	dz11 d(&b, { tty1, tty2 });
+	io.set_device(0, tty1);
+	io.set_device(1, tty2);
+	dz11 d(&b, &io);
 
 	// object init test
 	EXPECT_EQ(d.begin(), true);
