@@ -96,19 +96,25 @@ void start_disk(console *const cnsl)
 	cnsl->put_string_lf(format("MISO: %d", int(MISO)));
 	cnsl->put_string_lf(format("MOSI: %d", int(MOSI)));
 	cnsl->put_string_lf(format("SCK : %d", int(SCK )));
-	cnsl->put_string_lf(format("SS  : %d", int(SS  )));
-
 #endif
 
 #if defined(ESP32_WT_ETH01)
 	if (SD.begin(SdioConfig(FIFO_SDIO)))
 		disk_started = true;
 #elif defined(SHA2017)
+	cnsl->put_string_lf(format("SS  : %d", 21));
 	if (SD.begin(21, SD_SCK_MHZ(10)))
 		disk_started = true;
+#elif defined(SEEED_XIAO_S3)
+	cnsl->put_string_lf(format("SS  : %d", 1));
+	if (SD.begin(1, SD_SCK_MHZ(10)))
+		disk_started = true;
 #elif !defined(BUILD_FOR_RP2040)
+	cnsl->put_string_lf(format("SS  : %d", int(SS)));
 	if (SD.begin(SS, SD_SCK_MHZ(15)))
 		disk_started = true;
+#else
+#error What microcontroller is this?
 #endif
 	if (!disk_started) {
 		auto err = SD.sdErrorCode();
