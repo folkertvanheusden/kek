@@ -163,7 +163,7 @@ void dolog(const log_level_t ll, const char *fmt, ...)
 	va_end(ap);
 	std::vector<char> log_buffer(needed_length + 1);
 	va_start(ap, fmt);
-	vsnprintf(log_buffer.data(), log_buffer.size() - 1, fmt, ap);
+	vsnprintf(log_buffer.data(), log_buffer.size(), fmt, ap);
 	va_end(ap);
 
 	if (l_timestamp) {

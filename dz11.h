@@ -17,9 +17,13 @@
 
 class bus;
 
+#if defined(POSIX)
 // 8 interfaces
 constexpr const int dz11_n_lines = 8;
-constexpr const int n_dz11_registers = 7;
+#else
+constexpr const int dz11_n_lines = 4;
+#endif
+constexpr const int n_dz11_registers = 6;
 
 #define DZ11_INTERRUPT_VECTOR_RX 0310
 #define DZ11_INTERRUPT_VECTOR_TX 0314
