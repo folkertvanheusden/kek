@@ -254,6 +254,9 @@ void setup() {
 	Serial.begin(115200);
 	while(!Serial)
 		delay(100);
+#if defined(ESP32)
+  esp_log_level_set("*", ESP_LOG_INFO);
+#endif
 
   heap_caps_check_integrity_all(true);
 
