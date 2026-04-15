@@ -421,7 +421,7 @@ TEST(dz11, dz11tests) {
 	b.add_cpu(c);
 	c->setPSW_spl(7);  // allow IRQs from DZ11 (level 5)
 
-	comm_io io;
+	comm_io io(8);
 	comm_unittest_helper *tty1 = new comm_unittest_helper();
 	comm_unittest_helper *tty2 = new comm_unittest_helper();
 	io.set_device(0, tty1);
