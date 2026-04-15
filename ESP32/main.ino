@@ -18,6 +18,7 @@
 #if defined(ESP32)
 #include "esp_clk_tree.h"
 #include "esp_heap_caps.h"
+#include "esp_pthread.h"
 #endif
 
 #include "comm.h"
@@ -316,6 +317,12 @@ void setup() {
 			n_pages = min((free_psram - leave_unallocated) / 8192, uint32_t(512));  // start size is 2 MB max (with 1 MB, UNIX 7 behaves strangely)
 			cs->println(format("Free PSRAM: %d decimal bytes (or %d pages (see 'ramsize' in the debugger))", free_psram, n_pages));
 		}
+
+    esp_pthread_cfg_t config = esp_pthread_get_default_config();
+    config.stack_alloc_caps = MALLOC_CAP_8BIT | MALLOC_CAP_SPIRAM;
+    config.stack_size = 16384;
+    if (auto rc = esp_pthread_set_cfg(&config); rc != ESP_OK)
+      cs->println(format("esp_pthread_set_cfg(SPI_RAM) failed: %d", rc));
 	}
 #endif
 
