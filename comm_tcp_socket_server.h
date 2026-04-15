@@ -22,6 +22,7 @@ class comm_tcp_socket_server: public comm
 {
 private:
 	const int        port      { -1             };
+	const bool       setup_telnet { false       };
 	std::atomic_bool stop_flag { false          };
 	SOCKET           fd        { INVALID_SOCKET };
 	SOCKET           cfd       { INVALID_SOCKET };
@@ -29,7 +30,7 @@ private:
 	std::thread     *th        { nullptr        };
 
 public:
-	comm_tcp_socket_server(const int port);
+	comm_tcp_socket_server(const int port, const bool setup_telnet);
 	virtual ~comm_tcp_socket_server();
 
 	bool    begin() override;

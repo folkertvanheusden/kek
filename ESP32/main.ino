@@ -221,7 +221,7 @@ void start_network(console *const c)
         continue;
 			int port = 1100 + i;
 			DOLOG(info, false, "Configuring TCP socket on port %d for DZ11", port);
-			if (io_channels->set_device(i, new comm_tcp_socket_server(port)) == false)
+			if (io_channels->set_device(i, new comm_tcp_socket_server(port, true)) == false)
 				DOLOG(warning, false, "Failed to configure device");
 		}
 

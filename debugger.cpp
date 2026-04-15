@@ -296,8 +296,10 @@ void configure_comm(console *const cnsl, comm_io *const device_list)
 		}
 		else if (ch_opt == '2') {
 			std::string temp = cnsl->read_line("port: ");
-			if (temp.empty() == false)
-				rc = device_list->set_device(device_nr, new comm_tcp_socket_server(std::stoi(temp)));
+			if (temp.empty() == false) {
+				int ch_dev = wait_for_key("Initialize telnet session?", cnsl, { 'y', 'n' });
+				rc = device_list->set_device(device_nr, new comm_tcp_socket_server(std::stoi(temp), ch_dev == 'y'));
+			}
 		}
 		else if (ch_opt == '3') {
 #if IS_POSIX

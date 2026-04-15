@@ -268,6 +268,7 @@ void help()
 	printf("-J x     run validation suite x against the CPU emulation\n");
 	printf("-M       log metrics\n");
 	printf("-1 x     use x as device for DZ-11 (instead of 8 tcp-sockets starting at port 1100)\n");
+	printf("-2       set DZ-11 tcp-socket sessions to initialize as a telnet session\n");
 }
 
 int main(int argc, char *argv[])
@@ -310,9 +311,10 @@ int main(int argc, char *argv[])
 	std::string  deserialize;
 
 	std::optional<std::string> dz11_device;
+	bool         dz11_setup_telnet = false;
 
 	int  opt          = -1;
-	while((opt = getopt(argc, argv, "hD:MT:Br:R:p:ndf:tL:bl:s:Q:N:J:XS:P1:")) != -1)
+	while((opt = getopt(argc, argv, "hD:MT:Br:R:p:ndf:tL:bl:s:Q:N:J:XS:P1:2")) != -1)
 	{
 		switch(opt) {
 			case 'h':
@@ -325,6 +327,10 @@ int main(int argc, char *argv[])
 
 			case '1':
 				dz11_device = optarg;
+				break;
+
+			case '2':
+				dz11_setup_telnet = true;
 				break;
 
 			case 'D':
@@ -555,7 +561,7 @@ int main(int argc, char *argv[])
 			continue;
 		int port = 1100 + i;
 		DOLOG(info, false, "Configuring DZ11 device for TCP socket on port %d", port);
-		if (io_channels->set_device(i, new comm_tcp_socket_server(port)) == false)
+		if (io_channels->set_device(i, new comm_tcp_socket_server(port, dz11_setup_telnet)) == false)
 			DOLOG(warning, false, "Failed to configure device");
 	}
 
