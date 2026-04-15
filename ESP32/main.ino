@@ -310,7 +310,7 @@ void setup() {
 
 		uint32_t free_psram = ESP.getFreePsram();
 		if (free_psram > leave_unallocated) {
-			n_pages = min((free_psram - leave_unallocated) / 8192, uint32_t(256));  // start size is 2 MB max (with 1 MB, UNIX 7 behaves strangely)
+			n_pages = min((free_psram - leave_unallocated) / 8192, uint32_t(512));  // start size is 2 MB max (with 1 MB, UNIX 7 behaves strangely)
 			cs->println(format("Free PSRAM: %d decimal bytes (or %d pages (see 'ramsize' in the debugger))", free_psram, n_pages));
 		}
 	}
