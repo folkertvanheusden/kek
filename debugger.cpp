@@ -589,6 +589,7 @@ void show_run_statistics(console *const cnsl, cpu *const c)
 {
 #if defined(ESP32)
 	cnsl->put_string_lf(format("Free RAM (decimal bytes): %d", ESP.getFreeHeap()));
+	cnsl->put_string_lf(format("Free SPI-RAM: %d", heap_caps_get_free_size(MALLOC_CAP_SPIRAM)));
 #endif
 
 	auto stats = c->get_mips_rel_speed({ }, { });
