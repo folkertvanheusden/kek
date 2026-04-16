@@ -1184,6 +1184,9 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		return true;
 	}
 #endif
+	else if (parts[0] == "getinthz") {
+		cnsl->put_string_lf(format("kw11 Hz: %d", b->getKW11_L()->get_interrupt_frequency()));
+	}
 	else if (parts[0] == "setinthz" && parts.size() == 2) {
 		set_kw11_l_interrupt_freq(cnsl, b, std::stoi(parts.at(1)));
 		return true;
@@ -1333,6 +1336,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			"getmem ...    - get memory (a=), in octal, one byte",
 			"toggle ...    - set switch (s=, 0...15 (decimal)) of the front panel to state (t=, 0 or 1)",
 			"setinthz x    - set KW11-L interrupt frequency (Hz)",
+			"intwallclock x- use real 50 Hz (0) or cycle-based (1, roughly based)",
 			"cls           - clear screen",
 			"dir           - list files",
 			"bic x         - run BIC/LDA file",
