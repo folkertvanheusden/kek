@@ -269,6 +269,7 @@ void help()
 	printf("-M       log metrics\n");
 	printf("-1 x     use x as device for DZ-11 (instead of 8 tcp-sockets starting at port 1100)\n");
 	printf("-2       set DZ-11 tcp-socket sessions to initialize as a telnet session\n");
+	printf("-Q x     use x as port offset instead of 1100\n");
 }
 
 int main(int argc, char *argv[])
@@ -298,8 +299,6 @@ int main(int argc, char *argv[])
 
 	uint16_t     console_switches = 0;
 
-	std::string  test;
-
 	bool         disk_snapshots = false;
 
 	std::optional<int> set_ram_size;
@@ -313,13 +312,19 @@ int main(int argc, char *argv[])
 	std::optional<std::string> dz11_device;
 	bool         dz11_setup_telnet = false;
 
+	int          tcp_port_offset = 1100;
+
 	int  opt          = -1;
-	while((opt = getopt(argc, argv, "hD:MT:Br:R:p:ndf:tL:bl:s:Q:N:J:XS:P1:2")) != -1)
+	while((opt = getopt(argc, argv, "hD:MT:Br:R:p:ndf:tL:bl:s:Q:N:J:XS:P1:2Q:")) != -1)
 	{
 		switch(opt) {
 			case 'h':
 				help();
 				return 1;
+
+			case 'Q':
+				tcp_port_offset = atoi(optarg);
+				break;
 
 			case 'f':
 				debugger_init = optarg;
@@ -347,10 +352,6 @@ int main(int argc, char *argv[])
 
 			case 'J':
 				validate_json = optarg;
-				break;
-
-			case 'Q':
-				test = optarg;
 				break;
 
 			case 's': {
@@ -559,7 +560,7 @@ int main(int argc, char *argv[])
 	for(size_t i=0; i<dz11_n_lines; i++) {
 		if (io_channels->is_defined(i))
 			continue;
-		int port = 1100 + i;
+		int port = tcp_port_offset + i;
 		DOLOG(info, false, "Configuring DZ11 device for TCP socket on port %d", port);
 		if (io_channels->set_device(i, new comm_tcp_socket_server(port, dz11_setup_telnet)) == false)
 			DOLOG(warning, false, "Failed to configure device");
@@ -604,9 +605,6 @@ int main(int argc, char *argv[])
 	sigaction(SIGINT , &sa, nullptr);
 #endif
 
-	if (test.empty() == false)
-		load_p11_x11(b, test);
-
 	std::thread *metrics_thread = nullptr;
 	if (metrics)
 		metrics_thread = new std::thread(get_metrics, b->getCpu());
@@ -617,7 +615,7 @@ int main(int argc, char *argv[])
 
 	if (is_bic)
 		run_bic(cnsl, b, &event, bic_start.value());
-	else if (run_debugger || (bootloader == BL_NONE && test.empty() && tape.empty()))
+	else if (run_debugger || (bootloader == BL_NONE && tape.empty()))
 		debugger(cnsl, b, &event, debugger_init);
 	else {
 		b->getCpu()->emulation_start();  // for statistics
