@@ -269,6 +269,7 @@ void help()
 	printf("-J x     run validation suite x against the CPU emulation\n");
 	printf("-M       log metrics\n");
 	printf("-1 x     use x as device for DZ-11 (instead of 8 tcp-sockets starting at port 1100)\n");
+	printf("-Q x     use x as port offset instead of 1100\n");
 }
 
 int main(int argc, char *argv[])
@@ -314,13 +315,19 @@ int main(int argc, char *argv[])
 
 	std::optional<std::pair<uint32_t, uint16_t> > rom;
 
+	int          tcp_port_offset = 1100;
+
 	int  opt          = -1;
-	while((opt = getopt(argc, argv, "hD:MT:Br:R:p:ndf:tL:bl:s:Q:N:J:XS:P1:m:")) != -1)
+	while((opt = getopt(argc, argv, "hD:MT:Br:R:p:ndf:tL:bl:s:Q:N:J:XS:P1:m:Q:")) != -1)
 	{
 		switch(opt) {
 			case 'h':
 				help();
 				return 1;
+
+			case 'Q':
+				tcp_port_offset = atoi(optarg);
+				break;
 
 			case 'f':
 				debugger_init = optarg;
@@ -566,7 +573,7 @@ int main(int argc, char *argv[])
 	}
 
 	for(size_t i=comm_interfaces.size(); i<4; i++) {
-		int port = 1200 + i;
+		int port = tcp_port_offset + i;
 		comm_interfaces.push_back(new comm_tcp_socket_server(port));
 		DOLOG(info, false, "Configuring DZ11 device for TCP socket on port %d", port);
 	}
