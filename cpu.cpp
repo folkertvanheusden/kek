@@ -1850,10 +1850,11 @@ void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 			// make sure the trap vector is retrieved from kernel space
 			psw &= 037777;  // mask off 14/15 to make it into kernel-space
 
-			setPC(b->read_word(vector + 0, d_space));
+			auto space = b->getMMU()->get_use_data_space(0) ? d_space : i_space;
+			setPC(b->read_word(vector + 0, space));
 
 			// switch to kernel mode & update 'previous mode'
-			uint16_t new_psw = b->read_word(vector + 2, d_space) & 0147777;  // mask off old 'previous mode'
+			uint16_t new_psw = b->read_word(vector + 2, space) & 0147777;  // mask off old 'previous mode'
 			if (new_ipl != -1)
 				new_psw = (new_psw & ~0xe0) | (new_ipl << 5);
 			new_psw |= (before_psw >> 2) & 030000; // apply new 'previous mode'
