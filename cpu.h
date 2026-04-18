@@ -41,8 +41,9 @@ typedef struct {
 	// for MMR1 register
 	std::optional<mmr1_delta_t> mmr1_update;
 
-	std::optional<uint16_t> addr;
-	std::optional<int>      reg;
+	bool           is_addr;
+	uint16_t       addr;
+	int            reg;
 
 	std::optional<uint16_t> value;
 } gam_rc_t;
