@@ -468,8 +468,8 @@ void cpu::unqueue_interrupt(const uint8_t level, const uint8_t vector)
 
 void cpu::addToMMR1(const gam_rc_t & g)
 {
-	if (mmu_->isMMR1Locked() == false && g.mmr1_update.has_value() == true) {
-		auto & update = g.mmr1_update.value();
+	if (mmu_->isMMR1Locked() == false && g.mmr1_update.delta) {
+		auto & update = g.mmr1_update;
 		TRACE("MMR1: add %d to register R%d", update.delta, update.reg);
 		assert(update.delta);
 		mmu_->addToMMR1(update.delta, update.reg);

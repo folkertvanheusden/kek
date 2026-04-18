@@ -40,7 +40,7 @@ typedef struct {
 	int            access_mode;
 
 	// for MMR1 register
-	std::optional<mmr1_delta_t> mmr1_update;
+	mmr1_delta_t   mmr1_update;
 
 	bool           is_addr;
 	union {
