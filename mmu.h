@@ -101,7 +101,6 @@ public:
 	uint16_t getMMR1() const { return MMR1; }
 	uint16_t getMMR2() const { return MMR2; }
 	uint16_t getMMR3() const { return MMR3; }
-	uint16_t getMMR(int nr) const { const uint16_t *const mmrs[] { &MMR0, &MMR1, &MMR2, &MMR3 }; return *mmrs[nr]; }
 
 	void     setMMR0_as_is(uint16_t value);
 	void     setMMR0(const uint16_t value);
@@ -109,11 +108,11 @@ public:
 	void     setMMR2(const uint16_t value);
 	void     setMMR3(const uint16_t value);
 
-	bool     isMMR1Locked() const { return !!(MMR0 & 0160000); }
+	bool     isMMR1Locked() const { return MMR0 & 0160000; }
 	void     clearMMR1();
 	void     addToMMR1(const int8_t delta, const uint8_t reg);
 
-	void     setMMR0Bit(const int bit);
+	void     setMMR0Bit  (const int bit);
 	void     clearMMR0Bit(const int bit);
 
 	void     trap_if_odd(const uint16_t a, const int run_mode, const d_i_space_t space, const bool is_write);
