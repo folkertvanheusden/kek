@@ -2472,7 +2472,7 @@ bool cpu::step()
 {
 	it_is_a_trap = false;
 
-	if (any_queued_interrupts)
+	if (any_queued_interrupts.load(std::memory_order_relaxed))
 		execute_any_pending_interrupt();
 
 	instruction_count++;

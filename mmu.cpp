@@ -8,6 +8,8 @@
 #include "utils.h"
 
 
+constexpr const int di_ena_mask[4] = { 4, 2, 0, 1 };
+
 mmu::mmu()
 {
 	reset();
@@ -148,8 +150,6 @@ void mmu::setMMR3(const uint16_t value)
 
 bool mmu::get_use_data_space(const int run_mode) const
 {
-	constexpr const int di_ena_mask[4] = { 4, 2, 0, 1 };
-
 	return MMR3 & di_ena_mask[run_mode];
 }
 
@@ -419,7 +419,7 @@ void mmu::verify_access_valid(const uint32_t m_offset, const int page_index, con
 void mmu::verify_page_length(const uint16_t virt_addr, const int page_index, const bool is_write)
 {
 	uint16_t pdr_len    = get_pdr_len(page_index);
-	if (pdr_len == 127)
+	if (pdr_len == 127) [[likely]]
 		return;
 
 	uint16_t pdr_cmp   = (virt_addr >> 6) & 127;
