@@ -1838,10 +1838,8 @@ void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 
 				set_register(6, 04);
 			}
-			else {
-				before_psw = getPSW();
-				before_pc  = getPC();
-			}
+			before_psw = getPSW();
+			before_pc  = getPC();
 
 			if (debug_mode)
 				add_to_stack_trace(instruction_start);
