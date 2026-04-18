@@ -47,19 +47,22 @@ private:
 	// 8 pages, D/I, 3 modes and 1 invalid mode
 	page_t   pages[4][2][8];
 
-	uint16_t MMR0   { 0 };
-	uint16_t MMR1   { 0 };
-	uint16_t MMR2   { 0 };
-	uint16_t MMR3   { 0 };
-	uint16_t CPUERR { 0 };
-	uint16_t PIR    { 0 };
-	uint16_t CSR    { 0 };
+	uint16_t MMR0    { 0 };
+	uint16_t MMR1    { 0 };
+	uint16_t MMR2    { 0 };
+	uint16_t MMR3    { 0 };
+	uint16_t CPUERR  { 0 };
+	uint16_t PIR     { 0 };
+	uint16_t CSR     { 0 };
+	uint32_t io_base { 0 };
 
 	memory  *m      { nullptr };
 	cpu     *c      { nullptr };
 
 	JsonDocument add_par_pdr(const int run_mode, const bool is_d) const;
 	void set_par_pdr(const JsonVariantConst j_in, const int run_mode, const bool is_d);
+
+	void update_io_base() { io_base = is_enabled() ? (getMMR3() & 16 ? 017760000 : 0760000) : 0160000; }
 
 	void verify_page_access (const uint16_t virt_addr, const int run_mode, const bool d, const int apf, const bool is_write);
 	void verify_access_valid(const uint32_t m_offset,  const int run_mode, const bool d, const int apf, const bool is_io, const bool is_write);
@@ -91,7 +94,7 @@ public:
 	int      get_pdr_direction  (const int run_mode, const bool d, const int apf) { return pages[run_mode][d][apf].pdr & 8; }
 	uint32_t get_physical_memory_offset(const int run_mode, const bool d, const int apf) const { return pages[run_mode][d][apf].par * 64; }
 	bool     get_use_data_space(const int run_mode) const;
-	uint32_t get_io_base() const { return is_enabled() ? (getMMR3() & 16 ? 017760000 : 0760000) : 0160000; }
+	uint32_t get_io_base() const { return io_base; }
 
 	memory_addresses_t            calculate_physical_address(const int run_mode, const uint16_t a) const;
 	std::pair<trap_action_t, int> get_trap_action(const int run_mode, const bool d, const int apf, const bool is_write);

@@ -30,6 +30,7 @@ void mmu::reset()
 	memset(pages, 0x00, sizeof pages);
 
 	CPUERR = MMR0 = MMR1 = MMR2 = MMR3 = PIR = CSR = 0;
+	update_io_base();
 }
 
 void mmu::dump_par_pdr(console *const cnsl, const int run_mode, const bool d, const std::string & name, const int state, const std::optional<int> & selection) const
@@ -93,6 +94,7 @@ uint16_t mmu::read_par(const uint32_t a, const int run_mode)
 void mmu::setMMR0_as_is(uint16_t value)
 {
 	MMR0 = value;
+	update_io_base();
 }
 
 void mmu::setMMR0(uint16_t value)
@@ -108,6 +110,7 @@ void mmu::setMMR0(uint16_t value)
 	}
 
 	MMR0 = value;
+	update_io_base();
 }
 
 void mmu::setMMR0Bit(const int bit)
@@ -116,6 +119,7 @@ void mmu::setMMR0Bit(const int bit)
 	assert(bit < 16 && bit >= 0);
 
 	MMR0 |= 1 << bit;
+	update_io_base();
 }
 
 void mmu::clearMMR0Bit(const int bit)
@@ -124,6 +128,7 @@ void mmu::clearMMR0Bit(const int bit)
 	assert(bit < 16 && bit >= 0);
 
 	MMR0 &= ~(1 << bit);
+	update_io_base();
 }
 
 void mmu::setMMR1(const uint16_t value) 
@@ -139,6 +144,7 @@ void mmu::setMMR2(const uint16_t value)
 void mmu::setMMR3(const uint16_t value) 
 {
 	MMR3 = value;
+	update_io_base();
 }
 
 bool mmu::get_use_data_space(const int run_mode) const
@@ -307,7 +313,6 @@ memory_addresses_t mmu::calculate_physical_address(const int run_mode, const uin
 	if (get_use_data_space(run_mode) == false)
 		physical_data = physical_instruction;
 
-	uint32_t io_base                     = get_io_base();
 	bool     physical_instruction_is_psw = (physical_instruction - io_base + 0160000) == ADDR_PSW;
 	bool     physical_data_is_psw        = (physical_data        - io_base + 0160000) == ADDR_PSW;
 
@@ -472,7 +477,6 @@ uint32_t mmu::calculate_physical_address(const int run_mode, const uint16_t a, c
 		verify_page_access(a, run_mode, d, apf, is_write);
 
 		// e.g. ram or i/o, not unmapped
-		uint32_t io_base  = get_io_base();
 		bool     is_io    = m_offset >= io_base;
 
 		verify_access_valid(m_offset, run_mode, d, apf, is_io, is_write);
@@ -555,6 +559,7 @@ mmu *mmu::deserialize(const JsonVariantConst j, memory *const mem, cpu *const c)
         m->MMR1   = j["MMR1"];
         m->MMR2   = j["MMR2"];
         m->MMR3   = j["MMR3"];
+	m->update_io_base();
         m->CPUERR = j["CPUERR"];
         m->PIR    = j["PIR"];
         m->CSR    = j["CSR"];
