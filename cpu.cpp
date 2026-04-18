@@ -1419,7 +1419,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						auto a = getGAMAddress(dst_mode, dst_reg, wm_word);
 						addToMMR1(a);
 
-						mmu_->mmudebug(a.addr);
+						// mmu_->mmudebug(a.addr);
 
 						a.mode_selection = rm_prev;
 						a.space          = word_mode == wm_byte ? d_space : i_space;
