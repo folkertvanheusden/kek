@@ -545,8 +545,10 @@ bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 	bool          is_data  = space == d_space;
 	bool          d        = is_data && mmu_->get_use_data_space(run_mode);
 
-	if (mmu_->is_enabled() && (addr_in & 1) == 0 /* TODO remove this? */ && addr_in != ADDR_MMR0)
-		mmu_->set_page_written_to(run_mode, d, apf);
+	if (mmu_->is_enabled() && (addr_in & 1) == 0 /* TODO remove this? */ && addr_in != ADDR_MMR0) {
+		int page_index = mmu_->calc_par_pdr_index(run_mode, d, apf);
+		mmu_->set_page_written_to(page_index);
+	}
 
 	uint32_t m_offset = mmu_->calculate_physical_address(run_mode, addr_in, true, space);
 

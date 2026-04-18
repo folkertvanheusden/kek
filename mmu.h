@@ -45,7 +45,7 @@ class mmu : public device
 {
 private:
 	// 8 pages, D/I, 3 modes and 1 invalid mode
-	page_t   pages[4][2][8];
+	page_t   pages[64];
 
 	uint16_t MMR0    { 0 };
 	uint16_t MMR1    { 0 };
@@ -64,7 +64,7 @@ private:
 
 	void update_io_base() { io_base = is_enabled() ? (getMMR3() & 16 ? 017760000 : 0760000) : 0160000; }
 
-	void verify_page_access (const uint16_t virt_addr, const int run_mode, const bool d, const int apf, const bool is_write);
+	void verify_page_access (                          const int run_mode, const bool d, const int apf, const bool is_write);
 	void verify_access_valid(const uint32_t m_offset,  const int run_mode, const bool d, const int apf, const bool is_io, const bool is_write);
 	void verify_page_length (const uint16_t virt_addr, const int run_mode, const bool d, const int apf, const bool is_write);
 
@@ -87,12 +87,13 @@ public:
 	bool     is_enabled() const { return MMR0 & 1; }
 	bool     is_locked()  const { return MMR0 & 0160000; }
 
-	void     set_page_trapped   (const int run_mode, const bool d, const int apf) { pages[run_mode][d][apf].pdr |= 1 << 7; }
-	void     set_page_written_to(const int run_mode, const bool d, const int apf) { pages[run_mode][d][apf].pdr |= 1 << 6; }
-	int      get_access_control (const int run_mode, const bool d, const int apf) { return pages[run_mode][d][apf].pdr & 7; }
-	int      get_pdr_len        (const int run_mode, const bool d, const int apf) { return (pages[run_mode][d][apf].pdr >> 8) & 127; }
-	int      get_pdr_direction  (const int run_mode, const bool d, const int apf) { return pages[run_mode][d][apf].pdr & 8; }
-	uint32_t get_physical_memory_offset(const int run_mode, const bool d, const int apf) const { return pages[run_mode][d][apf].par * 64; }
+	int      calc_par_pdr_index(const int run_mode, const bool d, const int apf) const { return apf + (d << 3) + (run_mode << 4); }
+	void     set_page_trapped   (const int page_index) { pages[page_index].pdr |= 1 << 7; }
+	void     set_page_written_to(const int page_index) { pages[page_index].pdr |= 1 << 6; }
+	int      get_access_control (const int page_index) { return pages[page_index].pdr & 7; }
+	int      get_pdr_len        (const int page_index) { return (pages[page_index].pdr >> 8) & 127; }
+	int      get_pdr_direction  (const int page_index) { return pages[page_index].pdr & 8; }
+	uint32_t get_physical_memory_offset(const int page_index) const { return pages[page_index].par << 6; }
 	bool     get_use_data_space(const int run_mode) const;
 	uint32_t get_io_base() const { return io_base; }
 
