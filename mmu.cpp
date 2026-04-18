@@ -276,17 +276,13 @@ void mmu::write_byte(const uint16_t a, const uint8_t value)
 		write_par(a, 3, value, wm_byte);
 }
 
-void mmu::trap_if_odd(const uint16_t a, const int run_mode, const d_i_space_t space, const bool is_write)
+void mmu::trap_if_odd(const int page_index, const bool is_write)
 {
-	int page = a >> 13;
-
-	if (is_write) {
-		int page_index = calc_par_pdr_index(run_mode, space == d_space, page);
+	if (is_write)
 		set_page_trapped(page_index);
-	}
 
 	MMR0 &= ~(7 << 1);
-	MMR0 |= page << 1;
+	MMR0 |= (page_index & 7) << 1;
 
 	CPUERR |= 0100;
 }

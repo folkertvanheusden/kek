@@ -249,7 +249,7 @@ void bus::del_DZ11()
 
 uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm_selection_t mode_selection, const d_i_space_t space)
 {
-	int  run_mode     = mode_selection == rm_cur ? c->getPSW_runmode() : c->getPSW_prev_runmode();
+	int      run_mode = mode_selection == rm_cur ? c->getPSW_runmode() : c->getPSW_prev_runmode();
 
 	uint32_t m_offset = mmu_->calculate_physical_address(run_mode, addr_in, false, space);
 
@@ -294,7 +294,8 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 
 		if ((a & 1) && word_mode == wm_word) [[unlikely]] {
 			TRACE("READ-I/O odd address %06o UNHANDLED", a);
-			mmu_->trap_if_odd(addr_in, run_mode, space, false);
+			int page_index = mmu_->calc_par_pdr_index(run_mode, space, addr_in >> 13);
+			mmu_->trap_if_odd(page_index, false);
 			throw 0;
 			return 0;
 		}
@@ -508,15 +509,13 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 
 		c->trap(004);  // no such i/o
 		throw 1;
-
-		return -1;
 	}
 
 	if ((addr_in & 1) && word_mode == wm_word) {
 		TRACE("READ from %06o - odd address!", addr_in);
-		mmu_->trap_if_odd(addr_in, run_mode, space, false);
+		int page_index = mmu_->calc_par_pdr_index(run_mode, space, addr_in >> 13);
+		mmu_->trap_if_odd(page_index, false);
 		throw 2;
-		return 0;
 	}
 
 	if (m_offset >= m->get_memory_size()) {
@@ -538,17 +537,16 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 
 bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t value, const rm_selection_t mode_selection, const d_i_space_t space)
 {
-	int           run_mode = mode_selection == rm_cur ? c->getPSW_runmode() : c->getPSW_prev_runmode();
+	int           run_mode   = mode_selection == rm_cur ? c->getPSW_runmode() : c->getPSW_prev_runmode();
 
-	const uint8_t apf      = addr_in >> 13; // active page field
+	const uint8_t apf        = addr_in >> 13; // active page field
 
-	bool          is_data  = space == d_space;
-	bool          d        = is_data && mmu_->get_use_data_space(run_mode);
+	bool          is_data    = space == d_space;
+	bool          d          = is_data && mmu_->get_use_data_space(run_mode);
+	int           page_index = mmu_->calc_par_pdr_index(run_mode, d, apf);
 
-	if (mmu_->is_enabled() && (addr_in & 1) == 0 /* TODO remove this? */ && addr_in != ADDR_MMR0) {
-		int page_index = mmu_->calc_par_pdr_index(run_mode, d, apf);
+	if (mmu_->is_enabled() && (addr_in & 1) == 0 /* TODO remove this? */ && addr_in != ADDR_MMR0)
 		mmu_->set_page_written_to(page_index);
-	}
 
 	uint32_t m_offset = mmu_->calculate_physical_address(run_mode, addr_in, true, space);
 
@@ -774,7 +772,7 @@ bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 		if (word_mode == wm_word && (a & 1)) [[unlikely]] {
 			TRACE("WRITE-I/O to %08o (value: %06o) - odd address!", m_offset, value);
 
-			mmu_->trap_if_odd(a, run_mode, space, true);
+			mmu_->trap_if_odd(page_index, true);
 
 			throw 8;
 		}
@@ -784,11 +782,9 @@ bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 		throw 9;
 	}
 
-	if ( (addr_in & 1) && word_mode == wm_word) [[unlikely]] {
+	if ((addr_in & 1) && word_mode == wm_word) [[unlikely]] {
 		TRACE("WRITE to %06o (value: %06o) - odd address!", addr_in, value);
-
-		mmu_->trap_if_odd(addr_in, run_mode, space, true);
-
+		mmu_->trap_if_odd(page_index, true);
 		throw 10;
 	}
 

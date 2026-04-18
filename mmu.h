@@ -119,7 +119,7 @@ public:
 	void     setMMR0Bit  (const int bit);
 	void     clearMMR0Bit(const int bit);
 
-	void     trap_if_odd(const uint16_t a, const int run_mode, const d_i_space_t space, const bool is_write);
+	void     trap_if_odd(const int page_index, const bool is_write);
 
 	uint16_t getCPUERR() const { return CPUERR; }
 	void     setCPUERR(const uint16_t v) { CPUERR = v; }
