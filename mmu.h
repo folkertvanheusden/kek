@@ -64,7 +64,7 @@ private:
 
 	void update_io_base() { io_base = is_enabled() ? (getMMR3() & 16 ? 017760000 : 0760000) : 0160000; }
 
-	void verify_page_access (                          const int run_mode, const bool d, const int apf, const bool is_write);
+	void verify_page_access (const int page_index, const bool is_write);
 	void verify_access_valid(const uint32_t m_offset,  const int run_mode, const bool d, const int apf, const bool is_io, const bool is_write);
 	void verify_page_length (const uint16_t virt_addr, const int run_mode, const bool d, const int apf, const bool is_write);
 
@@ -88,6 +88,7 @@ public:
 	bool     is_locked()  const { return MMR0 & 0160000; }
 
 	int      calc_par_pdr_index(const int run_mode, const bool d, const int apf) const { return apf + (d << 3) + (run_mode << 4); }
+	std::tuple<int, bool, int> explode_page_index(const int page) { return { page >> 4, (page >> 3) & 1, page & 7 }; }
 	void     set_page_trapped   (const int page_index) { pages[page_index].pdr |= 1 << 7; }
 	void     set_page_written_to(const int page_index) { pages[page_index].pdr |= 1 << 6; }
 	int      get_access_control (const int page_index) { return pages[page_index].pdr & 7; }

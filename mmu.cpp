@@ -349,9 +349,8 @@ void mmu::mmudebug(const uint16_t a)
 #endif
 }
 
-void mmu::verify_page_access(const int run_mode, const bool d, const int apf, const bool is_write)
+void mmu::verify_page_access(const int page_index, const bool is_write)
 {
-	int          page_index                    = calc_par_pdr_index(run_mode, d, apf);
 	const auto [ trap_action, access_control ] = get_trap_action(page_index, is_write);
 	if (trap_action == T_PROCEED) [[likely]]
 		return;
@@ -372,10 +371,9 @@ void mmu::verify_page_access(const int run_mode, const bool d, const int apf, co
 		else
 			temp |= 1 << 13;  // read-only
 
+		const auto [ run_mode, d, apf ] = explode_page_index(page_index);
 		temp |= run_mode << 5;  // TODO: kernel-mode or user-mode when a trap occurs in user-mode?
-
 		temp |= apf << 1; // add current page
-
 		temp |= d << 4;
 
 		setMMR0_as_is(temp);
@@ -476,7 +474,7 @@ uint32_t mmu::calculate_physical_address(const int run_mode, const uint16_t a, c
 		if ((getMMR3() & 16) == 0)  // off is 18bit
 			m_offset &= 0x3ffff;
 
-		verify_page_access(run_mode, d, apf, is_write);
+		verify_page_access(page_index, is_write);
 
 		// e.g. ram or i/o, not unmapped
 		bool     is_io    = m_offset >= io_base;
