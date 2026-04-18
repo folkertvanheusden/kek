@@ -19,6 +19,7 @@
 
 class breakpoint;
 class bus;
+class mmu;
 
 constexpr const int      initial_trap_delay   = 8;
 constexpr const int      max_stacktrace_depth = 16;
@@ -84,7 +85,8 @@ private:
 	std::map<int, breakpoint *> breakpoints;
 	int                         bp_nr       { 0 };
 
-	bus *const b { nullptr };
+	bus *const b    { nullptr };
+	mmu *const mmu_ { nullptr };
 
 	std::atomic_uint32_t *const event { nullptr };
 

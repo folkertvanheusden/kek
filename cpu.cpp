@@ -26,7 +26,7 @@ constexpr const double pdp11_estimated_mips = pdp11_MHz / pdp11_avg_cycles_per_i
 
 constexpr const uint16_t word_mode_mask[2] { 0xffff, 0xff };
 
-cpu::cpu(bus *const b, std::atomic_uint32_t *const event) : b(b), event(event)
+cpu::cpu(bus *const b, std::atomic_uint32_t *const event) : b(b), mmu_(b->getMMU()), event(event)
 {
 	reset();
 
@@ -468,11 +468,11 @@ void cpu::unqueue_interrupt(const uint8_t level, const uint8_t vector)
 
 void cpu::addToMMR1(const gam_rc_t & g)
 {
-	if (b->getMMU()->isMMR1Locked() == false && g.mmr1_update.has_value() == true) {
+	if (mmu_->isMMR1Locked() == false && g.mmr1_update.has_value() == true) {
 		auto & update = g.mmr1_update.value();
 		TRACE("MMR1: add %d to register R%d", update.delta, update.reg);
 		assert(update.delta);
-		b->getMMU()->addToMMR1(update.delta, update.reg);
+		mmu_->addToMMR1(update.delta, update.reg);
 	}
 }
 
@@ -481,7 +481,7 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t wo
 {
 	gam_rc_t    g { word_mode, rm_cur, i_space, mode, { }, true, 0, { } };
         uint16_t    temp = 0;
-	d_i_space_t isR7_space = reg == 7 ? i_space : (b->getMMU()->get_use_data_space(getPSW_runmode()) ? d_space : i_space);
+	d_i_space_t isR7_space = reg == 7 ? i_space : (mmu_->get_use_data_space(getPSW_runmode()) ? d_space : i_space);
 	//                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ always d_space here? TODO
 
 	g.space     = isR7_space;
@@ -1419,7 +1419,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						auto a = getGAMAddress(dst_mode, dst_reg, wm_word);
 						addToMMR1(a);
 
-						b->getMMU()->mmudebug(a.addr);
+						mmu_->mmudebug(a.addr);
 
 						a.mode_selection = rm_prev;
 						a.space          = word_mode == wm_byte ? d_space : i_space;
@@ -1621,7 +1621,7 @@ void cpu::push_stack(const uint16_t v)
 				uint16_t a = add_register(6, -2);
 				b->write_word(a, v, d_space);
 				delayed_trap = 04;
-				b->getMMU()->setCPUERRBit(010);
+				mmu_->setCPUERRBit(010);
 			}
 			else {
 				set_register(6, 4);  // red zone
@@ -1759,8 +1759,8 @@ bool cpu::misc_operations(const uint16_t instr)
 
 		// PUSH link
 		push_stack(get_register(link_reg));
-		if (!b->getMMU()->isMMR1Locked()) {
-			b->getMMU()->addToMMR1(-2, 6);
+		if (!mmu_->isMMR1Locked()) {
+			mmu_->addToMMR1(-2, 6);
 
 			addToMMR1(a);
 		}
@@ -1836,7 +1836,7 @@ void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 			// make sure the trap vector is retrieved from kernel space
 			psw &= 037777;  // mask off 14/15 to make it into kernel-space
 
-			auto space = b->getMMU()->get_use_data_space(0) ? d_space : i_space;
+			auto space = mmu_->get_use_data_space(0) ? d_space : i_space;
 			setPC(b->read_word(vector + 0, space));
 
 			// switch to kernel mode & update 'previous mode'
@@ -2460,10 +2460,10 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 		work_values_str.push_back(format("%06o", v));
 	out.insert({ "work-values", work_values_str });
 
-	out.insert({ "MMR0", { format("%06o", b->getMMU()->getMMR0()) } });
-	out.insert({ "MMR1", { format("%06o", b->getMMU()->getMMR1()) } });
-	out.insert({ "MMR2", { format("%06o", b->getMMU()->getMMR2()) } });
-	out.insert({ "MMR3", { format("%06o", b->getMMU()->getMMR3()) } });
+	out.insert({ "MMR0", { format("%06o", mmu_->getMMR0()) } });
+	out.insert({ "MMR1", { format("%06o", mmu_->getMMR1()) } });
+	out.insert({ "MMR2", { format("%06o", mmu_->getMMR2()) } });
+	out.insert({ "MMR3", { format("%06o", mmu_->getMMR3()) } });
 
 	return out;
 }
@@ -2480,15 +2480,15 @@ bool cpu::step()
 	try {
 		instruction_start = getPC();
 
-		if (!b->getMMU()->isMMR1Locked())
-			b->getMMU()->setMMR2(instruction_start);
+		if (!mmu_->isMMR1Locked())
+			mmu_->setMMR2(instruction_start);
 
 		uint16_t instr = b->read_word(instruction_start);
 		add_register(7, 2);
 
 		if (double_operand_instructions(instr) || conditional_branch_instructions(instr) || condition_code_operations(instr) || misc_operations(instr)) {
-			if (!b->getMMU()->isMMR1Locked())
-				b->getMMU()->clearMMR1();
+			if (!mmu_->isMMR1Locked())
+				mmu_->clearMMR1();
 
 			if (delayed_trap.has_value()) {
 				trap(delayed_trap.value(), 7);
