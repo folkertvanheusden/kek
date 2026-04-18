@@ -37,7 +37,7 @@ typedef struct {
 } memory_addresses_t;
 
 typedef struct {
-	uint16_t par;
+	uint32_t par_preshifted;
 	uint16_t pdr;
 } page_t;
 
@@ -94,7 +94,7 @@ public:
 	int      get_access_control (const int page_index) { return pages[page_index].pdr & 7; }
 	int      get_pdr_len        (const int page_index) { return (pages[page_index].pdr >> 8) & 127; }
 	int      get_pdr_direction  (const int page_index) { return pages[page_index].pdr & 8; }
-	uint32_t get_physical_memory_offset(const int page_index) const { return pages[page_index].par << 6; }
+	uint32_t get_physical_memory_offset(const int page_index) const { return pages[page_index].par_preshifted; }
 	bool     get_use_data_space(const int run_mode) const;
 	uint32_t get_io_base() const { return io_base; }
 

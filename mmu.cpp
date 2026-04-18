@@ -48,7 +48,7 @@ void mmu::dump_par_pdr(console *const cnsl, const int run_mode, const bool d, co
 		if (selection.has_value() && i != selection.value())
 			continue;
 		int      page_index = calc_par_pdr_index(run_mode, d, i);
-		uint16_t par_value  = pages[page_index].par;
+		uint16_t par_value  = pages[page_index].par_preshifted >> 6;
 		uint16_t pdr_value  = pages[page_index].pdr;
 
 		uint16_t pdr_len    = (((pdr_value >> 8) & 127) + 1) * 64;
@@ -89,7 +89,7 @@ uint16_t mmu::read_par(const uint32_t a, const int run_mode)
 	int      page       = (a >> 1) & 7;
 	bool     is_d       = a & 16;
 	int      page_index = calc_par_pdr_index(run_mode, is_d, page);
-	return pages[page_index].par;
+	return pages[page_index].par_preshifted >> 6;
 }
 
 void mmu::setMMR0_as_is(uint16_t value)
@@ -198,14 +198,18 @@ void mmu::write_par(const uint32_t a, const int run_mode, const uint16_t value, 
 	int  page       = (a >> 1) & 7;
 	int  page_index = calc_par_pdr_index(run_mode, is_d, page);
 
-	if (word_mode == wm_byte)
-		update_word(&pages[page_index].par, a & 1, value);
-	else
-		pages[page_index].par = value;
+	if (word_mode == wm_byte) {
+		uint16_t par = pages[page_index].par_preshifted >> 6;
+		update_word(&par, a & 1, value);
+		pages[page_index].par_preshifted = par << 6;
+	}
+	else {
+		pages[page_index].par_preshifted = value << 6;
+	}
 
 	pages[page_index].pdr &= ~(128 /*A*/ + 64 /*W*/);  // reset PDR A/W when PAR is written to
 
-	TRACE("mmu WRITE-I/O PAR run-mode %d: %c for %d: %o (%07o)", run_mode, is_d ? 'D' : 'I', page, word_mode == wm_byte ? value & 0xff : value, pages[run_mode][is_d][page].par * 64);
+	TRACE("mmu WRITE-I/O PAR run-mode %d: %c for %d: %o (%07o)", run_mode, is_d ? 'D' : 'I', page, word_mode == wm_byte ? value & 0xff : value, pages[run_mode][is_d][page].par_preshifted);
 }
 
 uint16_t mmu::read_word(const uint16_t a)
@@ -496,7 +500,7 @@ JsonDocument mmu::add_par_pdr(const int run_mode, const bool is_d) const
 	JsonArray ja_par_work = ja_par.to<JsonArray>();
 	for(int i=0; i<8; i++) {
 		int page_index = calc_par_pdr_index(run_mode, is_d, i);
-		ja_par_work.add(pages[page_index].par);
+		ja_par_work.add(pages[page_index].par_preshifted);
 	}
 	j["par"] = ja_par;
 
@@ -540,7 +544,7 @@ void mmu::set_par_pdr(const JsonVariantConst j_in, const int run_mode, const boo
 	int       i_par = 0;
 	for(auto v: j_par) {
 		int page_index = calc_par_pdr_index(run_mode, is_d, i_par++);
-		pages[page_index].par = v;
+		pages[page_index].par_preshifted = v;
 	}
 
 	JsonArrayConst j_pdr = j_in["pdr"];
