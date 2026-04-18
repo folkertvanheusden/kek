@@ -1723,8 +1723,7 @@ bool cpu::misc_operations(const uint16_t instr)
 
 		case 0b0000000000000101: // RESET
 			if (getPSW_runmode() == 0) {  // only in kernel mode
-				b->init();
-
+				b->reset();
 				init_interrupt_queue();
 			}
 			return true;

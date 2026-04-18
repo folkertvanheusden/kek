@@ -164,6 +164,9 @@ void bus::reset()
 		dz11_->reset();
 	if (rp06_)
 		rp06_->reset();
+
+	mmu_->setMMR0(0);
+	mmu_->setMMR3(0);
 }
 
 void bus::add_RP06(rp06 *const rp06_)
@@ -237,12 +240,6 @@ void bus::del_DZ11()
 {
 	delete dz11_;
 	dz11_ = nullptr;
-}
-
-void bus::init()
-{
-	mmu_->setMMR0(0);
-	mmu_->setMMR3(0);
 }
 
 uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm_selection_t mode_selection, const d_i_space_t space)
