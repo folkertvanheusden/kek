@@ -65,8 +65,8 @@ private:
 	void update_io_base() { io_base = is_enabled() ? (getMMR3() & 16 ? 017760000 : 0760000) : 0160000; }
 
 	void verify_page_access (const int page_index, const bool is_write);
-	void verify_access_valid(const uint32_t m_offset,  const int run_mode, const bool d, const int apf, const bool is_io, const bool is_write);
-	void verify_page_length (const uint16_t virt_addr, const int run_mode, const bool d, const int apf, const bool is_write);
+	void verify_access_valid(const uint32_t m_offset, const int page_index, const bool is_io, const bool is_write);
+	void verify_page_length(const uint16_t virt_addr, const int page_index, const bool is_write);
 
 public:
 	mmu();

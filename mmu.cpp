@@ -385,7 +385,7 @@ void mmu::verify_page_access(const int page_index, const bool is_write)
 	throw 5;
 }
 
-void mmu::verify_access_valid(const uint32_t m_offset, const int run_mode, const bool d, const int apf, const bool is_io, const bool is_write)
+void mmu::verify_access_valid(const uint32_t m_offset, const int page_index, const bool is_io, const bool is_write)
 {
 	if (m_offset >= m->get_memory_size() && !is_io) [[unlikely]] {
 		TRACE("TRAP(04) (throw 6) on address %08o", m_offset);
@@ -396,6 +396,8 @@ void mmu::verify_access_valid(const uint32_t m_offset, const int run_mode, const
 			temp &= 017777;
 			temp |= 1l << 15;  // non-resident
 
+			const auto [ run_mode, d, apf ] = explode_page_index(page_index);
+
 			temp &= ~14;  // add current page
 			temp |= apf << 1;
 
@@ -405,10 +407,8 @@ void mmu::verify_access_valid(const uint32_t m_offset, const int run_mode, const
 			setMMR0_as_is(temp);
 		}
 
-		if (is_write) {
-			int page_index = calc_par_pdr_index(run_mode, d, apf);
+		if (is_write)
 			set_page_trapped(page_index);
-		}
 
 		c->trap(0250);
 
@@ -416,9 +416,8 @@ void mmu::verify_access_valid(const uint32_t m_offset, const int run_mode, const
 	}
 }
 
-void mmu::verify_page_length(const uint16_t virt_addr, const int run_mode, const bool d, const int apf, const bool is_write)
+void mmu::verify_page_length(const uint16_t virt_addr, const int page_index, const bool is_write)
 {
-	int      page_index = calc_par_pdr_index(run_mode, d, apf);
 	uint16_t pdr_len    = get_pdr_len(page_index);
 	if (pdr_len == 127)
 		return;
@@ -437,6 +436,8 @@ void mmu::verify_page_length(const uint16_t virt_addr, const int run_mode, const
 
 			temp &= 017777;
 			temp |= 1 << 14;  // length
+
+			const auto [ run_mode, d, apf ] = explode_page_index(page_index);
 
 			temp &= ~14;  // add current page
 			temp |= apf << 1;
@@ -479,9 +480,9 @@ uint32_t mmu::calculate_physical_address(const int run_mode, const uint16_t a, c
 		// e.g. ram or i/o, not unmapped
 		bool     is_io    = m_offset >= io_base;
 
-		verify_access_valid(m_offset, run_mode, d, apf, is_io, is_write);
+		verify_access_valid(m_offset, page_index, is_io, is_write);
 
-		verify_page_length(a, run_mode, d, apf, is_write);
+		verify_page_length(a, page_index, is_write);
 	}
 
 	return m_offset;
