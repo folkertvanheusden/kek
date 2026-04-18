@@ -1,4 +1,4 @@
-// (C) 2018-2025 by Folkert van Heusden
+// (C) 2018-2026 by Folkert van Heusden
 // Released under MIT license
 
 #include <assert.h>
@@ -41,10 +41,8 @@ cpu::~cpu()
 
 void cpu::init_interrupt_queue()
 {
-	queued_interrupts.clear();
-
 	for(uint8_t level=0; level<8; level++)
-		queued_interrupts.insert({ level, { } });
+		queued_interrupts[level].clear();
 }
 
 void cpu::emulation_start()
@@ -351,11 +349,7 @@ bool cpu::check_pending_interrupts() const
 	uint8_t start_level = getPSW_spl() + 1;
 
 	for(uint8_t i=start_level; i < 8; i++) {
-		auto interrupts = queued_interrupts.find(i);
-
-		assert(interrupts != queued_interrupts.end());
-
-		if (interrupts->second.empty() == false)
+		if (queued_interrupts[i].empty() == false)
 			return true;
 	}
 
@@ -394,9 +388,7 @@ bool cpu::execute_any_pending_interrupt()
 	uint8_t start_level   = current_level + 1;
 
 	for(uint8_t i=0; i < 8; i++) {
-		auto interrupts = queued_interrupts.find(i);
-
-		if (interrupts->second.empty() == false) {
+		if (queued_interrupts[i].empty() == false) {
 			any_queued_interrupts = true;
 
 			if (i < start_level)  // at least we know now that there's an interrupt scheduled
@@ -407,9 +399,9 @@ bool cpu::execute_any_pending_interrupt()
 				return false;
 			}
 
-			auto    vector = interrupts->second.begin();
+			auto    vector = queued_interrupts[i].begin();
 			uint8_t v      = *vector;
-			interrupts->second.erase(vector);
+			queued_interrupts[i].erase(vector);
 
 			TRACE("Invoking interrupt vector %o (IPL %d, current: %d)", v, i, current_level);
 			trap(v, i, true);
@@ -443,9 +435,8 @@ void cpu::queue_interrupt(const uint8_t level, const uint8_t vector)
 	std::unique_lock<std::mutex> lck(qi_lock);
 #endif
 
-	auto it = queued_interrupts.find(level);
-	assert(it != queued_interrupts.end());
-	it->second.insert(vector);
+	queued_interrupts[level].insert(vector);
+	TRACE("Queueing interrupt vector %o (IPL %d, current: %d), n: %zu", vector, level, getPSW_spl(), queued_interrupts[level].size());
 
 #if defined(BUILD_FOR_RP2040)
 	xSemaphoreGive(qi_lock);
@@ -458,8 +449,6 @@ void cpu::queue_interrupt(const uint8_t level, const uint8_t vector)
 #endif
 
 	any_queued_interrupts = true;
-
-	TRACE("Queueing interrupt vector %o (IPL %d, current: %d), n: %zu", vector, level, getPSW_spl(), it->second.size());
 }
 
 void cpu::unqueue_interrupt(const uint8_t level, const uint8_t vector)
@@ -470,9 +459,7 @@ void cpu::unqueue_interrupt(const uint8_t level, const uint8_t vector)
 	std::unique_lock<std::mutex> lck(qi_lock);
 #endif
 
-	auto it = queued_interrupts.find(level);
-	assert(it != queued_interrupts.end());
-	it->second.erase(vector);
+	queued_interrupts[level].erase(vector);
 
 #if defined(BUILD_FOR_RP2040)
 	xSemaphoreGive(qi_lock);
@@ -2553,13 +2540,13 @@ JsonDocument cpu::serialize()
 		j["delayed_trap"] = delayed_trap.value();
 
 	JsonVariant j_queued_interrupts;
-	for(auto & il: queued_interrupts) {
+	for(int il=0; il<8; il++) {
 		JsonDocument ja_qi_level;
 		JsonArray ja_qi_level_work = ja_qi_level.to<JsonArray>();
-		for(auto v: il.second)
+		for(auto v: queued_interrupts[il])
 			ja_qi_level_work.add(v);
 
-		j_queued_interrupts[format("%d", il.first)] = ja_qi_level;
+		j_queued_interrupts[format("%d", il)] = ja_qi_level;
 	}
 
 	j["queued_interrupts"]     = j_queued_interrupts;
@@ -2607,11 +2594,9 @@ cpu *cpu::deserialize(const JsonVariantConst j, bus *const b, std::atomic_uint32
 
 	c->init_interrupt_queue();
 	for(int level=0; level<8; level++) {
-		auto it = c->queued_interrupts.find(level);
-
 		JsonArrayConst ja_qi_level = j["queued_interrupts"][format("%d", level)].as<JsonArrayConst>();
 		for(auto v : ja_qi_level)
-			it->second.insert(v.as<int>());
+			c->queued_interrupts[level].insert(v.as<int>());
 	}
 
 	return c;

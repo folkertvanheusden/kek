@@ -612,9 +612,9 @@ void show_queued_interrupts(console *const cnsl, cpu *const c)
 
 	auto queued_interrupts = c->get_queued_interrupts();
 
-	for(auto & level: queued_interrupts) {
-		for(auto & qi: level.second)
-			cnsl->put_string_lf(format("Level: %d, interrupt: %03o", level.first, qi));
+	for(int level=0; level<8; level++) {
+		for(auto & qi: queued_interrupts[level])
+			cnsl->put_string_lf(format("Level: %d, interrupt: %03o", level, qi));
 	}
 }
 

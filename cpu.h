@@ -1,10 +1,11 @@
-// (C) 2018-2024 by Folkert van Heusden
+// (C) 2018-2026 by Folkert van Heusden
 // Released under MIT license
 
 #pragma once
 
 #include "gen.h"
 #include <ArduinoJson.h>
+#include <array>
 #include <atomic>
 #include <cassert>
 #include <condition_variable>
@@ -66,8 +67,8 @@ private:
 	bool     debug_mode         { false };
 	std::vector<std::pair<uint16_t, std::string> > stacktrace;
 
-	// level, vector
-	std::map<uint8_t, std::set<uint8_t> > queued_interrupts;
+	// vector, 8 levels
+	std::array<std::set<uint8_t>, 8> queued_interrupts;
 	std::atomic_bool        any_queued_interrupts { false };
 #if defined(BUILD_FOR_RP2040)
 	SemaphoreHandle_t       qi_lock { xSemaphoreCreateBinary() };
@@ -155,7 +156,7 @@ public:
 	void init_interrupt_queue();
 	void queue_interrupt(const uint8_t level, const uint8_t vector);
 	void unqueue_interrupt(const uint8_t level, const uint8_t vector);
-	std::map<uint8_t, std::set<uint8_t> > get_queued_interrupts() const { return queued_interrupts; }
+	std::array<std::set<uint8_t>, 8> get_queued_interrupts() const { return queued_interrupts; }
 	std::optional<int> get_interrupt_delay_left() const { return trap_delay; }
 	bool check_if_interrupts_pending() const { return any_queued_interrupts; }
 
