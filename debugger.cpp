@@ -555,8 +555,10 @@ void mmu_resolve(console *const cnsl, bus *const b, const uint16_t va)
 	}
 
 	for(int i=0; i<2; i++) {
-		auto ta_i = b->getMMU()->get_trap_action(run_mode, false, data.apf, i);
-		auto ta_d = b->getMMU()->get_trap_action(run_mode, true,  data.apf, i);
+		auto mmu        = b->getMMU();
+		int  page_index = mmu->calc_par_pdr_index(run_mode, 0, data.apf);
+		auto ta_i       = mmu->get_trap_action(page_index + 0, i);
+		auto ta_d       = mmu->get_trap_action(page_index + 8, i);
 
 		cnsl->put_string_lf(format("Instruction action: %s (%s)", trap_action_to_str(ta_i.first), i ? "write" : "read"));
 		cnsl->put_string_lf(format("Data action       : %s (%s)", trap_action_to_str(ta_d.first), i ? "write" : "read"));

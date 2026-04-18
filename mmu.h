@@ -98,7 +98,7 @@ public:
 	uint32_t get_io_base() const { return io_base; }
 
 	memory_addresses_t            calculate_physical_address(const int run_mode, const uint16_t a) const;
-	std::pair<trap_action_t, int> get_trap_action(const int run_mode, const bool d, const int apf, const bool is_write);
+	std::pair<trap_action_t, int> get_trap_action(const int page_index, const bool is_write);
 	uint32_t                      calculate_physical_address(const int run_mode, const uint16_t a, const bool is_write, const d_i_space_t space);
 
 	uint16_t getMMR0() const { return MMR0; }

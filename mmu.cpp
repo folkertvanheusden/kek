@@ -319,9 +319,8 @@ memory_addresses_t mmu::calculate_physical_address(const int run_mode, const uin
 	return { a, apf, physical_instruction, physical_instruction_is_psw, physical_data, physical_data_is_psw };
 }
 
-std::pair<trap_action_t, int> mmu::get_trap_action(const int run_mode, const bool d, const int apf, const bool is_write)
+std::pair<trap_action_t, int> mmu::get_trap_action(const int page_index, const bool is_write)
 {
-	int       page_index     = calc_par_pdr_index(run_mode, d, apf);
 	const int access_control = get_access_control(page_index);
 
 	constexpr const trap_action_t map[8][2] {
@@ -352,14 +351,13 @@ void mmu::mmudebug(const uint16_t a)
 
 void mmu::verify_page_access(const int run_mode, const bool d, const int apf, const bool is_write)
 {
-	const auto [ trap_action, access_control ] = get_trap_action(run_mode, d, apf, is_write);
+	int          page_index                    = calc_par_pdr_index(run_mode, d, apf);
+	const auto [ trap_action, access_control ] = get_trap_action(page_index, is_write);
 	if (trap_action == T_PROCEED) [[likely]]
 		return;
 
-	if (is_write) {
-		int page_index = calc_par_pdr_index(run_mode, d, apf);
+	if (is_write)
 		set_page_trapped(page_index);
-	}
 
 	if (is_locked() == false) {
 		uint16_t temp = getMMR0();
