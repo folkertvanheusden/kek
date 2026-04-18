@@ -142,14 +142,19 @@ void bus::set_memory_size(const int n_pages)
 	TRACE("Memory is now %u kB (%d pages)", n_bytes / 1024, n_pages);
 }
 
-void bus::reset()
+void bus::init()
 {
 	if (m)
 		m->reset();
-	if (mmu_)
-		mmu_->reset();
 	if (c)
 		c->reset();
+	reset();
+}
+
+void bus::reset()
+{
+	if (mmu_)
+		mmu_->reset();
 	if (tm11)
 		tm11->reset();
 	if (rk05_)
