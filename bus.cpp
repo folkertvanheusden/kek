@@ -527,9 +527,10 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 		throw 1;
 	}
 
+	int page_index = mmu_->calc_par_pdr_index(run_mode, space, addr_in >> 13);
+
 	if ((addr_in & 1) && word_mode == wm_word) {
 		TRACE("READ from %06o - odd address!", addr_in);
-		int page_index = mmu_->calc_par_pdr_index(run_mode, space, addr_in >> 13);
 		mmu_->trap_if_odd(page_index, false);
 		throw 2;
 	}
@@ -539,6 +540,8 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 		c->trap(004);  // no such RAM
 		throw 1;
 	}
+
+	mmu_->set_page_accessed(page_index);
 
 	uint16_t temp = 0;
 	if (word_mode == wm_byte)
@@ -824,6 +827,8 @@ bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 		c->trap(004);  // no such RAM
 		throw 1;
 	}
+
+	mmu_->set_page_accessed(page_index);
 
 	if (word_mode == wm_byte)
 		m->write_byte(m_offset, value);

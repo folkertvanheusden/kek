@@ -282,9 +282,6 @@ void mmu::write_byte(const uint16_t a, const uint8_t value)
 
 void mmu::trap_if_odd(const int page_index, const bool is_write)
 {
-	if (is_write)
-		set_page_trapped(page_index);
-
 	MMR0 &= ~(7 << 1);
 	MMR0 |= (page_index & 7) << 1;
 
@@ -359,9 +356,6 @@ void mmu::verify_page_access(const int page_index, const bool is_write)
 	if (trap_action == T_PROCEED) [[likely]]
 		return;
 
-	if (is_write)
-		set_page_trapped(page_index);
-
 	if (is_locked() == false) {
 		uint16_t temp = getMMR0();
 
@@ -411,9 +405,6 @@ void mmu::verify_access_valid(const uint32_t m_offset, const int page_index, con
 			setMMR0_as_is(temp);
 		}
 
-		if (is_write)
-			set_page_trapped(page_index);
-
 		c->trap(0250);
 
 		throw 6;
@@ -454,9 +445,6 @@ void mmu::verify_page_length(const uint16_t virt_addr, const int page_index, con
 
 			setMMR0_as_is(temp);
 		}
-
-		if (is_write)
-			set_page_trapped(page_index);
 
 		throw 7;
 	}
