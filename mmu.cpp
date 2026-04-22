@@ -424,8 +424,6 @@ void mmu::verify_page_length(const uint16_t virt_addr, const int page_index, con
 		TRACE("mmu::calculate_physical_address::p_offset %o versus %o direction %d", pdr_cmp, pdr_len, direction);
 		TRACE("TRAP(0250) (throw 7) on address %06o", virt_addr);
 
-		c->trap(0250);  // invalid access
-
 		if (is_locked() == false) {
 			uint16_t temp = getMMR0();
 
@@ -445,6 +443,8 @@ void mmu::verify_page_length(const uint16_t virt_addr, const int page_index, con
 
 			setMMR0_as_is(temp);
 		}
+
+		c->trap(0250);  // invalid access
 
 		throw 7;
 	}
