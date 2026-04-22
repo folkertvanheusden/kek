@@ -45,6 +45,8 @@ std::atomic_bool  sigw_event   { false };
 
 constexpr const uint16_t validation_psw_mask = 0174037;  // ignore unused bits & priority(!)
 
+constexpr const int default_port_offset = 1100;
+
 #if !defined(_WIN32)
 void sw_handler(int s)
 {
@@ -254,22 +256,23 @@ void help()
 	printf("-r d.img load file as a disk device\n");
 	printf("-N host:port  use NBD-server as disk device (like -r)\n");
 	printf("-R x     select disk type (rk05, rl02, rp06 or rp07)\n");
-	printf("-p 123   set CPU start pointer to decimal(!) value\n");
+	printf("-p 0123   set CPU start pointer to (octal) value\n");
 	printf("-b       enable bootloader (builtin)\n");
 	printf("-n       ncurses UI\n");
 	printf("-d       enable debugger\n");
 	printf("-f x     first process the commands from file x before entering the debugger\n");
 	printf("-S x     set ram size (in number of 8 kB pages)\n");
 	printf("-s x,y   set console switche state: set bit x (0...15) to y (0/1)\n");
+	printf("-m x,y   allocate y bytes of ram at address x to load a rom in\n");
 	printf("-t       enable tracing (disassemble to stderr, requires -d as well)\n");
 	printf("-l x     log to file x\n");
 	printf("-L x,y   set log level for screen (x) and file (y)\n");
 	printf("-X       do not include timestamp in logging\n");
 	printf("-J x     run validation suite x against the CPU emulation\n");
 	printf("-M       log metrics\n");
-	printf("-1 x     use x as device for DZ-11 (instead of 8 tcp-sockets starting at port 1100)\n");
+	printf("-1 x     use x as device for DZ-11 (instead of 8 tcp-sockets starting at port %d)\n", default_port_offset);
 	printf("-2       set DZ-11 tcp-socket sessions to initialize as a telnet session\n");
-	printf("-Q x     use x as port offset instead of 1100\n");
+	printf("-Q x     use x as port offset instead of %d\n", default_port_offset);
 }
 
 int main(int argc, char *argv[])
@@ -312,10 +315,12 @@ int main(int argc, char *argv[])
 	std::optional<std::string> dz11_device;
 	bool         dz11_setup_telnet = false;
 
-	int          tcp_port_offset = 1100;
+	std::optional<std::pair<uint32_t, uint16_t> > rom;
+
+	int          tcp_port_offset = default_port_offset;
 
 	int  opt          = -1;
-	while((opt = getopt(argc, argv, "hD:MT:Br:R:p:ndf:tL:bl:s:Q:N:J:XS:P1:2Q:")) != -1)
+	while((opt = getopt(argc, argv, "hD:MT:Br:R:p:ndf:tL:bl:s:Q:N:J:XS:P1:m:Q:2")) != -1)
 	{
 		switch(opt) {
 			case 'h':
@@ -367,6 +372,16 @@ int main(int argc, char *argv[])
 					break;
 				  }
 
+			case 'm': {
+					char *c = strchr(optarg, ',');
+					if (!c)
+						error_exit(false, "-m: parameter missing");
+					uint32_t addr = std::stoi(optarg, nullptr, 8);
+					uint32_t len  = std::stoi(c + 1,  nullptr, 8);
+					rom = { addr, len };
+					break;
+				  }
+
 			case 'b':
 				enable_bootloader = true;
 				break;
@@ -411,7 +426,7 @@ int main(int argc, char *argv[])
 				  break;
 
 			case 'p':
-				start_addr = atoi(optarg);
+				start_addr = std::stoi(optarg, nullptr, 8);
 				sa_set     = true;
 				break;
 
@@ -538,6 +553,9 @@ int main(int argc, char *argv[])
 
 		myusleep(251000);
 	}
+
+	if (rom.has_value())
+		b->add_rom(rom.value().first, rom.value().second);
 
 	if (b->getTty() == nullptr) {
 		tty *tty_ = new tty(cnsl, b);

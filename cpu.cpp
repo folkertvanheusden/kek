@@ -926,7 +926,6 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 		case 7: { // SOB
 				if (add_register(reg, -1)) {
 					uint16_t newPC = getPC() - dst * 2;
-
 					setPC(newPC);
 				}
 

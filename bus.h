@@ -73,6 +73,8 @@ private:
 	dz11    *dz11_   { nullptr };
 	rp06    *rp06_   { nullptr };
 
+	std::optional<std::tuple<uint32_t, uint16_t, uint8_t *> > rom;
+
 	uint16_t microprogram_break_register { 0 };
 
 	uint16_t console_switches { 0 };
@@ -97,6 +99,11 @@ public:
 	uint16_t get_console_leds() { return console_leds; }
 
 	void set_memory_size(const int n_pages);
+
+	// use bus::write to set
+	void    add_rom     (const uint32_t offset, const uint16_t len);
+	uint8_t get_rom_byte(const uint32_t offset);
+	void    put_rom_byte(const uint32_t offset, const uint8_t v);
 
 	void add_ram   (memory *const m      );
 	void add_cpu   (cpu    *const c      );
