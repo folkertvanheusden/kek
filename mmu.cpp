@@ -382,9 +382,7 @@ void mmu::verify_page_access(const int page_index, const bool is_write)
 	}
 
 	c->trap(0250);  // abort
-
-	if (access_control == T_ABORT_4)
-		throw 5;
+	throw 5;
 }
 
 void mmu::verify_access_valid(const uint32_t m_offset, const int page_index, const bool is_io, const bool is_write)
