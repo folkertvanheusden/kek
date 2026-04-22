@@ -211,7 +211,7 @@ void mmu::write_par(const uint32_t a, const int run_mode, const uint16_t value, 
 
 	pages[page_index].pdr &= ~(128 /*A*/ + 64 /*W*/);  // reset PDR A/W when PAR is written to
 
-	TRACE("mmu WRITE-I/O PAR run-mode %d: %c for %d: %o (%07o)", run_mode, is_d ? 'D' : 'I', page, word_mode == wm_byte ? value & 0xff : value, pages[run_mode][is_d][page].par_preshifted);
+	TRACE("mmu WRITE-I/O PAR run-mode %d: %c for %d: %o (%07o)", run_mode, is_d ? 'D' : 'I', page, word_mode == wm_byte ? value & 0xff : value, pages[page_index].par_preshifted);
 }
 
 uint16_t mmu::read_word(const uint16_t a)
@@ -368,8 +368,10 @@ void mmu::verify_page_access(const int page_index, const bool is_write)
 					  //
 		if (access_control == 0 || access_control == 4)
 			temp |= 1l << 15;  // not resident
-		else
-			temp |= 1 << 13;  // read-only
+		else if (access_control == 1 || access_control == 2)
+			temp |= 1 << 13;
+		else if (access_control == 3 || access_control == 7)
+			temp |= 1 << 15;
 
 		const auto [ run_mode, d, apf ] = explode_page_index(page_index);
 		temp |= run_mode << 5;  // TODO: kernel-mode or user-mode when a trap occurs in user-mode?
