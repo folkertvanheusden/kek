@@ -414,9 +414,6 @@ void mmu::verify_access_valid(const uint32_t m_offset, const int page_index, con
 void mmu::verify_page_length(const uint16_t virt_addr, const int page_index, const bool is_write)
 {
 	uint16_t pdr_len    = get_pdr_len(page_index);
-	if (pdr_len == 127) [[likely]]
-		return;
-
 	uint16_t pdr_cmp   = (virt_addr >> 6) & 127;
 	bool     direction = get_pdr_direction(page_index);
 
