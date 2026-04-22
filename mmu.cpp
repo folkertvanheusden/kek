@@ -109,10 +109,8 @@ void mmu::setMMR0(uint16_t value)
 		if ((value & 1) == 0)
 			value &= 254;  // bits 7...1 are protected 
 	}
-	else {
-		MMR0 = value;
-	}
 
+	MMR0 = value;
 	update_io_base();
 }
 
