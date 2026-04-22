@@ -407,8 +407,8 @@ dz11 * dz11::deserialize(const JsonVariantConst j, bus *const b)
 
 bool has_irq(cpu *const c, const int level, const uint16_t vector)
 {
-	auto irqs_for_level = c->get_queued_interrupts().find(level);
-	return irqs_for_level->second.find(vector) != irqs_for_level->second.end();
+	auto irqs_for_level = c->get_queued_interrupts()[level];
+	return irqs_for_level.find(vector) != irqs_for_level.end();
 }
 
 TEST(dz11, dz11tests) {
