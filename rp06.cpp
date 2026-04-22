@@ -192,7 +192,7 @@ void rp06::write_word(const uint16_t addr, uint16_t v)
 				uint8_t  xfer_buffer[SECTOR_SIZE] { };
 				uint32_t end_offset = offs + nb;
 				for(uint32_t cur_offset = offs; cur_offset<end_offset; cur_offset += SECTOR_SIZE) {
-					uint32_t cur_n = std::min(end_offset - cur_offset, SECTOR_SIZE);
+					uint32_t cur_n = std::min(end_offset - cur_offset, uint32_t(SECTOR_SIZE));
 
 					if (function_code == 070) {
 						DOLOG(debug, false, "RP06: reading %u bytes from %u (dec) to %06o (oct)", cur_n, cur_offset, addr);

@@ -156,6 +156,21 @@ std::optional<char> console::wait_char(const int timeout_ms)
 #endif
 }
 
+void console::unget_char(const char c)
+{
+#if defined(BUILD_FOR_RP2040)
+	xSemaphoreTake(input_lock, portMAX_DELAY);
+#else
+	std::unique_lock<std::mutex> lck(input_lock);
+#endif
+
+	input_buffer.push_back(c);
+
+#if defined(BUILD_FOR_RP2040)
+	xSemaphoreGive(input_lock);
+#endif
+}
+
 void console::flush_input()
 {
 #if defined(BUILD_FOR_RP2040)

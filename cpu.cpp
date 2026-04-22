@@ -1,4 +1,4 @@
-// (C) 2018-2025 by Folkert van Heusden
+// (C) 2018-2026 by Folkert van Heusden
 // Released under MIT license
 
 #include <assert.h>
@@ -26,7 +26,7 @@ constexpr const double pdp11_estimated_mips = pdp11_MHz / pdp11_avg_cycles_per_i
 
 constexpr const uint16_t word_mode_mask[2] { 0xffff, 0xff };
 
-cpu::cpu(bus *const b, std::atomic_uint32_t *const event) : b(b), event(event)
+cpu::cpu(bus *const b, std::atomic_uint32_t *const event) : b(b), mmu_(b->getMMU()), event(event)
 {
 	reset();
 
@@ -41,10 +41,8 @@ cpu::~cpu()
 
 void cpu::init_interrupt_queue()
 {
-	queued_interrupts.clear();
-
 	for(uint8_t level=0; level<8; level++)
-		queued_interrupts.insert({ level, { } });
+		queued_interrupts[level].clear();
 }
 
 void cpu::emulation_start()
@@ -203,13 +201,13 @@ void cpu::set_registerLowByte(const int nr, const word_mode_t word_mode, const u
 
 bool cpu::put_result(const gam_rc_t & g, const uint16_t value)
 {
-	if (g.addr.has_value() == false) {
-		set_registerLowByte(g.reg.value(), g.word_mode, value);
+	if (g.is_addr == false) {
+		set_registerLowByte(g.reg, g.word_mode, value);
 
 		return true;
 	}
 
-	return b->write(g.addr.value(), g.word_mode, value, g.mode_selection, g.space) == false;
+	return b->write(g.addr, g.word_mode, value, g.mode_selection, g.space) == false;
 }
 
 uint16_t cpu::add_register(const int nr, const uint16_t value)
@@ -351,11 +349,7 @@ bool cpu::check_pending_interrupts() const
 	uint8_t start_level = getPSW_spl() + 1;
 
 	for(uint8_t i=start_level; i < 8; i++) {
-		auto interrupts = queued_interrupts.find(i);
-
-		assert(interrupts != queued_interrupts.end());
-
-		if (interrupts->second.empty() == false)
+		if (queued_interrupts[i].empty() == false)
 			return true;
 	}
 
@@ -394,9 +388,7 @@ bool cpu::execute_any_pending_interrupt()
 	uint8_t start_level   = current_level + 1;
 
 	for(uint8_t i=0; i < 8; i++) {
-		auto interrupts = queued_interrupts.find(i);
-
-		if (interrupts->second.empty() == false) {
+		if (queued_interrupts[i].empty() == false) {
 			any_queued_interrupts = true;
 
 			if (i < start_level)  // at least we know now that there's an interrupt scheduled
@@ -407,9 +399,9 @@ bool cpu::execute_any_pending_interrupt()
 				return false;
 			}
 
-			auto    vector = interrupts->second.begin();
+			auto    vector = queued_interrupts[i].begin();
 			uint8_t v      = *vector;
-			interrupts->second.erase(vector);
+			queued_interrupts[i].erase(vector);
 
 			TRACE("Invoking interrupt vector %o (IPL %d, current: %d)", v, i, current_level);
 			trap(v, i, true);
@@ -443,9 +435,8 @@ void cpu::queue_interrupt(const uint8_t level, const uint8_t vector)
 	std::unique_lock<std::mutex> lck(qi_lock);
 #endif
 
-	auto it = queued_interrupts.find(level);
-	assert(it != queued_interrupts.end());
-	it->second.insert(vector);
+	queued_interrupts[level].insert(vector);
+	TRACE("Queueing interrupt vector %o (IPL %d, current: %d), n: %zu", vector, level, getPSW_spl(), queued_interrupts[level].size());
 
 #if defined(BUILD_FOR_RP2040)
 	xSemaphoreGive(qi_lock);
@@ -458,8 +449,6 @@ void cpu::queue_interrupt(const uint8_t level, const uint8_t vector)
 #endif
 
 	any_queued_interrupts = true;
-
-	TRACE("Queueing interrupt vector %o (IPL %d, current: %d), n: %zu", vector, level, getPSW_spl(), it->second.size());
 }
 
 void cpu::unqueue_interrupt(const uint8_t level, const uint8_t vector)
@@ -470,9 +459,7 @@ void cpu::unqueue_interrupt(const uint8_t level, const uint8_t vector)
 	std::unique_lock<std::mutex> lck(qi_lock);
 #endif
 
-	auto it = queued_interrupts.find(level);
-	assert(it != queued_interrupts.end());
-	it->second.erase(vector);
+	queued_interrupts[level].erase(vector);
 
 #if defined(BUILD_FOR_RP2040)
 	xSemaphoreGive(qi_lock);
@@ -481,19 +468,20 @@ void cpu::unqueue_interrupt(const uint8_t level, const uint8_t vector)
 
 void cpu::addToMMR1(const gam_rc_t & g)
 {
-	if (b->getMMU()->isMMR1Locked() == false && g.mmr1_update.has_value() == true) {
-		TRACE("MMR1: add %d to register R%d", g.mmr1_update.value().delta, g.mmr1_update.value().reg);
-		assert(g.mmr1_update.value().delta);
-		b->getMMU()->addToMMR1(g.mmr1_update.value().delta, g.mmr1_update.value().reg);
+	if (mmu_->isMMR1Locked() == false && g.mmr1_update.delta) {
+		auto & update = g.mmr1_update;
+		TRACE("MMR1: add %d to register R%d", update.delta, update.reg);
+		assert(update.delta);
+		mmu_->addToMMR1(update.delta, update.reg);
 	}
 }
 
 // GAM = general addressing modes
 gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t word_mode, const bool read_value)
 {
-	gam_rc_t    g { word_mode, rm_cur, i_space, mode, { }, { }, { }, { } };
+	gam_rc_t    g { word_mode, rm_cur, i_space, mode, { }, true, 0, { } };
         uint16_t    temp = 0;
-	d_i_space_t isR7_space = reg == 7 ? i_space : (b->getMMU()->get_use_data_space(getPSW_runmode()) ? d_space : i_space);
+	d_i_space_t isR7_space = reg == 7 ? i_space : (mmu_->get_use_data_space(getPSW_runmode()) ? d_space : i_space);
 	//                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ always d_space here? TODO
 
 	g.space     = isR7_space;
@@ -502,20 +490,21 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t wo
 
 	switch(mode) {
 		case 0:  // Rn
-			g.reg   = reg;
-			g.value = get_register(reg) & word_mode_mask[word_mode];
+			g.reg     = reg;
+			g.is_addr = false;
+			g.value   = get_register(reg) & word_mode_mask[word_mode];
 			break;
 		case 1:  // (Rn)
 			g.addr  = get_register(reg);
 			if (read_value)
-				g.value = b->read(g.addr.value(), word_mode, rm_cur, isR7_space);
+				g.value = b->read(g.addr, word_mode, rm_cur, isR7_space);
 			break;
 		case 2:  // (Rn)+  /  #n
 			g.addr  = get_register(reg);
 			add_register(reg, word_mode == wm_word || reg >= 6 ? 2 : 1);
 			g.mmr1_update = { word_mode == wm_word || reg >= 6 ? 2 : 1, reg };
 			if (read_value)
-				g.value = b->read(g.addr.value(), word_mode, rm_cur, isR7_space);
+				g.value = b->read(g.addr, word_mode, rm_cur, isR7_space);
 			break;
 		case 3:  // @(Rn)+  /  @#a
 			g.addr  = b->read(get_register(reg), wm_word, rm_cur, isR7_space);
@@ -524,7 +513,7 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t wo
 			// might be wrong: the adds should happen when the read is really performed(?), because of traps
 			add_register(reg, 2);
 			if (read_value)
-				g.value = b->read(g.addr.value(), word_mode, rm_cur, g.space);
+				g.value = b->read(g.addr, word_mode, rm_cur, g.space);
 			break;
 		case 4:  // -(Rn)
 			temp    = add_register(reg, word_mode == wm_word || reg >= 6 ? -2 : -1);
@@ -532,7 +521,7 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t wo
 			g.space = d_space;
 			g.addr  = temp;
 			if (read_value)
-				g.value = b->read(g.addr.value(), word_mode, rm_cur, isR7_space);
+				g.value = b->read(g.addr, word_mode, rm_cur, isR7_space);
 			break;
 		case 5:  // @-(Rn)
 			temp    = add_register(reg, -2);
@@ -540,7 +529,7 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t wo
 			g.addr  = b->read(temp, wm_word, rm_cur, isR7_space);
 			g.space = d_space;
 			if (read_value)
-				g.value = b->read(g.addr.value(), word_mode, rm_cur, g.space);
+				g.value = b->read(g.addr, word_mode, rm_cur, g.space);
 			break;
 		case 6:  // x(Rn)  /  a
 			next_word = b->read(getPC(), wm_word, rm_cur, i_space);
@@ -548,7 +537,7 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t wo
 			g.addr  = get_register(reg) + next_word;
 			g.space = d_space;
 			if (read_value)
-				g.value = b->read(g.addr.value(), word_mode, rm_cur, g.space);
+				g.value = b->read(g.addr, word_mode, rm_cur, g.space);
 			break;
 		case 7:  // @x(Rn)  /  @a
 			next_word = b->read(getPC(), wm_word, rm_cur, i_space);
@@ -556,7 +545,7 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t wo
 			g.addr  = b->read(get_register(reg) + next_word, wm_word, rm_cur, d_space);
 			g.space = d_space;
 			if (read_value)
-				g.value = b->read(g.addr.value(), word_mode, rm_cur, g.space);
+				g.value = b->read(g.addr, word_mode, rm_cur, g.space);
 			break;
 	}
 
@@ -569,17 +558,17 @@ bool cpu::putGAM(const gam_rc_t & g, const uint16_t value)
 {
 	assert(value < 256 || g.word_mode == wm_word);
 
-	if (g.addr.has_value()) {
-		auto rc = b->write(g.addr.value(), g.word_mode, value, g.mode_selection, g.space);
+	if (g.is_addr) {
+		auto rc = b->write(g.addr, g.word_mode, value, g.mode_selection, g.space);
 		return rc == false;
 	}
 
 	if (g.mode_selection == rm_prev) {
-		assert(g.reg.value() == 6);
+		assert(g.reg == 6);
 		sp[getPSW_prev_runmode()] = value;
 	}
 	else {
-		set_register(g.reg.value(), value);
+		set_register(g.reg, value);
 	}
 
 	return true;
@@ -1055,7 +1044,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						  addToMMR1(a);
 						  int32_t vl        = (a.value.value() + 1) & word_mode_mask[word_mode];
 
-						  bool    set_flags = b->write(a.addr.value(), a.word_mode, vl, a.mode_selection, a.space) == false;
+						  bool    set_flags = b->write(a.addr, a.word_mode, vl, a.mode_selection, a.space) == false;
 
 						  if (set_flags) {
 							  setPSW_n(SIGN(vl, word_mode));
@@ -1087,7 +1076,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						  addToMMR1(a);
 						  int32_t  vl        = (a.value.value() - 1) & word_mode_mask[word_mode];
 
-						  bool     set_flags = b->write(a.addr.value(), a.word_mode, vl, a.mode_selection, a.space) == false;
+						  bool     set_flags = b->write(a.addr, a.word_mode, vl, a.mode_selection, a.space) == false;
 
 						  if (set_flags) {
 							  setPSW_n(SIGN(vl, word_mode));
@@ -1119,7 +1108,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						  addToMMR1(a);
 						  uint16_t v = -a.value.value();
 
-						  bool set_flags = b->write(a.addr.value(), a.word_mode, v, a.mode_selection, a.space) == false;
+						  bool set_flags = b->write(a.addr, a.word_mode, v, a.mode_selection, a.space) == false;
 
 						  if (set_flags) {
 							  setPSW_n(SIGN(v, word_mode));
@@ -1156,7 +1145,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						  bool           org_c = getPSW_c();
 						  uint16_t       v     = (vo + org_c) & (word_mode == wm_byte ? 0x00ff : 0xffff);
 
-						  bool set_flags = b->write(a.addr.value(), a.word_mode, v, a.mode_selection, a.space) == false;
+						  bool set_flags = b->write(a.addr, a.word_mode, v, a.mode_selection, a.space) == false;
 
 						  if (set_flags) {
 							  setPSW_n(SIGN(v, word_mode));
@@ -1193,7 +1182,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						  bool           org_c = getPSW_c();
 						  uint16_t       v     = (vo - org_c) & word_mode_mask[word_mode];
 
-						  bool set_flags = b->write(a.addr.value(), a.word_mode, v, a.mode_selection, a.space) == false;
+						  bool set_flags = b->write(a.addr, a.word_mode, v, a.mode_selection, a.space) == false;
 
 						  if (set_flags) {
 							  setPSW_n(SIGN(v, word_mode));
@@ -1246,7 +1235,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						  else
 							  temp = (t >> 1) | (getPSW_c() << 15);
 
-						  bool set_flags = b->write(a.addr.value(), a.word_mode, temp, a.mode_selection, a.space) == false;
+						  bool set_flags = b->write(a.addr, a.word_mode, temp, a.mode_selection, a.space) == false;
 
 						  if (set_flags) {
 							  setPSW_c(new_carry);
@@ -1296,7 +1285,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 							  temp = (t << 1) | getPSW_c();
 						  }
 
-						  bool set_flags = b->write(a.addr.value(), a.word_mode, temp, a.mode_selection, a.space) == false;
+						  bool set_flags = b->write(a.addr, a.word_mode, temp, a.mode_selection, a.space) == false;
 
 						  if (set_flags) {
 							  setPSW_c(new_carry);
@@ -1342,7 +1331,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 							  v >>= 1;
 						  v |= hb;
 
-						  bool set_flags = b->write(a.addr.value(), a.word_mode, v, a.mode_selection, a.space) == false;
+						  bool set_flags = b->write(a.addr, a.word_mode, v, a.mode_selection, a.space) == false;
 
 						  if (set_flags) {
 							  setPSW_n(SIGN(v, word_mode));
@@ -1374,7 +1363,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						 uint16_t vl  = a.value.value();
 						 uint16_t v   = (vl << 1) & word_mode_mask[word_mode];
 
-						 bool set_flags = b->write(a.addr.value(), a.word_mode, v, a.mode_selection, a.space) == false;
+						 bool set_flags = b->write(a.addr, a.word_mode, v, a.mode_selection, a.space) == false;
 
 						 if (set_flags) {
 							 setPSW_n(SIGN(v, word_mode));
@@ -1402,7 +1391,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 				                addToMMR1(a);
 
 						// read from previous space
-						v = b->read(a.addr.value(), wm_word, rm_prev, word_mode == wm_byte ? d_space : i_space);
+						v = b->read(a.addr, wm_word, rm_prev, word_mode == wm_byte ? d_space : i_space);
 					 }
 
 					 setPSW_flags_nzv(v, wm_word);
@@ -1429,7 +1418,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						auto a = getGAMAddress(dst_mode, dst_reg, wm_word);
 						addToMMR1(a);
 
-						b->getMMU()->mmudebug(a.addr.value());
+						// mmu_->mmudebug(a.addr);
 
 						a.mode_selection = rm_prev;
 						a.space          = word_mode == wm_byte ? d_space : i_space;
@@ -1631,7 +1620,7 @@ void cpu::push_stack(const uint16_t v)
 				uint16_t a = add_register(6, -2);
 				b->write_word(a, v, d_space);
 				delayed_trap = 04;
-				b->getMMU()->setCPUERRBit(010);
+				mmu_->setCPUERRBit(010);
 			}
 			else {
 				set_register(6, 4);  // red zone
@@ -1722,8 +1711,7 @@ bool cpu::misc_operations(const uint16_t instr)
 
 		case 0b0000000000000101: // RESET
 			if (getPSW_runmode() == 0) {  // only in kernel mode
-				b->init();
-
+				b->reset();
 				init_interrupt_queue();
 			}
 			return true;
@@ -1748,7 +1736,7 @@ bool cpu::misc_operations(const uint16_t instr)
 
 		auto g = getGAMAddress(dst_mode, dst_reg, wm_word);
 		addToMMR1(g);
-		setPC(g.addr.value());
+		setPC(g.addr);
 
 		return true;
 	}
@@ -1764,14 +1752,14 @@ bool cpu::misc_operations(const uint16_t instr)
 		int  dst_reg   = instr & 7;
 
 		auto a         = getGAMAddress(dst_mode, dst_reg, wm_word);
-		auto dst_value = a.addr.value();
+		auto dst_value = a.addr;
 
 		int  link_reg  = (instr >> 6) & 7;
 
 		// PUSH link
 		push_stack(get_register(link_reg));
-		if (!b->getMMU()->isMMR1Locked()) {
-			b->getMMU()->addToMMR1(-2, 6);
+		if (!mmu_->isMMR1Locked()) {
+			mmu_->addToMMR1(-2, 6);
 
 			addToMMR1(a);
 		}
@@ -1838,10 +1826,8 @@ void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 
 				set_register(6, 04);
 			}
-			else {
-				before_psw = getPSW();
-				before_pc  = getPC();
-			}
+			before_psw = getPSW();
+			before_pc  = getPC();
 
 			if (debug_mode)
 				add_to_stack_trace(instruction_start);
@@ -1849,10 +1835,11 @@ void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 			// make sure the trap vector is retrieved from kernel space
 			psw &= 037777;  // mask off 14/15 to make it into kernel-space
 
-			setPC(b->read_word(vector + 0, d_space));
+			auto space = mmu_->get_use_data_space(0) ? d_space : i_space;
+			setPC(b->read_word(vector + 0, space));
 
 			// switch to kernel mode & update 'previous mode'
-			uint16_t new_psw = b->read_word(vector + 2, d_space) & 0147777;  // mask off old 'previous mode'
+			uint16_t new_psw = b->read_word(vector + 2, space) & 0147777;  // mask off old 'previous mode'
 			if (new_ipl != -1)
 				new_psw = (new_psw & ~0xe0) | (new_ipl << 5);
 			new_psw |= (before_psw >> 2) & 030000; // apply new 'previous mode'
@@ -2472,10 +2459,10 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 		work_values_str.push_back(format("%06o", v));
 	out.insert({ "work-values", work_values_str });
 
-	out.insert({ "MMR0", { format("%06o", b->getMMU()->getMMR0()) } });
-	out.insert({ "MMR1", { format("%06o", b->getMMU()->getMMR1()) } });
-	out.insert({ "MMR2", { format("%06o", b->getMMU()->getMMR2()) } });
-	out.insert({ "MMR3", { format("%06o", b->getMMU()->getMMR3()) } });
+	out.insert({ "MMR0", { format("%06o", mmu_->getMMR0()) } });
+	out.insert({ "MMR1", { format("%06o", mmu_->getMMR1()) } });
+	out.insert({ "MMR2", { format("%06o", mmu_->getMMR2()) } });
+	out.insert({ "MMR3", { format("%06o", mmu_->getMMR3()) } });
 
 	return out;
 }
@@ -2484,7 +2471,7 @@ bool cpu::step()
 {
 	it_is_a_trap = false;
 
-	if (any_queued_interrupts)
+	if (any_queued_interrupts.load(std::memory_order_relaxed))
 		execute_any_pending_interrupt();
 
 	instruction_count++;
@@ -2492,15 +2479,15 @@ bool cpu::step()
 	try {
 		instruction_start = getPC();
 
-		if (!b->getMMU()->isMMR1Locked())
-			b->getMMU()->setMMR2(instruction_start);
+		if (!mmu_->isMMR1Locked())
+			mmu_->setMMR2(instruction_start);
 
 		uint16_t instr = b->read_word(instruction_start);
 		add_register(7, 2);
 
 		if (double_operand_instructions(instr) || conditional_branch_instructions(instr) || condition_code_operations(instr) || misc_operations(instr)) {
-			if (!b->getMMU()->isMMR1Locked())
-				b->getMMU()->clearMMR1();
+			if (!mmu_->isMMR1Locked())
+				mmu_->clearMMR1();
 
 			if (delayed_trap.has_value()) {
 				trap(delayed_trap.value(), 7);
@@ -2554,13 +2541,13 @@ JsonDocument cpu::serialize()
 		j["delayed_trap"] = delayed_trap.value();
 
 	JsonVariant j_queued_interrupts;
-	for(auto & il: queued_interrupts) {
+	for(int il=0; il<8; il++) {
 		JsonDocument ja_qi_level;
 		JsonArray ja_qi_level_work = ja_qi_level.to<JsonArray>();
-		for(auto v: il.second)
+		for(auto v: queued_interrupts[il])
 			ja_qi_level_work.add(v);
 
-		j_queued_interrupts[format("%d", il.first)] = ja_qi_level;
+		j_queued_interrupts[format("%d", il)] = ja_qi_level;
 	}
 
 	j["queued_interrupts"]     = j_queued_interrupts;
@@ -2608,11 +2595,9 @@ cpu *cpu::deserialize(const JsonVariantConst j, bus *const b, std::atomic_uint32
 
 	c->init_interrupt_queue();
 	for(int level=0; level<8; level++) {
-		auto it = c->queued_interrupts.find(level);
-
 		JsonArrayConst ja_qi_level = j["queued_interrupts"][format("%d", level)].as<JsonArrayConst>();
 		for(auto v : ja_qi_level)
-			it->second.insert(v.as<int>());
+			c->queued_interrupts[level].insert(v.as<int>());
 	}
 
 	return c;
