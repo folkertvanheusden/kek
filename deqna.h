@@ -6,9 +6,13 @@
 #include "bus.h"
 #include "device.h"
 
-#define DEQNA_BASE   0174440
-#define DEQNA_VECTOR 0174454
-#define DEQNA_CSR    0174456
+#define DEQNA_BASE    0174440
+#define DEQNA_RX_BDLL 0174444
+#define DEQNA_RX_BDLH 0174446
+#define DEQNA_TX_BDLL 0174450
+#define DEQNA_TX_BDLH 0174452
+#define DEQNA_VECTOR  0174454
+#define DEQNA_CSR     0174456
 #define DEQNA_END    (DEQNA_CSR + 2)
 
 class deqna : public device
