@@ -1,4 +1,4 @@
-// (C) 2018-2024 by Folkert van Heusden
+// (C) 2018-2026 by Folkert van Heusden
 // Released under MIT license
 
 #include "gen.h"
@@ -9,6 +9,7 @@
 
 #include "bus.h"
 #include "cpu.h"
+#include "deqna.h"
 #include "dz11.h"
 #include "kw11-l.h"
 #include "log.h"
@@ -43,6 +44,7 @@ bus::~bus()
 	delete m;
 	delete dz11_;
 	delete rp06_;
+	delete deqna_;
 
 	if (rom.has_value())
 		delete [] std::get<2>(rom.value());
@@ -82,6 +84,8 @@ JsonDocument bus::serialize() const
 	// TODO: tm11
 
 	// TODO: rom
+
+	// TODO: deqna
 
 	return j_out;
 }
@@ -126,6 +130,8 @@ bus *bus::deserialize(const JsonDocument j, console *const cnsl, std::atomic_uin
 	// TODO: tm11
 
 	// TODO: rom
+
+	// TODO: deqna
 
 	return b;
 }
@@ -176,9 +182,17 @@ void bus::reset()
 		dz11_->reset();
 	if (rp06_)
 		rp06_->reset();
+	if (deqna_)
+		deqna_->reset();
 
 	mmu_->setMMR0(0);
 	mmu_->setMMR3(0);
+}
+
+void bus::add_DEQNA(deqna *const deqna_)
+{
+	delete this->deqna_;
+	this->deqna_ = deqna_;
 }
 
 void bus::add_RP06(rp06 *const rp06_)
@@ -504,6 +518,9 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 		if (rp06_ && a >= RP06_BASE && a < RP06_END)
 			return word_mode == wm_byte ? rp06_->read_byte(a) : rp06_->read_word(a);
 
+		if (deqna_ && a >= DEQNA_BASE && a < DEQNA_END)
+			return word_mode == wm_byte ? deqna_->read_byte(a) : deqna_->read_word(a);
+
 		// LO size register field must be all 1s, so subtract 1
 		uint32_t system_size = m->get_memory_size() / 64 - 1;
 		if (system_size == 0177777)
@@ -754,6 +771,11 @@ bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 
 		if (rp06_ && a >= RP06_BASE && a < RP06_END) {
 			word_mode == wm_byte ? rp06_->write_byte(a, value) : rp06_->write_word(a, value);
+			return false;
+		}
+
+		if (deqna_ && a >= DEQNA_BASE && a < DEQNA_END) {
+			word_mode == wm_byte ? deqna_->write_byte(a, value) : deqna_->write_word(a, value);
 			return false;
 		}
 

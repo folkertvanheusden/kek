@@ -519,6 +519,10 @@ int main(int argc, char *argv[])
 		rp06_dev->begin();
 		b->add_RP06(rp06_dev);
 
+		uint8_t mac_address[] { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06 };
+		auto deqna_dev = new deqna(b, mac_address);
+		b->add_DEQNA(deqna_dev);
+
 		if (disk_type == "rk05") {
 			bootloader = BL_RK05;
 
