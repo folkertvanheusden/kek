@@ -41,10 +41,10 @@ bus::~bus()
 	delete rl02_;
 	delete tty_;
 	delete mmu_;
-	delete m;
 	delete dz11_;
 	delete rp06_;
 	delete deqna_;
+	delete m;
 
 	if (rom.has_value())
 		delete [] std::get<2>(rom.value());

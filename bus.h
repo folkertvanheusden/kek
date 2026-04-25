@@ -102,6 +102,7 @@ public:
 	uint16_t get_console_leds() { return console_leds; }
 
 	void set_memory_size(const int n_pages);
+	uint32_t get_memory_size() const { return m->get_memory_size(); }
 
 	// use bus::write to set
 	void    add_rom     (const uint32_t offset, const uint16_t len);
