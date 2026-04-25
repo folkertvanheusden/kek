@@ -3,6 +3,10 @@
 
 #pragma once
 
+#include <atomic>
+#include <cstdint>
+#include <thread>
+
 #include "bus.h"
 #include "device.h"
 
@@ -15,11 +19,20 @@
 #define DEQNA_CSR     0174456
 #define DEQNA_END    (DEQNA_CSR + 2)
 
+constexpr const uint8_t bc_addr[] { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
+
 class deqna : public device
 {
 private:
-	uint16_t registers  [8] { 0 };
-	uint8_t  mac_address[6] { 0 };
+	uint16_t         registers  [8] { 0       };
+	uint8_t          mac_address[6] { 0       };
+	int              dev_fd         { -1      };
+	std::atomic_bool stop_flag      { false   };
+	std::thread     *th_rx          { nullptr };
+	std::thread     *th_tx          { nullptr };
+
+	void receiver   ();
+	void transmitter();
 
 public:
 	deqna(bus *const b, const uint8_t mac_address[6]);
