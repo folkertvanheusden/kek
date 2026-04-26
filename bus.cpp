@@ -930,7 +930,17 @@ void bus::write_word(const uint16_t a, const uint16_t value, const d_i_space_t s
 	write(a, wm_word, value, rm_cur, s);
 }
 
-uint8_t bus::read_unibus_byte(const uint32_t a)
+// TODO check for odd address
+uint16_t bus::read_unibus_word(const uint32_t a) const
+{
+	uint16_t v = 0;
+	if (a < m->get_memory_size())
+		v = m->read_word(a);
+	TRACE("read_unibus_byte[%08o]=%06o", a, v);
+	return v;
+}
+
+uint8_t bus::read_unibus_byte(const uint32_t a) const
 {
 	uint8_t v = 0;
 	if (a < m->get_memory_size())

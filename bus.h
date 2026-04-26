@@ -140,7 +140,8 @@ public:
 	uint16_t read_word(const uint16_t a, const d_i_space_t s);
 	uint16_t read_word(const uint16_t a) override { return read_word(a, i_space); }
 	std::optional<uint16_t> peek_word(const int run_mode, const uint16_t a);
-	uint8_t  read_unibus_byte(const uint32_t a);
+	uint8_t  read_unibus_byte(const uint32_t a) const;
+	uint16_t read_unibus_word(const uint32_t a) const;
 	uint16_t read_physical(const uint32_t a);
 	uint16_t read_physical_byte(const uint32_t a);
 
