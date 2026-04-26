@@ -140,7 +140,7 @@ void deqna::receiver()
 			continue;
 		}
 		///////////////////
-		uint32_t p_buffers = ((registers[3] & 63) << 22) | registers[2];
+		uint32_t p_buffers = ((registers[3] & 63) << 16) | registers[2];
 		// a descriptor is 6 words
 		while(p_buffers + 12 < b->get_memory_size()) {
 			auto     ph    = b->read_unibus_word(p_buffers + 1 * 2);
@@ -193,7 +193,7 @@ void deqna::transmitter()
 		if (registers[7] & 16)
 			continue;
 
-		uint32_t p_buffers = ((registers[5] & 63) << 22) | registers[4];
+		uint32_t p_buffers = ((registers[5] & 63) << 16) | registers[4];
 		// a descriptor is 6 words
 		while(p_buffers + 12 < b->get_memory_size()) {
 			auto     ph    = b->read_unibus_word(p_buffers + 1 * 2);
