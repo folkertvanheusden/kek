@@ -179,7 +179,7 @@ void deqna::receiver()
 		// TODO push into pdp memory
 	}
 
-	DOLOG(info, false, "RECEIVER THREAD TERMINATING");
+	DOLOG(info, false, "DEQNA RECEIVER THREAD TERMINATING");
 }
 
 void deqna::transmitter()
@@ -212,7 +212,7 @@ void deqna::transmitter()
 		}
 	}
 
-	DOLOG(info, false, "TRANSMITTER THREAD TERMINATING");
+	DOLOG(info, false, "DEQNA TRANSMITTER THREAD TERMINATING");
 }
 
 void deqna::reset()
