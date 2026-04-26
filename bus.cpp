@@ -860,6 +860,12 @@ bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 	return false;
 }
 
+void bus::write_unibus_word(const uint32_t a, const uint16_t value)
+{
+	if (a < m->get_memory_size())
+		m->write_word(a, value);
+}
+
 void bus::write_physical(const uint32_t a, const uint16_t value)
 {
 	TRACE("physicalWRITE %06o to %o", value, a);

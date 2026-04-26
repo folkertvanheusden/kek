@@ -151,4 +151,5 @@ public:
 	void     write_word(const uint16_t a, const uint16_t value, const d_i_space_t s);
 	void     write_word(const uint16_t a, const uint16_t value) override { write_word(a, value, i_space); }
 	void     write_physical(const uint32_t a, const uint16_t value);
+	void     write_unibus_word(const uint32_t a, const uint16_t value);
 };
