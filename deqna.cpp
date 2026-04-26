@@ -145,13 +145,17 @@ void deqna::receiver()
 		while(p_buffers + 12 < b->get_memory_size()) {
 			auto     ph    = b->read_unibus_word(p_buffers + 1 * 2);
 			auto     pl    = b->read_unibus_word(p_buffers + 2 * 2);
-			uint32_t chain = ((ph >> 10) << 16) | pl;
-			if (chain == 0 || (pl & 1) == 0)
+			uint32_t chain = ((ph & 0x3f) << 16) | pl;
+			printf("chain address: %o\n", chain);
+			if (chain == 0 || (ph & 0x8000) == 0)
 				break;
 			auto     len   = b->read_unibus_word(p_buffers + 3 * 2);  // buffer length in 3d word
-			uint16_t length = -int16_t(((len & 0xff) << 8) | (len >> 8));
+			uint16_t length = (~len + 1) * 2;
 			printf("RX %08x %d\n", p_buffers, length);
-			p_buffers = chain;
+			if (ph & 0x4000)  // chain?
+				p_buffers = chain;
+			else
+				break;
 		}
 		///////////////////
 
@@ -179,8 +183,8 @@ void deqna::receiver()
 void deqna::transmitter()
 {
 	while(!stop_flag) {
-		// 67.2 uS for the shortest packet including IFG (inter-
-		// frame gap)
+		// 67.2 uS for the shortest packet including IFG
+		// (inter frame gap)
 		myusleep(250);  // rounded up slightly
 
 		// sender list invalid?
@@ -192,13 +196,17 @@ void deqna::transmitter()
 		while(p_buffers + 12 < b->get_memory_size()) {
 			auto     ph    = b->read_unibus_word(p_buffers + 1 * 2);
 			auto     pl    = b->read_unibus_word(p_buffers + 2 * 2);
-			uint32_t chain = ((ph >> 10) << 16) | pl;
-			if (chain == 0 || (pl & 1) == 0)
+			uint32_t chain = ((ph & 0x3f) << 16) | pl;
+			printf("chain address: %o\n", chain);
+			if (chain == 0 || (ph & 0x8000) == 0)
 				break;
 			auto     len   = b->read_unibus_word(p_buffers + 3 * 2);  // buffer length in 3d word
-			uint16_t length = -int16_t(((len & 0xff) << 8) | (len >> 8));
+			uint16_t length = (~len + 1) * 2;
 			printf("TX %08x %d\n", p_buffers, length);
-			p_buffers = chain;
+			if (ph & 0x4000)  // chain?
+				p_buffers = chain;
+			else
+				break;
 		}
 	}
 }
