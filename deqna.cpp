@@ -139,25 +139,6 @@ void deqna::receiver()
 			myusleep(100000);
 			continue;
 		}
-		///////////////////
-		uint32_t p_buffers = ((registers[3] & 63) << 16) | registers[2];
-		// a descriptor is 6 words
-		while(p_buffers + 12 < b->get_memory_size()) {
-			auto     ph    = b->read_unibus_word(p_buffers + 1 * 2);
-			auto     pl    = b->read_unibus_word(p_buffers + 2 * 2);
-			uint32_t chain = ((ph & 0x3f) << 16) | pl;
-			printf("chain address: %o\n", chain);
-			if (chain == 0 || (ph & 0x8000) == 0)
-				break;
-			auto     len   = b->read_unibus_word(p_buffers + 3 * 2);  // buffer length in 3d word
-			uint16_t length = (~len + 1) * 2;
-			printf("RX %08x %d\n", p_buffers, length);
-			if (ph & 0x4000)  // chain?
-				p_buffers = chain;
-			else
-				break;
-		}
-		///////////////////
 
 		int rc = poll(fds, 1, 100);
 		if (rc == -1) {
@@ -176,7 +157,46 @@ void deqna::receiver()
 		if (memcmp(buffer, mac_address, 6) != 0 && memcmp(buffer, bc_addr, 6) != 0)
 			continue;
 
-		// TODO push into pdp memory
+		DOLOG(debug, false, "DEQNA: Ethernet packet received");
+
+		// push into pdp memory
+		uint32_t p_buffers = ((registers[3] & 63) << 16) | registers[2];
+		bool     queued    = false;
+		// a descriptor is 6 words
+		while(p_buffers + 12 <= b->get_memory_size()) {
+			auto     flags = b->read_unibus_word(p_buffers + 0 * 2);
+			auto     ph    = b->read_unibus_word(p_buffers + 1 * 2);
+			auto     pl    = b->read_unibus_word(p_buffers + 2 * 2);
+			uint32_t chain = ((ph & 0x3f) << 16) | pl;
+			auto     len   = b->read_unibus_word(p_buffers + 3 * 2);  // buffer length, 2s complement
+			int      length = (~len + 1) * 2;
+			if ((ph & 0x8000) == 0) {  // valid?
+				DOLOG(debug, false, "DEQNA: %08o is an invalid RX descr", p_buffers);
+				break;
+			}
+			if ((ph & 0x4000) == 0) {  // chain? no, use as buffer
+				DOLOG(debug, false, "DEQNA: %08o is not a chain pointer, use as buffer-pointer", chain);
+				for(int i=0; i<std::min(byte_cnt, length); i++)
+					b->write_unibus_byte(chain + i, buffer[i]);
+				uint16_t temp1 = b->read_unibus_word(p_buffers + 4 * 2);  // status word 1
+				temp1 &= 0x3fff;  // upper 2 bits 0 is "This buffer contains the last segment of a message with no errors."
+				// uint16_t temp2 = b->read_unibus_word(p_buffers + 5 * 2);  // status word 2
+				flags &= ~0xc000;
+				flags |= 0x8000;  // initialized, not in use
+				b->write_unibus_word(p_buffers + 0 * 2, flags);
+				registers[7] |= 0x8000;  // RI
+				if (registers[7] & 64) {  // IE
+					DOLOG(debug, false, "DEQNA packet queued");
+					b->getCpu()->queue_interrupt(5, registers[6] & 0x3fc);
+					queued = true;
+				}
+				break;
+			}
+			p_buffers = chain;
+		}
+
+		if (!queued)
+			DOLOG(info, false, "DEQNA packet NOT queued");
 	}
 
 	DOLOG(info, false, "DEQNA RECEIVER THREAD TERMINATING");
@@ -192,24 +212,7 @@ void deqna::transmitter()
 		// sender list invalid?
 		if (registers[7] & 16)
 			continue;
-
-		uint32_t p_buffers = ((registers[5] & 63) << 16) | registers[4];
-		// a descriptor is 6 words
-		while(p_buffers + 12 < b->get_memory_size()) {
-			auto     ph    = b->read_unibus_word(p_buffers + 1 * 2);
-			auto     pl    = b->read_unibus_word(p_buffers + 2 * 2);
-			uint32_t chain = ((ph & 0x3f) << 16) | pl;
-			printf("chain address: %o\n", chain);
-			if (chain == 0 || (ph & 0x8000) == 0)
-				break;
-			auto     len   = b->read_unibus_word(p_buffers + 3 * 2);  // buffer length in 3d word
-			uint16_t length = (~len + 1) * 2;
-			printf("TX %08x %d\n", p_buffers, length);
-			if (ph & 0x4000)  // chain?
-				p_buffers = chain;
-			else
-				break;
-		}
+myusleep(1000000);
 	}
 
 	DOLOG(info, false, "DEQNA TRANSMITTER THREAD TERMINATING");
