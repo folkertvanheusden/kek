@@ -209,7 +209,7 @@ void mmu::write_par(const uint32_t a, const int run_mode, const uint16_t value, 
 
 	pages[page_index].pdr &= ~(128 /*A*/ + 64 /*W*/);  // reset PDR A/W when PAR is written to
 
-	TRACE("mmu WRITE-I/O PAR run-mode %d: %c for %d: %o (%07o)", run_mode, is_d ? 'D' : 'I', page, word_mode == wm_byte ? value & 0xff : value, pages[run_mode][is_d][page].par_preshifted);
+	TRACE("mmu WRITE-I/O PAR run-mode %d: %c for %d: %o (%07o)", run_mode, is_d ? 'D' : 'I', page, word_mode == wm_byte ? value & 0xff : value, pages[page_index].par_preshifted);
 }
 
 uint16_t mmu::read_word(const uint16_t a)
@@ -282,9 +282,6 @@ void mmu::write_byte(const uint16_t a, const uint8_t value)
 
 void mmu::trap_if_odd(const int page_index, const bool is_write)
 {
-	if (is_write)
-		set_page_trapped(page_index);
-
 	MMR0 &= ~(7 << 1);
 	MMR0 |= (page_index & 7) << 1;
 
@@ -348,6 +345,7 @@ void mmu::mmudebug(const uint16_t a)
 {
 #if !defined(TURBO)
 	for(int rm=0; rm<4; rm++) {
+		auto ma = calculate_physical_address(rm, a);
 		TRACE("RM %d, a: %06o, apf: %d, PI: %08o (PSW: %d), PD: %08o (PSW: %d)", rm, ma.virtual_address, ma.apf, ma.physical_instruction, ma.physical_instruction_is_psw, ma.physical_data, ma.physical_data_is_psw);
 	}
 #endif
@@ -359,9 +357,6 @@ void mmu::verify_page_access(const int page_index, const bool is_write)
 	if (trap_action == T_PROCEED) [[likely]]
 		return;
 
-	if (is_write)
-		set_page_trapped(page_index);
-
 	if (is_locked() == false) {
 		uint16_t temp = getMMR0();
 
@@ -372,8 +367,10 @@ void mmu::verify_page_access(const int page_index, const bool is_write)
 					  //
 		if (access_control == 0 || access_control == 4)
 			temp |= 1l << 15;  // not resident
-		else
-			temp |= 1 << 13;  // read-only
+		else if (access_control == 1 || access_control == 2)
+			temp |= 1 << 13;
+		else if (access_control == 3 || access_control == 7)
+			temp |= 1 << 15;
 
 		const auto [ run_mode, d, apf ] = explode_page_index(page_index);
 		temp |= run_mode << 5;  // TODO: kernel-mode or user-mode when a trap occurs in user-mode?
@@ -411,9 +408,6 @@ void mmu::verify_access_valid(const uint32_t m_offset, const int page_index, con
 			setMMR0_as_is(temp);
 		}
 
-		if (is_write)
-			set_page_trapped(page_index);
-
 		c->trap(0250);
 
 		throw 6;
@@ -423,17 +417,12 @@ void mmu::verify_access_valid(const uint32_t m_offset, const int page_index, con
 void mmu::verify_page_length(const uint16_t virt_addr, const int page_index, const bool is_write)
 {
 	uint16_t pdr_len    = get_pdr_len(page_index);
-	if (pdr_len == 127) [[likely]]
-		return;
-
 	uint16_t pdr_cmp   = (virt_addr >> 6) & 127;
 	bool     direction = get_pdr_direction(page_index);
 
 	if (direction == false ? pdr_cmp > pdr_len : pdr_cmp < pdr_len) [[unlikely]] {
 		TRACE("mmu::calculate_physical_address::p_offset %o versus %o direction %d", pdr_cmp, pdr_len, direction);
 		TRACE("TRAP(0250) (throw 7) on address %06o", virt_addr);
-
-		c->trap(0250);  // invalid access
 
 		if (is_locked() == false) {
 			uint16_t temp = getMMR0();
@@ -455,8 +444,7 @@ void mmu::verify_page_length(const uint16_t virt_addr, const int page_index, con
 			setMMR0_as_is(temp);
 		}
 
-		if (is_write)
-			set_page_trapped(page_index);
+		c->trap(0250);  // invalid access
 
 		throw 7;
 	}

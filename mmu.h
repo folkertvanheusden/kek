@@ -89,7 +89,7 @@ public:
 
 	int      calc_par_pdr_index(const int run_mode, const bool d, const int apf) const { return apf + (d << 3) + (run_mode << 4); }
 	std::tuple<int, bool, int> explode_page_index(const int page) { return { page >> 4, (page >> 3) & 1, page & 7 }; }
-	void     set_page_trapped   (const int page_index) { pages[page_index].pdr |= 1 << 7; }
+	void     set_page_accessed  (const int page_index) { pages[page_index].pdr |= 1 << 7; }
 	void     set_page_written_to(const int page_index) { pages[page_index].pdr |= 1 << 6; }
 	int      get_access_control (const int page_index) { return pages[page_index].pdr & 7; }
 	int      get_pdr_len        (const int page_index) { return (pages[page_index].pdr >> 8) & 127; }

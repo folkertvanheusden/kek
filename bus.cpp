@@ -1,4 +1,4 @@
-// (C) 2018-2024 by Folkert van Heusden
+// (C) 2018-2026 by Folkert van Heusden
 // Released under MIT license
 
 #include "gen.h"
@@ -9,6 +9,7 @@
 
 #include "bus.h"
 #include "cpu.h"
+#include "deqna.h"
 #include "dz11.h"
 #include "kw11-l.h"
 #include "log.h"
@@ -40,9 +41,10 @@ bus::~bus()
 	delete rl02_;
 	delete tty_;
 	delete mmu_;
-	delete m;
 	delete dz11_;
 	delete rp06_;
+	delete deqna_;
+	delete m;
 
 	if (rom.has_value())
 		delete [] std::get<2>(rom.value());
@@ -82,6 +84,8 @@ JsonDocument bus::serialize() const
 	// TODO: tm11
 
 	// TODO: rom
+
+	// TODO: deqna
 
 	return j_out;
 }
@@ -126,6 +130,8 @@ bus *bus::deserialize(const JsonDocument j, console *const cnsl, std::atomic_uin
 	// TODO: tm11
 
 	// TODO: rom
+
+	// TODO: deqna
 
 	return b;
 }
@@ -176,9 +182,17 @@ void bus::reset()
 		dz11_->reset();
 	if (rp06_)
 		rp06_->reset();
+	if (deqna_)
+		deqna_->reset();
 
 	mmu_->setMMR0(0);
 	mmu_->setMMR3(0);
+}
+
+void bus::add_DEQNA(deqna *const deqna_)
+{
+	delete this->deqna_;
+	this->deqna_ = deqna_;
 }
 
 void bus::add_RP06(rp06 *const rp06_)
@@ -504,6 +518,9 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 		if (rp06_ && a >= RP06_BASE && a < RP06_END)
 			return word_mode == wm_byte ? rp06_->read_byte(a) : rp06_->read_word(a);
 
+		if (deqna_ && a >= DEQNA_BASE && a < DEQNA_END)
+			return word_mode == wm_byte ? deqna_->read_byte(a) : deqna_->read_word(a);
+
 		// LO size register field must be all 1s, so subtract 1
 		uint32_t system_size = m->get_memory_size() / 64 - 1;
 		if (system_size == 0177777)
@@ -527,9 +544,10 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 		throw 1;
 	}
 
+	int page_index = mmu_->calc_par_pdr_index(run_mode, space, addr_in >> 13);
+
 	if ((addr_in & 1) && word_mode == wm_word) {
 		TRACE("READ from %06o - odd address!", addr_in);
-		int page_index = mmu_->calc_par_pdr_index(run_mode, space, addr_in >> 13);
 		mmu_->trap_if_odd(page_index, false);
 		throw 2;
 	}
@@ -539,6 +557,8 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 		c->trap(004);  // no such RAM
 		throw 1;
 	}
+
+	mmu_->set_page_accessed(page_index);
 
 	uint16_t temp = 0;
 	if (word_mode == wm_byte)
@@ -561,10 +581,10 @@ bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 	bool          d          = is_data && mmu_->get_use_data_space(run_mode);
 	int           page_index = mmu_->calc_par_pdr_index(run_mode, d, apf);
 
-	if (mmu_->is_enabled() && (addr_in & 1) == 0 /* TODO remove this? */ && addr_in != ADDR_MMR0)
-		mmu_->set_page_written_to(page_index);
-
 	uint32_t m_offset = mmu_->calculate_physical_address(run_mode, addr_in, true, space);
+
+	if (mmu_->is_enabled())
+		mmu_->set_page_written_to(page_index);
 
 	uint32_t io_base  = mmu_->get_io_base();
 	bool     is_io    = m_offset >= io_base;
@@ -754,6 +774,11 @@ bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 			return false;
 		}
 
+		if (deqna_ && a >= DEQNA_BASE && a < DEQNA_END) {
+			word_mode == wm_byte ? deqna_->write_byte(a, value) : deqna_->write_word(a, value);
+			return false;
+		}
+
 		if (a >= 0172100 && a <= 0172137) {  // MM11-LP parity
 			TRACE("WRITE-I/O MM11-LP parity (%06o): %o", a, value);
 			return false;
@@ -824,6 +849,8 @@ bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 		c->trap(004);  // no such RAM
 		throw 1;
 	}
+
+	mmu_->set_page_accessed(page_index);
 
 	if (word_mode == wm_byte)
 		m->write_byte(m_offset, value);
