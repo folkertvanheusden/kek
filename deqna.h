@@ -24,7 +24,8 @@ constexpr const uint8_t bc_addr[] { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 class deqna : public device
 {
 private:
-	uint16_t         registers  [8] { 0       };
+	bus             *const b        { nullptr };
+	std::atomic_uint16_t registers[8] { 0     };  // accessed from multiple threads
 	uint8_t          mac_address[6] { 0       };
 	int              dev_fd         { -1      };
 	std::atomic_bool stop_flag      { false   };

@@ -99,7 +99,8 @@ static int open_tun(const std::string & dev_name, const uint8_t mac_address[6])
 }
 #endif
 
-deqna::deqna(bus *const b, const uint8_t mac_address[6])
+deqna::deqna(bus *const b, const uint8_t mac_address[6]) :
+	b(b)
 {
 	memcpy(this->mac_address, mac_address, sizeof this->mac_address);
 	reset();
@@ -135,6 +136,25 @@ void deqna::receiver()
 			myusleep(100000);
 			continue;
 		}
+		///////////////////
+		uint32_t p_buffers = ((registers[3] & 63) << 22) | registers[2];
+		// a descriptor is 6 words
+		while(p_buffers + 12 < b->get_memory_size()) {
+			auto     ph    = b->peek_word(0, p_buffers + 1 * 2);
+			auto     pl    = b->peek_word(0, p_buffers + 2 * 2);
+			if (ph.has_value() == false || pl.has_value() == false)
+				break;
+			uint32_t chain = ((ph.value() >> 10) << 16) | pl.value();
+			if (chain == 0 || (pl.value() & 1) == 0)
+				break;
+			auto     len   = b->peek_word(0, p_buffers + 3 * 2);  // buffer length in 3d word
+			if (len.has_value() == false)
+				break;
+			uint16_t length = -int16_t(((len.value() & 0xff) << 8) | (len.value() >> 8));
+			printf("RX %08x %d\n", p_buffers, length);
+			p_buffers += 12;
+		}
+		///////////////////
 
 		int rc = poll(fds, 1, 100);
 		if (rc == -1) {
@@ -160,7 +180,31 @@ void deqna::receiver()
 void deqna::transmitter()
 {
 	while(!stop_flag) {
-myusleep(101000);
+		// 67.2 uS for the shortest packet including IFG (inter-
+		// frame gap)
+		myusleep(250);  // rounded up slightly
+
+		// sender list invalid?
+		if (registers[7] & 16)
+			continue;
+
+		uint32_t p_buffers = ((registers[5] & 63) << 22) | registers[4];
+		// a descriptor is 6 words
+		while(p_buffers + 12 < b->get_memory_size()) {
+			auto     ph    = b->peek_word(0, p_buffers + 1 * 2);
+			auto     pl    = b->peek_word(0, p_buffers + 2 * 2);
+			if (ph.has_value() == false || pl.has_value() == false)
+				break;
+			uint32_t chain = ((ph.value() >> 10) << 16) | pl.value();
+			if (chain == 0 || (pl.value() & 1) == 0)
+				break;
+			auto     len   = b->peek_word(0, p_buffers + 3 * 2);  // buffer length in 3d word
+			if (len.has_value() == false)
+				break;
+			uint16_t length = -int16_t(((len.value() & 0xff) << 8) | (len.value() >> 8));
+			printf("TX %08x %d\n", p_buffers, length);
+			p_buffers += 12;
+		}
 	}
 }
 
@@ -187,8 +231,10 @@ uint16_t deqna::read_word(const uint16_t addr)
 	if (reg_nr < 6)  // MAC address in low byte from first 6 words
 		rc = mac_address[reg_nr];
 
-	if (reg_nr == 7)  // CSR
+	if (reg_nr == 7) {  // CSR
 		rc |= 0x2000;  // carrier detected
+		rc |= 0x1000;  // fuse ok
+	}
 
 	DOLOG(info, false, "deqna read from %06o (%d): %06o", addr, reg_nr, rc);
 
@@ -209,7 +255,7 @@ void deqna::write_word(const uint16_t addr, uint16_t v)
 	registers[reg_nr] = v;
 
 	if (addr == DEQNA_CSR) {
-		registers[7] &= ~0x8000;  // clear RI (receive interrupt request)
+		registers[7] &= 0x7fff;  // clear RI (receive interrupt request)
 	}
 	else if (addr == DEQNA_RX_BDLH) {
 		registers[7] &= ~32;  // RX buffers set, no more invalid
