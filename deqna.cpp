@@ -256,11 +256,12 @@ void deqna::write_word(const uint16_t addr, const uint16_t v)
 	int reg_nr = (addr - DEQNA_BASE) / 2;
 	DOLOG(info, false, "deqna write %06o to %06o (%d)", v, addr, reg_nr);
 
+	uint16_t old_v = registers[reg_nr];
 	registers[reg_nr] = v;
 
 	if (addr == DEQNA_CSR) {
-		registers[7] &= 0x7fff;  // clear RI (receive interrupt request)
-		registers[7] &= 0xff7f;  // clear XI
+		registers[7] = (old_v & 0x7f7f) |  // clear RI/XI
+			(v & 0x074b);  // some bits cannot be set by software
 	}
 	else if (addr == DEQNA_RX_BDLH) {
 		registers[7] &= ~32;  // RX buffers set, no more invalid
