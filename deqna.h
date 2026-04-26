@@ -19,8 +19,6 @@
 #define DEQNA_CSR     0174456
 #define DEQNA_END    (DEQNA_CSR + 2)
 
-constexpr const uint8_t bc_addr[] { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
-
 class deqna : public device
 {
 private:
@@ -45,6 +43,6 @@ public:
 
 	uint16_t read_word(const uint16_t addr) override;
 
-	void write_byte(const uint16_t addr, const uint8_t v) override;
-	void write_word(const uint16_t addr, uint16_t v)      override;
+	void write_byte(const uint16_t addr, const uint8_t  v) override;
+	void write_word(const uint16_t addr, const uint16_t v) override;
 };

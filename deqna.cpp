@@ -12,6 +12,9 @@
 #include "log.h"
 
 
+constexpr const uint8_t bc_addr[] { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
+
+
 #if defined(linux)
 static void set_ifr_name(ifreq *ifr, const std::string & dev_name)
 {
@@ -140,19 +143,15 @@ void deqna::receiver()
 		uint32_t p_buffers = ((registers[3] & 63) << 22) | registers[2];
 		// a descriptor is 6 words
 		while(p_buffers + 12 < b->get_memory_size()) {
-			auto     ph    = b->peek_word(0, p_buffers + 1 * 2);
-			auto     pl    = b->peek_word(0, p_buffers + 2 * 2);
-			if (ph.has_value() == false || pl.has_value() == false)
+			auto     ph    = b->read_unibus_word(p_buffers + 1 * 2);
+			auto     pl    = b->read_unibus_word(p_buffers + 2 * 2);
+			uint32_t chain = ((ph >> 10) << 16) | pl;
+			if (chain == 0 || (pl & 1) == 0)
 				break;
-			uint32_t chain = ((ph.value() >> 10) << 16) | pl.value();
-			if (chain == 0 || (pl.value() & 1) == 0)
-				break;
-			auto     len   = b->peek_word(0, p_buffers + 3 * 2);  // buffer length in 3d word
-			if (len.has_value() == false)
-				break;
-			uint16_t length = -int16_t(((len.value() & 0xff) << 8) | (len.value() >> 8));
+			auto     len   = b->read_unibus_word(p_buffers + 3 * 2);  // buffer length in 3d word
+			uint16_t length = -int16_t(((len & 0xff) << 8) | (len >> 8));
 			printf("RX %08x %d\n", p_buffers, length);
-			p_buffers += 12;
+			p_buffers = chain;
 		}
 		///////////////////
 
@@ -164,7 +163,7 @@ void deqna::receiver()
 		if (rc == 0)
 			continue;
 
-		uint8_t buffer[1512];
+		uint8_t buffer[1514];
 		int byte_cnt = read(dev_fd, buffer, sizeof buffer);
 		if (byte_cnt <= 0)
 			break;
@@ -191,19 +190,15 @@ void deqna::transmitter()
 		uint32_t p_buffers = ((registers[5] & 63) << 22) | registers[4];
 		// a descriptor is 6 words
 		while(p_buffers + 12 < b->get_memory_size()) {
-			auto     ph    = b->peek_word(0, p_buffers + 1 * 2);
-			auto     pl    = b->peek_word(0, p_buffers + 2 * 2);
-			if (ph.has_value() == false || pl.has_value() == false)
+			auto     ph    = b->read_unibus_word(p_buffers + 1 * 2);
+			auto     pl    = b->read_unibus_word(p_buffers + 2 * 2);
+			uint32_t chain = ((ph >> 10) << 16) | pl;
+			if (chain == 0 || (pl & 1) == 0)
 				break;
-			uint32_t chain = ((ph.value() >> 10) << 16) | pl.value();
-			if (chain == 0 || (pl.value() & 1) == 0)
-				break;
-			auto     len   = b->peek_word(0, p_buffers + 3 * 2);  // buffer length in 3d word
-			if (len.has_value() == false)
-				break;
-			uint16_t length = -int16_t(((len.value() & 0xff) << 8) | (len.value() >> 8));
+			auto     len   = b->read_unibus_word(p_buffers + 3 * 2);  // buffer length in 3d word
+			uint16_t length = -int16_t(((len & 0xff) << 8) | (len >> 8));
 			printf("TX %08x %d\n", p_buffers, length);
-			p_buffers += 12;
+			p_buffers = chain;
 		}
 	}
 }
@@ -212,7 +207,8 @@ void deqna::reset()
 {
 	DOLOG(info, false, "deqna reset");
 
-	memset(registers, 0x00, sizeof registers);
+	for(int i=0; i<8; i++)
+		registers[i] = 0;
 	registers[6] = 0774;
 	registers[7] = 0x100 |  // IL is on initially
 		32 |  // receive list invalid
@@ -247,7 +243,7 @@ void deqna::write_byte(const uint16_t addr, const uint8_t v)
 	DOLOG(info, false, "deqna write %03o to %06o (%d)", v, addr, reg_nr);
 }
 
-void deqna::write_word(const uint16_t addr, uint16_t v)
+void deqna::write_word(const uint16_t addr, const uint16_t v)
 {
 	int reg_nr = (addr - DEQNA_BASE) / 2;
 	DOLOG(info, false, "deqna write %06o to %06o (%d)", v, addr, reg_nr);
