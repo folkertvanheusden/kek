@@ -178,6 +178,8 @@ void deqna::receiver()
 
 		// TODO push into pdp memory
 	}
+
+	DOLOG(info, false, "RECEIVER THREAD TERMINATING");
 }
 
 void deqna::transmitter()
@@ -209,6 +211,8 @@ void deqna::transmitter()
 				break;
 		}
 	}
+
+	DOLOG(info, false, "TRANSMITTER THREAD TERMINATING");
 }
 
 void deqna::reset()
@@ -218,7 +222,7 @@ void deqna::reset()
 	for(int i=0; i<8; i++)
 		registers[i] = 0;
 	registers[6] = 0774;
-	registers[7] = 0x100 |  // IL is on initially
+	registers[7] = // 0x100 |  // IL is asserted initially, low active
 		32 |  // receive list invalid
 		16;  // transmit list invalid
 }
@@ -236,7 +240,7 @@ uint16_t deqna::read_word(const uint16_t addr)
 		rc = mac_address[reg_nr];
 
 	if (reg_nr == 7) {  // CSR
-		rc |= 0x2000;  // carrier detected
+//		rc |= 0x2000;  // carrier detected
 		rc |= 0x1000;  // fuse ok
 	}
 
@@ -260,7 +264,7 @@ void deqna::write_word(const uint16_t addr, const uint16_t v)
 	registers[reg_nr] = v;
 
 	if (addr == DEQNA_CSR) {
-		registers[7] = (old_v & 0x7f7f) |  // clear RI/XI
+		registers[7] = (old_v & 0x7834) |  // clear RI/XI and bits settable by software
 			(v & 0x074b);  // some bits cannot be set by software
 	}
 	else if (addr == DEQNA_RX_BDLH) {
