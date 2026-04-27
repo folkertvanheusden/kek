@@ -116,8 +116,6 @@ deqna::deqna(bus *const b, const uint8_t mac_address[6]) :
 
 deqna::~deqna()
 {
-	if (dev_fd != -1)
-		close(dev_fd);
 	stop_flag = true;
 	if (th_tx) {
 		th_tx->join();
@@ -127,6 +125,8 @@ deqna::~deqna()
 		th_rx->join();
 		delete th_rx;
 	}
+	if (dev_fd != -1)
+		close(dev_fd);
 }
 
 void deqna::receiver()
@@ -231,6 +231,8 @@ void deqna::transmitter()
 				DOLOG(debug, false, "deqna(tx): %08o is an invalid TX descr", p_buffers);
 				break;
 			}
+			flags |= 0x4000;  // buffer busy
+			b->write_unibus_word(p_buffers + 0 * 2, flags);
 			if ((ph & 0x6000) == 0x2000) {  // chain? no, use as buffer; also E is set
 				DOLOG(debug, false, "deqna(tx): %08o is not a chain pointer, use as buffer-pointer", chain);
 				if (length < 0 || length > 2048) {
@@ -238,6 +240,13 @@ void deqna::transmitter()
 					p_buffers = chain;
 					continue;
 				}
+				if (chain + length > b->get_memory_size()) {
+					DOLOG(debug, false, "deqna(tx): buffer does not fit in RAM");
+					break;
+				}
+
+				DOLOG(info, false, "flags: %06o, ph: %06o, status1: %06o, status2: %06o", flags, ph, b->read_unibus_word(p_buffers + 4 * 2), b->read_unibus_word(p_buffers + 5 * 2));
+
 				uint8_t *xmit_buffer = new uint8_t[length];
 				for(int i=0; i<length; i++)
 					xmit_buffer[i] = b->read_unibus_byte(chain + i);
@@ -247,10 +256,10 @@ void deqna::transmitter()
 					DOLOG(warning, false, "deqna(tx): failed transmitting - device down?");
 					break;
 				}
-				// uint16_t temp2 = b->read_unibus_word(p_buffers + 5 * 2);  // status word 2
-				flags &= ~0xc000;
-				flags |= 0x8000;  // initialized, not in use
+
+				flags &= ~0x4000;  // buffer no longer busy
 				b->write_unibus_word(p_buffers + 0 * 2, flags);
+
 				registers[7] |= 128;  // XI
 				if (registers[7] & 64) {  // IE
 					uint16_t vector = registers[6] & 0x3fc;
@@ -260,6 +269,8 @@ void deqna::transmitter()
 				}
 				break;
 			}
+			flags &= ~0x4000;  // buffer no longer busy
+			b->write_unibus_word(p_buffers + 0 * 2, flags);
 			p_buffers = chain;
 		}
 
@@ -306,6 +317,7 @@ uint16_t deqna::read_word(const uint16_t addr)
 
 void deqna::write_byte(const uint16_t addr, const uint8_t v)
 {
+	// just for completeness: the deqna only supports word-access
 	int reg_nr = (addr - DEQNA_BASE) / 2;
 	DOLOG(debug, false, "deqna write_b %03o to %06o (%d)", v, addr, reg_nr);
         uint16_t vtemp = registers[reg_nr];
