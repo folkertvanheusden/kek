@@ -72,7 +72,7 @@ private:
 	std::vector<std::pair<uint16_t, std::string> > stacktrace;
 
 	// vector, 8 levels
-	std::array<std::set<uint8_t>, 8> queued_interrupts;
+	std::array<std::set<uint16_t>, 8> queued_interrupts;
 	std::atomic_bool        any_queued_interrupts { false };
 #if defined(BUILD_FOR_RP2040)
 	SemaphoreHandle_t       qi_lock { xSemaphoreCreateBinary() };
@@ -159,9 +159,9 @@ public:
 	uint16_t pop_stack();
 
 	void init_interrupt_queue();
-	void queue_interrupt(const uint8_t level, const uint8_t vector);
-	void unqueue_interrupt(const uint8_t level, const uint8_t vector);
-	std::array<std::set<uint8_t>, 8> get_queued_interrupts() const { return queued_interrupts; }
+	void queue_interrupt(const uint8_t level, const uint16_t vector);
+	void unqueue_interrupt(const uint8_t level, const uint16_t vector);
+	std::array<std::set<uint16_t>, 8> get_queued_interrupts() const { return queued_interrupts; }
 	std::optional<int> get_interrupt_delay_left() const { return trap_delay; }
 	bool check_if_interrupts_pending() const { return any_queued_interrupts; }
 
