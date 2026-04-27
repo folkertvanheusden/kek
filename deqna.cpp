@@ -198,7 +198,7 @@ void deqna::receiver()
 		}
 
 		if (!queued)
-			DOLOG(info, false, "deqna(rx): packet NOT queued");
+			DOLOG(debug, false, "deqna(rx): packet NOT queued");
 	}
 
 	DOLOG(info, false, "deqna RECEIVER THREAD TERMINATING");
@@ -264,7 +264,7 @@ void deqna::transmitter()
 		}
 
 		if (!queued)
-			DOLOG(info, false, "deqna(tx): packet NOT queued");
+			DOLOG(debug, false, "deqna(tx): packet NOT queued");
 	}
 
 	DOLOG(info, false, "deqna TRANSMITTER THREAD TERMINATING");
@@ -272,7 +272,7 @@ void deqna::transmitter()
 
 void deqna::reset()
 {
-	DOLOG(info, false, "deqna reset");
+	DOLOG(debug, false, "deqna reset");
 
 	for(int i=0; i<8; i++)
 		registers[i] = 0;
@@ -299,7 +299,7 @@ uint16_t deqna::read_word(const uint16_t addr)
 		rc |= 0x1000;  // fuse ok
 	}
 
-	DOLOG(info, false, "deqna read from %06o (%d): %06o", addr, reg_nr, rc);
+	DOLOG(debug, false, "deqna read from %06o (%d): %06o", addr, reg_nr, rc);
 
 	return rc;
 }
@@ -307,13 +307,16 @@ uint16_t deqna::read_word(const uint16_t addr)
 void deqna::write_byte(const uint16_t addr, const uint8_t v)
 {
 	int reg_nr = (addr - DEQNA_BASE) / 2;
-	DOLOG(info, false, "deqna write %03o to %06o (%d)", v, addr, reg_nr);
+	DOLOG(debug, false, "deqna write_b %03o to %06o (%d)", v, addr, reg_nr);
+        uint16_t vtemp = registers[reg_nr];
+        update_word(&vtemp, addr & 1, v);
+        write_word(addr, vtemp);
 }
 
 void deqna::write_word(const uint16_t addr, const uint16_t v)
 {
 	int reg_nr = (addr - DEQNA_BASE) / 2;
-	DOLOG(info, false, "deqna write %06o to %06o (%d)", v, addr, reg_nr);
+	DOLOG(debug, false, "deqna write %06o to %06o (%d)", v, addr, reg_nr);
 
 	uint16_t old_v = registers[reg_nr];
 	registers[reg_nr] = v;
