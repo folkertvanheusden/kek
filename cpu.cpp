@@ -399,8 +399,8 @@ bool cpu::execute_any_pending_interrupt()
 				return false;
 			}
 
-			auto    vector = queued_interrupts[i].begin();
-			uint8_t v      = *vector;
+			auto     vector = queued_interrupts[i].begin();
+			uint16_t v      = *vector;
 			queued_interrupts[i].erase(vector);
 
 			TRACE("Invoking interrupt vector %o (IPL %d, current: %d)", v, i, current_level);
@@ -427,7 +427,7 @@ bool cpu::execute_any_pending_interrupt()
 	return false;
 }
 
-void cpu::queue_interrupt(const uint8_t level, const uint8_t vector)
+void cpu::queue_interrupt(const uint8_t level, const uint16_t vector)
 {
 #if defined(BUILD_FOR_RP2040)
 	xSemaphoreTake(qi_lock, portMAX_DELAY);
@@ -451,7 +451,7 @@ void cpu::queue_interrupt(const uint8_t level, const uint8_t vector)
 	any_queued_interrupts = true;
 }
 
-void cpu::unqueue_interrupt(const uint8_t level, const uint8_t vector)
+void cpu::unqueue_interrupt(const uint8_t level, const uint16_t vector)
 {
 #if defined(BUILD_FOR_RP2040)
 	xSemaphoreTake(qi_lock, portMAX_DELAY);
