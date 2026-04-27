@@ -157,7 +157,7 @@ void deqna::receiver()
 		if (memcmp(buffer, mac_address, 6) != 0 && memcmp(buffer, bc_addr, 6) != 0)
 			continue;
 
-		DOLOG(debug, false, "DEQNA: Ethernet packet received");
+		DOLOG(debug, false, "deqna: Ethernet packet received");
 
 		// push into pdp memory
 		uint32_t p_buffers = ((registers[3] & 63) << 16) | registers[2];
@@ -171,11 +171,11 @@ void deqna::receiver()
 			auto     len   = b->read_unibus_word(p_buffers + 3 * 2);  // buffer length, 2s complement
 			int      length = (~len + 1) * 2;
 			if ((ph & 0x8000) == 0) {  // valid?
-				DOLOG(debug, false, "DEQNA: %08o is an invalid RX descr", p_buffers);
+				DOLOG(debug, false, "deqna: %08o is an invalid RX descr", p_buffers);
 				break;
 			}
 			if ((ph & 0x4000) == 0) {  // chain? no, use as buffer
-				DOLOG(debug, false, "DEQNA: %08o is not a chain pointer, use as buffer-pointer", chain);
+				DOLOG(debug, false, "deqna: %08o is not a chain pointer, use as buffer-pointer", chain);
 				for(int i=0; i<std::min(byte_cnt, length); i++)
 					b->write_unibus_byte(chain + i, buffer[i]);
 				uint16_t temp1 = b->read_unibus_word(p_buffers + 4 * 2);  // status word 1
@@ -186,8 +186,9 @@ void deqna::receiver()
 				b->write_unibus_word(p_buffers + 0 * 2, flags);
 				registers[7] |= 0x8000;  // RI
 				if (registers[7] & 64) {  // IE
-					DOLOG(debug, false, "DEQNA packet queued");
-					b->getCpu()->queue_interrupt(5, registers[6] & 0x3fc);
+					uint16_t vector = registers[6] & 0x3fc;
+					DOLOG(debug, false, "deqna packet queued, trigger %06o", vector);
+					b->getCpu()->queue_interrupt(5, vector);
 					queued = true;
 				}
 				break;
@@ -196,10 +197,10 @@ void deqna::receiver()
 		}
 
 		if (!queued)
-			DOLOG(info, false, "DEQNA packet NOT queued");
+			DOLOG(info, false, "deqna packet NOT queued");
 	}
 
-	DOLOG(info, false, "DEQNA RECEIVER THREAD TERMINATING");
+	DOLOG(info, false, "deqna RECEIVER THREAD TERMINATING");
 }
 
 void deqna::transmitter()
@@ -215,7 +216,7 @@ void deqna::transmitter()
 myusleep(1000000);
 	}
 
-	DOLOG(info, false, "DEQNA TRANSMITTER THREAD TERMINATING");
+	DOLOG(info, false, "deqna TRANSMITTER THREAD TERMINATING");
 }
 
 void deqna::reset()
