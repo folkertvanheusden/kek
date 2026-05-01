@@ -98,13 +98,11 @@ void console_posix::panel_update_thread()
 {
 	set_thread_name("kek:c-panel");
 
-	constexpr int refresh_rate = 20;
-
 	while(*stop_event != EVENT_TERMINATE && stop_panel == false) {
-		myusleep(1000000 / refresh_rate);
+		myusleep(1000000 / refreshrate);
 
 		if (p_blinkenlights)
-			p_blinkenlights->push(b);
+			p_blinkenlights->push(b, running_flag);
 	}
 }
 

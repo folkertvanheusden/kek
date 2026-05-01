@@ -42,6 +42,7 @@ protected:
 	std::thread            *th               { nullptr };
 	std::thread            *th_panel         { nullptr };
 #endif
+	int                     refreshrate      { 15      };
 	std::atomic_bool        disk_read_activity_flag  { false };
 	std::atomic_bool        disk_write_activity_flag { false };
 	std::atomic_bool        running_flag     { false };
@@ -103,4 +104,6 @@ public:
 	void         set_blinkenlights_panel(blinkenlights *const p_blinkenlights);
 	void         stop_panel_thread() { stop_panel = true; }
 	virtual void panel_update_thread() = 0;
+	int          get_refreshrate(              ) const { return refreshrate; }
+	void         set_refreshrate(const int rate)       { refreshrate = rate; }
 };

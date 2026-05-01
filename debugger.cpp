@@ -44,6 +44,7 @@
 extern blinkenlights bl;
 
 #if defined(ESP32) || defined(BUILD_FOR_RP2040)
+bool network_configured = false;
 #if defined(ESP32)
 #include "esp32.h"
 #include "console_esp32.h"
@@ -54,13 +55,15 @@ extern blinkenlights bl;
 void configure_network(console *const cnsl);
 void check_network(console *const cnsl);
 void start_network(console *const cnsl);
+#else
+constexpr const bool network_configured = true;
 #endif
 
 #if !defined(BUILD_FOR_RP2040) && !defined(linux) && !defined(_WIN32)
 extern SdFs SDinstance;
 #endif
 
-#define SERIAL_CFG_FILE "dz11.json"
+#define DZ11_CFG_FILE "dz11.json"
 
 #if !defined(BUILD_FOR_RP2040)
 std::optional<disk_backend *> select_nbd_server(console *const cnsl)
@@ -483,22 +486,6 @@ int disassemble(cpu *const c, console *const cnsl, const uint16_t pc, const bool
 
 	DOLOG(debug, false, "SP: %s, MMR0/1/2/3: %s/%s/%s/%s", sp.c_str(), MMR0.c_str(), MMR1.c_str(), MMR2.c_str(), MMR3.c_str());
 
-#if 0
-	if (c->getPSW_runmode() == 3) {
-		/*
-		FILE *fh = fopen("/home/folkert/temp/ramdisk/log-kek.dat", "a+");
-		fprintf(fh, "%06o", pc);
-		for(auto & v: data["instruction-values"])
-			fprintf(fh, " %s", v.c_str());
-		fprintf(fh, "\n");
-		fclose(fh);
-		*/
-		FILE *fh = fopen("/home/folkert/temp/ramdisk/da-kek.txt", "a+");
-		fprintf(fh, "R0 %s R1 %s R2 %s R3 %s R4 %s R5 %s R6 %s R7 %06o %s\n", registers[0].c_str(), registers[1].c_str(), registers[2].c_str(), registers[3].c_str(), registers[4].c_str(), registers[5].c_str(), registers[6].c_str(), pc, instruction.c_str());
-		fclose(fh);
-	}
-#endif
-
 	return data["instruction-values"].size() * 2;
 }
 
@@ -683,9 +670,8 @@ void serdz11(console *const cnsl, bus *const b)
 	JsonDocument j = d->serialize();
 
 	bool ok = false;
-
 #if IS_POSIX
-	FILE *fh = fopen(SERIAL_CFG_FILE, "w");
+	FILE *fh = fopen(DZ11_CFG_FILE, "w");
 	if (fh) {
 		state_writer ws { fh };
 		serializeJsonPretty(j, ws);
@@ -694,7 +680,7 @@ void serdz11(console *const cnsl, bus *const b)
 		ok = true;
 	}
 #elif defined(ESP32)
-	File data_file = LittleFS.open("/" SERIAL_CFG_FILE, "w");
+	File data_file = LittleFS.open("/" DZ11_CFG_FILE, "w");
 	if (data_file) {
 		serializeJsonPretty(j, data_file);
 		data_file.close();
@@ -703,18 +689,18 @@ void serdz11(console *const cnsl, bus *const b)
 	}
 #endif
 
-	cnsl->put_string_lf(format("Serialize to " SERIAL_CFG_FILE ": %s", ok ? "OK" : "failed"));
+	cnsl->put_string_lf(format("Serialize to " DZ11_CFG_FILE ": %s", ok ? "OK" : "failed"));
 }
 
 void deserdz11(console *const cnsl, bus *const b)
 {
 #if defined(ESP32)
-	auto rc = deserialize_file("/" SERIAL_CFG_FILE);
+	auto rc = deserialize_file("/" DZ11_CFG_FILE);
 #else
-	auto rc = deserialize_file(SERIAL_CFG_FILE);
+	auto rc = deserialize_file(DZ11_CFG_FILE);
 #endif
 	if (rc.has_value() == false) {
-		cnsl->put_string_lf("Failed to deserialize " SERIAL_CFG_FILE);
+		cnsl->put_string_lf("Failed to deserialize " DZ11_CFG_FILE);
 		return;
 	}
 
@@ -722,7 +708,7 @@ void deserdz11(console *const cnsl, bus *const b)
 
 	b->add_DZ11(dz11::deserialize(rc.value(), b));
 
-	cnsl->put_string_lf(format("Deserialized " SERIAL_CFG_FILE));
+	cnsl->put_string_lf(format("Deserialized " DZ11_CFG_FILE));
 }
 
 void set_kw11_l_interrupt_freq(console *const cnsl, bus *const b, const int freq)
@@ -1088,8 +1074,8 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 	}
 #if defined(ESP32)
 	else if (cmd == "cfgnet") {
+		network_configured = true;
 		configure_network(cnsl);
-
 		return true;
 	}
 	else if (cmd == "chknet") {
@@ -1099,7 +1085,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 	}
 	else if (cmd == "startnet") {
 		start_network(cnsl);
-
+		network_configured = true;
 		return true;
 	}
 	else if (parts[0] == "pm" && parts.size() == 2) {
@@ -1221,12 +1207,17 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		return true;
 	}
 	else if (parts[0] == "blights") {
-		if (parts.size() == 2) {
+		if (network_configured == false)
+			cnsl->put_string_lf("Please configure network first (cfgnet)");
+		else if (parts.size() == 2) {
 			bl.set_target(parts[1]);
+			put_configuration_string(BLINKENLIGHTS_CFG_FILE, parts[1]);
 			cnsl->set_blinkenlights_panel(&bl);
 		}
 		else {
-			cnsl->put_string_lf("IP address missing");
+			put_configuration_string(BLINKENLIGHTS_CFG_FILE, "");
+			cnsl->set_blinkenlights_panel(nullptr);
+			cnsl->put_string_lf("PiDP11 blinkenlights panel disabled");
 		}
 		return true;
 	}
@@ -1260,6 +1251,14 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		ls_l(cnsl);
 
 		return true;
+	}
+	else if (cmd == "refr") {
+		if (parts.size() == 2) {
+			int rate = std::stoi(parts[1]);
+			if (rate > 0)
+				cnsl->set_refreshrate(rate);
+		}
+		cnsl->put_string_lf(format("Panel refresh rate: %d fps", cnsl->get_refreshrate()));
 	}
 	else if (cmd == "ult") {
 		tm11_unload_tape(b);
@@ -1364,10 +1363,11 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			"serdz11       - store DZ11 device settings",
 			"dserdz11      - load DZ11 device settings",
 #if IS_POSIX
-			"ser x         - serialize state to a file",
-			//					"dser          - deserialize state from a file",
+			"ser x         - serialize state to a file (deserialize with -D commandline parameter)",
+			// "dser          - deserialize state from a file",         ^^^^
 #endif
 			"dp            - disable panel",
+			"refr [x]      - set panel refreshrate (fps)",
 #if defined(ESP32)
 			"cfgnet        - configure network (e.g. WiFi)",
 			"startnet      - start network",

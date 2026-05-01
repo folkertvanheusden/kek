@@ -132,13 +132,11 @@ void console_ncurses::panel_update_thread()
 
 	uint64_t prev_instr_cnt = c->get_instructions_executed_count();
 
-	constexpr int refresh_rate = 50;
-
 	while(*stop_event != EVENT_TERMINATE && stop_panel == false) {
-		myusleep(1000000 / refresh_rate);
+		myusleep(1000000 / refreshrate);
 
 		if (p_blinkenlights)
-			p_blinkenlights->push(b);
+			p_blinkenlights->push(b, running_flag);
 
 		// note that these are approximately as there's no mutex on the emulation
 		try {
@@ -228,7 +226,7 @@ void console_ncurses::panel_update_thread()
 			// speed
 			uint64_t cur_instr_cnt = c->get_instructions_executed_count();
 
-			mvwprintw(w_panel->win, 1, 1 + 39, "%8ld", (cur_instr_cnt - prev_instr_cnt) * refresh_rate);
+			mvwprintw(w_panel->win, 1, 1 + 39, "%8ld", (cur_instr_cnt - prev_instr_cnt) * refreshrate);
 
 			prev_instr_cnt = cur_instr_cnt;
 

@@ -5,6 +5,9 @@
 #include <cstring>
 #include <map>
 #include <optional>
+#if !defined(ESP32)
+#include <poll.h>
+#endif
 #include <string>
 #include <unistd.h>
 #include <vector>
@@ -137,22 +140,22 @@ struct mapping {
 static bool validate_reply(const rpc_msg_reply *const rmsg, const uint32_t xid)
 {
 	if (ntohl(rmsg->header.xid) != xid) {
-		fprintf(stderr, "Unexpected XID: %d", ntohl(rmsg->header.xid));
+		DOLOG(debug, false, "Unexpected XID: %d", ntohl(rmsg->header.xid));
 		return false;
 	}
 
 	if (ntohl(rmsg->header.mtype) != REPLY) {
-		fprintf(stderr, "Not a reply (%d)", ntohl(rmsg->header.mtype));
+		DOLOG(debug, false, "Not a reply (%d)", ntohl(rmsg->header.mtype));
 		return false;
 	}
 
 	if (ntohl(rmsg->rbody.stat) != MSG_ACCEPTED) {
-		fprintf(stderr, "Request not accepted (%d)", ntohl(rmsg->rbody.stat));
+		DOLOG(debug, false, "Request not accepted (%d)", ntohl(rmsg->rbody.stat));
 		return false;
 	}
 
 	if (ntohl(rmsg->rbody.areply.stat) != SUCCESS) {
-		fprintf(stderr, "Command error: %d", ntohl(rmsg->rbody.areply.stat));
+		DOLOG(debug, false, "Command error: %d", ntohl(rmsg->rbody.areply.stat));
 		return false;
 	}
 
@@ -163,7 +166,7 @@ static const std::pair<const rpc_msg_reply *, int> exchange_message(const std::s
 {
 	int fd = socket(AF_INET, SOCK_DGRAM, 0);
 	if (fd == -1) {
-		fprintf(stderr, "Cannot create socket: %s", strerror(errno));
+		DOLOG(debug, false, "Cannot create socket: %s", strerror(errno));
 		return { nullptr, 0 };
 	}
 
@@ -171,28 +174,43 @@ static const std::pair<const rpc_msg_reply *, int> exchange_message(const std::s
 	serveraddr.sin_family = AF_INET;
 	serveraddr.sin_port   = htons(port);
 	if (inet_aton(server.c_str(), &serveraddr.sin_addr) == 0) {
-		fprintf(stderr, "inet_aton(%s) failed", server.c_str());
+		DOLOG(debug, false, "inet_aton(%s) failed", server.c_str());
 		close(fd);
 		return { nullptr, 0 };
 	}
 
 	if (sendto(fd, msg.data(), msg.size(), 0, reinterpret_cast<const sockaddr *>(&serveraddr), sizeof serveraddr) == -1) {
 		close(fd);
-		fprintf(stderr, "sendto failed: %s", strerror(errno));
+		DOLOG(debug, false, "sendto failed: %s", strerror(errno));
+		return { nullptr, 0 };
+	}
+
+        pollfd fds[] { { fd, POLLIN, 0 } };
+        int poll_rc = poll(fds, 1, 100);
+	if (poll_rc <= 0) {
+		close(fd);
+		if (poll_rc == -1)
+			DOLOG(debug, false, "poll failed: %s", strerror(errno));
+		else
+			DOLOG(debug, false, "blinkenpanel (%s:%d) did not respond to request", server.c_str(), port);
 		return { nullptr, 0 };
 	}
 
 	constexpr const int max_reply_size = 1500;
 	uint8_t  *reply = new uint8_t[max_reply_size];
+	if (!reply) {
+		DOLOG(ll_critical, true, "malloc issue: %s", strerror(errno));
+		return { nullptr, 0 };
+	}
 	int       rc = recv(fd, reply, max_reply_size, 0);
 	close(fd);
 	if (rc <= 0) {
-		fprintf(stderr, "recv failed: %s", strerror(errno));
+		DOLOG(debug, false, "recv failed: %s", strerror(errno));
 		delete [] reply;
 		return { nullptr, 0 };
 	}
 	if (rc % 4) {
-		fprintf(stderr, "invalid message length (%d)", rc);
+		DOLOG(debug, false, "invalid message length (%d)", rc);
 		delete [] reply;
 		return { nullptr, 0 };
 	}
@@ -291,7 +309,7 @@ static std::optional<int> find_port_for_rpc_service(const std::string & server, 
 	if (rmsg.first == nullptr)
 		return { };
 	if (rmsg.second != 7) {
-		fprintf(stderr, "message invalid size (%d)", rmsg.second);
+		DOLOG(debug, false, "message invalid size (%d)", rmsg.second);
 		return { };
 	}
 
@@ -328,7 +346,7 @@ static std::optional<std::string> get_blinkenlight_info(const std::string & serv
 		return { };
 	const rpc_blinkenlight_api_getinfo_res *data = reinterpret_cast<const rpc_blinkenlight_api_getinfo_res *>(&rmsg.first->rbody.areply.reply_data);
 	if (ntohl(data->error_code)) {
-		fprintf(stderr, "GETINFO returned error (%d)", ntohl(data->error_code));
+		DOLOG(debug, false, "GETINFO returned error (%d)", ntohl(data->error_code));
 		free_rpc_msg_reply(rmsg.first);
 		return { };
 	}
@@ -421,7 +439,7 @@ static std::optional<std::pair<std::string, control_info> > get_blinkenlight_con
 		return { };
 	uint32_t their_rc = ntohl(rmsg.first->rbody.areply.reply_data);
 	if (their_rc) {
-		fprintf(stderr, "GETCONTROLINFO error: %u", their_rc);
+		DOLOG(debug, false, "GETCONTROLINFO error: %u", their_rc);
 		free_rpc_msg_reply(rmsg.first);
 		return { };
 	}
@@ -453,9 +471,12 @@ static void get_blinkenlight_controls(const std::string & server, const int port
 
 	auto encapsulated = encapsulate_rpc_msg(reinterpret_cast<const rpc_msg *>(&msg), sizeof(msg) / 4, payload.data(), payload.size());
 	auto rmsg         = exchange_message(server, port, xid, encapsulated);
+	if (!rmsg.first)
+		return;
+
 	uint32_t their_rc = ntohl(rmsg.first->rbody.areply.reply_data);
 	if (their_rc)
-		fprintf(stderr, "GETCONTROLVALUE error: %u", their_rc);
+		DOLOG(debug, false, "GETCONTROLVALUE error: %u", their_rc);
 	// const uint32_t *p = reinterpret_cast<const uint32_t *>(rmsg.first);
 	// TODO return statuses
 	free_rpc_msg_reply(rmsg.first);
@@ -518,7 +539,7 @@ static bool set_blinkenlight_controls(const std::string & server, const int port
 		return { };
 	uint32_t their_rc = ntohl(rmsg.first->rbody.areply.reply_data);
 	if (their_rc)
-		fprintf(stderr, "SETCONTROLVALUES error: %u", their_rc);
+		DOLOG(debug, false, "SETCONTROLVALUES error: %u", their_rc);
 	free_rpc_msg_reply(rmsg.first);
 
 	return their_rc == 0;
@@ -539,6 +560,7 @@ bool blinkenlights::begin()
 
 bool blinkenlights::set_target(const std::string & ip)
 {
+	std::unique_lock<std::mutex> lck(controls_lock);
 	valid  = false;
 	server = ip;
 
@@ -572,14 +594,14 @@ bool blinkenlights::set_target(const std::string & ip)
 				auto rc = get_blinkenlight_controlinfo(server, udp_port, panel.second.panel_nr, i);
 				if (rc.has_value()) {
 					controls[panel.first][rc.value().first] = rc.value().second;
-					DOLOG(info, false, " %s (%u|%u, radix: %u, bytes: %u, bits: %u)", rc.value().first.c_str(),
+					DOLOG(debug, false, " %s (%u|%u, radix: %u, bytes: %u, bits: %u)", rc.value().first.c_str(),
 							rc.value().second.type, rc.value().second.is_input,
 							rc.value().second.radix, rc.value().second.value_bytelen, rc.value().second.value_bitlen);
 				}
 			}
 		}
 
-		valid = true;
+		valid = controls.find("11/70") != controls.end();  // crude check
 	}
 	else {
 		DOLOG(warning, false, "Device has no panels nor controls");
@@ -589,17 +611,18 @@ bool blinkenlights::set_target(const std::string & ip)
 	return true;
 }
 
-void blinkenlights::push(bus *const b)
+void blinkenlights::push(bus *const b, const bool running_flag)
 {
+	std::unique_lock<std::mutex> lck(controls_lock);
 	if (!valid)
 		return;
 	auto panel             = controls.find("11/70");
-	if (panel == controls.end())  // not initialized
-		return;
-	auto address_control   = panel->second.find("ADDRESS");
-	auto data_control      = panel->second.find("DATA"   );
-
 	try {
+		auto address_control   = panel->second.find("ADDRESS"  );
+		auto data_control      = panel->second.find("DATA"     );
+		auto mmr0_control      = panel->second.find("MMR0_MODE");
+		auto run_control       = panel->second.find("RUN"      );
+
 		cpu *const c           = b->getCpu();
 
 		uint16_t current_PSW   = c->getPSW();
@@ -610,12 +633,30 @@ void blinkenlights::push(bus *const b)
 
 		address_control->second.value = rc.physical_data;
 		data_control   ->second.value = current_instr.has_value() ? current_instr.value() : 0;
+		if (run_mode == 0)  // kernel
+			mmr0_control->second.value = 1;
+		else if (run_mode == 2)  // super
+			mmr0_control->second.value = 2;
+		else if (run_mode == 3)  // user
+			mmr0_control->second.value = 4;
+
+		run_control->second.value = running_flag;
 	}
-	catch(int trap) {
-		address_control->second.value = 0;
-		data_control   ->second.value = 0;
+	catch(int trap_nr) {
+		DOLOG(ll_error, false, "Trap %d caught in blinkenlights::push", trap_nr);
+		for(auto & control: panel->second)
+			control.second.value = 0;
+	}
+	catch(...) {
+		// most likely a find() that failed
+		DOLOG(ll_error, false, "Unexpected exception in blinkenlights::push (setup)");
 	}
 
-	set_blinkenlight_controls(server, udp_port, panel->second.begin()->second.panel_nr, panel->second);
-	get_blinkenlight_controls(server, udp_port, 0);
+	try {
+		set_blinkenlight_controls(server, udp_port, panel->second.begin()->second.panel_nr, panel->second);
+		get_blinkenlight_controls(server, udp_port, 0);
+	}
+	catch(...) {
+		DOLOG(ll_error, false, "Unexpected exception in blinkenlights::push (set/get)");
+	}
 }

@@ -55,8 +55,6 @@
 #include "version.h"
 
 
-constexpr const char SERIAL_CFG_FILE[] = "/serial.json";
-
 bus     *b    = nullptr;
 cpu     *c    = nullptr;
 tty     *tty_ = nullptr;
@@ -83,51 +81,16 @@ static void console_thread_wrapper_panel(void *const c)
 	vTaskSuspend(nullptr);
 }
 
-uint32_t load_serial_speed_configuration()
-{
-	File dataFile = LittleFS.open(SERIAL_CFG_FILE, "r");
-	if (!dataFile)
-		return 115200;
-
-	size_t size = dataFile.size();
-
-	uint8_t buffer[4] { 0 };
-	dataFile.read(buffer, 4);
-
-	dataFile.close();
-
-	uint32_t speed = (buffer[0] << 24) | (buffer[1] << 16) | (buffer[2] << 8) | buffer[3];
-	// sanity check
-	if (speed < 300)
-		speed = 115200;
-	return speed;
-}
-
-bool save_serial_speed_configuration(const uint32_t bps)
-{
-	File dataFile = LittleFS.open(SERIAL_CFG_FILE, "w");
-
-	if (!dataFile)
-		return false;
-
-	const uint8_t buffer[] = { uint8_t(bps >> 24), uint8_t(bps >> 16), uint8_t(bps >> 8), uint8_t(bps) };
-	dataFile.write(buffer, 4);
-
-	dataFile.close();
-
-	return true;
-}
-
 #if !defined(BUILD_FOR_RP2040)
 void set_hostname()
 {
-        uint64_t mac    = ESP.getEfuseMac();
-        uint8_t *chipid = reinterpret_cast<uint8_t *>(&mac);
+  uint64_t mac    = ESP.getEfuseMac();
+  uint8_t *chipid = reinterpret_cast<uint8_t *>(&mac);
 
-	char name[32];
-        snprintf(name, sizeof name, "PDP11-%02x%02x%02x%02x", chipid[2], chipid[3], chipid[4], chipid[5]);
+  char name[32];
+  snprintf(name, sizeof name, "PDP11-%02x%02x%02x%02x", chipid[2], chipid[3], chipid[4], chipid[5]);
 
-	WiFi.setHostname(name);
+  WiFi.setHostname(name);
 }
 
 void configure_network(console *const c)
@@ -211,7 +174,7 @@ void start_network(console *const c)
 
 		cs->println("* Adding DZ11");
 #if !defined(BUILD_FOR_RP2040) && defined(TTY_SERIAL_RX)
-		uint32_t bitrate = load_serial_speed_configuration();
+		uint32_t bitrate = get_configuration_uint32(SERIAL_CFG_FILE, 115200);
 
 		cs->println(format("* Init TTY (on DZ11), baudrate: %d bps, RX: %d, TX: %d", bitrate, TTY_SERIAL_RX, TTY_SERIAL_TX));
     if (io_channels->set_device(0, new comm_esp32_hardwareserial(uart_port_t(1), TTY_SERIAL_RX, TTY_SERIAL_TX, bitrate)) == false)
@@ -387,6 +350,13 @@ void setup() {
 
 	cs->println("* Starting console");
 	cnsl->start_thread();
+
+  bl.begin();
+  auto bl_ip = get_configuration_string(BLINKENLIGHTS_CFG_FILE, "");
+  if (bl_ip.empty() == false) {
+    cnsl->put_string_lf(format("Using PiDP11 blinkenlights on IP address %s", bl_ip.c_str()));
+    bl.set_target(bl_ip);
+  }
 
 	cnsl->put_string_lf("PDP-11/70 emulator, (C) Folkert van Heusden");
 }

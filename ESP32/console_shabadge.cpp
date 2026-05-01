@@ -52,10 +52,10 @@ void console_shabadge::put_char_ll(const char c)
 void console_shabadge::panel_update_thread()
 {
 	for(;;) {
-		vTaskDelay(100 / portTICK_RATE_MS);
+		vTaskDelay(1000 / (portTICK_RATE_MS * refreshrate));
 
 		if (p_blinkenlights)
-			p_blinkenlights->push(b);
+			p_blinkenlights->push(b, running_flag);
 
 		if (screen_updated && millis() - screen_updated_ts >= 1000) {
 			screen_updated = false;

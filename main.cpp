@@ -274,6 +274,7 @@ void help()
 	printf("-M       log metrics\n");
 	printf("-1 x     use x as device for DZ-11 (instead of 8 tcp-sockets starting at port %d)\n", default_port_offset);
 	printf("-2       set DZ-11 tcp-socket sessions to initialize as a telnet session\n");
+	printf("-8 x     setup a blinkenlights/PiDP11 connection on IP-address x\n");
 	printf("-Q x     use x as port offset instead of %d\n", default_port_offset);
 }
 
@@ -303,6 +304,7 @@ int main(int argc, char *argv[])
 	bool         is_bic    = false;
 
 	uint16_t     console_switches = 0;
+	std::string  blinkenlights_ip;
 
 	bool         disk_snapshots = false;
 
@@ -322,7 +324,7 @@ int main(int argc, char *argv[])
 	int          tcp_port_offset = default_port_offset;
 
 	int  opt          = -1;
-	while((opt = getopt(argc, argv, "hD:MT:Br:R:p:ndf:tL:bl:s:Q:N:J:XS:P1:m:Q:2")) != -1)
+	while((opt = getopt(argc, argv, "hD:MT:Br:R:p:ndf:tL:bl:s:Q:N:J:XS:P1:m:Q:28:")) != -1)
 	{
 		switch(opt) {
 			case 'h':
@@ -456,6 +458,10 @@ int main(int argc, char *argv[])
 				disk_snapshots = true;
 				break;
 
+			case '8':
+				blinkenlights_ip = optarg;
+				break;
+
 			default:
 			        fprintf(stderr, "-%c is not understood\n", opt);
 				return 1;
@@ -567,10 +573,14 @@ int main(int argc, char *argv[])
 	cnsl->set_bus(b);
 	cnsl->begin();
 
-	if (bl.begin())
+	if (bl.begin()) {
 		cnsl->set_blinkenlights_panel(&bl);
-	else
+		if (blinkenlights_ip.empty() == false)
+			bl.set_target(blinkenlights_ip);
+	}
+	else {
 		DOLOG(warning, false, "Cannot initialize blinkenlights");
+	}
 
 	//// DZ11
 	comm_io *io_channels = new comm_io(dz11_n_lines);
