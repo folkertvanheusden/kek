@@ -1,4 +1,4 @@
-// (C) 2018-2025 by Folkert van Heusden
+// (C) 2018-2026 by Folkert van Heusden
 // Released under MIT license
 
 #include <ArduinoJson.h>
@@ -11,6 +11,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "blinkenlights.h"
 #include "error.h"
 #include "comm.h"
 #include "comm_posix_tty.h"
@@ -40,6 +41,7 @@
 bool              withUI       { false };
 std::atomic_uint32_t event     { 0 };
 std::atomic_bool *running      { nullptr };
+blinkenlights     bl;
 
 std::atomic_bool  sigw_event   { false };
 
@@ -564,6 +566,11 @@ int main(int argc, char *argv[])
 
 	cnsl->set_bus(b);
 	cnsl->begin();
+
+	if (bl.begin())
+		cnsl->set_blinkenlights_panel(&bl);
+	else
+		DOLOG(warning, false, "Cannot initialize blinkenlights");
 
 	//// DZ11
 	comm_io *io_channels = new comm_io(dz11_n_lines);

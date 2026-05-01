@@ -110,6 +110,9 @@ void console_esp32::panel_update_thread()
 	while(!stop_panel) {
 		vTaskDelay(100 / portTICK_PERIOD_MS);
 
+		if (p_blinkenlights)
+			p_blinkenlights->push(b);
+
 		try {
 			// note that these are approximately as there's no mutex on the emulation
 			uint16_t current_PSW   = c->getPSW();

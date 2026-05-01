@@ -1,4 +1,4 @@
-// (C) 2018-2025 by Folkert van Heusden
+// (C) 2018-2026 by Folkert van Heusden
 // Released under MIT license
 
 #include <fstream>
@@ -13,6 +13,7 @@
 #include <LittleFS.h>
 #endif
 
+#include "blinkenlights.h"
 #include "breakpoint_parser.h"
 #include "bus.h"
 #if IS_POSIX
@@ -39,6 +40,8 @@
 #include "tty.h"
 #include "utils.h"
 
+
+extern blinkenlights bl;
 
 #if defined(ESP32) || defined(BUILD_FOR_RP2040)
 #if defined(ESP32)
@@ -1217,6 +1220,16 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 
 		return true;
 	}
+	else if (parts[0] == "blights") {
+		if (parts.size() == 2) {
+			bl.set_target(parts[1]);
+			cnsl->set_blinkenlights_panel(&bl);
+		}
+		else {
+			cnsl->put_string_lf("IP address missing");
+		}
+		return true;
+	}
 	else if (parts[0] == "log") {
 		DOLOG(info, true, cmd.c_str());
 
@@ -1361,6 +1374,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			"chknet        - check network status",
 			"pm x          - panel mode (bits or address)",
 #endif
+			"blights x     - enable blinkenlights on IP address x", 
 			"testdz11      - test DZ11",
 			"cfgdisk       - configure disk",
 			"log ...       - log a message to the logfile",

@@ -1,4 +1,4 @@
-// (C) 2023-2024 by Folkert van Heusden
+// (C) 2023-2026 by Folkert van Heusden
 // Released under MIT license
 
 #include <SPI.h>
@@ -53,6 +53,9 @@ void console_shabadge::panel_update_thread()
 {
 	for(;;) {
 		vTaskDelay(100 / portTICK_RATE_MS);
+
+		if (p_blinkenlights)
+			p_blinkenlights->push(b);
 
 		if (screen_updated && millis() - screen_updated_ts >= 1000) {
 			screen_updated = false;

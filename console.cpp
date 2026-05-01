@@ -1,4 +1,4 @@
-// (C) 2018-2024 by Folkert van Heusden
+// (C) 2018-2026 by Folkert van Heusden
 // Released under MIT license
 
 #include <cassert>
@@ -395,4 +395,9 @@ void console::operator()()
 	}
 
 	TRACE("Console thread terminating");
+}
+
+void console::set_blinkenlights_panel(blinkenlights *const p_blinkenlights)
+{
+	this->p_blinkenlights = p_blinkenlights;
 }

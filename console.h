@@ -1,4 +1,4 @@
-// (C) 2018-2024 by Folkert van Heusden
+// (C) 2018-2026 by Folkert van Heusden
 // Released under MIT license
 
 #pragma once
@@ -17,6 +17,7 @@
 #endif
 
 
+class blinkenlights;
 class bus;
 
 class console
@@ -32,12 +33,14 @@ private:
 #endif
 
 protected:
-	std::atomic_uint32_t *const stop_event   { nullptr };
+	std::atomic_uint32_t   *const stop_event { nullptr };
 	std::atomic_bool        stop_panel       { false   };
+	blinkenlights          *p_blinkenlights  { nullptr };
 
 	bus                    *b                { nullptr };
 #if !defined(BUILD_FOR_RP2040)
 	std::thread            *th               { nullptr };
+	std::thread            *th_panel         { nullptr };
 #endif
 	std::atomic_bool        disk_read_activity_flag  { false };
 	std::atomic_bool        disk_write_activity_flag { false };
@@ -97,6 +100,7 @@ public:
 	std::atomic_bool * get_disk_read_activity_flag()  { return &disk_read_activity_flag; }
 	std::atomic_bool * get_disk_write_activity_flag() { return &disk_write_activity_flag; }
 
+	void         set_blinkenlights_panel(blinkenlights *const p_blinkenlights);
 	void         stop_panel_thread() { stop_panel = true; }
 	virtual void panel_update_thread() = 0;
 };

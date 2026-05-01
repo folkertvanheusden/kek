@@ -1,4 +1,4 @@
-// (C) 2018-2024 by Folkert van Heusden
+// (C) 2018-2026 by Folkert van Heusden
 // Released under MIT license
 
 #include <poll.h>
@@ -6,6 +6,7 @@
 #include <ncurses.h>
 #include <unistd.h>
 
+#include "blinkenlights.h"
 #include "bus.h"
 #include "console_ncurses.h"
 #include "cpu.h"
@@ -26,7 +27,6 @@ console_ncurses::~console_ncurses()
 
 	if (th_panel) {
 		th_panel->join();
-
 		delete th_panel;
 	}
 
@@ -136,6 +136,9 @@ void console_ncurses::panel_update_thread()
 
 	while(*stop_event != EVENT_TERMINATE && stop_panel == false) {
 		myusleep(1000000 / refresh_rate);
+
+		if (p_blinkenlights)
+			p_blinkenlights->push(b);
 
 		// note that these are approximately as there's no mutex on the emulation
 		try {

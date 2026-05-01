@@ -18,8 +18,6 @@ private:
 
 	std::mutex   ncurses_mutex;
 
-	std::thread *th_panel  { nullptr };
-
 	int          tx        { 0 };
 	int          ty        { 0 };
 
