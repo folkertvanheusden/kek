@@ -21,6 +21,7 @@
 #include "esp_pthread.h"
 #endif
 
+#include "blinkenlights.h"
 #include "comm.h"
 #include "comm_arduino.h"
 #include "comm_esp32_hardwareserial.h"
@@ -71,6 +72,7 @@ std::atomic_uint32_t stop_event      { EVENT_NONE };
 std::atomic_bool    *running         { nullptr    };
 bool                 trace_output    { false      };
 comm                *cs              { nullptr    };  // Console Serial
+blinkenlights        bl;
 
 static void console_thread_wrapper_panel(void *const c)
 {

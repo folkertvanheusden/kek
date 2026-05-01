@@ -8,8 +8,14 @@
 #include <string>
 #include <unistd.h>
 #include <vector>
+#if defined(ESP32)
+#include <WiFiUdp.h>
+#include <lwip/netdb.h>
+#include <lwip/sockets.h>
+#else
 #include <arpa/inet.h>
 #include <sys/socket.h>
+#endif
 
 #include "blinkenlights.h"
 #include "bus.h"
