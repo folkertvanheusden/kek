@@ -1,3 +1,4 @@
+#include <atomic>
 #include <map>
 #include <string>
 
@@ -6,8 +7,9 @@ struct control_info;
 
 class blinkenlights {
 private:
-	std::string server;
-	int         udp_port;
+	std::string      server;
+	int              udp_port { 0     };
+	std::atomic_bool valid    { false };
 
 	// panel, control-name, control-mea
 	std::map<std::string, std::map<std::string, control_info> > controls;

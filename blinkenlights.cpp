@@ -533,6 +533,7 @@ bool blinkenlights::begin()
 
 bool blinkenlights::set_target(const std::string & ip)
 {
+	valid  = false;
 	server = ip;
 
 	auto rc_portmap = find_port_for_rpc_service(server, BLINKENLIGHT_RPC_PROC);
@@ -571,6 +572,8 @@ bool blinkenlights::set_target(const std::string & ip)
 				}
 			}
 		}
+
+		valid = true;
 	}
 	else {
 		DOLOG(warning, false, "Device has no panels nor controls");
@@ -582,6 +585,8 @@ bool blinkenlights::set_target(const std::string & ip)
 
 void blinkenlights::push(bus *const b)
 {
+	if (!valid)
+		return;
 	auto panel             = controls.find("11/70");
 	if (panel == controls.end())  // not initialized
 		return;
