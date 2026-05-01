@@ -22,6 +22,7 @@ else()
 endif()
 
 set(APP_SOURCES
+  blinkenlights.cpp
   breakpoint.cpp
   breakpoint_and.cpp
   breakpoint_memory.cpp

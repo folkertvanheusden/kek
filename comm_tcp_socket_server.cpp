@@ -68,7 +68,9 @@ static bool setup_telnet_session(const int fd)
 	return true;
 }
 
-comm_tcp_socket_server::comm_tcp_socket_server(const int port) : port(port)
+comm_tcp_socket_server::comm_tcp_socket_server(const int port, const bool setup_telnet) :
+	port(port),
+	setup_telnet(setup_telnet)
 {
 }
 
@@ -230,12 +232,10 @@ void comm_tcp_socket_server::operator()()
 			DOLOG(info, false, "Connected with %s", get_endpoint_name(cfd).c_str());
 		}
 
-#if 0
-		if (setup_telnet_session(cfd) == false) {
+		if (setup_telnet && setup_telnet_session(cfd) == false) {
 			close(cfd);
 			cfd = INVALID_SOCKET;
 		}
-#endif
 	}
 
 	DOLOG(info, true, "comm_tcp_socket_server thread terminating");
@@ -246,15 +246,14 @@ JsonDocument comm_tcp_socket_server::serialize() const
 	JsonDocument j;
 
 	j["comm-backend-type"] = "tcp-server";
-
 	j["port"] = port;
+	j["setup-telnet"] = setup_telnet;
 
 	return j;
 }
 
 comm_tcp_socket_server *comm_tcp_socket_server::deserialize(const JsonVariantConst j)
 {
-	comm_tcp_socket_server *r = new comm_tcp_socket_server(j["port"].as<int>());
-
+	comm_tcp_socket_server *r = new comm_tcp_socket_server(j["port"].as<int>(), j["setup-telnet"].as<bool>());
 	return r;
 }

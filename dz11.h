@@ -17,9 +17,13 @@
 
 class bus;
 
+#if defined(POSIX)
 // 8 interfaces
 constexpr const int dz11_n_lines = 8;
-constexpr const int n_dz11_registers = 7;
+#else
+constexpr const int dz11_n_lines = 4;
+#endif
+constexpr const int n_dz11_registers = 6;
 
 #define DZ11_INTERRUPT_VECTOR_RX 0310
 #define DZ11_INTERRUPT_VECTOR_TX 0314
@@ -44,13 +48,13 @@ private:
 	size_t            scanner_line_nr { 0    };
 
 	enum cstate { NOT_CONNECTED = 0, PENDING, CONNECTED };
-	std::vector<comm *> comm_interfaces;
-	std::vector<cstate> connected;
+	comm_io          *const io_channels { nullptr };
+	std::vector<cstate>   connected;
 	enum psetting { NO_PARITY = 0, ODD_PARITY, EVEN_PARITY };
 	std::vector<psetting> parity_setting;
 
-	std::vector<char>   recv_buffers[dz11_n_lines];
-        mutable std::mutex  input_lock;
+	std::vector<char>     recv_buffers[dz11_n_lines];
+        mutable std::mutex    input_lock;
 
 	void trigger_interrupt(const bool is_tx);
 	bool is_rx_interrupt_enabled() const;
@@ -59,7 +63,7 @@ private:
 	void tx_scanner(const std::optional<int> line, const bool force = false);
 
 public:
-	dz11(bus *const b, const std::vector<comm *> & comm_interfaces);
+	dz11(bus *const b, comm_io *const io_channels);
 	virtual ~dz11();
 
 	bool begin();
@@ -72,7 +76,7 @@ public:
 	JsonDocument serialize() const;
 	static dz11 *deserialize(const JsonVariantConst j, bus *const b);
 
-	std::vector<comm *> *get_comm_interfaces() { return &comm_interfaces; }
+	comm_io * get_comm_interfaces() { return io_channels; }
 
 	void reset() override;
 

@@ -43,6 +43,9 @@ bus::~bus()
 	delete m;
 	delete dz11_;
 	delete rp06_;
+
+	if (rom.has_value())
+		delete [] std::get<2>(rom.value());
 }
 
 JsonDocument bus::serialize() const
@@ -77,6 +80,8 @@ JsonDocument bus::serialize() const
 		j_out["rp06"]   = rp06_->serialize();
 
 	// TODO: tm11
+
+	// TODO: rom
 
 	return j_out;
 }
@@ -120,6 +125,8 @@ bus *bus::deserialize(const JsonDocument j, console *const cnsl, std::atomic_uin
 
 	// TODO: tm11
 
+	// TODO: rom
+
 	return b;
 }
 
@@ -142,14 +149,19 @@ void bus::set_memory_size(const int n_pages)
 	TRACE("Memory is now %u kB (%d pages)", n_bytes / 1024, n_pages);
 }
 
-void bus::reset()
+void bus::init()
 {
 	if (m)
 		m->reset();
-	if (mmu_)
-		mmu_->reset();
 	if (c)
 		c->reset();
+	reset();
+}
+
+void bus::reset()
+{
+	if (mmu_)
+		mmu_->reset();
 	if (tm11)
 		tm11->reset();
 	if (rk05_)
@@ -164,6 +176,9 @@ void bus::reset()
 		dz11_->reset();
 	if (rp06_)
 		rp06_->reset();
+
+	mmu_->setMMR0(0);
+	mmu_->setMMR3(0);
 }
 
 void bus::add_RP06(rp06 *const rp06_)
@@ -239,15 +254,9 @@ void bus::del_DZ11()
 	dz11_ = nullptr;
 }
 
-void bus::init()
-{
-	mmu_->setMMR0(0);
-	mmu_->setMMR3(0);
-}
-
 uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm_selection_t mode_selection, const d_i_space_t space)
 {
-	int  run_mode     = mode_selection == rm_cur ? c->getPSW_runmode() : c->getPSW_prev_runmode();
+	int      run_mode = mode_selection == rm_cur ? c->getPSW_runmode() : c->getPSW_prev_runmode();
 
 	uint32_t m_offset = mmu_->calculate_physical_address(run_mode, addr_in, false, space);
 
@@ -255,6 +264,15 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 	bool     is_io    = m_offset >= io_base;
 
 	if (is_io) {
+		if (rom.has_value()) {
+			auto r = rom.value();
+			if (m_offset >= std::get<0>(r) && m_offset < std::get<0>(r) + std::get<1>(r)) {
+				if (word_mode == wm_byte)
+					return get_rom_byte(m_offset);
+				return get_rom_byte(m_offset) + (get_rom_byte(m_offset + 1) << 8);
+			}
+		}
+
 		uint16_t a = m_offset - io_base + 0160000;  // TODO
 
 		//// REGISTERS ////
@@ -292,7 +310,8 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 
 		if ((a & 1) && word_mode == wm_word) [[unlikely]] {
 			TRACE("READ-I/O odd address %06o UNHANDLED", a);
-			mmu_->trap_if_odd(addr_in, run_mode, space, false);
+			int page_index = mmu_->calc_par_pdr_index(run_mode, space, addr_in >> 13);
+			mmu_->trap_if_odd(page_index, false);
 			throw 0;
 			return 0;
 		}
@@ -506,15 +525,14 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 
 		c->trap(004);  // no such i/o
 		throw 1;
-
-		return -1;
 	}
+
+	int page_index = mmu_->calc_par_pdr_index(run_mode, space, addr_in >> 13);
 
 	if ((addr_in & 1) && word_mode == wm_word) {
 		TRACE("READ from %06o - odd address!", addr_in);
-		mmu_->trap_if_odd(addr_in, run_mode, space, false);
+		mmu_->trap_if_odd(page_index, false);
 		throw 2;
-		return 0;
 	}
 
 	if (m_offset >= m->get_memory_size()) {
@@ -522,6 +540,8 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 		c->trap(004);  // no such RAM
 		throw 1;
 	}
+
+	mmu_->set_page_accessed(page_index);
 
 	uint16_t temp = 0;
 	if (word_mode == wm_byte)
@@ -536,22 +556,36 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 
 bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t value, const rm_selection_t mode_selection, const d_i_space_t space)
 {
-	int           run_mode = mode_selection == rm_cur ? c->getPSW_runmode() : c->getPSW_prev_runmode();
+	int           run_mode   = mode_selection == rm_cur ? c->getPSW_runmode() : c->getPSW_prev_runmode();
 
-	const uint8_t apf      = addr_in >> 13; // active page field
+	const uint8_t apf        = addr_in >> 13; // active page field
 
-	bool          is_data  = space == d_space;
-	bool          d        = is_data && mmu_->get_use_data_space(run_mode);
-
-	if (mmu_->is_enabled() && (addr_in & 1) == 0 /* TODO remove this? */ && addr_in != ADDR_MMR0)
-		mmu_->set_page_written_to(run_mode, d, apf);
+	bool          is_data    = space == d_space;
+	bool          d          = is_data && mmu_->get_use_data_space(run_mode);
+	int           page_index = mmu_->calc_par_pdr_index(run_mode, d, apf);
 
 	uint32_t m_offset = mmu_->calculate_physical_address(run_mode, addr_in, true, space);
+
+	if (mmu_->is_enabled())
+		mmu_->set_page_written_to(page_index);
 
 	uint32_t io_base  = mmu_->get_io_base();
 	bool     is_io    = m_offset >= io_base;
 
 	if (is_io) {
+		if (rom.has_value()) {
+			auto r = rom.value();
+			if (m_offset >= std::get<0>(r) && m_offset < std::get<0>(r) + std::get<1>(r)) {
+				if (word_mode == wm_byte)
+					put_rom_byte(m_offset, value);
+				else {
+					put_rom_byte(m_offset,     value);
+					put_rom_byte(m_offset + 1, value >> 8);
+				}
+				return false;
+			}
+		}
+
 		uint16_t a = m_offset - io_base + 0160000;  // TODO
 
 		if (word_mode == wm_byte) {
@@ -770,7 +804,7 @@ bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 		if (word_mode == wm_word && (a & 1)) [[unlikely]] {
 			TRACE("WRITE-I/O to %08o (value: %06o) - odd address!", m_offset, value);
 
-			mmu_->trap_if_odd(a, run_mode, space, true);
+			mmu_->trap_if_odd(page_index, true);
 
 			throw 8;
 		}
@@ -780,11 +814,9 @@ bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 		throw 9;
 	}
 
-	if ( (addr_in & 1) && word_mode == wm_word) [[unlikely]] {
+	if ((addr_in & 1) && word_mode == wm_word) [[unlikely]] {
 		TRACE("WRITE to %06o (value: %06o) - odd address!", addr_in, value);
-
-		mmu_->trap_if_odd(addr_in, run_mode, space, true);
-
+		mmu_->trap_if_odd(page_index, true);
 		throw 10;
 	}
 
@@ -795,6 +827,8 @@ bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 		c->trap(004);  // no such RAM
 		throw 1;
 	}
+
+	mmu_->set_page_accessed(page_index);
 
 	if (word_mode == wm_byte)
 		m->write_byte(m_offset, value);
@@ -854,8 +888,14 @@ std::optional<uint16_t> bus::peek_word(const int run_mode, const uint16_t a)
 	auto meta = mmu_->calculate_physical_address(run_mode, a);
 
 	uint32_t io_base  = mmu_->get_io_base();
-	if (meta.physical_instruction >= io_base)
+	if (meta.physical_instruction >= io_base) {
+		if (rom.has_value()) {
+			auto r = rom.value();
+			if (meta.physical_instruction >= std::get<0>(r) && meta.physical_instruction < std::get<0>(r) + std::get<1>(r))
+				return get_rom_byte(meta.physical_instruction) + (get_rom_byte(meta.physical_instruction + 1) << 8);
+		}
 		return { };
+	}
 
 	if (meta.physical_instruction >= m->get_memory_size())
 		return { };
@@ -882,4 +922,19 @@ void bus::write_unibus_byte(const uint32_t a, const uint8_t v)
 	TRACE("write_unibus_byte[%08o]=%03o", a, v);
 	if (a < m->get_memory_size())
 		m->write_byte(a, v);
+}
+
+void bus::add_rom(const uint32_t offset, const uint16_t len)
+{
+	rom = { offset, len, new uint8_t[len]() };
+}
+
+uint8_t bus::get_rom_byte(const uint32_t offset)
+{
+	return std::get<2>(rom.value())[offset - std::get<0>(rom.value())];
+}
+
+void bus::put_rom_byte(const uint32_t offset, const uint8_t v)
+{
+	std::get<2>(rom.value())[offset - std::get<0>(rom.value())] = v;
 }

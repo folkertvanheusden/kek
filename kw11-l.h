@@ -45,6 +45,7 @@ public:
 
 	void     show_state(console *const cnsl) const override;
 
+	int      get_interrupt_frequency();
 	void     set_interrupt_frequency(const int Hz);
 	void     set_wall_clock(const bool use_wall_clock) { wall_clock = use_wall_clock; }
 	bool     get_wall_clock()                          { return wall_clock;           }

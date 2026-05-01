@@ -9,14 +9,14 @@
 class comm_esp32_hardwareserial: public comm
 {
 private:
-	const int uart_nr     {  1    };
-	const int rx_pin      { -1    };
-	const int tx_pin      { -1    };
-	const int bitrate     { 38400 };
-	bool      initialized { false };
+	const uart_port_t uart_nr { UART_NUM_1 };
+	const int rx_pin          { -1         };
+	const int tx_pin          { -1         };
+	const int bitrate         { 38400      };
+	bool      initialized     { false      };
 
 public:
-	comm_esp32_hardwareserial(const int uart_nr, const int rx_pin, const int tx_pin, const int bps);
+	comm_esp32_hardwareserial(const uart_port_t uart_nr, const int rx_pin, const int tx_pin, const int bps);
 	virtual ~comm_esp32_hardwareserial();
 
 	bool    begin() override;

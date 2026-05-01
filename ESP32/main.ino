@@ -16,11 +16,13 @@
 #include <sys/types.h>
 #endif
 #if defined(ESP32)
-#include "esp_clk.h"
+#include "esp_clk_tree.h"
 #include "esp_heap_caps.h"
 #include <SC16IS752.h>
+#include "esp_pthread.h"
 #endif
 
+#include "blinkenlights.h"
 #include "comm.h"
 #include "comm_arduino.h"
 #include "comm_esp32_hardwareserial.h"
@@ -54,8 +56,6 @@
 #include "version.h"
 
 
-constexpr const char SERIAL_CFG_FILE[] = "/serial.json";
-
 bus     *b    = nullptr;
 cpu     *c    = nullptr;
 tty     *tty_ = nullptr;
@@ -64,7 +64,7 @@ console *cnsl = nullptr;
 uint16_t exec_addr = 0;
 
 #if !defined(BUILD_FOR_RP2040)
-SdFs     SD;
+SdFs     SDinstance;
 #endif
 
 std::atomic_uint32_t stop_event      { EVENT_NONE };
@@ -73,6 +73,7 @@ bool                 trace_output    { false      };
 comm                *cs              { nullptr    };  // Console Serial
 SC16IS752           *SC16IS752_a     { nullptr    };
 SC16IS752           *SC16IS752_b     { nullptr    };
+blinkenlights        bl;
 
 static void console_thread_wrapper_panel(void *const c)
 {
@@ -83,51 +84,16 @@ static void console_thread_wrapper_panel(void *const c)
 	vTaskSuspend(nullptr);
 }
 
-uint32_t load_serial_speed_configuration()
-{
-	File dataFile = LittleFS.open(SERIAL_CFG_FILE, "r");
-	if (!dataFile)
-		return 115200;
-
-	size_t size = dataFile.size();
-
-	uint8_t buffer[4] { 0 };
-	dataFile.read(buffer, 4);
-
-	dataFile.close();
-
-	uint32_t speed = (buffer[0] << 24) | (buffer[1] << 16) | (buffer[2] << 8) | buffer[3];
-	// sanity check
-	if (speed < 300)
-		speed = 115200;
-	return speed;
-}
-
-bool save_serial_speed_configuration(const uint32_t bps)
-{
-	File dataFile = LittleFS.open(SERIAL_CFG_FILE, "w");
-
-	if (!dataFile)
-		return false;
-
-	const uint8_t buffer[] = { uint8_t(bps >> 24), uint8_t(bps >> 16), uint8_t(bps >> 8), uint8_t(bps) };
-	dataFile.write(buffer, 4);
-
-	dataFile.close();
-
-	return true;
-}
-
 #if !defined(BUILD_FOR_RP2040)
 void set_hostname()
 {
-        uint64_t mac    = ESP.getEfuseMac();
-        uint8_t *chipid = reinterpret_cast<uint8_t *>(&mac);
+  uint64_t mac    = ESP.getEfuseMac();
+  uint8_t *chipid = reinterpret_cast<uint8_t *>(&mac);
 
-	char name[32];
-        snprintf(name, sizeof name, "PDP11-%02x%02x%02x%02x", chipid[2], chipid[3], chipid[4], chipid[5]);
+  char name[32];
+  snprintf(name, sizeof name, "PDP11-%02x%02x%02x%02x", chipid[2], chipid[3], chipid[4], chipid[5]);
 
-	WiFi.setHostname(name);
+  WiFi.setHostname(name);
 }
 
 void configure_network(console *const c)
@@ -207,29 +173,28 @@ void start_network(console *const c)
 	if (!dz11_loaded) {
 		dz11_loaded = true;
 
-		cs->println("* Adding DZ11");
-		std::vector<comm *> comm_interfaces;
+    comm_io *io_channels = new comm_io(dz11_n_lines);
 
+		cs->println("* Adding DZ11");
 #if !defined(BUILD_FOR_RP2040) && defined(TTY_SERIAL_RX)
-		uint32_t bitrate = load_serial_speed_configuration();
+		uint32_t bitrate = get_configuration_uint32(SERIAL_CFG_FILE, 115200);
 
 		cs->println(format("* Init TTY (on DZ11), baudrate: %d bps, RX: %d, TX: %d", bitrate, TTY_SERIAL_RX, TTY_SERIAL_TX));
-
-		comm_interfaces.push_back(new comm_esp32_hardwareserial(1, TTY_SERIAL_RX, TTY_SERIAL_TX, bitrate));
+    if (io_channels->set_device(0, new comm_esp32_hardwareserial(uart_port_t(1), TTY_SERIAL_RX, TTY_SERIAL_TX, bitrate)) == false)
+				DOLOG(warning, false, "Failed to configure device");
 #endif
 
-		for(size_t i=comm_interfaces.size(); i<4; i++) {
+		DOLOG(info, false, "Configuring TCP sockets for the remaining DZ11 slots");
+		for(size_t i=0; i<dz11_n_lines; i++) {
+      if (io_channels->is_defined(i))
+        continue;
 			int port = 1100 + i;
-			comm_interfaces.push_back(new comm_tcp_socket_server(port));
-			DOLOG(info, false, "Configuring DZ11 device for TCP socket on port %d", port);
+			DOLOG(info, false, "Configuring TCP socket on port %d for DZ11", port);
+			if (io_channels->set_device(i, new comm_tcp_socket_server(port, true)) == false)
+				DOLOG(warning, false, "Failed to configure device");
 		}
 
-		for(auto & c: comm_interfaces) {
-			if (c->begin() == false)
-				DOLOG(warning, false, "Failed to configure %s", c->get_identifier().c_str());
-		}
-
-		dz11 *dz11_ = new dz11(b, comm_interfaces);
+		dz11 *dz11_ = new dz11(b, io_channels);
 		dz11_->begin();
 		b->add_DZ11(dz11_);
 
@@ -258,6 +223,11 @@ void setup() {
 	Serial.begin(115200);
 	while(!Serial)
 		delay(100);
+#if defined(ESP32)
+  esp_log_level_set("*", ESP_LOG_INFO);
+#endif
+
+  heap_caps_check_integrity_all(true);
 
 	cs = new comm_arduino(&Serial, "Serial");
 #if defined(ESP32)
@@ -270,12 +240,13 @@ void setup() {
 	cs->println(format("GIT hash: %s", version_str));
 	cs->println("Build on: " __DATE__ " " __TIME__);
 
-	cs->println(format("# cores: %d, CPU frequency: %d Hz", SOC_CPU_CORES_NUM, esp_clk_cpu_freq()));
+  uint32_t freq = 0;
+  esp_clk_tree_src_get_freq_hz(SOC_MOD_CLK_CPU, ESP_CLK_TREE_SRC_FREQ_PRECISION_EXACT, &freq);
+	cs->println(format("# cores: %d, CPU frequency: %u Hz", SOC_CPU_CORES_NUM, freq));
 
 #if defined(ESP32)
 	heap_caps_register_failed_alloc_callback(heap_caps_alloc_failed_hook);
-#endif
-#if defined(ESP32)
+
 	set_hostname();
 #endif
 
@@ -285,7 +256,7 @@ void setup() {
 	SPI.setSCK(SCK);
 
 	for(int i=0; i<3; i++) {
-		if (SD.begin(false, SD_SCK_MHZ(10), SPI))
+		if (SDinstance.begin(false, SD_SCK_MHZ(10), SPI))
 			break;
 
 		cs->println("Cannot initialize SD card");
@@ -316,9 +287,15 @@ void setup() {
 
 		uint32_t free_psram = ESP.getFreePsram();
 		if (free_psram > leave_unallocated) {
-			n_pages = min((free_psram - leave_unallocated) / 8192, uint32_t(256));  // start size is 2 MB max (with 1 MB, UNIX 7 behaves strangely)
+			n_pages = min((free_psram - leave_unallocated) / 8192, uint32_t(512));  // start size is 2 MB max (with 1 MB, UNIX 7 behaves strangely)
 			cs->println(format("Free PSRAM: %d decimal bytes (or %d pages (see 'ramsize' in the debugger))", free_psram, n_pages));
 		}
+
+    esp_pthread_cfg_t config = esp_pthread_get_default_config();
+    config.stack_alloc_caps = MALLOC_CAP_8BIT | MALLOC_CAP_SPIRAM;
+    config.stack_size = 16384;
+    if (auto rc = esp_pthread_set_cfg(&config); rc != ESP_OK)
+      cs->println(format("esp_pthread_set_cfg(SPI_RAM) failed: %d", rc));
 	}
 #endif
 
@@ -381,6 +358,13 @@ void setup() {
 
 	cs->println("* Starting console");
 	cnsl->start_thread();
+
+  bl.begin();
+  auto bl_ip = get_configuration_string(BLINKENLIGHTS_CFG_FILE, "");
+  if (bl_ip.empty() == false) {
+    cnsl->put_string_lf(format("Using PiDP11 blinkenlights on IP address %s", bl_ip.c_str()));
+    bl.set_target(bl_ip);
+  }
 
 	cnsl->put_string_lf("PDP-11/70 emulator, (C) Folkert van Heusden");
 }

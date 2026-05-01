@@ -29,3 +29,11 @@ typedef enum { rm_prev, rm_cur } rm_selection_t;
 // more requires unibusmap support
 #define DEFAULT_N_PAGES 31
 #endif
+
+#if defined(ESP32) || defined(BUILD_FOR_RP2040)
+#define SERIAL_CFG_FILE        "serial.json"
+#define BLINKENLIGHTS_CFG_FILE "blinkenlights.dat"
+#else
+#define SERIAL_CFG_FILE        ".serial.json"
+#define BLINKENLIGHTS_CFG_FILE ".blinkenlights.dat"
+#endif

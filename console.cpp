@@ -1,4 +1,4 @@
-// (C) 2018-2024 by Folkert van Heusden
+// (C) 2018-2026 by Folkert van Heusden
 // Released under MIT license
 
 #include <cassert>
@@ -153,6 +153,21 @@ std::optional<char> console::wait_char(const int timeout_ms)
 	}
 
 	return { };
+#endif
+}
+
+void console::unget_char(const char c)
+{
+#if defined(BUILD_FOR_RP2040)
+	xSemaphoreTake(input_lock, portMAX_DELAY);
+#else
+	std::unique_lock<std::mutex> lck(input_lock);
+#endif
+
+	input_buffer.push_back(c);
+
+#if defined(BUILD_FOR_RP2040)
+	xSemaphoreGive(input_lock);
 #endif
 }
 
@@ -380,4 +395,9 @@ void console::operator()()
 	}
 
 	TRACE("Console thread terminating");
+}
+
+void console::set_blinkenlights_panel(blinkenlights *const p_blinkenlights)
+{
+	this->p_blinkenlights = p_blinkenlights;
 }

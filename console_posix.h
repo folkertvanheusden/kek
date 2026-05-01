@@ -24,6 +24,8 @@ public:
 	console_posix(std::atomic_uint32_t *const stop_event);
 	virtual ~console_posix();
 
+	void begin() override;
+
 	void resize_terminal() override;
 
 	void put_string_lf(const std::string & what) override;

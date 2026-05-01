@@ -1,4 +1,4 @@
-// (C) 2018-2024 by Folkert van Heusden
+// (C) 2018-2026 by Folkert van Heusden
 // Released under MIT license
 
 #pragma once
@@ -17,6 +17,7 @@
 #endif
 
 
+class blinkenlights;
 class bus;
 
 class console
@@ -32,13 +33,16 @@ private:
 #endif
 
 protected:
-	std::atomic_uint32_t *const stop_event   { nullptr };
+	std::atomic_uint32_t   *const stop_event { nullptr };
 	std::atomic_bool        stop_panel       { false   };
+	blinkenlights          *p_blinkenlights  { nullptr };
 
 	bus                    *b                { nullptr };
 #if !defined(BUILD_FOR_RP2040)
 	std::thread            *th               { nullptr };
+	std::thread            *th_panel         { nullptr };
 #endif
+	int                     refreshrate      { 15      };
 	std::atomic_bool        disk_read_activity_flag  { false };
 	std::atomic_bool        disk_write_activity_flag { false };
 	std::atomic_bool        running_flag     { false };
@@ -75,6 +79,7 @@ public:
 
 	bool         poll_char();
 	int          get_char();
+	void         unget_char(const char c);
 	std::optional<char> wait_char(const int timeout_ms);
 	std::string  read_line(const std::string & prompt);
 	void         flush_input();
@@ -96,6 +101,9 @@ public:
 	std::atomic_bool * get_disk_read_activity_flag()  { return &disk_read_activity_flag; }
 	std::atomic_bool * get_disk_write_activity_flag() { return &disk_write_activity_flag; }
 
+	void         set_blinkenlights_panel(blinkenlights *const p_blinkenlights);
 	void         stop_panel_thread() { stop_panel = true; }
 	virtual void panel_update_thread() = 0;
+	int          get_refreshrate(              ) const { return refreshrate; }
+	void         set_refreshrate(const int rate)       { refreshrate = rate; }
 };

@@ -83,6 +83,23 @@ void kw11_l::do_interrupt()
 		b->getCpu()->queue_interrupt(6, 0100);
 }
 
+int kw11_l::get_interrupt_frequency()
+{
+
+#if defined(BUILD_FOR_RP2040)
+	xSemaphoreTake(lf_csr_lock, portMAX_DELAY);
+#else
+	std::unique_lock<std::mutex> lck(lf_csr_lock);
+#endif
+
+	int cur_int_freq = int_frequency;
+
+#if defined(BUILD_FOR_RP2040)
+	xSemaphoreGive(lf_csr_lock);
+#endif
+	return cur_int_freq;
+}
+
 void kw11_l::operator()()
 {
 	set_thread_name("kek:kw-11l");
@@ -102,21 +119,7 @@ void kw11_l::operator()()
 			else {
 				myusleep(1000000 / 100);  // 100 Hz
 
-				int cur_int_freq = 1;
-
-				{
-#if defined(BUILD_FOR_RP2040)
-					xSemaphoreTake(lf_csr_lock, portMAX_DELAY);
-#else
-					std::unique_lock<std::mutex> lck(lf_csr_lock);
-#endif
-
-					cur_int_freq = int_frequency;
-
-#if defined(BUILD_FOR_RP2040)
-					xSemaphoreGive(lf_csr_lock);
-#endif
-				}
+				int cur_int_freq = get_interrupt_frequency();
 
 				uint64_t current_cycle_count = b->getCpu()->get_instructions_executed_count();
 				uint32_t took_ms = b->getCpu()->get_effective_run_time(current_cycle_count - prev_cycle_count);

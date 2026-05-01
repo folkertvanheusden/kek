@@ -1,4 +1,4 @@
-// (C) 2018-2025 by Folkert van Heusden
+// (C) 2018-2026 by Folkert van Heusden
 // Released under MIT license
 
 #include <fstream>
@@ -13,6 +13,7 @@
 #include <LittleFS.h>
 #endif
 
+#include "blinkenlights.h"
 #include "breakpoint_parser.h"
 #include "bus.h"
 #if IS_POSIX
@@ -40,7 +41,10 @@
 #include "utils.h"
 
 
+extern blinkenlights bl;
+
 #if defined(ESP32) || defined(BUILD_FOR_RP2040)
+bool network_configured = false;
 #if defined(ESP32)
 #include "esp32.h"
 #include "console_esp32.h"
@@ -51,13 +55,15 @@
 void configure_network(console *const cnsl);
 void check_network(console *const cnsl);
 void start_network(console *const cnsl);
+#else
+constexpr const bool network_configured = true;
 #endif
 
 #if !defined(BUILD_FOR_RP2040) && !defined(linux) && !defined(_WIN32)
-extern SdFs SD;
+extern SdFs SDinstance;
 #endif
 
-#define SERIAL_CFG_FILE "dz11.json"
+#define DZ11_CFG_FILE "dz11.json"
 
 #if !defined(BUILD_FOR_RP2040)
 std::optional<disk_backend *> select_nbd_server(console *const cnsl)
@@ -96,24 +102,30 @@ void start_disk(console *const cnsl)
 	cnsl->put_string_lf(format("MISO: %d", int(MISO)));
 	cnsl->put_string_lf(format("MOSI: %d", int(MOSI)));
 	cnsl->put_string_lf(format("SCK : %d", int(SCK )));
-	cnsl->put_string_lf(format("SS  : %d", int(SS  )));
-
 #endif
 
 #if defined(ESP32_WT_ETH01)
-	if (SD.begin(SdioConfig(FIFO_SDIO)))
+	if (SDinstance.begin(SdioConfig(FIFO_SDIO)))
 		disk_started = true;
 #elif defined(SHA2017)
-	if (SD.begin(21, SD_SCK_MHZ(10)))
+	cnsl->put_string_lf(format("SS  : %d", 21));
+	if (SDinstance.begin(21, SD_SCK_MHZ(10)))
+		disk_started = true;
+#elif defined(SEEED_XIAO_S3)
+	cnsl->put_string_lf(format("SS  : %d", 1));
+	if (SDinstance.begin(1, SD_SCK_MHZ(10)))
 		disk_started = true;
 #elif !defined(BUILD_FOR_RP2040)
-	if (SD.begin(SS, SD_SCK_MHZ(15)))
+	cnsl->put_string_lf(format("SS  : %d", int(SS)));
+	if (SDinstance.begin(SS, SD_SCK_MHZ(15)))
 		disk_started = true;
+#else
+#error What microcontroller is this?
 #endif
 	if (!disk_started) {
-		auto err = SD.sdErrorCode();
+		auto err = SDinstance.sdErrorCode();
 		if (err)
-			cnsl->put_string_lf(format("SDerror: 0x%x, data: 0x%x", err, SD.sdErrorData()));
+			cnsl->put_string_lf(format("SDerror: 0x%x, data: 0x%x", err, SDinstance.sdErrorData()));
 		else
 			cnsl->put_string_lf("Failed to initialize SD card");
 	}
@@ -147,7 +159,7 @@ void ls_l(console *const cnsl)
 
 	closedir(dir);
 #elif defined(BUILD_FOR_RP2040)
-	File root = SD.open("/");
+	File root = SDinstance.open("/");
 
 	for(;;) {
 		auto entry = root.openNextFile();
@@ -164,7 +176,7 @@ void ls_l(console *const cnsl)
 	}
 #elif defined(_WIN32)
 #else
-	SD.ls("/", LS_DATE | LS_SIZE | LS_R);
+	SDinstance.ls("/", LS_DATE | LS_SIZE | LS_R);
 #endif
 }
 
@@ -261,13 +273,13 @@ int wait_for_key(const std::string & title, console *const cnsl, const std::vect
 	return ch;
 }
 
-void configure_comm(console *const cnsl, std::vector<comm *> & device_list)
+void configure_comm(console *const cnsl, comm_io *const device_list)
 {
 	for(;;) {
 		std::vector<char> keys_allowed { '9' };
 		int               slot_key     { 'A' };
-		for(auto & c: device_list) {
-			cnsl->put_string_lf(format(" %c. %s", slot_key, c ? c->get_identifier().c_str() : "-"));
+		for(size_t i=0; i<device_list->channels.size(); i++) {
+			cnsl->put_string_lf(format(" %c. %s", slot_key, device_list->get_identifier(i).c_str()));
 			keys_allowed.push_back(slot_key);
 			slot_key++;
 		}
@@ -285,41 +297,31 @@ void configure_comm(console *const cnsl, std::vector<comm *> & device_list)
 			std::string temp_host = cnsl->read_line("host: ");
 			std::string temp_port = temp_host.empty() ? "" : cnsl->read_line("port: ");
 
-			if (temp_host.empty() == false && temp_port.empty() == false) {
-				delete device_list.at(device_nr);
-				device_list.at(device_nr) = new comm_tcp_socket_client(temp_host, std::stoi(temp_port));
-				rc = device_list.at(device_nr)->begin();
-			}
+			if (temp_host.empty() == false && temp_port.empty() == false)
+				rc = device_list->set_device(device_nr, new comm_tcp_socket_client(temp_host, std::stoi(temp_port)));
 		}
 		else if (ch_opt == '2') {
 			std::string temp = cnsl->read_line("port: ");
 			if (temp.empty() == false) {
-				delete device_list.at(device_nr);
-				device_list.at(device_nr) = new comm_tcp_socket_server(std::stoi(temp));
-				rc = device_list.at(device_nr)->begin();
+				int ch_dev = wait_for_key("Initialize telnet session? (y/n)", cnsl, { 'y', 'n' });
+				rc = device_list->set_device(device_nr, new comm_tcp_socket_server(std::stoi(temp), ch_dev == 'y'));
 			}
 		}
 		else if (ch_opt == '3') {
 #if IS_POSIX
 			std::string temp_dev = cnsl->read_line("device: ");
 			std::string temp_bitrate = cnsl->read_line("bitrate: ");
-			if (temp_dev.empty() == false && temp_bitrate.empty() == false) {
-				delete device_list.at(device_nr);
-				device_list.at(device_nr) = new comm_posix_tty(temp_dev, std::stoi(temp_bitrate));
-				rc = device_list.at(device_nr)->begin();
-			}
+			if (temp_dev.empty() == false && temp_bitrate.empty() == false)
+				rc = device_list->set_device(device_nr, new comm_posix_tty(temp_dev, std::stoi(temp_bitrate)));
 #elif defined(ESP32)
 			std::string temp_dev = cnsl->read_line("Uart number (0...2): ");
 			std::string temp_rx  = cnsl->read_line("RX pin: ");
 			std::string temp_tx  = cnsl->read_line("TX pin: ");
 			std::string temp_bitrate = cnsl->read_line("bitrate: ");
-			if (temp_dev.empty() == false && temp_bitrate.empty() == false && temp_rx.empty() == false && temp_tx.empty() == false) {
-				delete device_list.at(device_nr);
-				device_list.at(device_nr) = new comm_esp32_hardwareserial(std::stoi(temp_dev), std::stoi(temp_rx), std::stoi(temp_tx), std::stoi(temp_bitrate));
-				rc = device_list.at(device_nr)->begin();
-			}
+			if (temp_dev.empty() == false && temp_bitrate.empty() == false && temp_rx.empty() == false && temp_tx.empty() == false)
+				rc = device_list->set_device(device_nr, new comm_esp32_hardwareserial(uart_port_t(std::stoi(temp_dev)), std::stoi(temp_rx), std::stoi(temp_tx), std::stoi(temp_bitrate)));
 #else
-			cnsl->put_string_lf("Not implemented yet");
+			cnsl->put_string_lf("Not implemented yet on this platform");
 #endif
 		}
 
@@ -484,22 +486,6 @@ int disassemble(cpu *const c, console *const cnsl, const uint16_t pc, const bool
 
 	DOLOG(debug, false, "SP: %s, MMR0/1/2/3: %s/%s/%s/%s", sp.c_str(), MMR0.c_str(), MMR1.c_str(), MMR2.c_str(), MMR3.c_str());
 
-#if 0
-	if (c->getPSW_runmode() == 3) {
-		/*
-		FILE *fh = fopen("/home/folkert/temp/ramdisk/log-kek.dat", "a+");
-		fprintf(fh, "%06o", pc);
-		for(auto & v: data["instruction-values"])
-			fprintf(fh, " %s", v.c_str());
-		fprintf(fh, "\n");
-		fclose(fh);
-		*/
-		FILE *fh = fopen("/home/folkert/temp/ramdisk/da-kek.txt", "a+");
-		fprintf(fh, "R0 %s R1 %s R2 %s R3 %s R4 %s R5 %s R6 %s R7 %06o %s\n", registers[0].c_str(), registers[1].c_str(), registers[2].c_str(), registers[3].c_str(), registers[4].c_str(), registers[5].c_str(), registers[6].c_str(), pc, instruction.c_str());
-		fclose(fh);
-	}
-#endif
-
 	return data["instruction-values"].size() * 2;
 }
 
@@ -559,8 +545,10 @@ void mmu_resolve(console *const cnsl, bus *const b, const uint16_t va)
 	}
 
 	for(int i=0; i<2; i++) {
-		auto ta_i = b->getMMU()->get_trap_action(run_mode, false, data.apf, i);
-		auto ta_d = b->getMMU()->get_trap_action(run_mode, true,  data.apf, i);
+		auto mmu        = b->getMMU();
+		int  page_index = mmu->calc_par_pdr_index(run_mode, 0, data.apf);
+		auto ta_i       = mmu->get_trap_action(page_index + 0, i);
+		auto ta_d       = mmu->get_trap_action(page_index + 8, i);
 
 		cnsl->put_string_lf(format("Instruction action: %s (%s)", trap_action_to_str(ta_i.first), i ? "write" : "read"));
 		cnsl->put_string_lf(format("Data action       : %s (%s)", trap_action_to_str(ta_d.first), i ? "write" : "read"));
@@ -591,6 +579,11 @@ void reg_dump(console *const cnsl, cpu *const c)
 
 void show_run_statistics(console *const cnsl, cpu *const c)
 {
+#if defined(ESP32)
+	cnsl->put_string_lf(format("Free RAM (decimal bytes): %d", ESP.getFreeHeap()));
+	cnsl->put_string_lf(format("Free SPI-RAM: %d", heap_caps_get_free_size(MALLOC_CAP_SPIRAM)));
+#endif
+
 	auto stats = c->get_mips_rel_speed({ }, { });
 
 	cnsl->put_string_lf(format("Executed %zu instructions in %.2f ms of which %.2f ms idle", size_t(std::get<2>(stats)), std::get<3>(stats) / 1000., std::get<4>(stats) / 1000.));
@@ -611,9 +604,9 @@ void show_queued_interrupts(console *const cnsl, cpu *const c)
 
 	auto queued_interrupts = c->get_queued_interrupts();
 
-	for(auto & level: queued_interrupts) {
-		for(auto & qi: level.second)
-			cnsl->put_string_lf(format("Level: %d, interrupt: %03o", level.first, qi));
+	for(int level=0; level<8; level++) {
+		for(auto & qi: queued_interrupts[level])
+			cnsl->put_string_lf(format("Level: %d, interrupt: %03o", level, qi));
 	}
 }
 
@@ -677,9 +670,8 @@ void serdz11(console *const cnsl, bus *const b)
 	JsonDocument j = d->serialize();
 
 	bool ok = false;
-
 #if IS_POSIX
-	FILE *fh = fopen(SERIAL_CFG_FILE, "w");
+	FILE *fh = fopen(DZ11_CFG_FILE, "w");
 	if (fh) {
 		state_writer ws { fh };
 		serializeJsonPretty(j, ws);
@@ -688,7 +680,7 @@ void serdz11(console *const cnsl, bus *const b)
 		ok = true;
 	}
 #elif defined(ESP32)
-	File data_file = LittleFS.open("/" SERIAL_CFG_FILE, "w");
+	File data_file = LittleFS.open("/" DZ11_CFG_FILE, "w");
 	if (data_file) {
 		serializeJsonPretty(j, data_file);
 		data_file.close();
@@ -697,18 +689,18 @@ void serdz11(console *const cnsl, bus *const b)
 	}
 #endif
 
-	cnsl->put_string_lf(format("Serialize to " SERIAL_CFG_FILE ": %s", ok ? "OK" : "failed"));
+	cnsl->put_string_lf(format("Serialize to " DZ11_CFG_FILE ": %s", ok ? "OK" : "failed"));
 }
 
 void deserdz11(console *const cnsl, bus *const b)
 {
 #if defined(ESP32)
-	auto rc = deserialize_file("/" SERIAL_CFG_FILE);
+	auto rc = deserialize_file("/" DZ11_CFG_FILE);
 #else
-	auto rc = deserialize_file(SERIAL_CFG_FILE);
+	auto rc = deserialize_file(DZ11_CFG_FILE);
 #endif
 	if (rc.has_value() == false) {
-		cnsl->put_string_lf("Failed to deserialize " SERIAL_CFG_FILE);
+		cnsl->put_string_lf("Failed to deserialize " DZ11_CFG_FILE);
 		return;
 	}
 
@@ -716,7 +708,7 @@ void deserdz11(console *const cnsl, bus *const b)
 
 	b->add_DZ11(dz11::deserialize(rc.value(), b));
 
-	cnsl->put_string_lf(format("Deserialized " SERIAL_CFG_FILE));
+	cnsl->put_string_lf(format("Deserialized " DZ11_CFG_FILE));
 }
 
 void set_kw11_l_interrupt_freq(console *const cnsl, bus *const b, const int freq)
@@ -1082,8 +1074,8 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 	}
 #if defined(ESP32)
 	else if (cmd == "cfgnet") {
+		network_configured = true;
 		configure_network(cnsl);
-
 		return true;
 	}
 	else if (cmd == "chknet") {
@@ -1093,7 +1085,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 	}
 	else if (cmd == "startnet") {
 		start_network(cnsl);
-
+		network_configured = true;
 		return true;
 	}
 	else if (parts[0] == "pm" && parts.size() == 2) {
@@ -1183,6 +1175,9 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		return true;
 	}
 #endif
+	else if (parts[0] == "getinthz") {
+		cnsl->put_string_lf(format("kw11 Hz: %d", b->getKW11_L()->get_interrupt_frequency()));
+	}
 	else if (parts[0] == "setinthz" && parts.size() == 2) {
 		set_kw11_l_interrupt_freq(cnsl, b, std::stoi(parts.at(1)));
 		return true;
@@ -1209,6 +1204,21 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 	else if (cmd == "qi") {
 		show_queued_interrupts(cnsl, c);
 
+		return true;
+	}
+	else if (parts[0] == "blights") {
+		if (network_configured == false)
+			cnsl->put_string_lf("Please configure network first (cfgnet)");
+		else if (parts.size() == 2) {
+			bl.set_target(parts[1]);
+			put_configuration_string(BLINKENLIGHTS_CFG_FILE, parts[1]);
+			cnsl->set_blinkenlights_panel(&bl);
+		}
+		else {
+			put_configuration_string(BLINKENLIGHTS_CFG_FILE, "");
+			cnsl->set_blinkenlights_panel(nullptr);
+			cnsl->put_string_lf("PiDP11 blinkenlights panel disabled");
+		}
 		return true;
 	}
 	else if (parts[0] == "log") {
@@ -1242,6 +1252,14 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 
 		return true;
 	}
+	else if (cmd == "refr") {
+		if (parts.size() == 2) {
+			int rate = std::stoi(parts[1]);
+			if (rate > 0)
+				cnsl->set_refreshrate(rate);
+		}
+		cnsl->put_string_lf(format("Panel refresh rate: %d fps", cnsl->get_refreshrate()));
+	}
 	else if (cmd == "ult") {
 		tm11_unload_tape(b);
 
@@ -1258,7 +1276,10 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		return true;
 	}
 	else if (cmd == "cdz11") {
-		configure_comm(cnsl, *b->getDZ11()->get_comm_interfaces());
+		if (b->getDZ11())
+			configure_comm(cnsl, b->getDZ11()->get_comm_interfaces());
+		else
+			cnsl->put_string_lf("DZ11 not started yet, first invoke \"startnet\"");
 
 		return true;
 	}
@@ -1329,6 +1350,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			"getmem ...    - get memory (a=), in octal, one byte",
 			"toggle ...    - set switch (s=, 0...15 (decimal)) of the front panel to state (t=, 0 or 1)",
 			"setinthz x    - set KW11-L interrupt frequency (Hz)",
+			"intwallclock x- use real 50 Hz (0) or cycle-based (1, roughly based)",
 			"cls           - clear screen",
 			"dir           - list files",
 			"bic x         - run BIC/LDA file",
@@ -1341,16 +1363,18 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			"serdz11       - store DZ11 device settings",
 			"dserdz11      - load DZ11 device settings",
 #if IS_POSIX
-			"ser x         - serialize state to a file",
-			//					"dser          - deserialize state from a file",
+			"ser x         - serialize state to a file (deserialize with -D commandline parameter)",
+			// "dser          - deserialize state from a file",         ^^^^
 #endif
 			"dp            - disable panel",
+			"refr [x]      - set panel refreshrate (fps)",
 #if defined(ESP32)
 			"cfgnet        - configure network (e.g. WiFi)",
 			"startnet      - start network",
 			"chknet        - check network status",
 			"pm x          - panel mode (bits or address)",
 #endif
+			"blights x     - enable blinkenlights on IP address x", 
 			"testdz11      - test DZ11",
 			"cfgdisk       - configure disk",
 			"log ...       - log a message to the logfile",
@@ -1423,8 +1447,13 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 		std::ifstream fh;
 		fh.open(init.value());
 		while(std::getline(fh, line)) {
-			if (debugger_do(&state, cnsl, b, stop_event, line) == false)
-				return;
+			try {
+				if (debugger_do(&state, cnsl, b, stop_event, line) == false)
+					return;
+			}
+			catch(...) {
+				cnsl->put_string_lf("Exception in debugger");
+			}
 		}
 	}
 
