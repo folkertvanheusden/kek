@@ -32,3 +32,8 @@ void set_nodelay(const int fd);
 std::string get_endpoint_name(const int fd);
 
 std::optional<JsonDocument> deserialize_file(const std::string & filename);
+
+std::string get_configuration_string(const std::string & file, const std::string & default_value);
+uint32_t    get_configuration_uint32(const std::string & file, const uint32_t default_value);
+bool put_configuration_uint32(const std::string & file, const uint32_t value);
+bool put_configuration_string(const std::string & file, const std::string & value);

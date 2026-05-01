@@ -12,8 +12,10 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#include "blinkenlights.h"
 #include "console_posix.h"
 #include "error.h"
+#include "gen.h"
 
 
 console_posix::console_posix(std::atomic_uint32_t *const stop_event): console(stop_event)
@@ -36,11 +38,22 @@ console_posix::~console_posix()
 {
 	stop_thread();
 
+	if (th_panel) {
+		th_panel->join();
+		delete th_panel;
+	}
+
 #if !defined(_WIN32)
 	if (isatty(STDIN_FILENO) && tcsetattr(STDIN_FILENO, TCSANOW, &org_tty_opts) == -1)
 		error_exit(true, "~console_posix: tcsetattr failed");
 #endif
 }
+
+void console_posix::begin()
+{
+	th_panel = new std::thread(&console_posix::panel_update_thread, this);
+}
+
 
 int console_posix::wait_for_char_ll(const short timeout)
 {
@@ -83,6 +96,14 @@ void console_posix::resize_terminal()
 
 void console_posix::panel_update_thread()
 {
+	set_thread_name("kek:c-panel");
+
+	while(*stop_event != EVENT_TERMINATE && stop_panel == false) {
+		myusleep(1000000 / refreshrate);
+
+		if (p_blinkenlights)
+			p_blinkenlights->push(b, running_flag);
+	}
 }
 
 void console_posix::refresh_virtual_terminal()

@@ -1,4 +1,4 @@
-// (C) 2018-2024 by Folkert van Heusden
+// (C) 2018-2026 by Folkert van Heusden
 // Released under MIT license
 
 #include "gen.h"
@@ -12,6 +12,7 @@
 #include <ws2tcpip.h>
 #include <winsock2.h>
 #else
+#include <pwd.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
@@ -308,4 +309,104 @@ std::optional<JsonDocument> deserialize_file(const std::string & filename)
 #endif
 
 	return j;
+}
+
+std::string file_in_user_home(const std::string & file)
+{
+#if defined(ESP32)
+	return "/" + file;
+#else
+	passwd *pw = getpwuid(getuid());
+	if (!pw)
+		return file;
+
+	return std::string(pw->pw_dir) + "/" + file;
+#endif
+}
+
+std::string get_configuration_string(const std::string & file, const std::string & default_value)
+{
+#if defined(ESP32)
+	File data_file = LittleFS.open(file_in_user_home(file.c_str()), "r");
+	if (!data_file)
+		return default_value;
+
+	auto rc = data_file.readString();
+	data_file.close();
+
+	return rc.c_str();
+#else
+	FILE *fh = fopen(file_in_user_home(file).c_str(), "r");
+	if (!fh)
+		return default_value;
+	char buffer[64];
+	fgets(buffer, sizeof buffer, fh);
+	fclose(fh);
+
+	return buffer;
+#endif
+}
+
+uint32_t get_configuration_uint32(const std::string & file, const uint32_t default_value)
+{
+	uint8_t buffer[4] { };
+#if defined(ESP32)
+	File data_file = LittleFS.open(file_in_user_home(file.c_str()), "r");
+	if (!data_file)
+		return default_value;
+
+	size_t size = data_file.size();
+	if (size != 4) {
+		data_file.close();
+		return default_value;
+	}
+
+	data_file.read(buffer, 4);
+	data_file.close();
+#else
+	FILE *fh = fopen(file_in_user_home(file).c_str(), "rb");
+	if (!fh)
+		return default_value;
+	fread(buffer, 1, 4, fh);
+	fclose(fh);
+#endif
+
+	return (buffer[0] << 24) | (buffer[1] << 16) | (buffer[2] << 8) | buffer[3];
+}
+
+bool put_configuration_uint32(const std::string & file, const uint32_t value)
+{
+	const uint8_t buffer[] = { uint8_t(value >> 24), uint8_t(value >> 16), uint8_t(value >> 8), uint8_t(value) };
+#if defined(ESP32)
+	File data_file = LittleFS.open(file_in_user_home(file.c_str()), "w");
+	if (!data_file)
+		return false;
+	data_file.write(buffer, 4);
+	data_file.close();
+#else
+	FILE *fh = fopen(file_in_user_home(file).c_str(), "wb");
+	if (!fh)
+		return false;
+	fwrite(buffer, 1, 4, fh);
+	fclose(fh);
+#endif
+	return true;
+}
+
+bool put_configuration_string(const std::string & file, const std::string & value)
+{
+#if defined(ESP32)
+	File data_file = LittleFS.open(file_in_user_home(file.c_str()), "w");
+	if (!data_file)
+		return false;
+	data_file.print(value.c_str());
+	data_file.close();
+#else
+	FILE *fh = fopen(file_in_user_home(file).c_str(), "w");
+	if (!fh)
+		return false;
+	fprintf(fh, "%s", value.c_str());
+	fclose(fh);
+#endif
+	return true;
 }

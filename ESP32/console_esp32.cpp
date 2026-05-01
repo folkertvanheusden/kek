@@ -1,10 +1,11 @@
-// (C) 2018-2024 by Folkert van Heusden
+// (C) 2018-2026 by Folkert van Heusden
 // Released under MIT license
 
 #include <Adafruit_NeoPixel.h>
 #include <stdio.h>
 #include <unistd.h>
 
+#include "blinkenlights.h"
 #include "bus.h"
 #include "console_esp32.h"
 #include "cpu.h"
@@ -108,7 +109,10 @@ void console_esp32::panel_update_thread()
 	pixels.show();
 
 	while(!stop_panel) {
-		vTaskDelay(100 / portTICK_PERIOD_MS);
+		vTaskDelay(1000 / (portTICK_PERIOD_MS * refreshrate));
+
+		if (p_blinkenlights)
+			p_blinkenlights->push(b, running_flag);
 
 		try {
 			// note that these are approximately as there's no mutex on the emulation
