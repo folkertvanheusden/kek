@@ -117,9 +117,12 @@ private:
 		uint16_t    work_value;
 		bool        valid;
 		std::optional<std::string> error;
+		float       timing;
+		int         mode;
+		int         register_;
 	};
 
-	std::optional<operand_parameters> addressing_to_string(const uint8_t mode_register, const uint16_t pc, const word_mode_t word_mode) const;
+	operand_parameters addressing_to_string(const uint8_t mode_register, const uint16_t pc, const word_mode_t word_mode) const;
 
 	void add_to_stack_trace(const uint16_t p);
 	void pop_from_stack_trace();
