@@ -120,7 +120,8 @@ private:
 	};
 
 	operand_parameters addressing_to_string(const uint8_t mode_register, const uint16_t pc, const word_mode_t word_mode) const;
-	uint32_t calc_instruction_duration(const uint16_t instruction) const;  // nanoseconds
+	uint16_t peek_dst(const int mode, const int reg, const uint16_t pc, const word_mode_t word_mode) const;
+	uint32_t calc_instruction_duration(const uint16_t pc) const;  // nanoseconds
 
 	void add_to_stack_trace(const uint16_t p);
 	void pop_from_stack_trace();
@@ -203,7 +204,7 @@ public:
 	// used by 'main' for json-validation
 	void lowlevel_register_set(const uint8_t set, const uint8_t reg, const uint16_t value);
 	void lowlevel_register_sp_set(const uint8_t set, const uint16_t value);
-	uint16_t lowlevel_register_get(const uint8_t set, const uint8_t reg);
+	uint16_t lowlevel_register_get(const uint8_t set, const uint8_t reg) const;
 	void lowlevel_psw_set(const uint16_t value) { psw = value; }
 	uint16_t lowlevel_register_sp_get(const uint8_t nr) const { return sp[nr]; }
 

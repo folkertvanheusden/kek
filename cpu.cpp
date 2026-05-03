@@ -238,7 +238,7 @@ void cpu::lowlevel_register_set(const uint8_t set, const uint8_t reg, const uint
 	}
 }
 
-uint16_t cpu::lowlevel_register_get(const uint8_t set, const uint8_t reg)
+uint16_t cpu::lowlevel_register_get(const uint8_t set, const uint8_t reg) const
 {
 	assert(set < 2);
 	assert(reg < 8);
@@ -2019,26 +2019,122 @@ uint32_t timings_double_operand(const int col0, const int col1, const int col2, 
 	return col2 + (src != 0 && dst >= 6 ? col2c : 0);
 }
 
-uint32_t cpu::calc_instruction_duration(const uint16_t instruction) const
+uint16_t cpu::peek_dst(const int mode, const int reg, const uint16_t pc, const word_mode_t word_mode) const
+{
+	int         run_mode  = getPSW_runmode();
+	auto        temp      = b->peek_word(run_mode, pc & 65535);
+	if (temp.has_value() == false)
+		return 0;
+	uint16_t    next_word = temp.value();
+	uint16_t    mask      = word_mode_mask[word_mode];
+
+	std::optional<uint16_t> temp2;
+
+	switch(mode) {
+		case 0:
+			return get_register(reg) & mask;
+
+		case 1:
+			temp2 = b->peek_word(run_mode, get_register(reg));
+			if (temp2.has_value() == false)
+				return 0;
+
+			return temp2.value() & mask;
+
+		case 2:
+			if (reg == 7)
+				return next_word & mask;
+
+			temp2 = b->peek_word(run_mode, get_register(reg));
+			if (temp2.has_value() == false)
+				temp2 = 0;
+
+			return temp2.value() & mask;
+
+		case 3:
+			if (reg == 7) {
+				temp2 = b->peek_word(run_mode, next_word);
+				if (temp2.has_value() == false)
+					return 0;
+
+				return temp2.value() & mask;
+			}
+
+			temp2 = b->peek_word(run_mode, get_register(reg));
+			if (temp2.has_value() == false)
+				return 0;
+
+			temp2 = b->peek_word(run_mode, temp2.value());
+			if (temp2.has_value() == false)
+				return 0;
+
+			return temp2.value() & mask;
+
+		case 4:
+			temp2 = b->peek_word(run_mode, get_register(reg) - (word_mode == wm_word || reg >= 6 ? 2 : 1));
+			if (temp2.has_value() == false)
+				return 0;
+
+			return temp2.value() & mask;
+
+		case 5:
+			temp2 = b->peek_word(run_mode, get_register(reg) - 2);
+			if (temp2.has_value() == false)
+				return 0;
+
+			temp2 = b->peek_word(run_mode, temp2.value());
+			if (temp2.has_value() == false)
+				return 0;
+
+			return temp2.value() & mask;
+
+		case 6:
+			temp2 = b->peek_word(run_mode, get_register(reg) + next_word);
+			if (temp2.has_value() == false)
+				return 0;
+
+			return temp2.value() & mask;
+
+		case 7:
+			temp2 = b->peek_word(run_mode, get_register(reg) + next_word);
+			if (temp2.has_value() == false)
+				return 0;
+
+			temp2 = b->peek_word(run_mode, temp2.value());
+			if (temp2.has_value() == false)
+				return 0;
+
+			return temp2.value() & mask;
+	}
+
+	assert(false);
+	return 0;
+}
+
+uint32_t cpu::calc_instruction_duration(const uint16_t pc) const
 {
 	constexpr const uint32_t srcdst_timings[] { 0, 300, 300, 750, 450, 900, 600, 1050 };  // mode
 	uint32_t                 src_time = 0;
 	uint32_t                 ef_time  = 0;
 	uint32_t                 dst_time = 0;
 
-	bool word    = !(instruction >> 15);
-	int  src     = (instruction >> 9) & 7;
-	int  src_reg = (instruction >> 6) & 7;
-	int  dst     = (instruction >> 3) & 7;
-	int  dst_reg =  instruction       & 7;
+	int         run_mode    = getPSW_runmode();
+	auto        temp        = b->peek_word(run_mode, pc);
+	if (temp.has_value() == false)
+		return 0;
+	uint16_t    instruction = temp.value();
+	word_mode_t word_mode   = instruction & 0x8000 ? wm_byte : wm_word;
+	int         src         = (instruction >> 9) & 7;
+	int         src_reg     = (instruction >> 6) & 7;
+	int         dst         = (instruction >> 3) & 7;
+	int         dst_reg     =  instruction       & 7;
+	uint16_t    work_val    = 0;
 
 	switch((instruction >> 12) & 15) {
-		case 0:
-			break;
 		case 1: {  // MOV
 				src_time = srcdst_timings[src];
 
-				if (word) {
+				if (word_mode == wm_word) {
 					switch(dst) {
 						case 0:
 							if (dst_reg == 7)
@@ -2077,11 +2173,35 @@ uint32_t cpu::calc_instruction_duration(const uint16_t instruction) const
 			dst_time = srcdst_timings[dst];
 			break;
 		case 7:
+			work_val = peek_dst(dst, dst_reg, pc + 2, word_mode);
+
 			switch((instruction >> 9) & 7) {
+				case 0:  // MUL
+					ef_time  = 3300;
+					src_time = srcdst_timings[src];
+					break;
+
+				case 1:  // DIV
+					if (work_val == 0)
+						ef_time = 900;
+					else
+						ef_time = 7050 + work_val * 150 / 65535;
+					break;
+
+				case 2:  // ASH
+				case 3:  // ASHC
+					dst_time = srcdst_timings[dst];
+					ef_time  = (dst == 0 ? 750 : 900) + 150 * (work_val & 077);
+					break;
+
 				case 4:  // XOR
 					ef_time  = timings_double_operand(300, 300, 1200, 0, src, dst, dst_reg);
 					src_time = srcdst_timings[src];
 					dst_time = srcdst_timings[dst];
+					break;
+
+				case 7:  // SOB
+					ef_time  = lowlevel_register_get(run_mode, src_reg) >= 1 ? 600 : 750;  // branch is faster
 					break;
 			}
 			break;
@@ -2089,7 +2209,12 @@ uint32_t cpu::calc_instruction_duration(const uint16_t instruction) const
 			break;
 	}
 
-	return src_time + ef_time + dst_time;
+	uint32_t result = src_time + ef_time + dst_time;
+	if (result == 0) {
+		auto d = disassemble(pc);
+		DOLOG(debug, false, "%06o @ %06o: unspecified duration (%s)", instruction, pc, d.find("instruction-text")->second.begin()->c_str());
+	}
+	return result;
 }
 
 std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t addr) const
@@ -2120,7 +2245,7 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 	// TODO: 100000011
 
 	if (do_opcode == 0b000) {
-		auto addressing = addressing_to_string(dst_register, (addr + 2) & 65535, word_mode);
+		auto addressing = addressing_to_string(dst_register, addr + 2, word_mode);
 		auto dst_text { addressing };
 
 		auto next_word = dst_text.instruction_part;
@@ -2219,7 +2344,7 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 			name = "?";
 		else {
 			std::string src_text = format("R%d", (instruction >> 6) & 7);
-			auto        addressing = addressing_to_string(dst_register, (addr + 2) & 65535, word_mode);
+			auto        addressing = addressing_to_string(dst_register, addr + 2, word_mode);
 			auto        dst_text { addressing };
 
 			auto next_word = dst_text.instruction_part;
@@ -2293,7 +2418,7 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 		}
 
 		// source
-		auto addressing_src = addressing_to_string(src_register, (addr + 2) & 65535, word_mode);
+		auto addressing_src = addressing_to_string(src_register, addr + 2, word_mode);
 		auto src_text { addressing_src };
 
 		auto next_word_src = src_text.instruction_part;
@@ -2303,7 +2428,7 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 		work_values.push_back(src_text.work_value);
 
 		// destination
-		auto addressing_dst = addressing_to_string(dst_register, (addr + src_text.length) & 65535, word_mode);
+		auto addressing_dst = addressing_to_string(dst_register, addr + src_text.length, word_mode);
 		auto dst_text { addressing_dst };
 
 		auto next_word_dst = dst_text.instruction_part;
@@ -2460,7 +2585,7 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 			text = format("TRAP %o", instruction & 255);
 
 		if ((instruction & ~0b111111) == 0b0000000001000000) {
-			auto addressing = addressing_to_string(dst_register, (addr + 2) & 65535, word_mode);
+			auto addressing = addressing_to_string(dst_register, addr + 2, word_mode);
 			auto dst_text { addressing };
 
 			auto next_word = dst_text.instruction_part;
@@ -2479,7 +2604,7 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 		}
 
 		if ((instruction & 0b1111111000000000) == 0b0000100000000000) {
-			auto addressing = addressing_to_string(dst_register, (addr + 2) & 65535, word_mode);
+			auto addressing = addressing_to_string(dst_register, addr + 2, word_mode);
 			auto dst_text { addressing };
 
 			auto next_word = dst_text.instruction_part;
@@ -2551,7 +2676,7 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 	out.insert({ "MMR2", { format("%06o", mmu_->getMMR2()) } });
 	out.insert({ "MMR3", { format("%06o", mmu_->getMMR3()) } });
 
-	out.insert({ "duration", { format("%u", calc_instruction_duration(instruction)) } });
+	out.insert({ "duration", { format("%u", calc_instruction_duration(addr)) } });
 
 	return out;
 }
