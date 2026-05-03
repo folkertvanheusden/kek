@@ -110,18 +110,13 @@ deqna::deqna(bus *const b, const uint8_t mac_address[6]) :
 #if defined(linux)
 	dev_fd = open_tun("pdp", mac_address);
 #endif
-	th_rx = new std::thread(&deqna::receiver,    this);
-	th_tx = new std::thread(&deqna::transmitter, this);
+// TODO	th_rx = new std::thread(&deqna::receiver, this);
 }
 
 deqna::~deqna()
 {
-	stop_flag = true;
-	if (th_tx) {
-		th_tx->join();
-		delete th_tx;
-	}
 	if (th_rx) {
+		stop_flag = true;
 		th_rx->join();
 		delete th_rx;
 	}
@@ -206,34 +201,34 @@ void deqna::receiver()
 
 void deqna::transmitter()
 {
-	while(!stop_flag) {
-		// 67.2 uS for the shortest packet including IFG
-		// (inter frame gap)
-		myusleep(250);  // rounded up slightly
+	// sender list invalid?
+	if (registers[7] & 16)
+		return;
 
-		// sender list invalid?
-		if (registers[7] & 16)
-			continue;
+	uint8_t buffer[1514];
+	int     buffer_offset = 0;
 
-		// get packet from pdp memory
-		uint32_t p_buffers = ((registers[5] & 63) << 16) | registers[4];
-		bool     queued    = false;
-		// a descriptor is 6 words
-		while(p_buffers + 12 <= b->get_memory_size()) {
-			auto     flags = b->read_unibus_word(p_buffers + 0 * 2);
-			auto     ph    = b->read_unibus_word(p_buffers + 1 * 2);
-			auto     pl    = b->read_unibus_word(p_buffers + 2 * 2);
-			uint32_t chain = ((ph & 63) << 16) | pl;
-			auto     len   = b->read_unibus_word(p_buffers + 3 * 2);  // buffer length, 2s complement
-			int      length = ((~len & 0xffff) + 1) * 2;
-			DOLOG(debug, false, "deqna(tx): checking descr at %08o, points to %08o which is %d bytes (0x%04x | %04x)", p_buffers, chain, length, len, ~len);
-			if ((ph & 0x8000) == 0) {  // valid?
-				DOLOG(debug, false, "deqna(tx): %08o is an invalid TX descr", p_buffers);
-				break;
-			}
+	// get packet from pdp memory
+	uint32_t p_buffers = ((registers[5] & 63) << 16) | registers[4];
+	bool     queued    = false;
+	// a descriptor is 6 words
+	while(p_buffers + 12 <= b->get_memory_size()) {
+		auto     flags = b->read_unibus_word(p_buffers + 0 * 2);
+		auto     ph    = b->read_unibus_word(p_buffers + 1 * 2);
+		auto     pl    = b->read_unibus_word(p_buffers + 2 * 2);
+		uint32_t chain = ((ph & 63) << 16) | pl;
+		auto     len   = b->read_unibus_word(p_buffers + 3 * 2);  // buffer length, 2s complement
+		int      length = ((~len & 0xffff) + 1) * 2;
+
+		DOLOG(debug, false, "deqna(tx): checking descr at %08o, points to %08o which is %d bytes (0x%04x | %04x)", p_buffers, chain, length, len, ~len);
+
+		if ((ph & 0x8000) == 0)  // valid?
+			DOLOG(debug, false, "deqna(tx): %08o is end of BDL", p_buffers);
+		else {
 			flags |= 0x4000;  // buffer busy
-			b->write_unibus_word(p_buffers + 0 * 2, flags);
-			if ((ph & 0x6000) == 0x2000) {  // chain? no, use as buffer; also E is set
+			b->write_unibus_word(p_buffers + 0, flags);
+
+			if ((ph & 0x4000) == 0x0000) {  // chain? no, use as buffer
 				DOLOG(debug, false, "deqna(tx): %08o is not a chain pointer, use as buffer-pointer", chain);
 				if (length < 0 || length > 2048) {
 					DOLOG(debug, false, "deqna(tx): buffer has invalid size %d", length);
@@ -247,38 +242,49 @@ void deqna::transmitter()
 
 				DOLOG(info, false, "flags: %06o, ph: %06o, status1: %06o, status2: %06o", flags, ph, b->read_unibus_word(p_buffers + 4 * 2), b->read_unibus_word(p_buffers + 5 * 2));
 
-				uint8_t *xmit_buffer = new uint8_t[length];
-				for(int i=0; i<length; i++)
-					xmit_buffer[i] = b->read_unibus_byte(chain + i);
-				int tx_rc = write(dev_fd, xmit_buffer, length);
-				delete [] xmit_buffer;
+				for(int i=0; i<length && buffer_offset < sizeof(buffer); i++)
+					buffer[buffer_offset++] = b->read_unibus_byte(chain + i);
+
+				flags &= ~0x4000;  // buffer no longer busy
+				b->write_unibus_word(p_buffers + 0, flags);
+
+			}
+
+			flags &= ~0x4000;  // buffer no longer busy
+			b->write_unibus_word(p_buffers + 0, flags);
+		}
+
+		if (ph & 0x2000) {
+			if (buffer_offset == 0) {
+				DOLOG(warning, false, "deqna(tx): failed transmitting - empty buffer");
+			}
+			else {
+				int tx_rc = write(dev_fd, buffer, buffer_offset);
 				if (tx_rc <= 0) {
 					DOLOG(warning, false, "deqna(tx): failed transmitting - device down?");
 					break;
 				}
 
-				flags &= ~0x4000;  // buffer no longer busy
-				b->write_unibus_word(p_buffers + 0 * 2, flags);
-
-				registers[7] |= 128;  // XI
-				if (registers[7] & 64) {  // IE
-					uint16_t vector = registers[6] & 0x3fc;
-					DOLOG(debug, false, "deqna(tx): packet sent, trigger %06o", vector);
-					b->getCpu()->queue_interrupt(5, vector);
-					queued = true;
-				}
-				break;
+				buffer_offset = 0;
 			}
-			flags &= ~0x4000;  // buffer no longer busy
-			b->write_unibus_word(p_buffers + 0 * 2, flags);
-			p_buffers = chain;
+
+			registers[7] |= 128;  // XI
+			if (registers[7] & 64) {  // IE
+				uint16_t vector = registers[6] & 0x3fc;
+				DOLOG(debug, false, "deqna(tx): packet sent, trigger %06o", vector);
+				b->getCpu()->queue_interrupt(5, vector);
+				queued = true;
+			}
 		}
 
-		if (!queued)
-			DOLOG(debug, false, "deqna(tx): packet NOT queued");
+		if (ph & 0x4000)
+			p_buffers = chain;
+		else
+			p_buffers += 12;
 	}
 
-	DOLOG(info, false, "deqna TRANSMITTER THREAD TERMINATING");
+	if (!queued)
+		DOLOG(debug, false, "deqna(tx): packet NOT queued");
 }
 
 void deqna::reset()
@@ -342,6 +348,7 @@ void deqna::write_word(const uint16_t addr, const uint16_t v)
 	}
 	else if (addr == DEQNA_TX_BDLH) {
 		registers[7] &= ~16;  // TX buffers set, no more invalid
+		transmitter();
 	}
 	else if (addr == DEQNA_VECTOR) {
 		registers[reg_nr] &= 0x7fd;  // mask off unused bits but keep QE_VEC_ID enabled

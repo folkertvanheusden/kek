@@ -28,7 +28,6 @@ private:
 	int              dev_fd         { -1      };
 	std::atomic_bool stop_flag      { false   };
 	std::thread     *th_rx          { nullptr };
-	std::thread     *th_tx          { nullptr };
 
 	void receiver   ();
 	void transmitter();
