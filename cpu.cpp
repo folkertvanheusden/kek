@@ -2210,10 +2210,8 @@ uint32_t cpu::calc_instruction_duration(const uint16_t pc) const
 	}
 
 	uint32_t result = src_time + ef_time + dst_time;
-	if (result == 0) {
-		auto d = disassemble(pc);
-		DOLOG(debug, false, "%06o @ %06o: unspecified duration (%s)", instruction, pc, d.find("instruction-text")->second.begin()->c_str());
-	}
+	if (result == 0)
+		DOLOG(debug, false, "%06o @ %06o: unspecified duration", instruction, pc);
 	return result;
 }
 

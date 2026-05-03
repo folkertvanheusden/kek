@@ -13,6 +13,7 @@
 #include <LittleFS.h>
 #endif
 
+#include "benchmark.h"
 #include "blinkenlights.h"
 #include "breakpoint_parser.h"
 #include "bus.h"
@@ -747,6 +748,12 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 
 		*stop_event = EVENT_NONE;
 	}
+	else if (cmd == "benchmark") {
+		*cnsl->get_running_flag() = true;  // enable the KW11-L interrupt
+		benchmark(b, stop_event);
+		*cnsl->get_running_flag() = false;
+		return true;
+	}
 	else if (cmd == "marker")
 		state->marker = !state->marker;
 	else if (parts[0] == "single" || parts[0] == "s" || parts[0] == "step") {
@@ -1314,6 +1321,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		constexpr const char *const help[] = {
 			"dis[assemble] - show current instruction (pc=/n=)",
 			"go            - run until trap or ^e",
+			"benchmark     - run a benchmark",
 #if !defined(ESP32)
 			"quit/q        - stop emulator",
 #endif

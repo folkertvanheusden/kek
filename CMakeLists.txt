@@ -22,6 +22,7 @@ else()
 endif()
 
 set(APP_SOURCES
+  benchmark.cpp
   blinkenlights.cpp
   breakpoint.cpp
   breakpoint_and.cpp

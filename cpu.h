@@ -121,7 +121,6 @@ private:
 
 	operand_parameters addressing_to_string(const uint8_t mode_register, const uint16_t pc, const word_mode_t word_mode) const;
 	uint16_t peek_dst(const int mode, const int reg, const uint16_t pc, const word_mode_t word_mode) const;
-	uint32_t calc_instruction_duration(const uint16_t pc) const;  // nanoseconds
 
 	void add_to_stack_trace(const uint16_t p);
 	void pop_from_stack_trace();
@@ -156,6 +155,8 @@ public:
 
 	void     reset();
 	bool     step();
+
+	uint32_t calc_instruction_duration(const uint16_t pc) const;  // nanoseconds
 
 	void     push_stack(const uint16_t v);
 	uint16_t pop_stack();
