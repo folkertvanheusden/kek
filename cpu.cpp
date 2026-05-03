@@ -1902,29 +1902,26 @@ cpu::operand_parameters cpu::addressing_to_string(const uint8_t mode_register, c
 	std::optional<std::string> error;
 	int mode = mode_register >> 3;
 
-	constexpr const float timings[] { 0.00, 0.30, 0.30, 0.75, 0.45, 0.90, 0.60, 1.05 };
-	float timing = timings[mode];
-
 	switch(mode) {
 		case 0:
-			return { reg_name, 2, -1, uint16_t(get_register(reg) & mask), true, { }, timing, mode, reg };
+			return { reg_name, 2, -1, uint16_t(get_register(reg) & mask), true, { } };
 
 		case 1:
 			temp2 = b->peek_word(run_mode, get_register(reg));
 			if (temp2.has_value() == false)
 				temp2 = 0xffff, valid = false, error = format("cannot fetch memory from %o", get_register(reg));
 
-			return { format("(%s)", reg_name.c_str()), 2, -1, uint16_t(temp2.value() & mask), valid, error, timing, mode, -1 };
+			return { format("(%s)", reg_name.c_str()), 2, -1, uint16_t(temp2.value() & mask), valid, error };
 
 		case 2:
 			if (reg == 7)
-				return { format("#%06o", next_word), 4, int(next_word), uint16_t(next_word & mask), true, { }, timing, mode, -1 };
+				return { format("#%06o", next_word), 4, int(next_word), uint16_t(next_word & mask), true, { } };
 
 			temp2 = b->peek_word(run_mode, get_register(reg));
 			if (temp2.has_value() == false)
 				temp2 = 0xffff, valid = false, error = format("cannot fetch memory from %o", get_register(reg));
 
-			return { format("(%s)+", reg_name.c_str()), 2, -1, uint16_t(temp2.value() & mask), valid, error, timing, mode, -1 };
+			return { format("(%s)+", reg_name.c_str()), 2, -1, uint16_t(temp2.value() & mask), valid, error };
 
 		case 3:
 			if (reg == 7) {
@@ -1932,7 +1929,7 @@ cpu::operand_parameters cpu::addressing_to_string(const uint8_t mode_register, c
 				if (temp2.has_value() == false)
 					temp2 = 0xffff, valid = false, error = format("cannot fetch memory from %o", next_word);
 
-				return { format("@#%06o", next_word), 4, int(next_word), uint16_t(temp2.value() & mask), valid, error, timing, mode, -1 };
+				return { format("@#%06o", next_word), 4, int(next_word), uint16_t(temp2.value() & mask), valid, error };
 			}
 
 			temp2 = b->peek_word(run_mode, get_register(reg));
@@ -1945,7 +1942,7 @@ cpu::operand_parameters cpu::addressing_to_string(const uint8_t mode_register, c
 					temp2 = 0xffff, valid = false, error = format("cannot fetch memory from %o", keep);
 			}
 
-			return { format("@(%s)+", reg_name.c_str()), 2, -1, uint16_t(temp2.value() & mask), valid, error, timing, mode, -1 };
+			return { format("@(%s)+", reg_name.c_str()), 2, -1, uint16_t(temp2.value() & mask), valid, error };
 
 		case 4: {
 			uint16_t calculated_address = get_register(reg) - (word_mode == wm_word || reg >= 6 ? 2 : 1);
@@ -1953,7 +1950,7 @@ cpu::operand_parameters cpu::addressing_to_string(const uint8_t mode_register, c
 			if (temp2.has_value() == false)
 				temp2 = 0xffff, valid = false, error = format("cannot fetch memory from %o", calculated_address);
 
-			return { format("-(%s)", reg_name.c_str()), 2, -1, uint16_t(temp2.value() & mask), valid, error, timing, mode, -1 };
+			return { format("-(%s)", reg_name.c_str()), 2, -1, uint16_t(temp2.value() & mask), valid, error };
 			}
 
 		case 5: {
@@ -1967,7 +1964,7 @@ cpu::operand_parameters cpu::addressing_to_string(const uint8_t mode_register, c
 					temp2 = 0xffff, valid = false, error = format("cannot fetch memory from %o", temp2.value());
 			}
 
-			return { format("@-(%s)", reg_name.c_str()), 2, -1, uint16_t(temp2.value() & mask), valid, error, timing, mode, -1 };
+			return { format("@-(%s)", reg_name.c_str()), 2, -1, uint16_t(temp2.value() & mask), valid, error };
 			}
 
 		case 6:
@@ -1978,9 +1975,9 @@ cpu::operand_parameters cpu::addressing_to_string(const uint8_t mode_register, c
 				temp2 = 0xffff, valid = false, error = format("cannot fetch memory from %o", calculated_address);
 
 			if (reg == 7)
-				return { format("%06o", (pc + next_word + 2) & 65535), 4, int(next_word), uint16_t(temp2.value() & mask), valid, error, timing, mode, -1 };
+				return { format("%06o", (pc + next_word + 2) & 65535), 4, int(next_word), uint16_t(temp2.value() & mask), valid, error };
 
-			return { format("%o(%s)", next_word, reg_name.c_str()), 4, int(next_word), uint16_t(temp2.value() & mask), valid, error, timing, mode, -1 };
+			return { format("%o(%s)", next_word, reg_name.c_str()), 4, int(next_word), uint16_t(temp2.value() & mask), valid, error };
 			}
 
 		case 7:
@@ -1996,19 +1993,103 @@ cpu::operand_parameters cpu::addressing_to_string(const uint8_t mode_register, c
 			}
 
 			if (reg == 7)
-				return { format("@%06o", next_word), 4, int(next_word), uint16_t(temp2.value() & mask), valid, error, timing, mode, -1 };
+				return { format("@%06o", next_word), 4, int(next_word), uint16_t(temp2.value() & mask), valid, error };
 
-			return { format("@%o(%s)", next_word, reg_name.c_str()), 4, int(next_word), uint16_t(temp2.value() & mask), valid, error, timing, mode, -1 };
+			return { format("@%o(%s)", next_word, reg_name.c_str()), 4, int(next_word), uint16_t(temp2.value() & mask), valid, error };
 			}
 	}
 
 	operand_parameters out;
 	out.error  = format("unknown register mode %d", mode);
-	// TODO: Add .15 usec for odd byte instructions, except DST Mode O.
-	out.timing = timing;
-	out.mode   = mode;
 
 	return out;
+}
+
+// col 0: src = 0, dst = 0
+// col 1: src = 1-7, dst = 0
+// col 2: src = 0-7, dst = 1-7
+uint32_t timings_double_operand(const int col0, const int col1, const int col2, int col2c, const int src, const int dst, const int dst_reg)
+{
+	if (src == 0 && dst == 0)
+		return col0 + (dst_reg == 7 ? 300 : 0);
+
+	if (dst == 0)
+		return col1 + (dst_reg == 7 ? 300 : 0);
+
+	return col2 + (src != 0 && dst >= 6 ? col2c : 0);
+}
+
+uint32_t cpu::calc_instruction_duration(const uint16_t instruction) const
+{
+	constexpr const uint32_t srcdst_timings[] { 0, 300, 300, 750, 450, 900, 600, 1050 };  // mode
+	uint32_t                 src_time = 0;
+	uint32_t                 ef_time  = 0;
+	uint32_t                 dst_time = 0;
+
+	bool word    = !(instruction >> 15);
+	int  src     = (instruction >> 9) & 7;
+	int  src_reg = (instruction >> 6) & 7;
+	int  dst     = (instruction >> 3) & 7;
+	int  dst_reg =  instruction       & 7;
+
+	switch((instruction >> 12) & 15) {
+		case 0:
+			break;
+		case 1: {  // MOV
+				src_time = srcdst_timings[src];
+
+				if (word) {
+					switch(dst) {
+						case 0:
+							if (dst_reg == 7)
+								ef_time = src == 0 ? 300 : 450;
+							else  // 0-6
+								ef_time = src == 0 ? 600 : 750;
+							break;
+						case 1:
+							ef_time = 1200;
+							break;
+						case 6:
+							ef_time = src == 0 ? 1500 : 1650;
+							break;
+						case 7:
+							ef_time = src == 0 ? 1950 : 2100;
+							break;
+					}
+				}
+				else {
+					ef_time  = timings_double_operand(300, 450, 1200, 150, src, dst, dst_reg);
+					dst_time = srcdst_timings[dst];
+				}
+			}
+			break;
+		case 2:  // CMP
+		case 3:  // BIT
+			ef_time  = timings_double_operand(300, 450, 450, 150, src, dst, dst_reg);
+			src_time = srcdst_timings[src];
+			dst_time = srcdst_timings[dst];
+			break;
+		case 4:  // BIC
+		case 5:  // BIS
+		case 6:  // ADD
+			ef_time  = timings_double_operand(300, 450, 1200, 150, src, dst, dst_reg);
+			src_time = srcdst_timings[src];
+			dst_time = srcdst_timings[dst];
+			break;
+		case 7:
+			switch((instruction >> 9) & 7) {
+				case 4:  // XOR
+					ef_time  = timings_double_operand(300, 300, 1200, 0, src, dst, dst_reg);
+					src_time = srcdst_timings[src];
+					dst_time = srcdst_timings[dst];
+					break;
+			}
+			break;
+		default:
+			break;
+	}
+
+	return src_time + ef_time + dst_time;
 }
 
 std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t addr) const
@@ -2016,8 +2097,6 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 	auto        temp          = b->peek_word(getPSW_runmode(), addr);
 	if (temp.has_value() == false)
 		return { };
-
-	float       timing        = 0.f;
 
 	uint16_t    instruction   = temp.value();
 	word_mode_t word_mode     = instruction & 0x8000 ? wm_byte : wm_word;
@@ -2042,7 +2121,6 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 
 	if (do_opcode == 0b000) {
 		auto addressing = addressing_to_string(dst_register, (addr + 2) & 65535, word_mode);
-		timing += addressing.timing;
 		auto dst_text { addressing };
 
 		auto next_word = dst_text.instruction_part;
@@ -2052,104 +2130,56 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 		// single_operand_instructions
 		switch(so_opcode) {
 			case 0b00000011:
-				if (word_mode == wm_word) {
+				if (word_mode == wm_word)
 					text = "SWAB " + dst_text.operand;
-					timing += addressing.mode == 0 ? 0.30 : 1.20;
-				}
 				break;
 
 			case 0b000101000:
 				name = "CLR";
-				timing += addressing.mode == 0 ? 0.30 : 1.20;
-				if (addressing.mode == 0)
-					timing += 0.30 + (addressing.register_ == 7 ? 0.15 : 0.);
-				else
-					timing += 1.20;
 				break;
 
 			case 0b000101001:
 				name = "COM";
-				if (addressing.mode == 0)
-					timing += 0.30 + (addressing.register_ == 7 ? 0.15 : 0.);
-				else
-					timing += 1.20;
 				break;
 
 			case 0b000101010:
 				name = "INC";
-				if (addressing.mode == 0)
-					timing += 0.30 + (addressing.register_ == 7 ? 0.15 : 0.);
-				else
-					timing += 1.20;
 				break;
 
 			case 0b000101011:
 				name = "DEC";
-				if (addressing.mode == 0)
-					timing += 0.30 + (addressing.register_ == 7 ? 0.15 : 0.);
-				else
-					timing += 1.20;
 				break;
 
 			case 0b000101100:
 				name = "NEG";
-				timing = addressing.mode == 0 ? 0.30 : 1.20;
 				break;
 
 			case 0b000101101:
 				name = "ADC";
-				if (addressing.mode == 0)
-					timing += 0.30 + (addressing.register_ == 7 ? 0.15 : 0.);
-				else
-					timing += 1.20;
 				break;
 
 			case 0b000101110:
 				name = "SBC";
-				if (addressing.mode == 0)
-					timing += 0.30 + (addressing.register_ == 7 ? 0.15 : 0.);
-				else
-					timing += 1.20;
 				break;
 
 			case 0b000101111:
 				name = "TST";
-				if (addressing.mode == 0)
-					timing += 0.30 + (addressing.register_ == 7 ? 0.15 : 0.);
-				else
-					timing += 0.45;
 				break;
 
 			case 0b000110000:
 				name = "ROR";
-				if (addressing.mode == 0)
-					timing += 0.30 + (addressing.register_ == 7 ? 0.15 : 0.);
-				else
-					timing += 1.20;
 				break;
 
 			case 0b000110001:
 				name = "ROL";
-				if (addressing.mode == 0)
-					timing += 0.30 + (addressing.register_ == 7 ? 0.15 : 0.);
-				else
-					timing += 1.20;
 				break;
 
 			case 0b000110010:
 				name = "ASR";
-				if (addressing.mode == 0)
-					timing += 0.30 + (addressing.register_ == 7 ? 0.15 : 0.);
-				else
-					timing += 1.20;
 				break;
 
 			case 0b00110011:
 				name = "ASL";
-				if (addressing.mode == 0)
-					timing += 0.30 + (addressing.register_ == 7 ? 0.15 : 0.);
-				else
-					timing += 1.20;
 				break;
 
 			case 0b00110101:
@@ -2170,13 +2200,8 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 			case 0b000110111:
 				if (word_mode == wm_byte)
 					name = "MFPS";
-				else {
+				else
 					name = "SXT";
-					if (addressing.mode == 0)
-						timing += 0.30 + (addressing.register_ == 7 ? 0.15 : 0.);
-					else
-						timing += 1.20;
-				}
 				break;
 		}
 
@@ -2195,7 +2220,6 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 		else {
 			std::string src_text = format("R%d", (instruction >> 6) & 7);
 			auto        addressing = addressing_to_string(dst_register, (addr + 2) & 65535, word_mode);
-			timing += addressing.timing;
 			auto        dst_text { addressing };
 
 			auto next_word = dst_text.instruction_part;
@@ -2213,12 +2237,10 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 
 				case 2:
 					name = "ASH";
-					timing += (addressing.mode == 0 ? 0.75 : 1.20) * dst_text.work_value;
 					break;
 
 				case 3:
 					name = "ASHC";
-					timing += (addressing.mode == 0 ? 0.75 : 1.20) * dst_text.work_value;
 					break;
 
 				case 4:
@@ -2272,7 +2294,6 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 
 		// source
 		auto addressing_src = addressing_to_string(src_register, (addr + 2) & 65535, word_mode);
-		timing += addressing_src.timing;
 		auto src_text { addressing_src };
 
 		auto next_word_src = src_text.instruction_part;
@@ -2283,7 +2304,6 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 
 		// destination
 		auto addressing_dst = addressing_to_string(dst_register, (addr + src_text.length) & 65535, word_mode);
-		timing += addressing_dst.timing;
 		auto dst_text { addressing_dst };
 
 		auto next_word_dst = dst_text.instruction_part;
@@ -2441,7 +2461,6 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 
 		if ((instruction & ~0b111111) == 0b0000000001000000) {
 			auto addressing = addressing_to_string(dst_register, (addr + 2) & 65535, word_mode);
-			timing += addressing.timing;
 			auto dst_text { addressing };
 
 			auto next_word = dst_text.instruction_part;
@@ -2461,7 +2480,6 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 
 		if ((instruction & 0b1111111000000000) == 0b0000100000000000) {
 			auto addressing = addressing_to_string(dst_register, (addr + 2) & 65535, word_mode);
-			timing += addressing.timing;
 			auto dst_text { addressing };
 
 			auto next_word = dst_text.instruction_part;
@@ -2533,7 +2551,7 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 	out.insert({ "MMR2", { format("%06o", mmu_->getMMR2()) } });
 	out.insert({ "MMR3", { format("%06o", mmu_->getMMR3()) } });
 
-	out.insert({ "duration", { format("%0.3f", timing) } });
+	out.insert({ "duration", { format("%u", calc_instruction_duration(instruction)) } });
 
 	return out;
 }
