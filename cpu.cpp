@@ -2130,7 +2130,8 @@ uint32_t cpu::calc_instruction_duration(const uint16_t pc) const
 	int         dst_reg     =  instruction       & 7;
 	uint16_t    work_val    = 0;
 
-	switch((instruction >> 12) & 15) {
+	switch(instruction >> 12) {
+		case 011:   // MOVB
 		case 1: {  // MOV
 				src_time = srcdst_timings[src];
 
@@ -2143,7 +2144,17 @@ uint32_t cpu::calc_instruction_duration(const uint16_t pc) const
 								ef_time = src == 0 ? 600 : 750;
 							break;
 						case 1:
+						case 2:
 							ef_time = 1200;
+							break;
+						case 3:
+							ef_time = 1650;
+							break;
+						case 4:
+							ef_time = 1350;
+							break;
+						case 5:
+							ef_time = 1800;
 							break;
 						case 6:
 							ef_time = src == 0 ? 1500 : 1650;
@@ -2160,14 +2171,19 @@ uint32_t cpu::calc_instruction_duration(const uint16_t pc) const
 			}
 			break;
 		case 2:  // CMP
+		case 012:  // CMPB
 		case 3:  // BIT
+		case 013:  // BITB
 			ef_time  = timings_double_operand(300, 450, 450, 150, src, dst, dst_reg);
 			src_time = srcdst_timings[src];
 			dst_time = srcdst_timings[dst];
 			break;
 		case 4:  // BIC
+		case 014:  // BICB
 		case 5:  // BIS
+		case 015:  // BISB
 		case 6:  // ADD
+		case 016:  // SUB
 			ef_time  = timings_double_operand(300, 450, 1200, 150, src, dst, dst_reg);
 			src_time = srcdst_timings[src];
 			dst_time = srcdst_timings[dst];
@@ -2204,6 +2220,9 @@ uint32_t cpu::calc_instruction_duration(const uint16_t pc) const
 					ef_time  = lowlevel_register_get(run_mode, src_reg) >= 1 ? 600 : 750;  // branch is faster
 					break;
 			}
+			break;
+		case 017:
+			// FPP
 			break;
 		default:
 			break;
