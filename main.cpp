@@ -156,7 +156,6 @@ int run_cpu_validation(console *const cnsl, const std::string & filename)
 		int cur_n_errors = 0;
 
 		// DO!
-		c->emulation_start();
 		for(int k=0; k<run_n_instructions; k++) {
 			disassemble(c, nullptr, c->getPC(), false);
 			if (c->step() == false) {
@@ -206,40 +205,6 @@ int run_cpu_validation(console *const cnsl, const std::string & filename)
 }
 #endif
 
-void get_metrics(cpu *const c)
-{
-	set_thread_name("kek:metrics");
-
-	uint64_t previous_instruction_count = c->get_instructions_executed_count();
-	uint64_t previous_ts                = get_us();
-	uint64_t previous_idle_time         = c->get_wait_time();
-
-	while(event != EVENT_TERMINATE) {
-		sleep(1);
-
-		uint64_t ts        = get_us();
-		uint64_t idle_time = c->get_wait_time();
-		uint64_t current_instruction_count = c->get_instructions_executed_count();
-
-		uint64_t current_idle_duration = idle_time - previous_idle_time;
-
-		auto stats = c->get_mips_rel_speed(current_instruction_count - previous_instruction_count, ts - previous_ts - current_idle_duration);
-
-		FILE *fh = fopen("kek-metrics.csv", "a+");
-		if (fh) {
-			fseek(fh, 0, SEEK_END);
-			if (ftell(fh) == 0)
-				fprintf(fh, "timestamp,MIPS,relative speed in %%,instructions executed count,idle time\n");
-			fprintf(fh, "%.06f, %.2f, %.2f%%, %" PRIu64 ", %.3f\n", ts / 1000., std::get<0>(stats), std::get<1>(stats), std::get<2>(stats), current_idle_duration / 1000000.);
-			fclose(fh);
-		}
-
-		previous_idle_time         = idle_time;
-		previous_instruction_count = current_instruction_count;
-		previous_ts                = ts;
-	}
-}
-
 void start_disk_devices(const std::vector<disk_backend *> & backends, const bool enable_snapshots)
 {
 	for(auto & backend: backends) {
@@ -270,7 +235,6 @@ void help()
 	printf("-L x,y   set log level for screen (x) and file (y)\n");
 	printf("-X       do not include timestamp in logging\n");
 	printf("-J x     run validation suite x against the CPU emulation\n");
-	printf("-M       log metrics\n");
 	printf("-1 x     use x as device for DZ-11 (instead of 8 tcp-sockets starting at port %d)\n", default_port_offset);
 	printf("-2       set DZ-11 tcp-socket sessions to initialize as a telnet session\n");
 	printf("-8 x     setup a blinkenlights/PiDP11 connection on IP-address x\n");
@@ -311,8 +275,6 @@ int main(int argc, char *argv[])
 
 	std::string  validate_json;
 
-	bool         metrics = false;
-
 	std::string  deserialize;
 
 	std::optional<std::string> dz11_device;
@@ -321,7 +283,7 @@ int main(int argc, char *argv[])
 	int          tcp_port_offset = default_port_offset;
 
 	int  opt          = -1;
-	while((opt = getopt(argc, argv, "hD:MT:Br:R:p:ndf:tL:bl:s:Q:N:J:XS:P1:m:Q:28:")) != -1)
+	while((opt = getopt(argc, argv, "hD:T:Br:R:p:ndf:tL:bl:s:Q:N:J:XS:P1:m:Q:28:")) != -1)
 	{
 		switch(opt) {
 			case 'h':
@@ -346,10 +308,6 @@ int main(int argc, char *argv[])
 
 			case 'D':
 				deserialize = optarg;
-				break;
-
-			case 'M':
-				metrics = true;
 				break;
 
 			case 'X':
@@ -624,10 +582,6 @@ int main(int argc, char *argv[])
 	sigaction(SIGINT , &sa, nullptr);
 #endif
 
-	std::thread *metrics_thread = nullptr;
-	if (metrics)
-		metrics_thread = new std::thread(get_metrics, b->getCpu());
-
 	cnsl->start_thread();
 
 	b->getKW11_L()->begin(cnsl);
@@ -637,8 +591,6 @@ int main(int argc, char *argv[])
 	else if (run_debugger || (bootloader == BL_NONE && tape.empty()))
 		debugger(cnsl, b, &event, debugger_init);
 	else {
-		b->getCpu()->emulation_start();  // for statistics
-
 		for(;;) {
 			*running = true;
 
@@ -651,17 +603,9 @@ int main(int argc, char *argv[])
 			if (stop_event == EVENT_HALT || stop_event == EVENT_INTERRUPT || stop_event == EVENT_TERMINATE)
 				break;
 		}
-
-		auto stats = b->getCpu()->get_mips_rel_speed({ }, { });
-		cnsl->put_string_lf(format("MIPS: %.2f, relative speed: %.2f%%, instructions executed: %" PRIu64 " in %.2f seconds", std::get<0>(stats), std::get<1>(stats), std::get<2>(stats), std::get<3>(stats) / 1000000.));
 	}
 
 	event = EVENT_TERMINATE;
-
-	if (metrics_thread) {
-		metrics_thread->join();
-		delete metrics_thread;
-	}
 
 	cnsl->stop_thread();
 

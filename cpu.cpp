@@ -45,14 +45,6 @@ void cpu::init_interrupt_queue()
 		queued_interrupts[level].clear();
 }
 
-void cpu::emulation_start()
-{
-	instruction_count = 0;
-
-	running_since = get_us();
-	wait_time     = 0;
-}
-
 std::optional<std::string> cpu::check_breakpoint()
 {
 	for(auto & bp: breakpoints) {
@@ -85,29 +77,6 @@ bool cpu::remove_breakpoint(const int bp_id)
 std::map<int, breakpoint *> cpu::list_breakpoints()
 {
 	return breakpoints;
-}
-
-uint64_t cpu::get_instructions_executed_count() const
-{
-	// this may wreck havoc as it is not protected by a mutex
-	// but a mutex would slow things down too much (as would
-	// do an atomic)
-	return instruction_count;
-}
-
-std::tuple<double, double, uint64_t, uint32_t, double> cpu::get_mips_rel_speed(const std::optional<uint64_t> & instruction_count, const std::optional<uint64_t> & t_diff_in) const
-{
-	uint64_t instr_count = instruction_count.has_value() ? instruction_count.value() : get_instructions_executed_count();
-        uint64_t t_diff      = t_diff_in.has_value() ? t_diff_in.value() : (get_us() - running_since - wait_time);
-        double   mips        = t_diff ? instr_count / double(t_diff) : 0;
-
-	return { mips, mips * 100 / pdp11_estimated_mips, instr_count, t_diff, wait_time };
-}
-
-uint32_t cpu::get_effective_run_time(const uint64_t instruction_count) const
-{
-	// division is to go from ns to ms
-	return instruction_count * pdp11_avg_cycles_per_instruction * pdp11_clock_cycle / 1000000l;
 }
 
 void cpu::add_to_stack_trace(const uint16_t p)
@@ -1651,8 +1620,6 @@ bool cpu::misc_operations(const uint16_t instr)
 
 		case 0b0000000000000001: // WAIT
 			{
-				uint64_t start = get_us();
-
 #if defined(BUILD_FOR_RP2040)
 				uint8_t rc = 0;
 				xQueueReceive(qi_q, &rc, 0);
@@ -1662,9 +1629,6 @@ bool cpu::misc_operations(const uint16_t instr)
 				if (check_pending_interrupts() == false)
 					qi_cv.wait(lck);
 #endif
-				uint64_t end = get_us();
-
-				wait_time += end - start;  // used for MIPS calculation
 			}
 
 			TRACE("WAIT returned");
@@ -2826,8 +2790,6 @@ bool cpu::step()
 	if (any_queued_interrupts.load(std::memory_order_relaxed))
 		execute_any_pending_interrupt();
 
-	instruction_count++;
-
 	try {
 		instruction_start = getPC();
 
@@ -2880,9 +2842,6 @@ JsonDocument cpu::serialize()
         j["fpsr"]                  = fpsr;
         j["stack_limit_register"]  = stack_limit_register;
         j["processing_trap_depth"] = processing_trap_depth;
-        j["instruction_count"]     = instruction_count;
-        j["running_since"]         = running_since;
-        j["wait_time"]             = wait_time;
         j["it_is_a_trap"]          = it_is_a_trap;
         j["debug_mode"]            = debug_mode;
 
@@ -2927,9 +2886,6 @@ cpu *cpu::deserialize(const JsonVariantConst j, bus *const b, std::atomic_uint32
         c->fpsr                  = j["fpsr"];
         c->stack_limit_register  = j["stack_limit_register"];
         c->processing_trap_depth = j["processing_trap_depth"];
-        c->instruction_count     = j["instruction_count"];
-        c->running_since         = get_us();
-        c->wait_time             = 0;
         c->it_is_a_trap          = j["it_is_a_trap"];
         c->debug_mode            = j["debug_mode"];
 
