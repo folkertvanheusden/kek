@@ -43,9 +43,6 @@ bus::~bus()
 	delete m;
 	delete dz11_;
 	delete rp06_;
-
-	if (rom.has_value())
-		delete [] std::get<2>(rom.value());
 }
 
 JsonDocument bus::serialize() const
@@ -80,8 +77,6 @@ JsonDocument bus::serialize() const
 		j_out["rp06"]   = rp06_->serialize();
 
 	// TODO: tm11
-
-	// TODO: rom
 
 	return j_out;
 }
@@ -124,8 +119,6 @@ bus *bus::deserialize(const JsonDocument j, console *const cnsl, std::atomic_uin
 		b->add_RP06(rp06::deserialize(j["rp06"], b));
 
 	// TODO: tm11
-
-	// TODO: rom
 
 	return b;
 }
@@ -264,15 +257,6 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 	bool     is_io    = m_offset >= io_base;
 
 	if (is_io) {
-		if (rom.has_value()) {
-			auto r = rom.value();
-			if (m_offset >= std::get<0>(r) && m_offset < std::get<0>(r) + std::get<1>(r)) {
-				if (word_mode == wm_byte)
-					return get_rom_byte(m_offset);
-				return get_rom_byte(m_offset) + (get_rom_byte(m_offset + 1) << 8);
-			}
-		}
-
 		uint16_t a = m_offset - io_base + 0160000;  // TODO
 
 		//// REGISTERS ////
@@ -573,19 +557,6 @@ bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 	bool     is_io    = m_offset >= io_base;
 
 	if (is_io) {
-		if (rom.has_value()) {
-			auto r = rom.value();
-			if (m_offset >= std::get<0>(r) && m_offset < std::get<0>(r) + std::get<1>(r)) {
-				if (word_mode == wm_byte)
-					put_rom_byte(m_offset, value);
-				else {
-					put_rom_byte(m_offset,     value);
-					put_rom_byte(m_offset + 1, value >> 8);
-				}
-				return false;
-			}
-		}
-
 		uint16_t a = m_offset - io_base + 0160000;  // TODO
 
 		if (word_mode == wm_byte) {
@@ -888,14 +859,8 @@ std::optional<uint16_t> bus::peek_word(const int run_mode, const uint16_t a)
 	auto meta = mmu_->calculate_physical_address(run_mode, a);
 
 	uint32_t io_base  = mmu_->get_io_base();
-	if (meta.physical_instruction >= io_base) {
-		if (rom.has_value()) {
-			auto r = rom.value();
-			if (meta.physical_instruction >= std::get<0>(r) && meta.physical_instruction < std::get<0>(r) + std::get<1>(r))
-				return get_rom_byte(meta.physical_instruction) + (get_rom_byte(meta.physical_instruction + 1) << 8);
-		}
+	if (meta.physical_instruction >= io_base)
 		return { };
-	}
 
 	if (meta.physical_instruction >= m->get_memory_size())
 		return { };
@@ -922,19 +887,4 @@ void bus::write_unibus_byte(const uint32_t a, const uint8_t v)
 	TRACE("write_unibus_byte[%08o]=%03o", a, v);
 	if (a < m->get_memory_size())
 		m->write_byte(a, v);
-}
-
-void bus::add_rom(const uint32_t offset, const uint16_t len)
-{
-	rom = { offset, len, new uint8_t[len]() };
-}
-
-uint8_t bus::get_rom_byte(const uint32_t offset)
-{
-	return std::get<2>(rom.value())[offset - std::get<0>(rom.value())];
-}
-
-void bus::put_rom_byte(const uint32_t offset, const uint8_t v)
-{
-	std::get<2>(rom.value())[offset - std::get<0>(rom.value())] = v;
 }
