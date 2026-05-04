@@ -331,10 +331,9 @@ void setup() {
 	cs->println("* Starting KW11-L");
 	b->getKW11_L()->begin(cnsl);
 
-#if !defined(SHA2017)
-	pinMode(LED_BUILTIN, OUTPUT);
-#endif
+	cs->println(format("LED_BUILTIN %d", LED_BUILTIN));
 #if defined(HEARTBEAT_PIN)
+	cs->println(format("Enable heartbeat pin on GPIO %d", HEARTBEAT_PIN));
 	pinMode(HEARTBEAT_PIN, OUTPUT);
 #endif
 
