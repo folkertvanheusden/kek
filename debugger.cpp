@@ -748,9 +748,9 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 
 		*stop_event = EVENT_NONE;
 	}
-	else if (cmd == "benchmark") {
+	else if (parts[0] == "benchmark") {
 		*cnsl->get_running_flag() = true;  // enable the KW11-L interrupt
-		benchmark(b, stop_event);
+		benchmark(b, stop_event, parts.size() == 2 && parts[1] == "-v");
 		*cnsl->get_running_flag() = false;
 		return true;
 	}
@@ -1321,7 +1321,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		constexpr const char *const help[] = {
 			"dis[assemble] - show current instruction (pc=/n=)",
 			"go            - run until trap or ^e",
-			"benchmark     - run a benchmark",
+			"benchmark [-v]- run a benchmark",
 #if !defined(ESP32)
 			"quit/q        - stop emulator",
 #endif

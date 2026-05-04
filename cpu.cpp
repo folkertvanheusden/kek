@@ -1493,78 +1493,66 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 	return true;
 }
 
-bool cpu::conditional_branch_instructions(const uint16_t instr)
+std::optional<bool> cpu::conditional_branch_instructions_evaluate(const uint16_t instr) const
 {
-	const uint8_t opcode = instr >> 8;
-	const int8_t  offset = instr;
-	bool          take   = false;
-
-	switch(opcode) {
+	switch(instr >> 8) {
 		case 0b00000001: // BR
-			take = true;
-			break;
+			return true;
 
 		case 0b00000010: // BNE
-			take = !getPSW_z();
-			break;
+			return !getPSW_z();
 
 		case 0b00000011: // BEQ
-			take = getPSW_z();
-			break;
+			return getPSW_z();
 
 		case 0b00000100: // BGE
-			take = getPSW_n() == getPSW_v();
-			break;
+			return getPSW_n() == getPSW_v();
 
 		case 0b00000101: // BLT
-			take = getPSW_n() ^ getPSW_v();
-			break;
+			return getPSW_n() ^ getPSW_v();
 
 		case 0b00000110: // BGT
-			take = getPSW_n() == getPSW_v() && getPSW_z() == false;
-			break;
+			return getPSW_n() == getPSW_v() && getPSW_z() == false;
 
 		case 0b00000111: // BLE
-			take = getPSW_n() != getPSW_v() || getPSW_z();
-			break;
+			return getPSW_n() != getPSW_v() || getPSW_z();
 
 		case 0b10000000: // BPL
-			take = getPSW_n() == false;
-			break;
+			return getPSW_n() == false;
 
 		case 0b10000001: // BMI
-			take = getPSW_n() == true;
-			break;
+			return getPSW_n() == true;
 
 		case 0b10000010: // BHI
-			take = getPSW_c() == false && getPSW_z() == false;
-			break;
+			return getPSW_c() == false && getPSW_z() == false;
 
 		case 0b10000011: // BLOS
-			take = getPSW_c() || getPSW_z();
-			break;
+			return getPSW_c() || getPSW_z();
 
 		case 0b10000100: // BVC
-			take = getPSW_v() == false;
-			break;
+			return getPSW_v() == false;
 
 		case 0b10000101: // BVS
-			take = getPSW_v();
-			break;
+			return getPSW_v();
 
 		case 0b10000110: // BCC
-			take = getPSW_c() == false;
-			break;
+			return getPSW_c() == false;
 
 		case 0b10000111: // BCS / BLO
-			take = getPSW_c();
-			break;
-
-		default:
-			return false;
+			return getPSW_c();
 	}
 
-	if (take)
+	return { };
+}
+
+bool cpu::conditional_branch_instructions(const uint16_t instr)
+{
+	const int8_t  offset = instr;
+	auto          take   = conditional_branch_instructions_evaluate(instr);
+	if  (take.has_value() == false)
+		return false;
+
+	if (take.value())
 		add_register(7, offset * 2);
 
 	return true;
@@ -2221,6 +2209,13 @@ uint32_t cpu::calc_instruction_duration(const uint16_t pc) const
 					break;
 			}
 			break;
+		case 010: {  // branch
+				  auto rc = conditional_branch_instructions_evaluate(instruction);
+				  if (rc.has_value() == false)
+					  break;
+				  ef_time = rc.value() ? 600 : 300;
+			  }
+			  break;
 		case 017:
 			// FPP
 			break;

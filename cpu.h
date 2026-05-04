@@ -103,6 +103,7 @@ private:
 	gam_rc_t getGAMAddress(const uint8_t mode, const int reg, const word_mode_t word_mode);
 	bool     putGAM(const gam_rc_t & g, const uint16_t value); // returns false when flag registers should not be updated
 
+	std::optional<bool> conditional_branch_instructions_evaluate(const uint16_t instr) const;
 	bool double_operand_instructions(const uint16_t instr);
 	bool additional_double_operand_instructions(const uint16_t instr);
 	bool single_operand_instructions(const uint16_t instr);
