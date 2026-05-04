@@ -21,7 +21,6 @@ class breakpoint;
 class bus;
 class mmu;
 
-constexpr const int      initial_trap_delay   = 8;
 constexpr const int      max_stacktrace_depth = 16;
 constexpr const uint16_t B16_MSBSET = 0x8000;
 constexpr const uint32_t B32_MSBSET = 0x80000000;
@@ -63,7 +62,6 @@ private:
 	uint16_t stack_limit_register { 0400 };
 	int      processing_trap_depth { 0  };
 	bool     it_is_a_trap       { false };
-	std::optional<int> trap_delay { 0   };
 	std::optional<int> delayed_trap {   };  // invoked after completion of the instruction
 	bool     debug_mode         { false };
 	std::vector<std::pair<uint16_t, std::string> > stacktrace;
@@ -156,7 +154,6 @@ public:
 	void queue_interrupt(const uint8_t level, const uint16_t vector);
 	void unqueue_interrupt(const uint8_t level, const uint16_t vector);
 	std::array<std::set<uint16_t>, 8> get_queued_interrupts() const { return queued_interrupts; }
-	std::optional<int> get_interrupt_delay_left() const { return trap_delay; }
 	bool check_if_interrupts_pending() const { return any_queued_interrupts; }
 
 	void trap(uint16_t vector, const int new_ipl = -1, const bool is_interrupt = false);
