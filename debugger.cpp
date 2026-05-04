@@ -463,12 +463,12 @@ int disassemble(cpu *const c, console *const cnsl, const uint16_t pc, const bool
 	std::string result;
 
 	if (instruction_only)
-		result = format("PC: %06o, instr: %s\t%s\t%s (%.3f us)",
+		result = format("PC: %06o, instr: %-20s %-13s %5.2fus %s",
 				pc,
 				instruction_values.c_str(),
-				instruction.c_str(),
 				work_values.c_str(),
-				duration);
+				duration,
+				instruction.c_str());
 	else
 		result = format("R0: %s, R1: %s, R2: %s, R3: %s, R4: %s, R5: %s, SP: %s, PC: %06o, PSW: %s (%s), instr: %s: %s (%.3f us)",
 				registers[0].c_str(), registers[1].c_str(), registers[2].c_str(), registers[3].c_str(), registers[4].c_str(), registers[5].c_str(),
