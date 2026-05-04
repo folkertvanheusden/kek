@@ -86,7 +86,7 @@ private:
 	std::atomic_uint32_t *const event { nullptr };
 
 	bool     check_pending_interrupts() const;  // needs the 'qi_lock'-lock
-	bool     execute_any_pending_interrupt();
+	void     execute_any_pending_interrupt();
 
 	uint32_t shifter(uint32_t value, int shift, bool is32b);
 

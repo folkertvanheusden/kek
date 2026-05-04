@@ -9,7 +9,6 @@
 #include "breakpoint.h"
 #include "bus.h"
 #include "cpu.h"
-#include "esp32.h"
 #include "gen.h"
 #include "log.h"
 #include "utils.h"
@@ -323,7 +322,7 @@ bool cpu::check_pending_interrupts() const
 	return false;
 }
 
-bool cpu::execute_any_pending_interrupt()
+void cpu::execute_any_pending_interrupt()
 {
 #if defined(BUILD_FOR_RP2040)
 	xSemaphoreTake(qi_lock, portMAX_DELAY);
@@ -361,15 +360,13 @@ bool cpu::execute_any_pending_interrupt()
 			xSemaphoreGive(qi_lock);
 #endif
 
-			return true;
+			return;
 		}
 	}
 
 #if defined(BUILD_FOR_RP2040)
 	xSemaphoreGive(qi_lock);
 #endif
-
-	return false;
 }
 
 void cpu::queue_interrupt(const uint8_t level, const uint16_t vector)
