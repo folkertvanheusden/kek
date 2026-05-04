@@ -458,23 +458,24 @@ int disassemble(cpu *const c, console *const cnsl, const uint16_t pc, const bool
 	std::string MMR2 = data["MMR2"].at(0);
 	std::string MMR3 = data["MMR3"].at(0);
 
+	float duration = std::stoi(data["duration"].at(0)) / 1000.;
+
 	std::string result;
 
 	if (instruction_only)
-		result = format("PC: %06o, instr: %s\t%s\t%s",
+		result = format("PC: %06o, instr: %s\t%s\t%s (%.3f us)",
 				pc,
 				instruction_values.c_str(),
 				instruction.c_str(),
-				work_values.c_str()
-				);
+				work_values.c_str(),
+				duration);
 	else
-		result = format("R0: %s, R1: %s, R2: %s, R3: %s, R4: %s, R5: %s, SP: %s, PC: %06o, PSW: %s (%s), instr: %s: %s",
+		result = format("R0: %s, R1: %s, R2: %s, R3: %s, R4: %s, R5: %s, SP: %s, PC: %06o, PSW: %s (%s), instr: %s: %s (%.3f us)",
 				registers[0].c_str(), registers[1].c_str(), registers[2].c_str(), registers[3].c_str(), registers[4].c_str(), registers[5].c_str(),
 				registers[6].c_str(), pc, 
 				psw.c_str(), data["psw-value"][0].c_str(),
 				instruction_values.c_str(),
-				instruction.c_str()
-				);
+				instruction.c_str(), duration);
 
 	if (cnsl)
 		cnsl->put_string_lf(result);
@@ -808,7 +809,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 	}
 	else if (parts[0] == "disassemble" || parts[0] == "dis") {
 		uint16_t pc = kv.find("pc") != kv.end() ? std::stoi(kv.find("pc")->second, nullptr, 8)  : c->getPC();
-		int n  = kv.find("n")  != kv.end() ? std::stoi(kv.find("n") ->second, nullptr, 10) : 1;
+		int      n  = kv.find("n")  != kv.end() ? std::stoi(kv.find("n") ->second, nullptr, 10) : 1;
 
 		cnsl->put_string_lf(format("Disassemble %d instructions starting at %o", n, pc));
 
@@ -816,7 +817,6 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 
 		for(int i=0; i<n; i++) {
 			pc += disassemble(c, cnsl, pc, !show_registers);
-
 			show_registers = false;
 		}
 
