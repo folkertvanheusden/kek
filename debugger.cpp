@@ -460,12 +460,11 @@ int disassemble(cpu *const c, console *const cnsl, const uint16_t pc, const bool
 	std::string result;
 
 	if (instruction_only)
-		result = format("PC: %06o, instr: %s\t%s\t%s",
+		result = format("PC: %06o, instr: %-20s %-13s %s",
 				pc,
 				instruction_values.c_str(),
-				instruction.c_str(),
-				work_values.c_str()
-				);
+				work_values.c_str(),
+				instruction.c_str());
 	else
 		result = format("R0: %s, R1: %s, R2: %s, R3: %s, R4: %s, R5: %s, SP: %s, PC: %06o, PSW: %s (%s), instr: %s: %s",
 				registers[0].c_str(), registers[1].c_str(), registers[2].c_str(), registers[3].c_str(), registers[4].c_str(), registers[5].c_str(),
@@ -593,12 +592,6 @@ void show_run_statistics(console *const cnsl, cpu *const c)
 void show_queued_interrupts(console *const cnsl, cpu *const c)
 {
 	cnsl->put_string_lf(format("Current level: %d", c->getPSW_spl()));
-
-	auto delay = c->get_interrupt_delay_left();
-	if (delay.has_value())
-		cnsl->put_string_lf(format("Current delay left: %d", delay.value()));
-	else
-		cnsl->put_string_lf("No delay");
 
 	cnsl->put_string_lf(format("Interrupt pending flag: %d", c->check_if_interrupts_pending()));
 

@@ -343,9 +343,6 @@ void cpu::setPSW_flags_nzv(const uint16_t value, const word_mode_t word_mode)
 
 bool cpu::check_pending_interrupts() const
 {
-	if (trap_delay.has_value() && trap_delay.value() > 1)
-		return false;
-
 	uint8_t start_level = getPSW_spl() + 1;
 
 	for(uint8_t i=start_level; i < 8; i++) {
@@ -364,21 +361,6 @@ bool cpu::execute_any_pending_interrupt()
 	std::unique_lock<std::mutex> lck(qi_lock);
 #endif
 
-	bool can_trigger = false;
-
-	if (trap_delay.has_value()) {
-		trap_delay.value()--;
-
-		TRACE("Delayed trap: %d instructions left", trap_delay.value());
-
-		if (trap_delay.value() > 0)
-			return false;
-
-		trap_delay.reset();
-
-		can_trigger = true;
-	}
-
 	any_queued_interrupts = false;
 
 	uint8_t current_level = getPSW_spl();
@@ -394,20 +376,12 @@ bool cpu::execute_any_pending_interrupt()
 			if (i < start_level)  // at least we know now that there's an interrupt scheduled
 				continue;
 
-			if (can_trigger == false) {
-				trap_delay = initial_trap_delay;
-				return false;
-			}
-
 			auto     vector = queued_interrupts[i].begin();
 			uint16_t v      = *vector;
 			queued_interrupts[i].erase(vector);
 
 			TRACE("Invoking interrupt vector %o (IPL %d, current: %d)", v, i, current_level);
 			trap(v, i, true);
-
-			// when there are more interrupts scheduled, invoke them asap
-			trap_delay = initial_trap_delay;
 
 #if defined(BUILD_FOR_RP2040)
 			xSemaphoreGive(qi_lock);
@@ -416,9 +390,6 @@ bool cpu::execute_any_pending_interrupt()
 			return true;
 		}
 	}
-
-	if (any_queued_interrupts && trap_delay.has_value() == false)
-		trap_delay = initial_trap_delay;
 
 #if defined(BUILD_FOR_RP2040)
 	xSemaphoreGive(qi_lock);
@@ -926,6 +897,7 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 		case 7: { // SOB
 				if (add_register(reg, -1)) {
 					uint16_t newPC = getPC() - dst * 2;
+
 					setPC(newPC);
 				}
 
@@ -2534,9 +2506,6 @@ JsonDocument cpu::serialize()
         j["it_is_a_trap"]          = it_is_a_trap;
         j["debug_mode"]            = debug_mode;
 
-	if (trap_delay.has_value())
-		j["trap_delay"] = trap_delay.value();
-
 	if (delayed_trap.has_value())
 		j["delayed_trap"] = delayed_trap.value();
 
@@ -2580,11 +2549,6 @@ cpu *cpu::deserialize(const JsonVariantConst j, bus *const b, std::atomic_uint32
         c->wait_time             = 0;
         c->it_is_a_trap          = j["it_is_a_trap"];
         c->debug_mode            = j["debug_mode"];
-
-	if (j.containsKey("trap_delay"))
-		c->trap_delay    = j["trap_delay"];
-	else
-		c->trap_delay.reset();
 
 	if (j.containsKey("delayed_trap"))
 		c->delayed_trap  = j["delayed_trap"];

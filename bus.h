@@ -76,8 +76,6 @@ private:
 	rp06    *rp06_   { nullptr };
 	deqna   *deqna_  { nullptr };
 
-	std::optional<std::tuple<uint32_t, uint16_t, uint8_t *> > rom;
-
 	uint16_t microprogram_break_register { 0 };
 
 	uint16_t console_switches { 0 };
@@ -103,11 +101,6 @@ public:
 
 	void set_memory_size(const int n_pages);
 	uint32_t get_memory_size() const { return m->get_memory_size(); }
-
-	// use bus::write to set
-	void    add_rom     (const uint32_t offset, const uint16_t len);
-	uint8_t get_rom_byte(const uint32_t offset);
-	void    put_rom_byte(const uint32_t offset, const uint8_t v);
 
 	void add_ram   (memory *const m      );
 	void add_cpu   (cpu    *const c      );
