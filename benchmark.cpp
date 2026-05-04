@@ -74,13 +74,23 @@ uint64_t get_count(bus *const b)
 	return count;
 }
 
-void benchmark(bus *const b, std::atomic_uint32_t *const stop_event, const bool measure)
+void reset_benchmark(bus *const b)
 {
+        cpu *const c = b->getCpu();
+	c->reset();
+	b->reset();
+
 	for(uint16_t a = 0; a<benchmark_raw_len; a++)
 		b->write_byte(a + base, benchmark_raw[a]);
 
-        cpu *const c = b->getCpu();
         c->set_register(7, base);
+}
+
+void benchmark(bus *const b, std::atomic_uint32_t *const stop_event, const bool measure)
+{
+        reset_benchmark(b);
+
+        cpu *const c = b->getCpu();
 
 	*stop_event = EVENT_NONE;
 
@@ -98,14 +108,8 @@ void benchmark(bus *const b, std::atomic_uint32_t *const stop_event, const bool 
 
 		uint64_t count_slower = get_count(b);
 
-		c->reset();
-		b->reset();
+		reset_benchmark(b);
 
-		b->write_word(base + 8, 0);  // iteration counter
-		b->write_word(base + 10, 0);
-		b->write_word(base + 12, 0);
-		b->write_word(base + 14, 0);  // kw11-l counter
-		c->set_register(7, base);
 		*stop_event = EVENT_NONE;
 		while(*stop_event == EVENT_NONE)
 			c->step();
