@@ -120,7 +120,7 @@ void benchmark(bus *const b, std::atomic_uint32_t *const stop_event, const bool 
 		double   mul          = count_faster / double(count_slower);
 
 		DOLOG(info, true, "benchmark (raw): %zu instructions, emulated duration: %.3f seconds (or %" PRIu64 " ns)", cycle_count, duration / 1000000000., duration);
-		DOLOG(info, true, "benchmark (compensated): %zu instructions, emulated duration: %zu seconds (or %" PRIu64 " ns)", size_t(cycle_count * mul), size_t(duration * mul / 1000000000), uint64_t(duration * mul));
+		DOLOG(info, true, "benchmark (compensated): %zu instructions, emulated duration: %.3f seconds (or %" PRIu64 " ns)", size_t(cycle_count * mul), duration * mul / 1000000000., uint64_t(duration * mul));
 	}
 	else {
 		DOLOG(info, true, "benchmark: please wait ~10 seconds");
