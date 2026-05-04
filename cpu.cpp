@@ -2200,7 +2200,6 @@ uint32_t cpu::calc_instruction_duration(const uint16_t pc) const
 					break;
 				}
 			}
-			printf("%03o %03o %06o fell through\r\n", instruction >> 12, (instruction >> 6) & 077, instruction);
 			break;
 
 		case 011:   // MOVB
@@ -2340,8 +2339,6 @@ uint32_t cpu::calc_instruction_duration(const uint16_t pc) const
 					work_val = peek_dst(dst, dst_reg, pc + 2, word_mode);
 					ef_time += work_val & 1 ? 150 : 0;
 					break;
-				default:
-					printf("%03o %03o %06o fell through\r\n", instruction >> 12, (instruction >> 6) & 077, instruction);
 			}
 			break;
 		case 017:
