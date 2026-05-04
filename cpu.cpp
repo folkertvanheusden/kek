@@ -2101,7 +2101,9 @@ uint16_t cpu::peek_dst(const int mode, const int reg, const uint16_t pc, const w
 
 uint32_t cpu::calc_instruction_duration(const uint16_t pc) const
 {
+	constexpr const uint32_t mtp_dst[] { 900, 1650, 1650, 2100, 1800, 2250, 2100, 2550 };
 	constexpr const uint32_t srcdst_timings[] { 0, 300, 300, 750, 450, 900, 600, 1050 };  // mode
+	constexpr const uint32_t jmp_dst[] { 0, 1950, 1950, 2250, 1950, 2400, 2100, 2550 };
 	uint32_t                 src_time = 0;
 	uint32_t                 ef_time  = 0;
 	uint32_t                 dst_time = 0;
@@ -2119,6 +2121,88 @@ uint32_t cpu::calc_instruction_duration(const uint16_t pc) const
 	uint16_t    work_val    = 0;
 
 	switch(instruction >> 12) {
+		case 0:
+			switch((instruction >> 6) & 077) {
+				case 0:
+					switch(instruction) {
+						case 0:  // HALT
+							ef_time = 1050;
+							break;
+						case 1:  // WAIT
+							ef_time = 450;
+							break;
+						case 2:  // RTI
+						case 6:  // RTT
+							ef_time = 1500;
+							break;
+						case 5:  // RESET
+							ef_time = 10000000;  // 10 ms
+							break;
+					}
+					break;
+				case 1:  // JMP
+					ef_time = jmp_dst[dst];
+					break;
+				case 2:  // RTS
+					ef_time = 1050;
+					break;
+				case 040:
+				case 041:
+				case 042:
+				case 043:
+				case 044:
+				case 045:
+				case 046:
+				case 047:  // JSR
+					ef_time = jmp_dst[dst];
+					break;
+				case 054:  // NEG
+					ef_time = dst == 0 ? 750 : 1500;
+					break;
+				case 3:  // SWAB
+				case 050:  // CLR
+				case 051:  // COM
+				case 052:  // INC
+				case 053:  // DEC
+				case 055:  // ADC
+				case 056:  // SBC
+				case 061:  // ROL
+				case 063:  // ASL
+				case 067:  // SXT
+					ef_time = dst == 0 ? 300 : 1200;
+					ef_time += dst == 0 && dst_reg == 7 ? 300 : 0;
+					break;
+				case 057:  // TST
+					ef_time = dst == 0 ? 300 : 450;
+					ef_time += dst == 0 && dst_reg == 7 ? 300 : 0;
+					break;
+				case 060:  // ROR
+				case 062:  // ASR
+					ef_time = dst == 0 ? 300 : 1200;
+					ef_time += dst == 0 && dst_reg == 7 ? 300 : 0;
+					work_val = peek_dst(dst, dst_reg, pc + 2, word_mode);
+					ef_time += work_val & 1 ? 150 : 0;
+					break;
+				case 064:  // MARK
+					ef_time = 900;
+					break;
+				case 065:  // MFPI
+					ef_time = 1500;
+					break;
+				case 066:  // MTPI
+					ef_time = mtp_dst[dst];
+					break;
+			}
+			{  // branch
+				auto rc = conditional_branch_instructions_evaluate(instruction);
+				if (rc.has_value()) {
+					ef_time = rc.value() ? 600 : 300;
+					break;
+				}
+			}
+			printf("%03o %03o %06o fell through\r\n", instruction >> 12, (instruction >> 6) & 077, instruction);
+			break;
+
 		case 011:   // MOVB
 		case 1: {  // MOV
 				src_time = srcdst_timings[src];
@@ -2209,13 +2293,57 @@ uint32_t cpu::calc_instruction_duration(const uint16_t pc) const
 					break;
 			}
 			break;
-		case 010: {  // branch
-				  auto rc = conditional_branch_instructions_evaluate(instruction);
-				  if (rc.has_value() == false)
+		case 010:
+			{  // branch
+				auto rc = conditional_branch_instructions_evaluate(instruction);
+				if (rc.has_value()) {
+					ef_time = rc.value() ? 600 : 300;
+					break;
+				}
+			}
+
+			switch((instruction >> 6) & 077) {
+				case 040:
+				case 041:
+				case 042:
+				case 043:  // EMT
+					  ef_time = 3300;
 					  break;
-				  ef_time = rc.value() ? 600 : 300;
-			  }
-			  break;
+				case 044:
+				case 045:
+				case 046:
+				case 047:  // TRAP
+					  ef_time = 600;
+					  break;
+				case 050:  // CLRB
+				case 051:  // COMB
+				case 052:  // INCB
+				case 053:  // DECB
+				case 055:  // ADCB
+				case 056:  // SBCB
+				case 061:  // ROLB
+				case 063:  // ASLB
+					ef_time = dst == 0 ? 300 : 1200;
+					ef_time += dst == 0 && dst_reg == 7 ? 300 : 0;
+					break;
+				case 054:  // NEGB
+					ef_time = dst == 0 ? 750 : 1500;
+					break;
+				case 057:  // TSTB
+					ef_time = dst == 0 ? 300 : 450;
+					ef_time += dst == 0 && dst_reg == 7 ? 300 : 0;
+					break;
+				case 060:  // RORB
+				case 062:  // ASRB
+					ef_time = dst == 0 ? 300 : 1200;
+					ef_time += dst == 0 && dst_reg == 7 ? 300 : 0;
+					work_val = peek_dst(dst, dst_reg, pc + 2, word_mode);
+					ef_time += work_val & 1 ? 150 : 0;
+					break;
+				default:
+					printf("%03o %03o %06o fell through\r\n", instruction >> 12, (instruction >> 6) & 077, instruction);
+			}
+			break;
 		case 017:
 			// FPP
 			break;
