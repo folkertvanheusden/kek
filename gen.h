@@ -37,3 +37,7 @@ typedef enum { rm_prev, rm_cur } rm_selection_t;
 #define SERIAL_CFG_FILE        ".serial.json"
 #define BLINKENLIGHTS_CFG_FILE ".blinkenlights.dat"
 #endif
+
+#if defined(ESP32)
+#include "ESP32/esp32.h"
+#endif
