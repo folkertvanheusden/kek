@@ -9,6 +9,7 @@
 #include "breakpoint.h"
 #include "bus.h"
 #include "cpu.h"
+#include "esp32.h"
 #include "gen.h"
 #include "log.h"
 #include "utils.h"
@@ -348,6 +349,10 @@ bool cpu::execute_any_pending_interrupt()
 			auto     vector = queued_interrupts[i].begin();
 			uint16_t v      = *vector;
 			queued_interrupts[i].erase(vector);
+#if defined(ESP32) && !defined(SHA2017)
+			if (v != 0100)  // ignore 50 Hz interrupt
+				digitalWrite(HEARTBEAT_PIN, !digitalRead(HEARTBEAT_PIN));
+#endif
 
 			TRACE("Invoking interrupt vector %o (IPL %d, current: %d)", v, i, current_level);
 			trap(v, i, true);

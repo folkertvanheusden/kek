@@ -133,7 +133,6 @@ void tty::operator()()
 	while(!stop_flag) {
 		if (c->poll_char()) {
 #if defined(BUILD_FOR_RP2040)
-			digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
 			xSemaphoreTake(chars_lock, portMAX_DELAY);
 #else
 			std::unique_lock<std::mutex> lck(chars_lock);
