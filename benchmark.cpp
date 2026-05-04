@@ -86,7 +86,7 @@ void reset_benchmark(bus *const b)
         c->set_register(7, base);
 }
 
-void benchmark(bus *const b, std::atomic_uint32_t *const stop_event, const bool measure)
+void benchmark(console *const cnsl, bus *const b, std::atomic_uint32_t *const stop_event, const bool measure)
 {
         reset_benchmark(b);
 
@@ -95,7 +95,7 @@ void benchmark(bus *const b, std::atomic_uint32_t *const stop_event, const bool 
 	*stop_event = EVENT_NONE;
 
 	if (measure) {
-		DOLOG(info, true, "benchmark: please wait ~20 seconds");
+		cnsl->put_string_lf("benchmark: please wait ~20 seconds");
 		size_t   cycle_count = 0;
 		uint64_t duration    = 0;
 		while(*stop_event == EVENT_NONE) {
@@ -115,15 +115,15 @@ void benchmark(bus *const b, std::atomic_uint32_t *const stop_event, const bool 
 			c->step();
 
 		uint64_t count_faster = get_count(b);
-		DOLOG(info, true, "benchmark count slow: %" PRIu64 ", count fast: %" PRIu64, count_slower, count_faster);
+		cnsl->put_string_lf(format("benchmark count slow: %" PRIu64 ", count fast: %" PRIu64, count_slower, count_faster));
 
 		double   mul          = count_faster / double(count_slower);
 
-		DOLOG(info, true, "benchmark (raw): %zu instructions, emulated duration: %.3f seconds (or %" PRIu64 " ns)", cycle_count, duration / 1000000000., duration);
-		DOLOG(info, true, "benchmark (compensated): %zu instructions, emulated duration: %.3f seconds (or %" PRIu64 " ns)", size_t(cycle_count * mul), duration * mul / 1000000000., uint64_t(duration * mul));
+		cnsl->put_string_lf(format("benchmark (raw): %zu instructions, emulated duration: %.3f seconds (or %" PRIu64 " ns)", cycle_count, duration / 1000000000., duration));
+		cnsl->put_string_lf(format("benchmark (compensated): %zu instructions, emulated duration: %.3f seconds (or %" PRIu64 " ns)", size_t(cycle_count * mul), duration * mul / 1000000000., uint64_t(duration * mul)));
 	}
 	else {
-		DOLOG(info, true, "benchmark: please wait ~10 seconds");
+		cnsl->put_string_lf("benchmark: please wait ~10 seconds");
 		while(*stop_event == EVENT_NONE)
 			c->step();
 	}

@@ -751,7 +751,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 	}
 	else if (parts[0] == "benchmark") {
 		*cnsl->get_running_flag() = true;  // enable the KW11-L interrupt
-		benchmark(b, stop_event, parts.size() == 2 && parts[1] == "-v");
+		benchmark(cnsl, b, stop_event, parts.size() == 2 && parts[1] == "-v");
 		*cnsl->get_running_flag() = false;
 		return true;
 	}
