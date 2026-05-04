@@ -9,7 +9,6 @@
 #include "breakpoint.h"
 #include "bus.h"
 #include "cpu.h"
-#include "esp32.h"
 #include "gen.h"
 #include "log.h"
 #include "utils.h"
