@@ -254,7 +254,7 @@ void deqna::transmitter()
 			b->write_unibus_word(p_buffers + 0, flags);
 		}
 
-		if (ph & 0x2000) {
+		if (ph & 0x2000) {  // END bit
 			if (buffer_offset == 0) {
 				DOLOG(warning, false, "deqna(tx): failed transmitting - empty buffer");
 			}
@@ -268,6 +268,11 @@ void deqna::transmitter()
 				buffer_offset = 0;
 			}
 
+			b->write_unibus_word(p_buffers + 4 * 2, 0);  // all good
+			b->write_unibus_word(p_buffers + 5 * 2, 1);  // TDR
+
+			uint16_t temp = registers[7];
+			DOLOG(debug, false, "deqna(tx): register 7=0x%04x", temp);
 			registers[7] |= 128;  // XI
 			if (registers[7] & 64) {  // IE
 				uint16_t vector = registers[6] & 0x3fc;
@@ -276,6 +281,9 @@ void deqna::transmitter()
 				queued = true;
 			}
 		}
+
+		if ((ph & 0x8000) == 0)
+			break;
 
 		if (ph & 0x4000)
 			p_buffers = chain;
