@@ -59,12 +59,23 @@ uint8_t benchmark_raw[] = {
   0x1a, 0xfb, 0xfd, 0x80, 0x37, 0x90, 0x16, 0xfb, 0x82, 0x0a, 0xf7, 0x01,
   0x87, 0x00
 };
-const size_t benchmark_raw_len { 614 };
+constexpr const size_t   benchmark_raw_len { 614 };
+
+constexpr const uint16_t base { 01000 };
+
+uint64_t get_count(bus *const b)
+{
+	// NOTE: these locations depend on the version of benchmark.asm!
+	uint64_t count = 0;
+	for(int i=5; i>=0; i--) {
+		count <<= 8;
+		count |= b->read_byte(base + 8 + i);
+	}
+	return count;
+}
 
 void benchmark(bus *const b, std::atomic_uint32_t *const stop_event, const bool measure)
 {
-	constexpr const uint16_t base = 01000;
-
 	for(uint16_t a = 0; a<benchmark_raw_len; a++)
 		b->write_byte(a + base, benchmark_raw[a]);
 
@@ -74,6 +85,7 @@ void benchmark(bus *const b, std::atomic_uint32_t *const stop_event, const bool 
 	*stop_event = EVENT_NONE;
 
 	if (measure) {
+		DOLOG(info, true, "benchmark: please wait ~20 seconds");
 		size_t   cycle_count = 0;
 		uint64_t duration    = 0;
 		while(*stop_event == EVENT_NONE) {
@@ -84,18 +96,31 @@ void benchmark(bus *const b, std::atomic_uint32_t *const stop_event, const bool 
 			c->step();
 		}
 
-		DOLOG(info, true, "benchmark: %zu instructions, emulated duration: %.3f seconds (or %" PRIu64 " ns)", cycle_count, duration / 1000000000., duration);
+		uint64_t count_slower = get_count(b);
+
+		c->reset();
+		b->reset();
+
+		b->write_word(base + 8, 0);  // iteration counter
+		b->write_word(base + 10, 0);
+		b->write_word(base + 12, 0);
+		b->write_word(base + 14, 0);  // kw11-l counter
+		c->set_register(7, base);
+		*stop_event = EVENT_NONE;
+		while(*stop_event == EVENT_NONE)
+			c->step();
+
+		uint64_t count_faster = get_count(b);
+		DOLOG(info, true, "benchmark count slow: %" PRIu64 ", count fast: %" PRIu64, count_slower, count_faster);
+
+		double   mul          = count_faster / double(count_slower);
+
+		DOLOG(info, true, "benchmark (raw): %zu instructions, emulated duration: %.3f seconds (or %" PRIu64 " ns)", cycle_count, duration / 1000000000., duration);
+		DOLOG(info, true, "benchmark (compensated): %zu instructions, emulated duration: %zu seconds (or %" PRIu64 " ns)", size_t(cycle_count * mul), size_t(duration * mul / 1000000000), uint64_t(duration * mul));
 	}
 	else {
+		DOLOG(info, true, "benchmark: please wait ~10 seconds");
 		while(*stop_event == EVENT_NONE)
 			c->step();
 	}
-
-	// NOTE: these locations depend on the version of benchmark.asm!
-	uint64_t count = 0;
-	for(int i=5; i>=0; i--) {
-		count <<= 8;
-		count |= b->read_byte(base + 8 + i);
-	}
-	DOLOG(info, true, "benchmark: count=%" PRIx64, count);
 }
