@@ -1,7 +1,9 @@
 // (C) 2018-2026 by Folkert van Heusden
 // Released under MIT license
 
+#if defined(NEOPIXELS_PIN)
 #include <Adafruit_NeoPixel.h>
+#endif
 #include <stdio.h>
 #include <unistd.h>
 
@@ -64,6 +66,7 @@ void console_esp32::refresh_virtual_terminal()
 
 void console_esp32::panel_update_thread()
 {
+#if defined(NEOPIXELS_PIN)
 	DOLOG(info, false, "panel task started");
 
 	cpu *const c = b->getCpu();
@@ -199,4 +202,5 @@ void console_esp32::panel_update_thread()
 #endif
 
 	DOLOG(info, false, "panel task terminating");
+#endif
 }
