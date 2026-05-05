@@ -572,7 +572,7 @@ void reg_dump(console *const cnsl, cpu *const c)
 
 	cnsl->put_string_lf(format("PSW: %06o, PC: %06o, run mode: %d", c->getPSW(), c->lowlevel_register_get(0, 7), c->getPSW_runmode()));
 
-	cnsl->put_string_lf(format("STACK: k:%06o, sv:%06o, -:%06o, usr: %06o",
+	cnsl->put_string_lf(format("STACK: k:%06o, sv:%06o, -:%06o, usr:%06o",
 				c->lowlevel_register_sp_get(0),
 				c->lowlevel_register_sp_get(1),
 				c->lowlevel_register_sp_get(2),
