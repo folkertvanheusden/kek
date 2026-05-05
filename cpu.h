@@ -68,6 +68,7 @@ private:
 	std::optional<int> delayed_trap {   };  // invoked after completion of the instruction
 	bool     debug_mode         { false };
 	std::vector<std::pair<uint16_t, std::string> > stacktrace;
+	int      kw11l_counter      { 0     };
 
 	// vector, 8 levels
 	std::array<std::set<uint16_t>, 8> queued_interrupts;
