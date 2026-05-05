@@ -569,7 +569,7 @@ void reg_dump(console *const cnsl, cpu *const c)
 
 	cnsl->put_string_lf(format("PSW: %06o, PC: %06o, run mode: %d", c->getPSW(), c->lowlevel_register_get(0, 7), c->getPSW_runmode()));
 
-	cnsl->put_string_lf(format("STACK: k:%06o, sv:%06o, -:%06o, usr: %06o",
+	cnsl->put_string_lf(format("STACK: k:%06o, sv:%06o, -:%06o, usr:%06o",
 				c->lowlevel_register_sp_get(0),
 				c->lowlevel_register_sp_get(1),
 				c->lowlevel_register_sp_get(2),
@@ -710,11 +710,6 @@ void set_kw11_l_interrupt_freq(console *const cnsl, bus *const b, const int freq
 		b->getKW11_L()->set_interrupt_frequency(freq);
 	else
 		cnsl->put_string_lf("Frequency out of range");
-}
-
-void set_kw11_l_tick_mode(console *const cnsl, bus *const b, const bool wall_clock)
-{
-	b->getKW11_L()->set_wall_clock(wall_clock);
 }
 
 struct debugger_state {
@@ -1175,12 +1170,6 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		set_kw11_l_interrupt_freq(cnsl, b, std::stoi(parts.at(1)));
 		return true;
 	}
-	else if (parts[0] == "intwallclock" && parts.size() == 2) {
-		bool new_mode = std::stoi(parts.at(1));
-		set_kw11_l_tick_mode(cnsl, b, new_mode);
-		cnsl->put_string_lf(format("New interrupt mode: %s", new_mode ? "wall clock" : "cycle count relative"));
-		return true;
-	}
 	else if (parts[0] == "setsl" && parts.size() == 3) {
 		if (setloghost(parts.at(1).c_str(), parse_ll(parts[2])) == false)
 			cnsl->put_string_lf("Failed parsing IP address");
@@ -1343,7 +1332,6 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			"getmem ...    - get memory (a=), in octal, one byte",
 			"toggle ...    - set switch (s=, 0...15 (decimal)) of the front panel to state (t=, 0 or 1)",
 			"setinthz x    - set KW11-L interrupt frequency (Hz)",
-			"intwallclock x- use real 50 Hz (0) or cycle-based (1, roughly based)",
 			"cls           - clear screen",
 			"dir           - list files",
 			"bic x         - run BIC/LDA file",
