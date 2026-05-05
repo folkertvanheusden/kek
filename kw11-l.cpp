@@ -108,7 +108,7 @@ void kw11_l::operator()()
 
 	while(!stop_flag) {
 		if (*cnsl->get_running_flag()) {
-			myusleep(1000000 / 50);  // 50 Hz
+			myusleep(1000000 / int_frequency);  // usually 50 or 60 Hz
 			do_interrupt();
 		}
 		else {
