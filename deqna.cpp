@@ -188,7 +188,8 @@ void deqna::receiver()
 				temp1 &= 0x3fff;  // upper 2 bits 0 is "This buffer contains the last segment of a message with no errors."
 				b->write_unibus_word(p_buffers + 4 * 2, temp1);
 
-				b->write_unibus_word(p_buffers + 3 * 2, -((byte_cnt + 1) / 2));  // TODO: set 'odd count' bit instead
+				b->write_unibus_word(p_buffers + 4 * 2, (byte_cnt & 0x0700) | 0x00f8);  // FIXME odd byte count
+				b->write_unibus_word(p_buffers + 5 * 2, ((byte_cnt & 0xff) << 8) | (byte_cnt & 0xff));  // mirrored
 				flags &= ~0xc000;
 				flags |= 0x8000;  // initialized, not in use
 				b->write_unibus_word(p_buffers + 0 * 2, flags);
