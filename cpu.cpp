@@ -110,6 +110,7 @@ void cpu::reset()
 
         it_is_a_trap          = false;
 	processing_trap_depth = 0;
+	kw11l_counter         = 0;
 }
 
 uint16_t cpu::get_register(const int nr) const
@@ -349,8 +350,15 @@ void cpu::execute_any_pending_interrupt()
 			uint16_t v      = *vector;
 			queued_interrupts[i].erase(vector);
 #if defined(ESP32) && !defined(SHA2017)
-			if (v != 0100)  // ignore 50 Hz interrupt
+			if (v = 0100) {  // 50 Hz interrupt
+				if (++kw11l_counter >= 25) {
+					kw11l_counter = 0;
+					digitalWrite(HEARTBEAT_PIN, !digitalRead(HEARTBEAT_PIN));
+				}
+			}
+			else {
 				digitalWrite(HEARTBEAT_PIN, !digitalRead(HEARTBEAT_PIN));
+			}
 #endif
 
 			TRACE("Invoking interrupt vector %o (IPL %d, current: %d)", v, i, current_level);
@@ -386,8 +394,7 @@ void cpu::queue_interrupt(const uint8_t level, const uint16_t vector)
 	uint8_t value = 1;
 	xQueueSend(qi_q, &value, portMAX_DELAY);
 #else
-
-	qi_cv.notify_all();
+	qi_cv.notify_one();
 #endif
 
 	any_queued_interrupts = true;
@@ -770,7 +777,7 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 				int32_t result = R1 * R2;
 
 				set_register(reg, result >> 16);
-				set_register(reg | 1, result & 65535);
+				set_register(reg | 1, result);
 
 				setPSW_n(result < 0);
 				setPSW_z(result == 0);
@@ -846,7 +853,7 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 				uint32_t new_value = shifter(R0R1, shift, true);
 
 				set_register(reg,     new_value >> 16  );
-				set_register(reg | 1, new_value & 65535);
+				set_register(reg | 1, new_value);
 
 				return true;
 			}
@@ -1804,7 +1811,7 @@ cpu::operand_parameters cpu::addressing_to_string(const uint8_t mode_register, c
 	assert(mode_register < 64);
 
 	int         run_mode  = getPSW_runmode();
-	auto        temp      = b->peek_word(run_mode, pc & 65535);
+	auto        temp      = b->peek_word(run_mode, pc);
 	if (temp.has_value() == false) {
 		operand_parameters out;
 		out.error = "cannot read from memory";
@@ -1948,7 +1955,7 @@ uint32_t timings_double_operand(const int col0, const int col1, const int col2, 
 uint16_t cpu::peek_dst(const int mode, const int reg, const uint16_t pc, const word_mode_t word_mode) const
 {
 	int         run_mode  = getPSW_runmode();
-	auto        temp      = b->peek_word(run_mode, pc & 65535);
+	auto        temp      = b->peek_word(run_mode, pc);
 	if (temp.has_value() == false)
 		return 0;
 	uint16_t    next_word = temp.value();
