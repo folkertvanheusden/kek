@@ -243,8 +243,7 @@ void deqna::transmitter()
 			break;
 		}
 		else {
-			flags |= 0x4000;  // buffer busy
-			b->write_unibus_word(p_buffers + 0, flags);
+			b->write_unibus_word(p_buffers + 0, 0xffff);  // buffer busy
 
 			if ((ph & 0x4000) == 0x0000) {  // chain? no, use as buffer
 				DOLOG(debug, false, "deqna(tx): %08o is not a chain pointer, use as buffer-pointer", chain);
@@ -281,7 +280,7 @@ void deqna::transmitter()
 				buffer_offset = 0;
 			}
 
-			b->write_unibus_word(p_buffers + 4 * 2, 0);  // all good
+			b->write_unibus_word(p_buffers + 4 * 2, 0x2000);  // all good
 			b->write_unibus_word(p_buffers + 5 * 2, 0);  // TDR
 
 			uint16_t temp = registers[7];
