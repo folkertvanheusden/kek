@@ -1,3 +1,4 @@
+// reference: https://bitsavers.trailing-edge.com/pdf/dec/pdp11/1170/EK-KB11C-TM-001_1170procMan.pdf
 #include <cstring>
 #include <fcntl.h>
 #include <poll.h>
