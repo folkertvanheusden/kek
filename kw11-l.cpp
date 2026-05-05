@@ -106,42 +106,10 @@ void kw11_l::operator()()
 
 	TRACE("Starting KW11-L thread");
 
-	uint64_t prev_cycle_count          = b->getCpu()->get_instructions_executed_count();
-	uint64_t interval_prev_cycle_count = prev_cycle_count;
-	auto     prev_tick                 = get_ms();
-
 	while(!stop_flag) {
 		if (*cnsl->get_running_flag()) {
-			if (wall_clock) {
-				myusleep(1000000 / 50);  // 50 Hz
-				do_interrupt();
-			}
-			else {
-				myusleep(1000000 / 100);  // 100 Hz
-
-				int cur_int_freq = get_interrupt_frequency();
-
-				uint64_t current_cycle_count = b->getCpu()->get_instructions_executed_count();
-				uint32_t took_ms = b->getCpu()->get_effective_run_time(current_cycle_count - prev_cycle_count);
-				auto     now     = get_ms();
-
-				// - 50 Hz depending on instruction count ('cur_int_freq')
-				// - nothing executed in interval
-				// - 2 Hz minimum
-				auto t_diff = now - prev_tick;
-				if (took_ms >= 1000 / cur_int_freq || current_cycle_count - interval_prev_cycle_count == 0 || t_diff >= 500) {
-					do_interrupt();
-
-					prev_cycle_count = current_cycle_count;
-
-					t_diff_sum      += t_diff;
-					n_t_diff++;
-
-					prev_tick        = now;
-				}
-
-				interval_prev_cycle_count = current_cycle_count;
-			}
+			myusleep(1000000 / int_frequency);  // usually 50 or 60 Hz
+			do_interrupt();
 		}
 		else {
 			myusleep(1000000 / 10);  // 10 Hz
