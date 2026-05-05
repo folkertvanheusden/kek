@@ -1,4 +1,4 @@
-// reference: https://bitsavers.trailing-edge.com/pdf/dec/pdp11/1170/EK-KB11C-TM-001_1170procMan.pdf
+// reference: https://treasures.scss.tcd.ie/hardware/TCD-SCSS-T.20141120.008/EK-DELQA-UG-002.pdf
 #include <cstring>
 #include <fcntl.h>
 #include <poll.h>
@@ -112,13 +112,13 @@ deqna::deqna(bus *const b, const uint8_t mac_address[6]) :
 
 bool deqna::begin()
 {
+	bool rc = false;
 #if defined(linux)
 	dev_fd = open_tun("pdp", mac_address);
-	return dev_fd != -1;
+	rc = dev_fd != -1;
 #endif
-// TODO	th_rx = new std::thread(&deqna::receiver, this);
-
-	return false;
+	th_rx = new std::thread(&deqna::receiver, this);
+	return rc;
 }
 
 deqna::~deqna()
@@ -181,10 +181,12 @@ void deqna::receiver()
 				DOLOG(debug, false, "deqna(rx): %08o is not a chain pointer, use as buffer-pointer", chain);
 				for(int i=0; i<std::min(byte_cnt, length); i++)
 					b->write_unibus_byte(chain + i, buffer[i]);
+
 				uint16_t temp1 = b->read_unibus_word(p_buffers + 4 * 2);  // status word 1
 				temp1 &= 0x3fff;  // upper 2 bits 0 is "This buffer contains the last segment of a message with no errors."
-				// TODO write temp1?
-				// uint16_t temp2 = b->read_unibus_word(p_buffers + 5 * 2);  // status word 2
+				b->write_unibus_word(p_buffers + 4 * 2, temp1);
+
+				b->write_unibus_word(p_buffers + 3 * 2, -((byte_cnt + 1) / 2));  // TODO: set 'odd count' bit instead
 				flags &= ~0xc000;
 				flags |= 0x8000;  // initialized, not in use
 				b->write_unibus_word(p_buffers + 0 * 2, flags);
