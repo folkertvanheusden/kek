@@ -39,5 +39,5 @@ typedef enum { rm_prev, rm_cur } rm_selection_t;
 #endif
 
 #if defined(ESP32)
-#include "ESP32/esp32.h"
+#include "esp32.h"
 #endif
