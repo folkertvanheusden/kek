@@ -276,7 +276,7 @@ void deqna::transmitter()
 			}
 
 			b->write_unibus_word(p_buffers + 4 * 2, 0);  // all good
-			b->write_unibus_word(p_buffers + 5 * 2, 1);  // TDR
+			b->write_unibus_word(p_buffers + 5 * 2, 0);  // TDR
 
 			uint16_t temp = registers[7];
 			DOLOG(debug, false, "deqna(tx): register 7=0x%04x", temp);
