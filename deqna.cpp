@@ -181,6 +181,7 @@ void deqna::receiver()
 			}
 			if ((ph & 0x4000) == 0) {  // chain? no, use as buffer
 				DOLOG(debug, false, "deqna(rx): %08o is not a chain pointer, use as buffer-pointer", chain);
+				b->write_unibus_word(p_buffers + 0 * 2, 0xffff);  // processed
 				for(int i=0; i<std::min(byte_cnt, length); i++)
 					b->write_unibus_byte(chain + i, buffer[i]);
 
@@ -190,7 +191,6 @@ void deqna::receiver()
 
 				b->write_unibus_word(p_buffers + 4 * 2, (byte_cnt & 0x0700) | 0x00f8);  // FIXME odd byte count
 				b->write_unibus_word(p_buffers + 5 * 2, ((byte_cnt & 0xff) << 8) | (byte_cnt & 0xff));  // mirrored
-				b->write_unibus_word(p_buffers + 0 * 2, 0xffff);  // processed
 				registers[7] |= 0x8000;  // RI
 				if (registers[7] & 64) {  // IE
 					uint16_t vector = registers[6] & 0x3fc;
