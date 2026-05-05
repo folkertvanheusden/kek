@@ -190,9 +190,7 @@ void deqna::receiver()
 
 				b->write_unibus_word(p_buffers + 4 * 2, (byte_cnt & 0x0700) | 0x00f8);  // FIXME odd byte count
 				b->write_unibus_word(p_buffers + 5 * 2, ((byte_cnt & 0xff) << 8) | (byte_cnt & 0xff));  // mirrored
-				flags &= ~0xc000;
-				flags |= 0x8000;  // initialized, not in use
-				b->write_unibus_word(p_buffers + 0 * 2, flags);
+				b->write_unibus_word(p_buffers + 0 * 2, 0xffff);  // processed
 				registers[7] |= 0x8000;  // RI
 				if (registers[7] & 64) {  // IE
 					uint16_t vector = registers[6] & 0x3fc;
