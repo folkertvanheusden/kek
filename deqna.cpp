@@ -108,10 +108,17 @@ deqna::deqna(bus *const b, const uint8_t mac_address[6]) :
 {
 	memcpy(this->mac_address, mac_address, sizeof this->mac_address);
 	reset();
+}
+
+bool deqna::begin()
+{
 #if defined(linux)
 	dev_fd = open_tun("pdp", mac_address);
+	return dev_fd != -1;
 #endif
 // TODO	th_rx = new std::thread(&deqna::receiver, this);
+
+	return false;
 }
 
 deqna::~deqna()
@@ -223,18 +230,19 @@ void deqna::transmitter()
 
 		DOLOG(debug, false, "deqna(tx): checking descr at %08o, points to %08o which is %d bytes (0x%04x | %04x)", p_buffers, chain, length, len, ~len);
 
-		if ((ph & 0x8000) == 0)  // valid?
+		if ((ph & 0x8000) == 0) {  // valid?
 			DOLOG(debug, false, "deqna(tx): %08o is end of BDL", p_buffers);
+			break;
+		}
 		else {
 			flags |= 0x4000;  // buffer busy
 			b->write_unibus_word(p_buffers + 0, flags);
 
 			if ((ph & 0x4000) == 0x0000) {  // chain? no, use as buffer
 				DOLOG(debug, false, "deqna(tx): %08o is not a chain pointer, use as buffer-pointer", chain);
-				if (length < 0 || length > 2048) {
+				if (length > 2048) {
 					DOLOG(debug, false, "deqna(tx): buffer has invalid size %d", length);
-					p_buffers = chain;
-					continue;
+					break;
 				}
 				if (chain + length > b->get_memory_size()) {
 					DOLOG(debug, false, "deqna(tx): buffer does not fit in RAM");
@@ -245,10 +253,6 @@ void deqna::transmitter()
 
 				for(int i=0; i<length && buffer_offset < sizeof(buffer); i++)
 					buffer[buffer_offset++] = b->read_unibus_byte(chain + i);
-
-				flags &= ~0x4000;  // buffer no longer busy
-				b->write_unibus_word(p_buffers + 0, flags);
-
 			}
 
 			flags &= ~0x4000;  // buffer no longer busy

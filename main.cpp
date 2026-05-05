@@ -516,7 +516,10 @@ int main(int argc, char *argv[])
 
 		uint8_t mac_address[] { 0x52, 0x55, 0x01, 0x8a, 0xd8, 0xd3 };
 		auto deqna_dev = new deqna(b, mac_address);
-		b->add_DEQNA(deqna_dev);
+		if (deqna_dev->begin())
+			b->add_DEQNA(deqna_dev);
+		else
+			DOLOG(ll_alert, true, "Failed to setup DEQNA device");
 
 		if (disk_type == "rk05") {
 			bootloader = BL_RK05;

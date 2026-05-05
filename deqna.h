@@ -36,6 +36,8 @@ public:
 	deqna(bus *const b, const uint8_t mac_address[6]);
 	virtual ~deqna();
 
+	bool begin();
+
 	void reset() override;
 
 	void show_state(console *const cnsl) const override;
