@@ -136,6 +136,8 @@ void deqna::receiver()
 {
 	pollfd fds[] { { dev_fd, POLLIN, 0 } };
 
+	uint32_t p_buffers = ((registers[3] & 63) << 16) | registers[2];
+
 	while(!stop_flag) {
 		// receive list invalid?
 		if (registers[7] & 32) {
@@ -163,7 +165,6 @@ void deqna::receiver()
 		DOLOG(debug, false, "deqna(rx): Ethernet packet received");
 
 		// push into pdp memory
-		uint32_t p_buffers = ((registers[3] & 63) << 16) | registers[2];
 		bool     queued    = false;
 		// a descriptor is 6 words
 		while(p_buffers + 12 <= b->get_memory_size()) {
@@ -175,6 +176,7 @@ void deqna::receiver()
 			int      length = ((~len & 0xffff) + 1) * 2;
 			if ((ph & 0x8000) == 0) {  // valid?
 				DOLOG(debug, false, "deqna(rx): %08o is an invalid RX descr", p_buffers);
+				p_buffers = ((registers[3] & 63) << 16) | registers[2];
 				break;
 			}
 			if ((ph & 0x4000) == 0) {  // chain? no, use as buffer
@@ -199,7 +201,10 @@ void deqna::receiver()
 				}
 				break;
 			}
-			p_buffers = chain;
+			if (ph & 0x4000)
+				p_buffers = chain;
+			else
+				p_buffers += 12;
 		}
 
 		if (!queued)
