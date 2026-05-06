@@ -172,6 +172,8 @@ void bus::reset()
 		kw11_l_->reset();
 	if (dz11_)
 		dz11_->reset();
+	if (dc11_)
+		dc11_->reset();
 	if (rp06_)
 		rp06_->reset();
 	if (deqna_)
@@ -254,6 +256,12 @@ void bus::add_DZ11(dz11 *const dz11_)
 	this->dz11_ = dz11_;
 }
 
+void bus::add_DC11(dc11 *const dc11_)
+{
+	delete this->dc11_;
+	this->dc11_ = dc11_;
+}
+
 void bus::del_DZ11()
 {
 	delete dz11_;
@@ -262,9 +270,16 @@ void bus::del_DZ11()
 
 uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm_selection_t mode_selection, const d_i_space_t space)
 {
-	int      run_mode = mode_selection == rm_cur ? c->getPSW_runmode() : c->getPSW_prev_runmode();
+	int      run_mode   = mode_selection == rm_cur ? c->getPSW_runmode() : c->getPSW_prev_runmode();  // TODO used?
 
-	uint32_t m_offset = mmu_->calculate_physical_address(run_mode, addr_in, false, space);
+	bool     is_data    = space == d_space;
+	bool     d          = is_data && mmu_->get_use_data_space(run_mode);
+	int      page_index = mmu_->calc_par_pdr_index(run_mode, d, addr_in >> 13);
+
+	uint32_t m_offset   = 0;
+
+	if (mmu_->has_special_handling(page_index) == true) {
+		m_offset = mmu_->calculate_physical_address(run_mode, addr_in, false, space);  // TODO FALSE?!
 
 	uint32_t io_base  = mmu_->get_io_base();
 	bool     is_io    = m_offset >= io_base;
@@ -495,6 +510,9 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 		if (tty_ && a >= PDP11TTY_BASE && a < PDP11TTY_END)
 			return word_mode == wm_byte ? tty_->read_byte(a) : tty_->read_word(a);
 
+			if (dc11_ && a >= DC11_BASE && a < DC11_END)
+				return word_mode == wm_byte ? dc11_->read_byte(a) : dc11_->read_word(a);
+
 		if (dz11_ && a >= DZ11_BASE && a < DZ11_END)
 			return word_mode == wm_byte ? dz11_->read_byte(a) : dz11_->read_word(a);
 
@@ -526,8 +544,10 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 		c->trap(004);  // no such i/o
 		throw 1;
 	}
-
-	int page_index = mmu_->calc_par_pdr_index(run_mode, space, addr_in >> 13);
+	}
+	else {
+		m_offset = mmu_->calculate_physical_address(run_mode, addr_in).physical_data;
+	}
 
 	if ((addr_in & 1) && word_mode == wm_word) {
 		TRACE("READ from %06o - odd address!", addr_in);
@@ -564,7 +584,10 @@ bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 	bool          d          = is_data && mmu_->get_use_data_space(run_mode);
 	int           page_index = mmu_->calc_par_pdr_index(run_mode, d, apf);
 
-	uint32_t m_offset = mmu_->calculate_physical_address(run_mode, addr_in, true, space);
+	uint32_t      m_offset   = 0;
+
+	if (mmu_->has_special_handling(page_index) == true) {
+		m_offset = mmu_->calculate_physical_address(run_mode, addr_in, true, space);
 
 	if (mmu_->is_enabled())
 		mmu_->set_page_written_to(page_index);
@@ -734,6 +757,11 @@ bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 			return false;
 		}
 
+			if (dc11_ && a >= DC11_BASE && a < DC11_END) {
+				word_mode == wm_byte ? dc11_->write_byte(a, value) : dc11_->write_word(a, value);
+				return false;
+			}
+
 		if (dz11_ && a >= DZ11_BASE && a < DZ11_END) {
 			word_mode == wm_byte ? dz11_->write_byte(a, value) : dz11_->write_word(a, value);
 			return false;
@@ -806,13 +834,17 @@ bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 		throw 9;
 	}
 
+		TRACE("WRITE to %06o/%07o %c %c: %06o", addr_in, m_offset, space == d_space ? 'D' : 'I', word_mode == wm_byte ? 'B' : 'W', value);
+	}
+	else {
+		m_offset = mmu_->calculate_physical_address(run_mode, addr_in).physical_data;
+	}
+
 	if ((addr_in & 1) && word_mode == wm_word) [[unlikely]] {
 		TRACE("WRITE to %06o (value: %06o) - odd address!", addr_in, value);
 		mmu_->trap_if_odd(page_index, true);
 		throw 10;
 	}
-
-	TRACE("WRITE to %06o/%07o %c %c: %06o", addr_in, m_offset, space == d_space ? 'D' : 'I', word_mode == wm_byte ? 'B' : 'W', value);
 
 	if (m_offset >= m->get_memory_size()) {
 		mmu_->setCPUERRBit(040);

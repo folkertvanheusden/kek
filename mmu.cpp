@@ -30,9 +30,9 @@ void mmu::begin(memory *const m, cpu *const c)
 void mmu::reset()
 {
 	memset(pages, 0x00, sizeof pages);
-
 	CPUERR = MMR0 = MMR1 = MMR2 = MMR3 = PIR = CSR = 0;
 	update_io_base();
+	update_special_handling_bits();
 }
 
 void mmu::dump_par_pdr(console *const cnsl, const int run_mode, const bool d, const std::string & name, const int state, const std::optional<int> & selection) const
@@ -50,10 +50,10 @@ void mmu::dump_par_pdr(console *const cnsl, const int run_mode, const bool d, co
 		int      page_index = calc_par_pdr_index(run_mode, d, i);
 		uint16_t par_value  = pages[page_index].par_preshifted >> 6;
 		uint16_t pdr_value  = pages[page_index].pdr;
-
 		uint16_t pdr_len    = (((pdr_value >> 8) & 127) + 1) * 64;
+		bool     special    = special_handling[page_index];
 
-		cnsl->put_string_lf(format("%d] %06o %08o %06o %04o D%d A%d", i, par_value, par_value * 64, pdr_value, pdr_len, !!(pdr_value & 8), pdr_value & 7));
+		cnsl->put_string_lf(format("%d] %06o %08o %06o %04o D%d A%d %d", i, par_value, par_value * 64, pdr_value, pdr_len, !!(pdr_value & 8), pdr_value & 7, special));
 	}
 }
 
@@ -96,6 +96,7 @@ void mmu::setMMR0_as_is(uint16_t value)
 {
 	MMR0 = value;
 	update_io_base();
+	update_special_handling_bits();
 }
 
 void mmu::setMMR0(uint16_t value)
@@ -112,6 +113,7 @@ void mmu::setMMR0(uint16_t value)
 
 	MMR0 = value;
 	update_io_base();
+	update_special_handling_bits();
 }
 
 void mmu::setMMR0Bit(const int bit)
@@ -121,6 +123,7 @@ void mmu::setMMR0Bit(const int bit)
 
 	MMR0 |= 1 << bit;
 	update_io_base();
+	update_special_handling_bits();
 }
 
 void mmu::clearMMR0Bit(const int bit)
@@ -130,6 +133,7 @@ void mmu::clearMMR0Bit(const int bit)
 
 	MMR0 &= ~(1 << bit);
 	update_io_base();
+	update_special_handling_bits();
 }
 
 void mmu::setMMR1(const uint16_t value) 
@@ -172,6 +176,24 @@ void mmu::addToMMR1(const int8_t delta, const uint8_t reg)
 	MMR1 |= reg;
 }
 
+void mmu::update_special_handling_bits()
+{
+	if (is_enabled()) {
+		bool d_i = (MMR3 & 7) != 0;
+
+		for(int page=0; page<64; page++) {
+			special_handling[page] = (pages[page].pdr & 7) != 6 || ((pages[page].pdr >> 8) & 127) != 127 ||
+						 pages[page].par_preshifted >= io_base ||
+						 (get_physical_memory_offset(page + 0) != get_physical_memory_offset(page + 8) && d_i);
+		}
+	}
+	else {
+		memset(special_handling, 0x00, sizeof special_handling);
+		for(int i=0; i<8; i++)
+			special_handling[i * 8 + 7] = true;
+	}
+}
+
 void mmu::write_pdr(const uint32_t a, const int run_mode, const uint16_t value, const word_mode_t word_mode)
 {
 	bool is_d       = a & 16;
@@ -188,6 +210,8 @@ void mmu::write_pdr(const uint32_t a, const int run_mode, const uint16_t value, 
 	}
 
 	pages[page_index].pdr &= ~(32768 + 128 /*A*/ + 64 /*W*/ + 32 + 16);  // set bit 4, 5 & 15 to 0 as they are unused and A/W are set to 0 by writes
+
+	update_special_handling_bits();
 
 	TRACE("mmu WRITE-I/O PDR run-mode %d: %c for %d: %o [%d]", run_mode, is_d ? 'D' : 'I', page, value, word_mode);
 }
@@ -208,6 +232,8 @@ void mmu::write_par(const uint32_t a, const int run_mode, const uint16_t value, 
 	}
 
 	pages[page_index].pdr &= ~(128 /*A*/ + 64 /*W*/);  // reset PDR A/W when PAR is written to
+
+	update_special_handling_bits();
 
 	TRACE("mmu WRITE-I/O PAR run-mode %d: %c for %d: %o (%07o)", run_mode, is_d ? 'D' : 'I', page, word_mode == wm_byte ? value & 0xff : value, pages[page_index].par_preshifted);
 }
