@@ -530,7 +530,7 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 		}
 	}
 	else {
-		m_offset = mmu_->get_PAR_preshifted(page_index) + (addr_in & 8191);
+		m_offset = mmu_->calculate_physical_address(run_mode, addr_in).physical_data;
 	}
 
 	if ((addr_in & 1) && word_mode == wm_word) {
@@ -816,7 +816,7 @@ bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 		TRACE("WRITE to %06o/%07o %c %c: %06o", addr_in, m_offset, space == d_space ? 'D' : 'I', word_mode == wm_byte ? 'B' : 'W', value);
 	}
 	else {
-		m_offset = mmu_->get_PAR_preshifted(page_index) + (addr_in & 8191);
+		m_offset = mmu_->calculate_physical_address(run_mode, addr_in).physical_data;
 	}
 
 	if ((addr_in & 1) && word_mode == wm_word) [[unlikely]] {
