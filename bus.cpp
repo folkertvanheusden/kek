@@ -266,7 +266,7 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 	uint32_t m_offset   = 0;
 
 	if (mmu_->has_special_handling(page_index) == true) {
-		m_offset = mmu_->calculate_physical_address(run_mode, addr_in, false, space);  // TODO FALSE?!
+		m_offset = mmu_->calculate_physical_address(run_mode, addr_in, false, space);
 
 		uint32_t io_base  = mmu_->get_io_base();
 		bool     is_io    = m_offset >= io_base;
