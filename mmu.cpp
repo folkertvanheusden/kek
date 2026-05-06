@@ -96,7 +96,6 @@ void mmu::setMMR0_as_is(uint16_t value)
 {
 	MMR0 = value;
 	update_io_base();
-	update_special_handling_bits();
 }
 
 void mmu::setMMR0(uint16_t value)
@@ -113,7 +112,6 @@ void mmu::setMMR0(uint16_t value)
 
 	MMR0 = value;
 	update_io_base();
-	update_special_handling_bits();
 }
 
 void mmu::setMMR0Bit(const int bit)
@@ -123,7 +121,6 @@ void mmu::setMMR0Bit(const int bit)
 
 	MMR0 |= 1 << bit;
 	update_io_base();
-	update_special_handling_bits();
 }
 
 void mmu::clearMMR0Bit(const int bit)
@@ -133,7 +130,6 @@ void mmu::clearMMR0Bit(const int bit)
 
 	MMR0 &= ~(1 << bit);
 	update_io_base();
-	update_special_handling_bits();
 }
 
 void mmu::setMMR1(const uint16_t value) 
@@ -178,19 +174,10 @@ void mmu::addToMMR1(const int8_t delta, const uint8_t reg)
 
 void mmu::update_special_handling_bits()
 {
-	if (is_enabled()) {
-		bool d_i = (MMR3 & 7) != 0;
-
-		for(int page=0; page<64; page++) {
-			special_handling[page] = (pages[page].pdr & 7) != 6 || ((pages[page].pdr >> 8) & 127) != 127 ||
-						 pages[page].par_preshifted >= io_base ||
-						 (get_physical_memory_offset(page + 0) != get_physical_memory_offset(page + 8) && d_i);
-		}
-	}
-	else {
-		memset(special_handling, 0x00, sizeof special_handling);
-		for(int i=0; i<8; i++)
-			special_handling[i * 8 + 7] = true;
+	for(int page=0; page<64; page++) {
+		special_handling[page] = (pages[page].pdr & 7) != 6 || ((pages[page].pdr >> 8) & 127) != 127 ||
+					 pages[page].par_preshifted >= io_base ||
+					 get_physical_memory_offset(page + 0) != get_physical_memory_offset(page + 8);
 	}
 }
 
