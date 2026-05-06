@@ -167,6 +167,8 @@ void bus::reset()
 		kw11_l_->reset();
 	if (dz11_)
 		dz11_->reset();
+	if (dc11_)
+		dc11_->reset();
 	if (rp06_)
 		rp06_->reset();
 
@@ -239,6 +241,12 @@ void bus::add_DZ11(dz11 *const dz11_)
 {
 	delete this->dz11_;
 	this->dz11_ = dz11_;
+}
+
+void bus::add_DC11(dc11 *const dc11_)
+{
+	delete this->dc11_;
+	this->dc11_ = dc11_;
 }
 
 void bus::del_DZ11()
@@ -482,6 +490,9 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 		if (tty_ && a >= PDP11TTY_BASE && a < PDP11TTY_END)
 			return word_mode == wm_byte ? tty_->read_byte(a) : tty_->read_word(a);
 
+		if (dc11_ && a >= DC11_BASE && a < DC11_END)
+			return word_mode == wm_byte ? dc11_->read_byte(a) : dc11_->read_word(a);
+
 		if (dz11_ && a >= DZ11_BASE && a < DZ11_END)
 			return word_mode == wm_byte ? dz11_->read_byte(a) : dz11_->read_word(a);
 
@@ -715,6 +726,11 @@ bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 		if (tty_ && a >= PDP11TTY_BASE && a < PDP11TTY_END) {
 			TRACE("WRITE-I/O TTY register %d: %06o", (a - PDP11TTY_BASE) / 2, value);
 			word_mode == wm_byte ? tty_->write_byte(a, value) : tty_->write_word(a, value);
+			return false;
+		}
+
+		if (dc11_ && a >= DC11_BASE && a < DC11_END) {
+			word_mode == wm_byte ? dc11_->write_byte(a, value) : dc11_->write_word(a, value);
 			return false;
 		}
 
