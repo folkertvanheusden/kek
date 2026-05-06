@@ -25,6 +25,7 @@
 #include "disk_backend.h"
 #include "disk_backend_file.h"
 #include "disk_backend_nbd.h"
+#include "dc11.h"
 #include "dz11.h"
 #include "gen.h"
 #include "kw11-l.h"
@@ -279,6 +280,7 @@ int main(int argc, char *argv[])
 
 	std::optional<std::string> dz11_device;
 	bool         dz11_setup_telnet = false;
+	bool         dc11_setup_telnet = false;
 
 	int          tcp_port_offset = default_port_offset;
 
@@ -304,6 +306,7 @@ int main(int argc, char *argv[])
 
 			case '2':
 				dz11_setup_telnet = true;
+				dc11_setup_telnet = true;
 				break;
 
 			case 'D':
@@ -547,9 +550,24 @@ int main(int argc, char *argv[])
 	dz11_->begin();
 	b->add_DZ11(dz11_);
 	//
+	//// DC11
+	comm_io *io_channels2 = new comm_io(dc11_n_lines);
+	for(size_t i=0; i<dc11_n_lines; i++) {
+		if (io_channels2->is_defined(i))
+			continue;
+		int port = tcp_port_offset + i + dz11_n_lines;
+		DOLOG(info, false, "Configuring DC11 device for TCP socket on port %d", port);
+		if (io_channels2->set_device(i, new comm_tcp_socket_server(port, dc11_setup_telnet)) == false)
+			DOLOG(warning, false, "Failed to configure device");
+	}
+	dc11 *dc11_ = new dc11(b, io_channels2);
+	dc11_->begin();
+	b->add_DC11(dc11_);
+	//
 
 	tm_11 *tm_11_ = new tm_11(b);
 	b->add_tm11(tm_11_);
+	//
 
 	running = cnsl->get_running_flag();
 

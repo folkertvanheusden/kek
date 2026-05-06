@@ -39,7 +39,8 @@ set(APP_SOURCES
   console_ncurses.cpp
   console_posix.cpp
   cpu.cpp
-  dz11.cpp  # dc11.cpp
+  dc11.cpp
+  dz11.cpp
   debugger.cpp
   device.cpp
   disk_backend.cpp

@@ -32,8 +32,8 @@ private:
 	std::atomic_bool  stop_flag        { false   };
 	std::thread      *th               { nullptr };
 
-	std::vector<comm *> comm_interfaces;
-	std::vector<bool  > connected;
+	comm_io          *const io_channels { nullptr };
+	std::vector<bool> connected;
 
 	std::vector<char>   recv_buffers[dc11_n_lines];
         mutable std::mutex  input_lock  [dc11_n_lines];
@@ -43,7 +43,7 @@ private:
 	bool is_tx_interrupt_enabled(const int line_nr) const;
 
 public:
-	dc11(bus *const b, const std::vector<comm *> & comm_interfaces);
+	dc11(bus *const b, comm_io *const io_channels);
 	virtual ~dc11();
 
 	bool begin();
@@ -51,7 +51,7 @@ public:
 	JsonDocument serialize() const;
 	static dc11 *deserialize(const JsonVariantConst j, bus *const b);
 
-	std::vector<comm *> *get_comm_interfaces() { return &comm_interfaces; }
+	comm_io * get_comm_interfaces() { return io_channels; }
 
 	void reset() override;
 
