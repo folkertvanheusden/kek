@@ -46,6 +46,7 @@ class mmu : public device
 private:
 	// 8 pages, D/I, 3 modes and 1 invalid mode
 	page_t   pages[64];
+	bool     special_handling[64];
 
 	uint16_t MMR0    { 0 };
 	uint16_t MMR1    { 0 };
@@ -62,6 +63,7 @@ private:
 	JsonDocument add_par_pdr(const int run_mode, const bool is_d) const;
 	void set_par_pdr(const JsonVariantConst j_in, const int run_mode, const bool is_d);
 
+	void update_special_handling_bits();
 	void update_io_base() { io_base = is_enabled() ? (getMMR3() & 16 ? 017760000 : 0760000) : 0160000; }
 
 	void verify_page_access (const int page_index, const bool is_write);
@@ -87,6 +89,8 @@ public:
 	bool     is_enabled() const { return MMR0 & 1; }
 	bool     is_locked()  const { return MMR0 & 0160000; }
 
+	bool     has_special_handling(const int page_index) { return special_handling[page_index]; }
+	uint32_t get_PAR_preshifted(const int page_index) const { return pages[page_index].par_preshifted; }
 	int      calc_par_pdr_index(const int run_mode, const bool d, const int apf) const { return apf + (d << 3) + (run_mode << 4); }
 	std::tuple<int, bool, int> explode_page_index(const int page) { return { page >> 4, (page >> 3) & 1, page & 7 }; }
 	void     set_page_accessed  (const int page_index) { pages[page_index].pdr |= 1 << 7; }

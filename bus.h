@@ -1,4 +1,4 @@
-// (C) 2018-2024 by Folkert van Heusden
+// (C) 2018-2026 by Folkert van Heusden
 // Released under MIT license
 
 #pragma once
@@ -11,6 +11,7 @@
 #include <stdio.h>
 
 #include "device.h"
+#include "dc11.h"
 #include "dz11.h"
 #include "mmu.h"
 #include "rk05.h"
@@ -70,10 +71,9 @@ private:
 	kw11_l  *kw11_l_ { nullptr };
 	mmu     *mmu_    { nullptr };
 	memory  *m       { nullptr };
+	dc11    *dc11_   { nullptr };
 	dz11    *dz11_   { nullptr };
 	rp06    *rp06_   { nullptr };
-
-	std::optional<std::tuple<uint32_t, uint16_t, uint8_t *> > rom;
 
 	uint16_t microprogram_break_register { 0 };
 
@@ -100,11 +100,6 @@ public:
 
 	void set_memory_size(const int n_pages);
 
-	// use bus::write to set
-	void    add_rom     (const uint32_t offset, const uint16_t len);
-	uint8_t get_rom_byte(const uint32_t offset);
-	void    put_rom_byte(const uint32_t offset, const uint8_t v);
-
 	void add_ram   (memory *const m      );
 	void add_cpu   (cpu    *const c      );
 	void add_mmu   (mmu    *const mmu_   );
@@ -113,6 +108,7 @@ public:
 	void add_rl02  (rl02   *const rl02_  );
 	void add_tty   (tty    *const tty_   );
 	void add_KW11_L(kw11_l *const kw11_l_);
+	void add_DC11  (dc11   *const dc11_  );
 	void add_DZ11  (dz11   *const dz11_  );
 	// required to release devices when doing a reload
 	void del_DZ11  ();
@@ -125,6 +121,7 @@ public:
 	mmu    *getMMU()    { return mmu_;    }
 	rk05   *getRK05()   { return rk05_;   }
 	rl02   *getRL02()   { return rl02_;   }
+	dc11   *getDC11()   { return dc11_;   }
 	dz11   *getDZ11()   { return dz11_;   }
 	tm_11  *getTM11()   { return tm11;    }
 	rp06   *getRP06()   { return rp06_;   }

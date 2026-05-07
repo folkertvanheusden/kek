@@ -20,18 +20,13 @@
 #include "utils.h"
 
 
-#define ESP32_UART UART_NUM_1
-
-// this line is reserved for a serial port
-constexpr const int serial_line = 3;
-
 const char *const dc11_register_names[] { "RCSR", "RBUF", "TSCR", "TBUF" };
 
-dc11::dc11(bus *const b, const std::vector<comm *> & comm_interfaces):
+dc11::dc11(bus *const b, comm_io *const io_channels):
 	b(b),
-	comm_interfaces(comm_interfaces)
+	io_channels(io_channels)  // FIXME must be 4 elements
 {
-	connected.resize(4);  // FIXME keep same size as comm_interfaces
+	connected.resize(4);
 }
 
 dc11::~dc11()
@@ -45,27 +40,15 @@ dc11::~dc11()
 		delete th;
 	}
 
-	for(auto & c : comm_interfaces) {
-		DOLOG(debug, false, "Stopping %s", c->get_identifier().c_str());
-		delete c;
-	}
+	delete io_channels;
 }
 
 void dc11::show_state(console *const cnsl) const
 {
-	for(size_t i=0; i<comm_interfaces.size(); i++) {
+	for(size_t i=0; i<dc11_n_lines; i++) {
 		cnsl->put_string_lf(format("* LINE %zu", i + 1));
 
-#if 0  // TODO
-		if (i == serial_line) {
-			cnsl->put_string_lf(format(" TTY thread running: %s", serial_thread_running ? "true": "false" ));
-			cnsl->put_string_lf(format(" TTY enabled: %s", serial_enabled ? "true": "false" ));
-		}
-		else {
-			if (pfds[dc11_n_lines + i].fd != INVALID_SOCKET)
-				cnsl->put_string_lf(" Connected to: " + get_endpoint_name(pfds[dc11_n_lines + i].fd));
-		}
-#endif
+		cnsl->put_string_lf(" identifier: " + io_channels->get_identifier(i));
 
 		std::unique_lock<std::mutex> lck(input_lock[i]);
 		cnsl->put_string_lf(format(" Characters in buffer: %zu", recv_buffers[i].size()));
@@ -86,12 +69,12 @@ void dc11::test_port(const size_t nr, const std::string & txt) const
 {
 	DOLOG(info, false, "DC11 test line %zu", nr);
 
-	comm_interfaces.at(nr)->send_data(reinterpret_cast<const uint8_t *>(txt.c_str()), txt.size());
+	io_channels->send_data(nr, reinterpret_cast<const uint8_t *>(txt.c_str()), txt.size());
 }
 
 void dc11::test_ports(const std::string & txt) const
 {
-	for(size_t i=0; i<comm_interfaces.size(); i++)
+	for(size_t i=0; i<dc11_n_lines; i++)
 		test_port(i, txt);
 }
 
@@ -111,12 +94,11 @@ void dc11::operator()()
 	while(!stop_flag) {
 		myusleep(10000);  // TODO replace polling
 
-		for(size_t line_nr=0; line_nr<comm_interfaces.size(); line_nr++) {
+		for(size_t line_nr=0; line_nr<dc11_n_lines; line_nr++) {
 			std::unique_lock<std::mutex> lck(input_lock[line_nr]);
 
 			// (dis-)connected?
-			bool is_connected = comm_interfaces.at(line_nr)->is_connected();
-
+			bool is_connected  = io_channels->is_connected(line_nr);
 			if (is_connected != connected[line_nr]) {
 				DOLOG(debug, false, "DC11 line %d state changed to %d", line_nr, is_connected);
 #if defined(ESP32)
@@ -136,11 +118,9 @@ void dc11::operator()()
 
 			// receive data
 			bool have_data = false;
-			while(comm_interfaces.at(line_nr)->has_data()) {
-				uint8_t buffer = comm_interfaces.at(line_nr)->get_byte();
-
+			while(io_channels->has_data(line_nr)) {
+				uint8_t buffer = io_channels->get_byte(line_nr);
 				recv_buffers[line_nr].push_back(char(buffer));
-
 				have_data = true;
 			}
 
@@ -195,7 +175,7 @@ uint16_t dc11::read_word(const uint16_t addr)
 		registers[line_nr * 4 + 0] &= ~1;  // DTR: bit 0  [RCSR]
 		registers[line_nr * 4 + 0] &= ~4;  // CD : bit 2
 
-		if (comm_interfaces.at(line_nr)->is_connected()) {
+		if (connected[line_nr]) {
 			registers[line_nr * 4 + 0] |= 1;
 			registers[line_nr * 4 + 0] |= 4;
 		}
@@ -231,7 +211,7 @@ uint16_t dc11::read_word(const uint16_t addr)
 		registers[line_nr * 4 + 2] &= ~2;  // CTS: bit 1  [TSCR]
 		registers[line_nr * 4 + 2] &= ~128;  // READY: bit 7
 
-		if (comm_interfaces.at(line_nr)->is_connected()) {
+		if (io_channels->is_connected(line_nr)) {
 			registers[line_nr * 4 + 2] |= 2;
 			registers[line_nr * 4 + 2] |= 128;
 		}
@@ -279,7 +259,7 @@ void dc11::write_word(const uint16_t addr, const uint16_t v)
 		else
 			TRACE("DC11: transmit %c on line %d", c, line_nr);
 
-		comm_interfaces.at(line_nr)->send_data(reinterpret_cast<const uint8_t *>(&c), 1);
+		io_channels->send_data(line_nr, reinterpret_cast<const uint8_t *>(&c), 1);
 
 		if (is_tx_interrupt_enabled(line_nr))
 			trigger_interrupt(line_nr, true);
@@ -291,14 +271,9 @@ void dc11::write_word(const uint16_t addr, const uint16_t v)
 JsonDocument dc11::serialize() const
 {
 	JsonDocument j;
+	j["interfaces"] = io_channels->serialize();
 
-	JsonDocument j_interfaces;
-	JsonArray    j_interfaces_work = j_interfaces.to<JsonArray>();
-	for(auto & c: comm_interfaces)
-		j_interfaces_work.add(c->serialize());
-	j["interfaces"] = j_interfaces;
-
-	for(int regnr=0; regnr<4; regnr++)
+	for(int regnr=0; regnr<4 * dc11_n_lines; regnr++)
 		j[format("register-%d", regnr)] = registers[regnr];
 
 	return j;
@@ -306,16 +281,12 @@ JsonDocument dc11::serialize() const
 
 dc11 *dc11::deserialize(const JsonVariantConst j, bus *const b)
 {
-	std::vector<comm *> interfaces;
+	comm_io *io_channels = comm_io::deserialize(j["interfaces"], b);
 
-	JsonArrayConst j_interfaces = j["interfaces"];
-	for(auto v: j_interfaces)
-		interfaces.push_back(comm::deserialize(v, b));
-
-	dc11 *r = new dc11(b, interfaces);
+	dc11 *r = new dc11(b, io_channels);
 	r->begin();
 
-	for(int regnr=0; regnr<4; regnr++)
+	for(int regnr=0; regnr<4 * dc11_n_lines; regnr++)
 		r->registers[regnr] = j[format("register-%d", regnr)];
 
 	return r;

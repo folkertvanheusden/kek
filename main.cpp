@@ -25,6 +25,7 @@
 #include "disk_backend.h"
 #include "disk_backend_file.h"
 #include "disk_backend_nbd.h"
+#include "dc11.h"
 #include "dz11.h"
 #include "gen.h"
 #include "kw11-l.h"
@@ -258,14 +259,13 @@ void help()
 	printf("-r d.img load file as a disk device\n");
 	printf("-N host:port  use NBD-server as disk device (like -r)\n");
 	printf("-R x     select disk type (rk05, rl02, rp06 or rp07)\n");
-	printf("-p 0123   set CPU start pointer to (octal) value\n");
+	printf("-p 123   set CPU start pointer to octal value\n");
 	printf("-b       enable bootloader (builtin)\n");
 	printf("-n       ncurses UI\n");
 	printf("-d       enable debugger\n");
 	printf("-f x     first process the commands from file x before entering the debugger\n");
 	printf("-S x     set ram size (in number of 8 kB pages)\n");
 	printf("-s x,y   set console switche state: set bit x (0...15) to y (0/1)\n");
-	printf("-m x,y   allocate y bytes of ram at address x to load a rom in\n");
 	printf("-t       enable tracing (disassemble to stderr, requires -d as well)\n");
 	printf("-l x     log to file x\n");
 	printf("-L x,y   set log level for screen (x) and file (y)\n");
@@ -318,8 +318,7 @@ int main(int argc, char *argv[])
 
 	std::optional<std::string> dz11_device;
 	bool         dz11_setup_telnet = false;
-
-	std::optional<std::pair<uint32_t, uint16_t> > rom;
+	bool         dc11_setup_telnet = false;
 
 	int          tcp_port_offset = default_port_offset;
 
@@ -345,6 +344,7 @@ int main(int argc, char *argv[])
 
 			case '2':
 				dz11_setup_telnet = true;
+				dc11_setup_telnet = true;
 				break;
 
 			case 'D':
@@ -373,16 +373,6 @@ int main(int argc, char *argv[])
 					console_switches &= ~(1 << bit);
 					console_switches |= state << bit;
 
-					break;
-				  }
-
-			case 'm': {
-					char *c = strchr(optarg, ',');
-					if (!c)
-						error_exit(false, "-m: parameter missing");
-					uint32_t addr = std::stoi(optarg, nullptr, 8);
-					uint32_t len  = std::stoi(c + 1,  nullptr, 8);
-					rom = { addr, len };
 					break;
 				  }
 
@@ -562,9 +552,6 @@ int main(int argc, char *argv[])
 		myusleep(251000);
 	}
 
-	if (rom.has_value())
-		b->add_rom(rom.value().first, rom.value().second);
-
 	if (b->getTty() == nullptr) {
 		tty *tty_ = new tty(cnsl, b);
 		b->add_tty(tty_);
@@ -605,9 +592,24 @@ int main(int argc, char *argv[])
 	dz11_->begin();
 	b->add_DZ11(dz11_);
 	//
+	//// DC11
+	comm_io *io_channels2 = new comm_io(dc11_n_lines);
+	for(size_t i=0; i<dc11_n_lines; i++) {
+		if (io_channels2->is_defined(i))
+			continue;
+		int port = tcp_port_offset + i + dz11_n_lines;
+		DOLOG(info, false, "Configuring DC11 device for TCP socket on port %d", port);
+		if (io_channels2->set_device(i, new comm_tcp_socket_server(port, dc11_setup_telnet)) == false)
+			DOLOG(warning, false, "Failed to configure device");
+	}
+	dc11 *dc11_ = new dc11(b, io_channels2);
+	dc11_->begin();
+	b->add_DC11(dc11_);
+	//
 
 	tm_11 *tm_11_ = new tm_11(b);
 	b->add_tm11(tm_11_);
+	//
 
 	running = cnsl->get_running_flag();
 

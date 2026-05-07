@@ -497,7 +497,7 @@ static bool set_blinkenlight_controls(const std::string & server, const int port
 	std::vector<control_info> selection;
 	uint32_t sum = 0;
 	for(auto & control: controls) {
-		if (control.second.type != 1 && control.second.panel_nr == panel_nr) {
+		if (control.second.type == 2 && control.second.panel_nr == panel_nr) {
 			selection.push_back(control.second);
 			sum += control.second.value_bytelen;
 		}
