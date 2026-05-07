@@ -312,8 +312,7 @@ void deqna::reset()
 	for(int i=0; i<8; i++)
 		registers[i] = 0;
 	registers[6] = 0774;
-	registers[7] = // 0x100 |  // IL is asserted initially, low active
-		32 |  // receive list invalid
+	registers[7] = 32 |  // receive list invalid
 		16;  // transmit list invalid
 }
 
