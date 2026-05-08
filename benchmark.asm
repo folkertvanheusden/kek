@@ -226,17 +226,16 @@ finished: halt
 	jmp finished
 
 make_hex: 
-	movb (R1), R4     ; get first byte to process
+	movb 1(R1), R4     ; get first byte to process
 	ash #-4,R4        ; high nibble
 	BIC #177760,R4
 	add #hex_chars, R4
 	movb (R4),(R2)+
-	movb (R1), R4     ; re-get byte to process
+	movb 1(R1), R4     ; re-get byte to process
 	BIC #177760,R4        ; low nibble
 	add #hex_chars, R4
 	movb (R4),(R2)+
 	;
-	inc R1
 	movb (R1), R4     ; get second byte to process
 	ash #-4,R4        ; high nibble
 	BIC #177760,R4
