@@ -29,11 +29,7 @@
 #include "comm_esp32_hardwareserial.h"
 #include "comm_tcp_socket_client.h"
 #include "comm_tcp_socket_server.h"
-#if defined(SHA2017)
-#include "console_shabadge.h"
-#else
 #include "console_esp32.h"
-#endif
 #include "cpu.h"
 #include "debugger.h"
 #include "disk_backend.h"
