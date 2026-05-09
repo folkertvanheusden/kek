@@ -61,34 +61,6 @@ void set_boot_loader(bus *const b, const bootloader_t which)
 		DOLOG(debug, false, "Enabling RL02 bootloader");
 		start = offset = 01000;
 
-		/* from https://www.pdp-11.nl/peripherals/disk/rl-info.html
-		static const uint16_t rl02_code[] = {
-			0012701,
-			0174400,
-			0012761,
-			0000013,
-			0000004,
-			0012711,
-			0000004,
-			0105711,
-			0100376,
-			0005061,
-			0000002,
-			0005061,
-			0000004,
-			0012761,
-			0177400,
-			0000006,
-			0012711,
-			0000014,
-			0105711,
-			0100376,
-			0005007
-		};
-
-		size = 21;
-		*/
-
 		// from http://gunkies.org/wiki/RL11_disk_controller
 		static const uint16_t rl02_code[] = {
 			0012700,
