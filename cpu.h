@@ -93,7 +93,7 @@ private:
 
 	uint16_t add_register(const int nr, const uint16_t value);
 
-	void     addToMMR1(const gam_rc_t & g);
+	void     add_to_MMR1(const gam_rc_t & g);
 
 	gam_rc_t getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t word_mode, const bool read_value = true);
 	gam_rc_t getGAMAddress(const uint8_t mode, const int reg, const word_mode_t word_mode);
