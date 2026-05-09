@@ -910,6 +910,16 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 
 		return true;
 	}
+	else if (parts[0] == "d" || parts[0] == "deposit") {
+		if (parts.size() != 3)
+			cnsl->put_string_lf("deposit: parameter(s) missing");
+		else {
+			uint16_t a = std::stoi(parts[1], nullptr, 8);
+			uint16_t v = std::stoi(parts[2], nullptr, 8);
+			c->getBus()->write_word(a, v);
+			cnsl->put_string_lf(format("Set %06o to %06o", a, v));
+		}
+	}
 	else if (parts[0] == "setmem") {
 		auto a_it = kv.find("a");
 		auto v_it = kv.find("v");
@@ -1329,6 +1339,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			"setpsw x      - set PSW value y (octal)",
 			"getpsw        -",
 			"setmem ...    - set memory (a=) to value (v=), both in octal, one byte",
+			"d[eposit] x y - set memory x to value y, octal word",
 			"getmem ...    - get memory (a=), in octal, one byte",
 			"toggle ...    - set switch (s=, 0...15 (decimal)) of the front panel to state (t=, 0 or 1)",
 			"setinthz x    - set KW11-L interrupt frequency (Hz)",
