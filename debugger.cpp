@@ -831,17 +831,6 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 
 		return true;
 	}
-	else if (parts[0] == "getreg") {
-		if (parts.size() == 2) {
-			int reg = std::stoi(parts.at(1));
-			cnsl->put_string_lf(format("REG %d = %06o", reg, c->get_register(reg)));
-		}
-		else {
-			cnsl->put_string_lf("getreg requires a register");
-		}
-
-		return true;
-	}
 	else if (parts[0] == "setstack") {
 		if (parts.size() == 3) {
 			int      reg = std::stoi(parts.at(1));
@@ -853,17 +842,6 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		}
 		else {
 			cnsl->put_string_lf("setstack requires a register and an octal value");
-		}
-
-		return true;
-	}
-	else if (parts[0] == "getstack") {
-		if (parts.size() == 2) {
-			int reg = std::stoi(parts.at(1));
-			cnsl->put_string_lf(format("REG %d = %06o", reg, c->get_stackpointer(reg)));
-		}
-		else {
-			cnsl->put_string_lf("getreg requires a stack register");
 		}
 
 		return true;
@@ -1210,15 +1188,19 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 
 		return true;
 	}
-	else if (parts[0] == "bic" && parts.size() == 2) {
-		auto rc = load_tape(b, parts[1].c_str());
-		if (rc.has_value()) {
-			c->setPC(rc.value());
-
-			cnsl->put_string_lf("BIC/LDA file loaded");
-		}
+	else if (parts[0] == "bic") {
+		if (parts.size() != 2)
+			cnsl->put_string_lf("BIC/LDA parameter missing");
 		else {
-			cnsl->put_string_lf("BIC/LDA failed to load");
+			auto rc = load_tape(b, parts[1].c_str());
+			if (rc.has_value()) {
+				c->setPC(rc.value());
+
+				cnsl->put_string_lf("BIC/LDA file loaded");
+			}
+			else {
+				cnsl->put_string_lf("BIC/LDA failed to load");
+			}
 		}
 
 		return true;
@@ -1324,13 +1306,11 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			"setpc x       - set PC to value (octal)",
 			"getpc         -",
 			"setreg x y    - set register x to value y (octal)",
-			"getreg x      -",
 			"setstack x y  - set stack register x to value y (octal)",
-			"getstack x    -",
 			"setpsw x      - set PSW value y (octal)",
 			"getpsw        -",
-			"setmem ...    - set memory (a=) to value (v=), both in octal, one byte",
 			"d[eposit] x y - set memory x to value y, octal word",
+			"setmem ...    - set memory (a=) to value (v=), both in octal, one byte",
 			"getmem ...    - get memory (a=), in octal, one byte",
 			"toggle ...    - set switch (s=, 0...15 (decimal)) of the front panel to state (t=, 0 or 1)",
 			"setinthz x    - set KW11-L interrupt frequency (Hz)",
