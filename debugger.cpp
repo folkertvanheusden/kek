@@ -429,12 +429,12 @@ void configure_disk(bus *const b, console *const cnsl)
 	}
 }
 
-// returns size of instruction (in bytes)
-int disassemble(cpu *const c, console *const cnsl, const uint16_t pc, const bool instruction_only)
+// returns size of instruction (in bytes) and duration
+std::pair<int, uint32_t> disassemble(cpu *const c, console *const cnsl, const uint16_t pc, const bool instruction_only)
 {
 	auto data      = c->disassemble(pc);
 	if (data.empty())
-		return 2;  // problem!
+		return { 2, 0 };  // problem!
 
 	auto registers = data["registers"];
 	auto psw       = data["psw"][0];
@@ -454,7 +454,8 @@ int disassemble(cpu *const c, console *const cnsl, const uint16_t pc, const bool
 	std::string MMR2 = data["MMR2"].at(0);
 	std::string MMR3 = data["MMR3"].at(0);
 
-	float duration = std::stoi(data["duration"].at(0)) / 1000.;
+	uint32_t duration   = std::stoi(data["duration"].at(0));
+	float    duration_f = duration / 1000.;
 
 	std::string result;
 
@@ -463,7 +464,7 @@ int disassemble(cpu *const c, console *const cnsl, const uint16_t pc, const bool
 				pc,
 				instruction_values.c_str(),
 				work_values.c_str(),
-				duration,
+				duration_f,
 				instruction.c_str());
 	else
 		result = format("R0: %s, R1: %s, R2: %s, R3: %s, R4: %s, R5: %s, SP: %s, PC: %06o, PSW: %s (%s), instr: %s: %s (%.3f us)",
@@ -471,7 +472,7 @@ int disassemble(cpu *const c, console *const cnsl, const uint16_t pc, const bool
 				registers[6].c_str(), pc, 
 				psw.c_str(), data["psw-value"][0].c_str(),
 				instruction_values.c_str(),
-				instruction.c_str(), duration);
+				instruction.c_str(), duration_f);
 
 	if (cnsl)
 		cnsl->put_string_lf(result);
@@ -484,7 +485,7 @@ int disassemble(cpu *const c, console *const cnsl, const uint16_t pc, const bool
 
 	DOLOG(debug, false, "SP: %s, MMR0/1/2/3: %s/%s/%s/%s", sp.c_str(), MMR0.c_str(), MMR1.c_str(), MMR2.c_str(), MMR3.c_str());
 
-	return data["instruction-values"].size() * 2;
+	return { data["instruction-values"].size() * 2, duration };
 }
 
 std::map<std::string, std::string> split(const std::vector<std::string> & kv_array, const std::string & splitter)
@@ -807,7 +808,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		bool show_registers = kv.find("pc") == kv.end();
 
 		for(int i=0; i<n; i++) {
-			pc += disassemble(c, cnsl, pc, !show_registers);
+			pc += disassemble(c, cnsl, pc, !show_registers).first;
 			show_registers = false;
 		}
 
@@ -1381,6 +1382,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 	else {
 		reset_cpu = false;
 
+		uint64_t took = 0;
 		while(*stop_event == EVENT_NONE) {
 			if (state->trace_start_addr != -1 && c->getPC() == state->trace_start_addr)
 				settrace(true);
@@ -1389,7 +1391,8 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 				if (!state->single_step)
 					TRACE("---");
 
-				disassemble(c, state->single_step ? cnsl : nullptr, c->getPC(), false);
+				auto rc = disassemble(c, state->single_step ? cnsl : nullptr, c->getPC(), false);
+				took += rc.second;
 			}
 
 			auto bp_result = c->check_breakpoint();
@@ -1403,6 +1406,8 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			if (state->single_step && --state->n_single_step == 0)
 				break;
 		}
+		if (gettrace())
+			cnsl->put_string_lf(format("Took %.3f emulated milliseconds", took / 1000000.));
 	}
 
 	*cnsl->get_running_flag() = false;
