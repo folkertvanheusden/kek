@@ -28,18 +28,10 @@ constexpr const uint32_t B32_MSWSET = 0xffff0000;
 constexpr const uint64_t B64_MSWSET = 0xffffffff00000000ll;
 
 typedef struct {
-	int      delta;
-	unsigned reg;
-} mmr1_delta_t;
-
-typedef struct {
 	word_mode_t    word_mode;
 	rm_selection_t mode_selection;
 	d_i_space_t    space;
 	int            access_mode;
-
-	// for MMR1 register
-	mmr1_delta_t   mmr1_update;
 
 	bool           is_addr;
 	union {
@@ -96,7 +88,7 @@ private:
 
 	uint16_t add_register(const int nr, const uint16_t value);
 
-	void     add_to_MMR1(const gam_rc_t & g);
+	void     add_to_MMR1(const int reg, const int delta);
 
 	gam_rc_t getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t word_mode, const bool read_value = true);
 	gam_rc_t getGAMAddress(const uint8_t mode, const int reg, const word_mode_t word_mode);

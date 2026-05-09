@@ -448,27 +448,29 @@ void cpu::unqueue_interrupt(const uint8_t level, const uint16_t vector)
 #endif
 }
 
-void cpu::add_to_MMR1(const gam_rc_t & g)
+void cpu::add_to_MMR1(const int reg, const int delta)
 {
-	if (mmu_->isMMR1Locked() == false && g.mmr1_update.delta) {
-		auto & update = g.mmr1_update;
-		TRACE("MMR1: add %d to register R%d", update.delta, update.reg);
-		assert(update.delta);
-		mmu_->add_to_MMR1(update.delta, update.reg);
+	assert(reg >= 0 && reg < 8);
+	assert(delta >= -2 && delta <= 2);
+
+	if (mmu_->isMMR1Locked() == false) {
+		TRACE("MMR1: add %d to register R%d", delta, reg);
+		mmu_->add_to_MMR1(delta, reg);
 	}
 }
 
 // GAM = general addressing modes
 gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t word_mode, const bool read_value)
 {
-	gam_rc_t    g { word_mode, rm_cur, i_space, mode, { }, true, 0, { } };
-        uint16_t    temp = 0;
+	gam_rc_t    g { word_mode, rm_cur, i_space, mode, true, 0, { } };
 	d_i_space_t isR7_space = reg == 7 ? i_space : (mmu_->get_use_data_space(getPSW_runmode()) ? d_space : i_space);
 	//                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ always d_space here? TODO
 
 	g.space     = isR7_space;
 
+        uint16_t temp      = 0;
 	uint16_t next_word = 0;
+	int      delta     = 0;
 
 	switch(mode) {
 		case 0:  // Rn
@@ -483,14 +485,15 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t wo
 			break;
 		case 2:  // (Rn)+  /  #n
 			g.addr  = get_register(reg);
-			add_register(reg, word_mode == wm_word || reg >= 6 ? 2 : 1);
-			g.mmr1_update = { word_mode == wm_word || reg >= 6 ? 2 : 1, reg };
+			delta   = word_mode == wm_word || reg >= 6 ? 2 : 1;
+			add_register(reg, delta);
+			add_to_MMR1(reg, delta);
 			if (read_value)
 				g.value = b->read(g.addr, word_mode, rm_cur, isR7_space);
 			break;
 		case 3:  // @(Rn)+  /  @#a
 			g.addr  = b->read(get_register(reg), wm_word, rm_cur, isR7_space);
-			g.mmr1_update = { 2, reg };
+			add_to_MMR1(reg, 2);
 			g.space = d_space;
 			// might be wrong: the adds should happen when the read is really performed(?), because of traps
 			add_register(reg, 2);
@@ -498,8 +501,9 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t wo
 				g.value = b->read(g.addr, word_mode, rm_cur, g.space);
 			break;
 		case 4:  // -(Rn)
-			temp    = add_register(reg, word_mode == wm_word || reg >= 6 ? -2 : -1);
-			g.mmr1_update = { word_mode == wm_word || reg >= 6 ? -2 : -1, reg };
+			delta   = word_mode == wm_word || reg >= 6 ? -2 : -1;
+			temp    = add_register(reg, delta);
+			add_to_MMR1(reg, delta);
 			g.space = d_space;
 			g.addr  = temp;
 			if (read_value)
@@ -507,7 +511,7 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t wo
 			break;
 		case 5:  // @-(Rn)
 			temp    = add_register(reg, -2);
-			g.mmr1_update = { -2, reg };
+			add_to_MMR1(reg, -2);
 			g.addr  = b->read(temp, wm_word, rm_cur, isR7_space);
 			g.space = d_space;
 			if (read_value)
@@ -584,13 +588,9 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 
 				    if (word_mode == wm_byte && dst_mode == 0) {
 					    set_register(dst_reg, int8_t(g_src.value.value()));  // int8_t: sign extension
-					    add_to_MMR1(g_src);
 				    }
 				    else {
 					    auto g_dst = getGAMAddress(dst_mode, dst_reg, word_mode);
-					    add_to_MMR1(g_dst);
-					    add_to_MMR1(g_src);
-
 					    set_flags = putGAM(g_dst, g_src.value.value());
 				    }
 
@@ -603,9 +603,6 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 		case 0b010: { // CMP/CMPB Compare Word/Byte
 				    gam_rc_t g_src = getGAM(src_mode, src_reg, word_mode);
 				    auto     g_dst = getGAM(dst_mode, dst_reg, word_mode);
-
-				    add_to_MMR1(g_dst);
-				    add_to_MMR1(g_src);
 
 				    uint16_t temp  = (g_src.value.value() - g_dst.value.value()) & word_mode_mask[word_mode];
 
@@ -621,9 +618,6 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 				    gam_rc_t g_src  = getGAM(src_mode, src_reg, word_mode);
 				    auto     g_dst  = getGAM(dst_mode, dst_reg, word_mode);
 
-				    add_to_MMR1(g_dst);
-				    add_to_MMR1(g_src);
-
 				    uint16_t result = (g_dst.value.value() & g_src.value.value()) & word_mode_mask[word_mode];
 
 				    setPSW_flags_nzv(result, word_mode);
@@ -635,8 +629,6 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 				  gam_rc_t g_src  = getGAM(src_mode, src_reg, word_mode);
 
 				  if (dst_mode == 0) {
-					  add_to_MMR1(g_src);  // keep here because of order of updates
-
 					  uint16_t v      = get_register(dst_reg);  // need the full word
 					  uint16_t result = v & ~g_src.value.value();
 
@@ -646,10 +638,6 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 				  }
 				  else {
 					  auto     g_dst  = getGAM(dst_mode, dst_reg, word_mode);
-
-					  add_to_MMR1(g_dst);
-					  add_to_MMR1(g_src);
-
 					  uint16_t result = g_dst.value.value() & ~g_src.value.value();
 
 					  if (put_result(g_dst, result))
@@ -663,8 +651,6 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 				  gam_rc_t g_src  = getGAM(src_mode, src_reg, word_mode);
 
 				  if (dst_mode == 0) {
-					  add_to_MMR1(g_src);  // keep here because of order of updates
-
 					  uint16_t v      = get_register(dst_reg);  // need the full word
 					  uint16_t result = v | g_src.value.value();
 
@@ -676,10 +662,6 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 				  }
 				  else {
 					  auto     g_dst  = getGAM(dst_mode, dst_reg, word_mode);
-
-					  add_to_MMR1(g_dst);
-					  add_to_MMR1(g_src);
-
 					  uint16_t result = g_dst.value.value() | g_src.value.value();
 
 					  if (put_result(g_dst, result)) {
@@ -695,10 +677,6 @@ bool cpu::double_operand_instructions(const uint16_t instr)
 		case 0b110: { // ADD/SUB Add/Subtract Word
 				    auto     g_ssrc = getGAM(src_mode, src_reg, wm_word);
 				    auto     g_dst  = getGAM(dst_mode, dst_reg, wm_word);
-
-				    add_to_MMR1(g_dst);
-				    add_to_MMR1(g_ssrc);
-
 				    int16_t  result = 0;
 
 				    if (instr & 0x8000)  // SUB
@@ -802,9 +780,7 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 	switch(operation) {
 		case 0: { // MUL
 				int16_t R1  = get_register(reg);
-
 				auto    R2g = getGAM(dst_mode, dst_reg, wm_word);
-			        add_to_MMR1(R2g);
 				int16_t R2  = R2g.value.value();
 
 				int32_t result = R1 * R2;
@@ -821,9 +797,7 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 
 		case 1: { // DIV
 				auto    R2g     = getGAM(dst_mode, dst_reg, wm_word);
-			        add_to_MMR1(R2g);
 				int16_t divider = R2g.value.value();
-
 				int32_t R0R1    = (uint32_t(get_register(reg)) << 16) | get_register(reg | 1);
 
 				if (divider == 0) {  // divide by zero
@@ -867,9 +841,7 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 		case 2: { // ASH
 				uint32_t R         = get_register(reg);
 			        auto     g_dst     = getGAM(dst_mode, dst_reg, wm_word);
-			        add_to_MMR1(g_dst);
 				int      shift     = g_dst.value.value() & 077;
-
 				uint32_t new_value = shifter(R, shift, false);
 
 				set_register(reg, new_value);
@@ -880,9 +852,7 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 		case 3: { // ASHC
 				uint32_t R0R1      = (uint32_t(get_register(reg)) << 16) | get_register(reg | 1);
 			        auto     g_dst     = getGAM(dst_mode, dst_reg, wm_word);
-			        add_to_MMR1(g_dst);
 				int      shift     = g_dst.value.value() & 077;
-
 				uint32_t new_value = shifter(R0R1, shift, true);
 
 				set_register(reg,     new_value >> 16  );
@@ -894,9 +864,7 @@ bool cpu::additional_double_operand_instructions(const uint16_t instr)
 		case 4: { // XOR (word only)
 			  	uint16_t reg_v = get_register(reg);  // in case it is R7
 			        auto     g_dst = getGAM(dst_mode, dst_reg, wm_word);
-				add_to_MMR1(g_dst);
 				uint16_t vl    = g_dst.value.value() ^ reg_v;
-
 				bool set_flags = putGAM(g_dst, vl);
 
 				if (set_flags)
@@ -933,8 +901,6 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						 return false;
 
 					 auto g_dst = getGAM(dst_mode, dst_reg, word_mode);
-					 add_to_MMR1(g_dst);
-
 					 uint16_t v = g_dst.value.value();
 
 					 v = (v << 8) | (v >> 8);
@@ -961,8 +927,6 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					  }
 					  else {
 						  auto g_dst = getGAMAddress(dst_mode, dst_reg, word_mode);
-						  add_to_MMR1(g_dst);
-
 						  set_flags = putGAM(g_dst, 0);
 					  }
 
@@ -989,7 +953,6 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					  }
 					  else {
 						  auto a = getGAM(dst_mode, dst_reg, word_mode);
-						  add_to_MMR1(a);
 						  v = a.value.value();
 
 						  if (word_mode == wm_byte)
@@ -1024,7 +987,6 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					  }
 					  else {
 						  auto    a         = getGAM(dst_mode, dst_reg, word_mode);
-						  add_to_MMR1(a);
 						  int32_t vl        = (a.value.value() + 1) & word_mode_mask[word_mode];
 
 						  bool    set_flags = b->write(a.addr, a.word_mode, vl, a.mode_selection, a.space) == false;
@@ -1056,7 +1018,6 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					  }
 					  else {
 						  auto     a         = getGAM(dst_mode, dst_reg, word_mode);
-						  add_to_MMR1(a);
 						  int32_t  vl        = (a.value.value() - 1) & word_mode_mask[word_mode];
 
 						  bool     set_flags = b->write(a.addr, a.word_mode, vl, a.mode_selection, a.space) == false;
@@ -1088,7 +1049,6 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					  }
 					  else {
 						  auto     a = getGAM(dst_mode, dst_reg, word_mode);
-						  add_to_MMR1(a);
 						  uint16_t v = -a.value.value();
 
 						  bool set_flags = b->write(a.addr, a.word_mode, v, a.mode_selection, a.space) == false;
@@ -1123,7 +1083,6 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					  }
 					  else {
 						  auto           a     = getGAM(dst_mode, dst_reg, word_mode);
-						  add_to_MMR1(a);
 						  const uint16_t vo    = a.value.value();
 						  bool           org_c = getPSW_c();
 						  uint16_t       v     = (vo + org_c) & (word_mode == wm_byte ? 0x00ff : 0xffff);
@@ -1160,7 +1119,6 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					  }
 					  else {
 						  auto           a     = getGAM(dst_mode, dst_reg, word_mode);
-						  add_to_MMR1(a);
 						  const uint16_t vo    = a.value.value();
 						  bool           org_c = getPSW_c();
 						  uint16_t       v     = (vo - org_c) & word_mode_mask[word_mode];
@@ -1180,7 +1138,6 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 		case 0b000101111: { // TST/TSTB
 				    	  auto     g = getGAM(dst_mode, dst_reg, word_mode);
 					  uint16_t v = g.value.value();
-					  add_to_MMR1(g);
 
 					  setPSW_flags_nzv(v, word_mode);
 					  setPSW_c(false);
@@ -1208,7 +1165,6 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					  }
 					  else {
 						  auto     a         = getGAM(dst_mode, dst_reg, word_mode);
-					          add_to_MMR1(a);
 						  uint16_t t         = a.value.value();
 						  bool     new_carry = t & 1;
 
@@ -1254,7 +1210,6 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					  }
 					  else {
 						  auto     a         = getGAM(dst_mode, dst_reg, word_mode);
-					          add_to_MMR1(a);
 						  uint16_t t         = a.value.value();
 						  bool     new_carry = false;
 
@@ -1301,7 +1256,6 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					  }
 					  else {
 						  auto     a   = getGAM(dst_mode, dst_reg, word_mode);
-					          add_to_MMR1(a);
 						  uint16_t v   = a.value.value();
 
 						  uint16_t hb  = word_mode == wm_byte ? v & 128 : v & 32768;
@@ -1342,7 +1296,6 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					 }
 					 else {
 						 auto     a   = getGAM(dst_mode, dst_reg, word_mode);
-					         add_to_MMR1(a);
 						 uint16_t vl  = a.value.value();
 						 uint16_t v   = (vl << 1) & word_mode_mask[word_mode];
 
@@ -1371,7 +1324,6 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					 else {
 						 // calculate address in current address space
 						auto a = getGAMAddress(dst_mode, dst_reg, wm_word);
-				                add_to_MMR1(a);
 
 						// read from previous space
 						v = b->read(a.addr, wm_word, rm_prev, word_mode == wm_byte ? d_space : i_space);
@@ -1399,7 +1351,6 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					 }
 					 else {
 						auto a = getGAMAddress(dst_mode, dst_reg, wm_word);
-						add_to_MMR1(a);
 
 						// mmu_->mmudebug(a.addr);
 
@@ -1456,7 +1407,6 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 				 }
 				 else {  // SXT
 					 auto     g_dst = getGAM(dst_mode, dst_reg, word_mode);
-					 add_to_MMR1(g_dst);
 
 					 uint16_t vl    = -getPSW_n();
 
@@ -1714,7 +1664,6 @@ bool cpu::misc_operations(const uint16_t instr)
 		int dst_reg = instr & 7;
 
 		auto g = getGAMAddress(dst_mode, dst_reg, wm_word);
-		add_to_MMR1(g);
 		setPC(g.addr);
 
 		return true;
@@ -1737,11 +1686,8 @@ bool cpu::misc_operations(const uint16_t instr)
 
 		// PUSH link
 		push_stack(get_register(link_reg));
-		if (!mmu_->isMMR1Locked()) {
+		if (!mmu_->isMMR1Locked())
 			mmu_->add_to_MMR1(-2, 6);
-
-			add_to_MMR1(a);
-		}
 
 		// MOVE PC,link
 		set_register(link_reg, getPC());
