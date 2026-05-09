@@ -134,10 +134,10 @@ void bus::set_memory_size(const int n_pages)
 {
 	uint32_t n_bytes = n_pages * 8192l;
 
+	// free first so that on ESP32 there won't be 2 memory sets
 	delete m;
-	m = new memory(n_bytes);
-
-	mmu_->begin(m, c);
+	m = nullptr;
+	add_ram(new memory(n_bytes));
 
 	TRACE("Memory is now %u kB (%d pages)", n_bytes / 1024, n_pages);
 }
@@ -194,6 +194,12 @@ void bus::add_ram(memory *const m)
 	this->m = m;
 
 	mmu_->begin(m, c);
+
+	main_mem_writers[wm_word] = [=](const uint32_t a, const uint16_t v) { m->write_word(a, v); };
+	main_mem_writers[wm_byte] = [=](const uint32_t a, const uint16_t v) { m->write_byte(a, v); };
+
+	main_mem_readers[wm_word] = [=](const uint32_t a) { return m->read_word(a); };
+	main_mem_readers[wm_byte] = [=](const uint32_t a) { return m->read_byte(a); };
 }
 
 void bus::add_mmu(mmu *const mmu_)
@@ -266,7 +272,7 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 	uint32_t m_offset   = 0;
 
 	if (mmu_->has_special_handling(page_index) == true) {
-		m_offset = mmu_->calculate_physical_address(run_mode, addr_in, false, space);  // TODO FALSE?!
+		m_offset = mmu_->calculate_physical_address(run_mode, addr_in, false, space);
 
 		uint32_t io_base  = mmu_->get_io_base();
 		bool     is_io    = m_offset >= io_base;
@@ -530,7 +536,7 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 		}
 	}
 	else {
-		m_offset = mmu_->calculate_physical_address(run_mode, addr_in).physical_data;
+		m_offset = mmu_->get_PAR_preshifted(page_index) + (addr_in & 8191);
 	}
 
 	if ((addr_in & 1) && word_mode == wm_word) {
@@ -547,11 +553,7 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 
 	mmu_->set_page_accessed(page_index);
 
-	uint16_t temp = 0;
-	if (word_mode == wm_byte)
-		temp = m->read_byte(m_offset);
-	else
-		temp = m->read_word(m_offset);
+	uint16_t temp = main_mem_readers[word_mode](m_offset);
 
 	TRACE("READ from %06o/%07o %c %c: %06o (%s)", addr_in, m_offset, space == d_space ? 'D' : 'I', word_mode == wm_byte ? 'B' : 'W', temp, mode_selection == rm_prev ? "prev" : "cur");
 
@@ -816,7 +818,7 @@ bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 		TRACE("WRITE to %06o/%07o %c %c: %06o", addr_in, m_offset, space == d_space ? 'D' : 'I', word_mode == wm_byte ? 'B' : 'W', value);
 	}
 	else {
-		m_offset = mmu_->calculate_physical_address(run_mode, addr_in).physical_data;
+		m_offset = mmu_->get_PAR_preshifted(page_index) + (addr_in & 8191);
 	}
 
 	if ((addr_in & 1) && word_mode == wm_word) [[unlikely]] {
@@ -833,10 +835,7 @@ bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 
 	mmu_->set_page_accessed(page_index);
 
-	if (word_mode == wm_byte)
-		m->write_byte(m_offset, value);
-	else
-		m->write_word(m_offset, value);
+	main_mem_writers[word_mode](m_offset, value);
 
 	return false;
 }

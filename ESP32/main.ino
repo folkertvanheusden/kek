@@ -27,11 +27,7 @@
 #include "comm_esp32_hardwareserial.h"
 #include "comm_tcp_socket_client.h"
 #include "comm_tcp_socket_server.h"
-#if defined(SHA2017)
-#include "console_shabadge.h"
-#else
 #include "console_esp32.h"
-#endif
 #include "cpu.h"
 #include "debugger.h"
 #include "disk_backend.h"
@@ -298,9 +294,7 @@ void setup() {
 	c = new cpu(b, &stop_event);
 	b->add_cpu(c);
 
-#if defined(SHA2017)
-	cnsl = new console_shabadge(&stop_event, cs);
-#elif defined(ESP32) || defined(BUILD_FOR_RP2040)
+#if defined(ESP32) || defined(BUILD_FOR_RP2040)
 	cnsl = new console_esp32(&stop_event, cs, 80, 25);
 #endif
 	cnsl->set_bus(b);

@@ -349,7 +349,7 @@ void cpu::execute_any_pending_interrupt()
 			auto     vector = queued_interrupts[i].begin();
 			uint16_t v      = *vector;
 			queued_interrupts[i].erase(vector);
-#if defined(ESP32) && !defined(SHA2017)
+#if defined(ESP32)
 			if (v = 0100) {  // 50 Hz interrupt
 				if (++kw11l_counter >= 25) {
 					kw11l_counter = 0;
