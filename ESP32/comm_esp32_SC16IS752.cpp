@@ -15,6 +15,7 @@ comm_esp32_SC16IS752::comm_esp32_SC16IS752(SC16IS752 *const parent, int dev_nr, 
 	dev_nr(dev_nr),
 	port_nr(port_nr)
 {
+	printf("comm_esp32_SC16IS752\r\n");
 }
 
 comm_esp32_SC16IS752::~comm_esp32_SC16IS752()

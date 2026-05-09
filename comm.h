@@ -24,8 +24,8 @@ class comm
 {
 private:
 #if defined(ESP32)
-	static SC16IS752 *dc11_inst_1;
-	static SC16IS752 *dc11_inst_2;
+	static SC16IS752 *ser2_inst_1;
+	static SC16IS752 *ser2_inst_2;
 #endif
 public:
 	comm();

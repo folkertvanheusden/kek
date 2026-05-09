@@ -1,4 +1,4 @@
-// (C) 2018-2025 by Folkert van Heusden
+// (C) 2018-2026 by Folkert van Heusden
 // Released under MIT license
 
 #include <Arduino.h>
@@ -11,6 +11,7 @@
 #if defined(BUILD_FOR_RP2040)
 #else
 #include <WiFi.h>
+#include <Wire.h>
 #include <sys/poll.h>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -219,6 +220,16 @@ void heap_caps_alloc_failed_hook(size_t requested_size, uint32_t caps, const cha
 }
 #endif
 
+void probe_i2c() {
+  cs->println("Scanning i2c bus...");
+  Wire.begin();
+  for(byte address = 1; address < 127; address++) {
+    Wire.beginTransmission(address);
+    if (Wire.endTransmission() == 0)
+      cs->println(format("i2c device found at %02x", address));
+  }
+}
+
 void setup() {
 	Serial.begin(115200);
 	while(!Serial)
@@ -230,15 +241,16 @@ void setup() {
   heap_caps_check_integrity_all(true);
 
 	cs = new comm_arduino(&Serial, "Serial");
-#if defined(ESP32)
-  SC16IS752_a = new SC16IS752(SC16IS750_PROTOCOL_I2C, 0x4d);
-  SC16IS752_b = new SC16IS752(SC16IS750_PROTOCOL_I2C, 0x4e);  // TODO 0x4e
-  cs->set_comm(SC16IS752_a, SC16IS752_b);
-#endif
-
 	cs->println("PDP11 emulator, by Folkert van Heusden");
 	cs->println(format("GIT hash: %s", version_str));
 	cs->println("Build on: " __DATE__ " " __TIME__);
+
+#if defined(ESP32)
+  probe_i2c();
+  SC16IS752_a = new SC16IS752(SC16IS750_PROTOCOL_I2C, 0x4d);
+//  SC16IS752_b = new SC16IS752(SC16IS750_PROTOCOL_I2C, 0x4e);
+  cs->set_comm(SC16IS752_a, SC16IS752_b);
+#endif
 
   uint32_t freq = 0;
   esp_clk_tree_src_get_freq_hz(SOC_MOD_CLK_CPU, ESP_CLK_TREE_SRC_FREQ_PRECISION_EXACT, &freq);
@@ -306,9 +318,7 @@ void setup() {
 	c = new cpu(b, &stop_event);
 	b->add_cpu(c);
 
-#if defined(SHA2017)
-	cnsl = new console_shabadge(&stop_event, cs);
-#elif defined(ESP32) || defined(BUILD_FOR_RP2040)
+#if defined(ESP32) || defined(BUILD_FOR_RP2040)
 	cnsl = new console_esp32(&stop_event, cs, 80, 25);
 #endif
 	cnsl->set_bus(b);

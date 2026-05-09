@@ -22,8 +22,8 @@
 
 
 #if defined(ESP32)
-SC16IS752 *comm::dc11_inst_1 { nullptr };
-SC16IS752 *comm::dc11_inst_2 { nullptr };
+SC16IS752 *comm::ser2_inst_1 { nullptr };
+SC16IS752 *comm::ser2_inst_2 { nullptr };
 #endif
 
 comm::comm()
@@ -48,8 +48,8 @@ void comm::println(const std::string & in)
 
 void comm::set_comm(SC16IS752 *const a, SC16IS752 *const b)
 {
-	dc11_inst_1 = a;
-	dc11_inst_2 = b;
+	ser2_inst_1 = a;
+	ser2_inst_2 = b;
 }
 
 comm *comm::deserialize(const JsonVariantConst j, bus *const b)
@@ -64,7 +64,7 @@ comm *comm::deserialize(const JsonVariantConst j, bus *const b)
                 d = comm_tcp_socket_client::deserialize(j);
 #if defined(ESP32)
 	else if (type == "SC16IS752-serial")
-                d = comm_esp32_SC16IS752::deserialize(j, dc11_inst_1, dc11_inst_2);
+                d = comm_esp32_SC16IS752::deserialize(j, ser2_inst_1, ser2_inst_2);
 	else if (type == "hardware-serial")
                 d = comm_esp32_hardwareserial::deserialize(j);
 #endif
