@@ -13,17 +13,30 @@
 
 #include "ArduinoJson.h"
 
+#if defined(ESP32)
+#include <SC16IS752.h>
+#endif
+
 
 class bus;
 
 class comm
 {
+private:
+#if defined(ESP32)
+	static SC16IS752 *ser2_inst_1;
+	static SC16IS752 *ser2_inst_2;
+#endif
 public:
 	comm();
 	virtual ~comm();
 
 	virtual bool    begin() = 0;
+	virtual bool    need_dealloc() { return true; }
 
+#if defined(ESP32)
+	void            set_comm(SC16IS752 *const a, SC16IS752 *const b);
+#endif
 	virtual JsonDocument serialize() const = 0;
 	static comm    *deserialize(const JsonVariantConst j, bus *const b);
 
@@ -84,7 +97,7 @@ struct comm_io
 
 	bool set_device(const int idx, comm *const p) {
 		std::unique_lock<std::shared_mutex> lck(lock);
-		if (channels[idx])
+		if (channels[idx] && channels[idx]->need_dealloc() == true)
 			delete channels[idx];
 		channels[idx] = p;
 		return p->begin();

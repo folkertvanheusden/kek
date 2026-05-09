@@ -25,6 +25,7 @@
 #include "cpu.h"
 #if defined(ESP32)
 #include "comm_esp32_hardwareserial.h"
+#include "comm_esp32_SC16IS752.h"
 #endif
 #include "disk_backend.h"
 #if IS_POSIX || defined(_WIN32)
@@ -48,6 +49,9 @@ bool network_configured = false;
 #if defined(ESP32)
 #include "esp32.h"
 #include "console_esp32.h"
+
+extern comm_esp32_SC16IS752 *SC16IS752_com_a[2];
+extern comm_esp32_SC16IS752 *SC16IS752_com_b[2];
 #elif defined(BUILD_FOR_RP2040)
 #include "rp2040.h"
 #endif
@@ -106,10 +110,6 @@ void start_disk(console *const cnsl)
 
 #if defined(ESP32_WT_ETH01)
 	if (SDinstance.begin(SdioConfig(FIFO_SDIO)))
-		disk_started = true;
-#elif defined(SHA2017)
-	cnsl->put_string_lf(format("SS  : %d", 21));
-	if (SDinstance.begin(21, SD_SCK_MHZ(10)))
 		disk_started = true;
 #elif defined(SEEED_XIAO_S3)
 	cnsl->put_string_lf(format("SS  : %d", 1));
@@ -290,7 +290,7 @@ void configure_comm(console *const cnsl, comm_io *const device_list)
 
 		size_t device_nr = ch_dev - 'A';
 
-		int  ch_opt = wait_for_key("1. TCP client, 2. TCP server, 3. serial device, 9. to abort", cnsl, { '1', '2', '3', '9' });
+		int  ch_opt = wait_for_key("1. TCP client, 2. TCP server, 3. serial device, 4. SC16IS752, 9. to abort", cnsl, { '1', '2', '3', '4', '9' });
 		bool rc     = false;
 
 		if (ch_opt == '1') {
@@ -309,10 +309,10 @@ void configure_comm(console *const cnsl, comm_io *const device_list)
 		}
 		else if (ch_opt == '3') {
 #if IS_POSIX
-			std::string temp_dev = cnsl->read_line("device: ");
+			std::string temp_dev     = cnsl->read_line("device: ");
 			std::string temp_bitrate = cnsl->read_line("bitrate: ");
 			if (temp_dev.empty() == false && temp_bitrate.empty() == false)
-				rc = device_list->set_device(device_nr, new comm_posix_tty(temp_dev, std::stoi(temp_bitrate)));
+				rc = device_list->set_device(device_nr, new comm_posix_tty(temp_dev, std::atoi(temp_bitrate)));
 #elif defined(ESP32)
 			std::string temp_dev = cnsl->read_line("Uart number (0...2): ");
 			std::string temp_rx  = cnsl->read_line("RX pin: ");
@@ -322,6 +322,24 @@ void configure_comm(console *const cnsl, comm_io *const device_list)
 				rc = device_list->set_device(device_nr, new comm_esp32_hardwareserial(uart_port_t(std::stoi(temp_dev)), std::stoi(temp_rx), std::stoi(temp_tx), std::stoi(temp_bitrate)));
 #else
 			cnsl->put_string_lf("Not implemented yet on this platform");
+#endif
+		}
+		else if (ch_opt == '4') {
+#if defined(ESP32)
+			std::string temp_port    = cnsl->read_line("port (A/B): ");
+			std::string temp_bitrate = cnsl->read_line("bitrate: ");
+			if (temp_port.empty() == false && temp_bitrate.empty() == false) {
+				int port = toupper(temp_port[0]) - 'A';
+				if (port < 0 || port > 1)
+					continue;
+
+				// currently only 1 SC16IS752
+				auto new_dev = SC16IS752_com_a[port];
+				new_dev->configure_port(std::stoi(temp_bitrate));
+				rc = device_list->set_device(device_nr, new_dev);
+			}
+#else
+			cnsl->put_string_lf("Only on microcontrollers");
 #endif
 		}
 
@@ -554,9 +572,9 @@ void mmu_resolve(console *const cnsl, bus *const b, const uint16_t va)
 	}
 }
 
-void reg_dump(console *const cnsl, cpu *const c)
+void show_cpu_state(console *const cnsl, cpu *const c)
 {
-	for(uint8_t set=0; set<2; set++) {
+	for(int set=0; set<2; set++) {
 		cnsl->put_string_lf(format("Set %d, R0: %06o, R1: %06o, R2: %06o, R3: %06o, R4: %06o, R5: %06o",
 						set,
 						c->lowlevel_register_get(set, 0),
@@ -574,6 +592,17 @@ void reg_dump(console *const cnsl, cpu *const c)
 				c->lowlevel_register_sp_get(1),
 				c->lowlevel_register_sp_get(2),
 				c->lowlevel_register_sp_get(3)));
+
+	auto queued_interrupts = c->get_queued_interrupts();
+	for(int i=0; i<8; i++) {
+		if (queued_interrupts[i].empty() == false) {
+			cnsl->put_string(format("interrupt level: %d, queued:", i));
+			for(auto & vector: queued_interrupts[i])
+				cnsl->put_string(format(" %03o", vector));
+			cnsl->put_string_lf("");
+		}
+	}
+	cnsl->put_string_lf(format("stack limit register: %06o", c->get_stack_limit_register()));
 }
 
 void show_run_statistics(console *const cnsl, cpu *const c)
@@ -803,15 +832,6 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 
 		return true;
 	}
-	else if (parts[0] == "D" && parts.size() == 3) {  // SIMH compatibility
-		uint16_t v = std::stoi(parts.at(2), nullptr, 8);
-		if (parts[1] == "PC")
-			c->setPC(v);
-		else {
-			uint16_t a = std::stoi(parts.at(1), nullptr, 8);
-			c->getBus()->write_word(a, v);
-		}
-	}
 	else if (parts[0] == "setpc") {
 		if (parts.size() == 2) {
 			uint16_t new_pc = std::stoi(parts.at(1), nullptr, 8);
@@ -844,17 +864,6 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 
 		return true;
 	}
-	else if (parts[0] == "getreg") {
-		if (parts.size() == 2) {
-			int reg = std::stoi(parts.at(1));
-			cnsl->put_string_lf(format("REG %d = %06o", reg, c->get_register(reg)));
-		}
-		else {
-			cnsl->put_string_lf("getreg requires a register");
-		}
-
-		return true;
-	}
 	else if (parts[0] == "setstack") {
 		if (parts.size() == 3) {
 			int      reg = std::stoi(parts.at(1));
@@ -866,17 +875,6 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		}
 		else {
 			cnsl->put_string_lf("setstack requires a register and an octal value");
-		}
-
-		return true;
-	}
-	else if (parts[0] == "getstack") {
-		if (parts.size() == 2) {
-			int reg = std::stoi(parts.at(1));
-			cnsl->put_string_lf(format("REG %d = %06o", reg, c->get_stackpointer(reg)));
-		}
-		else {
-			cnsl->put_string_lf("getreg requires a stack register");
 		}
 
 		return true;
@@ -910,6 +908,22 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		}
 
 		return true;
+	}
+	else if (parts[0] == "d" || parts[0] == "deposit") {
+		if (parts.size() != 3)
+			cnsl->put_string_lf("deposit: parameter(s) missing");
+		else {
+			uint16_t v = std::stoi(parts[2], nullptr, 8);
+			if (parts[1] == "pc" || parts[1] == "PC") {
+				c->setPC(v);
+				cnsl->put_string_lf(format("Set PC to %06o", v));
+			}
+			else {
+				uint16_t a = std::stoi(parts[1], nullptr, 8);
+				c->getBus()->write_word(a, v);
+				cnsl->put_string_lf(format("Set %06o to %06o", a, v));
+			}
+		}
 	}
 	else if (parts[0] == "setmem") {
 		auto a_it = kv.find("a");
@@ -959,6 +973,8 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			b->getMMU() ->show_state(cnsl);
 		else if (parts[1] == "rk05")
 			b->getRK05()->show_state(cnsl);
+		else if (parts[1] == "dc11")
+			b->getDC11()->show_state(cnsl);
 		else if (parts[1] == "dz11")
 			b->getDZ11()->show_state(cnsl);
 		else if (parts[1] == "tm11")
@@ -967,6 +983,8 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			b->getKW11_L()->show_state(cnsl);
 		else if (parts[1] == "rp06" || parts[1] == "rp07")
 			b->getRP06()->show_state(cnsl);
+		else if (parts[1] == "cpu")
+			show_cpu_state(cnsl, c);
 		else
 			cnsl->put_string_lf(format("Device \"%s\" is not known", parts[1].c_str()));
 
@@ -977,11 +995,6 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			mmu_resolve(cnsl, b, std::stoi(parts[1], nullptr, 8));
 		else
 			cnsl->put_string_lf("Parameter missing");
-
-		return true;
-	}
-	else if (parts[0] == "regdump") {
-		reg_dump(cnsl, c);
 
 		return true;
 	}
@@ -1208,15 +1221,19 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 
 		return true;
 	}
-	else if (parts[0] == "bic" && parts.size() == 2) {
-		auto rc = load_tape(b, parts[1].c_str());
-		if (rc.has_value()) {
-			c->setPC(rc.value());
-
-			cnsl->put_string_lf("BIC/LDA file loaded");
-		}
+	else if (parts[0] == "bic") {
+		if (parts.size() != 2)
+			cnsl->put_string_lf("BIC/LDA parameter missing");
 		else {
-			cnsl->put_string_lf("BIC/LDA failed to load");
+			auto rc = load_tape(b, parts[1].c_str());
+			if (rc.has_value()) {
+				c->setPC(rc.value());
+
+				cnsl->put_string_lf("BIC/LDA file loaded");
+			}
+			else {
+				cnsl->put_string_lf("BIC/LDA failed to load");
+			}
 		}
 
 		return true;
@@ -1248,7 +1265,12 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		return true;
 	}
 	else if (parts[0] == "testdz11") {
-		b->getDZ11()->test_ports(cmd);
+		if (b->getDZ11()) {
+			b->getDZ11()->test_ports(parts.size() == 2 ? std::stoi(parts[1]) : 1);
+		}
+		else {
+			cnsl->put_string_lf("DZ11 not started yet, first invoke \"startnet\"");
+		}
 
 		return true;
 	}
@@ -1316,18 +1338,16 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			"bt            - show backtrace - need to enable debug first",
 			"strace x      - start tracing from address - invoke without address to disable",
 			"trl x         - set trace run-level (0...3), empty for all",
-			"regdump       - dump register contents",
-			"state x       - dump state of a device: rl02, rk05, rp06, rp07, mmu, tm11, kw11l or dz11",
+			"state x       - dump state of a device: rl02, rk05, rp06, rp07, mmu, tm11, kw11l, cpu, dc11 or dz11",
 			"mmures x      - resolve a virtual address",
 			"qi            - show queued interrupts",
 			"setpc x       - set PC to value (octal)",
 			"getpc         -",
 			"setreg x y    - set register x to value y (octal)",
-			"getreg x      -",
 			"setstack x y  - set stack register x to value y (octal)",
-			"getstack x    -",
 			"setpsw x      - set PSW value y (octal)",
 			"getpsw        -",
+			"d[eposit] x y - set memory x to value y, octal word",
 			"setmem ...    - set memory (a=) to value (v=), both in octal, one byte",
 			"getmem ...    - get memory (a=), in octal, one byte",
 			"toggle ...    - set switch (s=, 0...15 (decimal)) of the front panel to state (t=, 0 or 1)",

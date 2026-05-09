@@ -1,7 +1,7 @@
 ; written by Folkert van Heusden <folkert@komputilo.nl>
 ; (C) 2026, MIT license
 
-        .link 1000
+        .link 14000
 init:
         mov #init, sp
 	jmp start
