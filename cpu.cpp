@@ -1611,16 +1611,12 @@ void cpu::push_stack(const uint16_t v)
 				delayed_trap = 04;
 				processing_trap_depth = 127;  // double trap so halt
 			}
-		}
-		else {
-			uint16_t a = add_register(6, -2);
-			b->write_word(a, v, d_space);
+			return;
 		}
 	}
-	else {
-		uint16_t a = add_register(6, -2);
-		b->write_word(a, v, d_space);
-	}
+
+	uint16_t a = add_register(6, -2);
+	b->write_word(a, v, d_space);
 }
 
 uint16_t cpu::pop_stack()
