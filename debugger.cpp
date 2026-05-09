@@ -550,9 +550,9 @@ void mmu_resolve(console *const cnsl, bus *const b, const uint16_t va)
 	}
 }
 
-void reg_dump(console *const cnsl, cpu *const c)
+void show_cpu_state(console *const cnsl, cpu *const c)
 {
-	for(uint8_t set=0; set<2; set++) {
+	for(int set=0; set<2; set++) {
 		cnsl->put_string_lf(format("Set %d, R0: %06o, R1: %06o, R2: %06o, R3: %06o, R4: %06o, R5: %06o",
 						set,
 						c->lowlevel_register_get(set, 0),
@@ -570,6 +570,17 @@ void reg_dump(console *const cnsl, cpu *const c)
 				c->lowlevel_register_sp_get(1),
 				c->lowlevel_register_sp_get(2),
 				c->lowlevel_register_sp_get(3)));
+
+	auto queued_interrupts = c->get_queued_interrupts();
+	for(int i=0; i<8; i++) {
+		if (queued_interrupts[i].empty() == false) {
+			cnsl->put_string(format("interrupt level: %d, queued:", i));
+			for(auto & vector: queued_interrupts[i])
+				cnsl->put_string(format(" %03o", vector));
+			cnsl->put_string_lf("");
+		}
+	}
+	cnsl->put_string_lf(format("stack limit register: %06o", c->get_stack_limit_register()));
 }
 
 void show_run_statistics(console *const cnsl, cpu *const c)
@@ -951,7 +962,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		else if (parts[1] == "rp06" || parts[1] == "rp07")
 			b->getRP06()->show_state(cnsl);
 		else if (parts[1] == "cpu")
-			reg_dump(cnsl, c);
+			show_cpu_state(cnsl, c);
 		else
 			cnsl->put_string_lf(format("Device \"%s\" is not known", parts[1].c_str()));
 
