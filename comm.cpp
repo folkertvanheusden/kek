@@ -46,11 +46,13 @@ void comm::println(const std::string & in)
 	send_data(reinterpret_cast<const uint8_t *>("\r\n"), 2);
 }
 
+#if defined(ESP32)
 void comm::set_comm(SC16IS752 *const a, SC16IS752 *const b)
 {
 	ser2_inst_1 = a;
 	ser2_inst_2 = b;
 }
+#endif
 
 comm *comm::deserialize(const JsonVariantConst j, bus *const b)
 {
