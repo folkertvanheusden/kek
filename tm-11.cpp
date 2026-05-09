@@ -121,7 +121,7 @@ void tm_11::write_byte(const uint16_t addr, const uint8_t v)
 	write_word(addr, vtemp);
 }
 
-std::optional<uint32_t> tm_11::find_data_record_forward()
+std::optional<unsigned> tm_11::find_data_record_forward()
 {
 	for(;;) {
 		uint8_t header_buffer[4] { };
@@ -147,7 +147,7 @@ std::optional<uint32_t> tm_11::find_data_record_forward()
 	return { };
 }
 
-std::optional<uint32_t> tm_11::find_data_record_backward()
+std::optional<unsigned> tm_11::find_data_record_backward()
 {
 	for(;;) {
 		if (fseek(fh, -4, SEEK_CUR) != 0)

@@ -33,8 +33,8 @@ private:
 	FILE           *fh                 { nullptr };
 	std::string     tape_file;
 
-	std::optional<uint32_t> find_data_record_forward ();
-	std::optional<uint32_t> find_data_record_backward();
+	std::optional<unsigned> find_data_record_forward ();
+	std::optional<unsigned> find_data_record_backward();
 	bool skip_trailer_forward ();
 	bool skip_trailer_backward();
 
