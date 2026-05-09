@@ -313,7 +313,7 @@ void configure_comm(console *const cnsl, comm_io *const device_list)
 			std::string temp_dev     = cnsl->read_line("device: ");
 			std::string temp_bitrate = cnsl->read_line("bitrate: ");
 			if (temp_dev.empty() == false && temp_bitrate.empty() == false)
-				rc = device_list->set_device(device_nr, new comm_posix_tty(temp_dev, std::atoi(temp_bitrate)));
+				rc = device_list->set_device(device_nr, new comm_posix_tty(temp_dev, std::stoi(temp_bitrate)));
 #elif defined(ESP32)
 			std::string temp_dev = cnsl->read_line("Uart number (0...2): ");
 			std::string temp_rx  = cnsl->read_line("RX pin: ");
