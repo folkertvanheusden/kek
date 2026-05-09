@@ -28,7 +28,7 @@ private:
 	memory   *const m                  { nullptr };
 	bus      *const b                  { nullptr };
 	uint16_t        registers[6]       { 0       };
-	uint8_t         xfer_buffer[65536];
+	uint8_t         xfer_buffer[10240];
 	int             offset             { 0       };
 	FILE           *fh                 { nullptr };
 	std::string     tape_file;
