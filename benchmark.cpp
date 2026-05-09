@@ -96,8 +96,9 @@ void benchmark(console *const cnsl, bus *const b, std::atomic_uint32_t *const st
 
 	if (measure) {
 		cnsl->put_string_lf("benchmark: please wait ~20 seconds");
-		size_t   cycle_count = 0;
-		uint64_t duration    = 0;
+		uint64_t start_ts1    = get_us();
+		size_t   cycle_count  = 0;
+		uint64_t duration     = 0;
 		while(*stop_event == EVENT_NONE) {
 			uint16_t pc = c->getPC();
 			cycle_count++;
@@ -105,18 +106,23 @@ void benchmark(console *const cnsl, bus *const b, std::atomic_uint32_t *const st
 			duration += c->calc_instruction_duration(pc);
 			c->step();
 		}
+		uint64_t end_ts1      = get_us();
 
-		uint64_t count_slower = get_count(b);
+		double   timing_comp1 = 10000000. / (end_ts1 - start_ts1);  // kw11-l interrupt is not always exact 50 Hz
+		uint64_t count_slower = get_count(b) * timing_comp1;
 
 		reset_benchmark(b);
 
+		uint64_t start_ts2    = get_us();
 		*stop_event = EVENT_NONE;
 		while(*stop_event == EVENT_NONE)
 			c->step();
+		uint64_t end_ts2      = get_us();
 
-		uint64_t count_faster = get_count(b);
-		cnsl->put_string_lf(format("benchmark count slow: %" PRIu64 ", count fast: %" PRIu64, count_slower, count_faster));
+		double   timing_comp2 = 10000000. / (end_ts2 - start_ts2);
+		uint64_t count_faster = get_count(b) * timing_comp2;
 
+		cnsl->put_string_lf(format("benchmark count slow: %" PRIu64 " (%.3f timer jitter compensation), count fast: %" PRIu64 " (%.3f)", count_slower, timing_comp1, count_faster, timing_comp2));
 		double   mul          = count_faster / double(count_slower);
 
 		cnsl->put_string_lf(format("benchmark (raw): %zu instructions, emulated duration: %.3f seconds (or %" PRIu64 " ns)", cycle_count, duration / 1000000000., duration));
