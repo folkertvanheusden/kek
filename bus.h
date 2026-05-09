@@ -6,6 +6,7 @@
 #include "gen.h"
 #include <ArduinoJson.h>
 #include <assert.h>
+#include <functional>
 #include <mutex>
 #include <stdint.h>
 #include <stdio.h>
@@ -74,6 +75,9 @@ private:
 	dc11    *dc11_   { nullptr };
 	dz11    *dz11_   { nullptr };
 	rp06    *rp06_   { nullptr };
+
+	std::function<void     (const uint32_t a, const uint16_t v)> main_mem_writers[2];
+	std::function<uint16_t (const uint32_t a                  )> main_mem_readers[2];
 
 	uint16_t microprogram_break_register { 0 };
 
