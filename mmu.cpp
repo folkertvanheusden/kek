@@ -159,7 +159,7 @@ void mmu::clearMMR1()
 	MMR1 = 0;
 }
 
-void mmu::addToMMR1(const int8_t delta, const uint8_t reg)
+void mmu::add_to_MMR1(const int8_t delta, const uint8_t reg)
 {
 	assert(reg >= 0 && reg <= 7);
 	assert(delta >= -2 && delta <= 2);

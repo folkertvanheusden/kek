@@ -119,7 +119,7 @@ public:
 
 	bool     isMMR1Locked() const { return MMR0 & 0160000; }
 	void     clearMMR1();
-	void     addToMMR1(const int8_t delta, const uint8_t reg);
+	void     add_to_MMR1(const int8_t delta, const uint8_t reg);
 
 	void     setMMR0Bit  (const int bit);
 	void     clearMMR0Bit(const int bit);
