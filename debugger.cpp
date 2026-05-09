@@ -802,15 +802,6 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 
 		return true;
 	}
-	else if (parts[0] == "D" && parts.size() == 3) {  // SIMH compatibility
-		uint16_t v = std::stoi(parts.at(2), nullptr, 8);
-		if (parts[1] == "PC")
-			c->setPC(v);
-		else {
-			uint16_t a = std::stoi(parts.at(1), nullptr, 8);
-			c->getBus()->write_word(a, v);
-		}
-	}
 	else if (parts[0] == "setpc") {
 		if (parts.size() == 2) {
 			uint16_t new_pc = std::stoi(parts.at(1), nullptr, 8);
@@ -914,10 +905,16 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		if (parts.size() != 3)
 			cnsl->put_string_lf("deposit: parameter(s) missing");
 		else {
-			uint16_t a = std::stoi(parts[1], nullptr, 8);
 			uint16_t v = std::stoi(parts[2], nullptr, 8);
-			c->getBus()->write_word(a, v);
-			cnsl->put_string_lf(format("Set %06o to %06o", a, v));
+			if (parts[1] == "pc" || parts[1] == "PC") {
+				c->setPC(v);
+				cnsl->put_string_lf(format("Set PC to %06o", v));
+			}
+			else {
+				uint16_t a = std::stoi(parts[1], nullptr, 8);
+				c->getBus()->write_word(a, v);
+				cnsl->put_string_lf(format("Set %06o to %06o", a, v));
+			}
 		}
 	}
 	else if (parts[0] == "setmem") {
@@ -968,6 +965,8 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			b->getMMU() ->show_state(cnsl);
 		else if (parts[1] == "rk05")
 			b->getRK05()->show_state(cnsl);
+		else if (parts[1] == "dc11")
+			b->getDC11()->show_state(cnsl);
 		else if (parts[1] == "dz11")
 			b->getDZ11()->show_state(cnsl);
 		else if (parts[1] == "tm11")
@@ -976,6 +975,8 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			b->getKW11_L()->show_state(cnsl);
 		else if (parts[1] == "rp06" || parts[1] == "rp07")
 			b->getRP06()->show_state(cnsl);
+		else if (parts[1] == "cpu")
+			reg_dump(cnsl, c);
 		else
 			cnsl->put_string_lf(format("Device \"%s\" is not known", parts[1].c_str()));
 
@@ -986,11 +987,6 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			mmu_resolve(cnsl, b, std::stoi(parts[1], nullptr, 8));
 		else
 			cnsl->put_string_lf("Parameter missing");
-
-		return true;
-	}
-	else if (parts[0] == "regdump") {
-		reg_dump(cnsl, c);
 
 		return true;
 	}
@@ -1326,8 +1322,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			"bt            - show backtrace - need to enable debug first",
 			"strace x      - start tracing from address - invoke without address to disable",
 			"trl x         - set trace run-level (0...3), empty for all",
-			"regdump       - dump register contents",
-			"state x       - dump state of a device: rl02, rk05, rp06, rp07, mmu, tm11, kw11l or dz11",
+			"state x       - dump state of a device: rl02, rk05, rp06, rp07, mmu, tm11, kw11l, cpu, dc11 or dz11",
 			"mmures x      - resolve a virtual address",
 			"qi            - show queued interrupts",
 			"setpc x       - set PC to value (octal)",
