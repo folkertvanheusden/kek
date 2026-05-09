@@ -6,9 +6,9 @@ READ = 000002       ; Read forward
 GO   = 000001       ; Go bit
 UNIT0= 000000       ; Unit 0
 
-    mov #01000, r0
-    mov r0,sp       ; needed for the rts pc at the end
-    push r0
+    mov #014000, r0 ; load the program at this address, stack below it
+    mov r0,sp       ;
+    push r0         ; needed for the rts pc at the end
     mov #2, r1      ; 2 blocks to read
 READ.BLOCK:
     mov r0, @#TMBA  ; Set Memory Address
