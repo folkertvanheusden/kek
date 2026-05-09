@@ -1,4 +1,4 @@
-// (C) 2025 by Folkert van Heusden
+// (C) 2025-2026 by Folkert van Heusden
 // Released under MIT license
 
 #include "gen.h"
@@ -15,12 +15,16 @@ private:
 	int        dev_nr      { -1      };
 	int        port_nr     { -1      };
 	bool       initialized { false   };
+	int        baud_rate   { -1      };
 
 public:
 	comm_esp32_SC16IS752(SC16IS752 *const parent, const int dev_nr, const int port_nr);
 	virtual ~comm_esp32_SC16IS752();
 
 	bool    begin() override;
+	bool    need_dealloc() override { return false; }
+
+	void    configure_port(const int baud_rate);
 
 	JsonDocument serialize() const override;
 	static comm_esp32_SC16IS752 *deserialize(const JsonVariantConst j, SC16IS752 *const a, SC16IS752 *const b);

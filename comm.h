@@ -32,6 +32,7 @@ public:
 	virtual ~comm();
 
 	virtual bool    begin() = 0;
+	virtual bool    need_dealloc() { return true; }
 
 #if defined(ESP32)
 	void            set_comm(SC16IS752 *const a, SC16IS752 *const b);
@@ -96,7 +97,7 @@ struct comm_io
 
 	bool set_device(const int idx, comm *const p) {
 		std::unique_lock<std::shared_mutex> lck(lock);
-		if (channels[idx])
+		if (channels[idx] && channels[idx]->need_dealloc() == true)
 			delete channels[idx];
 		channels[idx] = p;
 		return p->begin();

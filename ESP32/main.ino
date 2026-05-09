@@ -27,6 +27,7 @@
 #include "comm.h"
 #include "comm_arduino.h"
 #include "comm_esp32_hardwareserial.h"
+#include "comm_esp32_SC16IS752.h"
 #include "comm_tcp_socket_client.h"
 #include "comm_tcp_socket_server.h"
 #include "console_esp32.h"
@@ -64,12 +65,14 @@ uint16_t exec_addr = 0;
 SdFs     SDinstance;
 #endif
 
-std::atomic_uint32_t stop_event      { EVENT_NONE };
-std::atomic_bool    *running         { nullptr    };
-bool                 trace_output    { false      };
-comm                *cs              { nullptr    };  // Console Serial
-SC16IS752           *SC16IS752_a     { nullptr    };
-SC16IS752           *SC16IS752_b     { nullptr    };
+std::atomic_uint32_t  stop_event         { EVENT_NONE };
+std::atomic_bool     *running            { nullptr    };
+bool                  trace_output       { false      };
+comm                 *cs                 { nullptr    };  // Console Serial
+SC16IS752            *SC16IS752_a        { nullptr    };
+SC16IS752            *SC16IS752_b        { nullptr    };
+comm_esp32_SC16IS752 *SC16IS752_com_a[2] { nullptr    };
+comm_esp32_SC16IS752 *SC16IS752_com_b[2] { nullptr    };
 blinkenlights        bl;
 
 static void console_thread_wrapper_panel(void *const c)
@@ -216,13 +219,37 @@ void heap_caps_alloc_failed_hook(size_t requested_size, uint32_t caps, const cha
 }
 #endif
 
-void probe_i2c() {
-  cs->println("Scanning i2c bus...");
+// scan for SC16IS752 devices
+bool i2c_probe(const byte addr)
+{
+    Wire.beginTransmission(addr);
+    if (Wire.endTransmission() == 0) {
+      cs->println(format("i2c device found at %02x", addr));
+      return true;
+    }
+    return false;
+}
+
+void test_SC16IS752(SC16IS752 *const p, const uint8_t which)
+{
+  cs->println(format("PING result for SC16IS752 @ 0x%02x: %d", which, p->ping()));
+}
+
+void search_SC16IS752()
+{
+  cs->println("Scanning i2c bus for SC16IS752 devices...");
   Wire.begin();
-  for(byte address = 1; address < 127; address++) {
-    Wire.beginTransmission(address);
-    if (Wire.endTransmission() == 0)
-      cs->println(format("i2c device found at %02x", address));
+  if (i2c_probe(0x4d)) {
+    SC16IS752_a        = new SC16IS752(SC16IS750_PROTOCOL_I2C, 0x4d);
+    SC16IS752_com_a[0] = new comm_esp32_SC16IS752(SC16IS752_a, 0, 0);
+    SC16IS752_com_a[1] = new comm_esp32_SC16IS752(SC16IS752_a, 0, 1);
+    test_SC16IS752(SC16IS752_a, 0x4d);
+  }
+  if (i2c_probe(0x4e)) {
+    SC16IS752_b = new SC16IS752(SC16IS750_PROTOCOL_I2C, 0x4e);
+    SC16IS752_com_b[0] = new comm_esp32_SC16IS752(SC16IS752_a, 1, 0);
+    SC16IS752_com_b[1] = new comm_esp32_SC16IS752(SC16IS752_a, 1, 1);
+    test_SC16IS752(SC16IS752_a, 0x4e);
   }
 }
 
@@ -242,9 +269,7 @@ void setup() {
 	cs->println("Build on: " __DATE__ " " __TIME__);
 
 #if defined(ESP32)
-  probe_i2c();
-  SC16IS752_a = new SC16IS752(SC16IS750_PROTOCOL_I2C, 0x4d);
-//  SC16IS752_b = new SC16IS752(SC16IS750_PROTOCOL_I2C, 0x4e);
+  search_SC16IS752();
   cs->set_comm(SC16IS752_a, SC16IS752_b);
 #endif
 

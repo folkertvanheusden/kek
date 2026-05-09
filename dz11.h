@@ -82,8 +82,8 @@ public:
 
 	void show_state(console *const cnsl) const override;
 
-	void test_port(const size_t port_nr, const std::string & txt) const;
-	void test_ports(const std::string & txt) const;
+	void test_port(const size_t port_nr) const;
+	void test_ports(const int cnt) const;
 
 	uint8_t  read_byte(const uint16_t addr) override;
 	uint16_t read_word(const uint16_t addr) override;

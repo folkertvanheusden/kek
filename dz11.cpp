@@ -79,17 +79,20 @@ bool dz11::begin()
 	return true;
 }
 
-void dz11::test_port(const size_t nr, const std::string & txt) const
+void dz11::test_port(const size_t nr) const
 {
-	DOLOG(info, false, "DZ11 test line %zu", nr);
+	auto str = format("DZ11 test line %zu", nr);
+	DOLOG(info, false, str.c_str());
 
-	io_channels->send_data(nr, reinterpret_cast<const uint8_t *>(txt.c_str()), txt.size());
+	io_channels->send_data(nr, reinterpret_cast<const uint8_t *>(str.c_str()), str.size());
 }
 
-void dz11::test_ports(const std::string & txt) const
+void dz11::test_ports(const int cnt) const
 {
-	for(int i=0; i<dz11_n_lines; i++)
-		test_port(i, txt);
+	for(int k=0; k<cnt; k++) {
+		for(int i=0; i<dz11_n_lines; i++)
+			test_port(i);
+	}
 }
 
 void dz11::trigger_interrupt(const bool is_tx)

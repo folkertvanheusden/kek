@@ -25,6 +25,7 @@
 #include "cpu.h"
 #if defined(ESP32)
 #include "comm_esp32_hardwareserial.h"
+#include "comm_esp32_SC16IS752.h"
 #endif
 #include "disk_backend.h"
 #if IS_POSIX || defined(_WIN32)
@@ -48,6 +49,9 @@ bool network_configured = false;
 #if defined(ESP32)
 #include "esp32.h"
 #include "console_esp32.h"
+
+extern comm_esp32_SC16IS752 *SC16IS752_com_a[2];
+extern comm_esp32_SC16IS752 *SC16IS752_com_b[2];
 #elif defined(BUILD_FOR_RP2040)
 #include "rp2040.h"
 #endif
@@ -286,7 +290,7 @@ void configure_comm(console *const cnsl, comm_io *const device_list)
 
 		size_t device_nr = ch_dev - 'A';
 
-		int  ch_opt = wait_for_key("1. TCP client, 2. TCP server, 3. serial device, 9. to abort", cnsl, { '1', '2', '3', '9' });
+		int  ch_opt = wait_for_key("1. TCP client, 2. TCP server, 3. serial device, 4. SC16IS752, 9. to abort", cnsl, { '1', '2', '3', '4', '9' });
 		bool rc     = false;
 
 		if (ch_opt == '1') {
@@ -305,10 +309,10 @@ void configure_comm(console *const cnsl, comm_io *const device_list)
 		}
 		else if (ch_opt == '3') {
 #if IS_POSIX
-			std::string temp_dev = cnsl->read_line("device: ");
+			std::string temp_dev     = cnsl->read_line("device: ");
 			std::string temp_bitrate = cnsl->read_line("bitrate: ");
 			if (temp_dev.empty() == false && temp_bitrate.empty() == false)
-				rc = device_list->set_device(device_nr, new comm_posix_tty(temp_dev, std::stoi(temp_bitrate)));
+				rc = device_list->set_device(device_nr, new comm_posix_tty(temp_dev, std::atoi(temp_bitrate)));
 #elif defined(ESP32)
 			std::string temp_dev = cnsl->read_line("Uart number (0...2): ");
 			std::string temp_rx  = cnsl->read_line("RX pin: ");
@@ -318,6 +322,24 @@ void configure_comm(console *const cnsl, comm_io *const device_list)
 				rc = device_list->set_device(device_nr, new comm_esp32_hardwareserial(uart_port_t(std::stoi(temp_dev)), std::stoi(temp_rx), std::stoi(temp_tx), std::stoi(temp_bitrate)));
 #else
 			cnsl->put_string_lf("Not implemented yet on this platform");
+#endif
+		}
+		else if (ch_opt == '4') {
+#if defined(ESP32)
+			std::string temp_port    = cnsl->read_line("port (A/B): ");
+			std::string temp_bitrate = cnsl->read_line("bitrate: ");
+			if (temp_port.empty() == false && temp_bitrate.empty() == false) {
+				int port = toupper(temp_port[0]) - 'A';
+				if (port < 0 || port > 1)
+					continue;
+
+				// currently only 1 SC16IS752
+				auto new_dev = SC16IS752_com_a[port];
+				new_dev->configure_port(std::stoi(temp_bitrate));
+				rc = device_list->set_device(device_nr, new_dev);
+			}
+#else
+			cnsl->put_string_lf("Only on microcontrollers");
 #endif
 		}
 
@@ -1244,7 +1266,12 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		return true;
 	}
 	else if (parts[0] == "testdz11") {
-		b->getDZ11()->test_ports(cmd);
+		if (b->getDZ11()) {
+			b->getDZ11()->test_ports(parts.size() == 2 ? std::stoi(parts[1]) : 1);
+		}
+		else {
+			cnsl->put_string_lf("DZ11 not started yet, first invoke \"startnet\"");
+		}
 
 		return true;
 	}

@@ -1,4 +1,4 @@
-// (C) 2025 by Folkert van Heusden
+// (C) 2025-2026 by Folkert van Heusden
 // Released under MIT license
 
 #include "gen.h"
@@ -15,7 +15,6 @@ comm_esp32_SC16IS752::comm_esp32_SC16IS752(SC16IS752 *const parent, int dev_nr, 
 	dev_nr(dev_nr),
 	port_nr(port_nr)
 {
-	printf("comm_esp32_SC16IS752\r\n");
 }
 
 comm_esp32_SC16IS752::~comm_esp32_SC16IS752()
@@ -31,7 +30,7 @@ bool comm_esp32_SC16IS752::begin()
 
 std::string comm_esp32_SC16IS752::get_identifier() const
 {
-	return format("SC16IS752:%d", port_nr);
+	return format("SC16IS752:%d/%d", port_nr, baud_rate);
 }
 
 bool comm_esp32_SC16IS752::is_connected()
@@ -73,5 +72,14 @@ comm_esp32_SC16IS752 *comm_esp32_SC16IS752::deserialize(const JsonVariantConst j
 	comm_esp32_SC16IS752 *r = new comm_esp32_SC16IS752(dev_nr == 0 ? a: b, dev_nr, port_nr);
 	r->begin();
 	return r;
+}
+
+void comm_esp32_SC16IS752::configure_port(const int baud_rate)
+{
+	if (port_nr == 0)
+		parent->beginA(baud_rate);
+	else
+		parent->beginB(baud_rate);
+	this->baud_rate = baud_rate;
 }
 #endif
