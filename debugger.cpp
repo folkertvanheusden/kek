@@ -107,10 +107,6 @@ void start_disk(console *const cnsl)
 #if defined(ESP32_WT_ETH01)
 	if (SDinstance.begin(SdioConfig(FIFO_SDIO)))
 		disk_started = true;
-#elif defined(SHA2017)
-	cnsl->put_string_lf(format("SS  : %d", 21));
-	if (SDinstance.begin(21, SD_SCK_MHZ(10)))
-		disk_started = true;
 #elif defined(SEEED_XIAO_S3)
 	cnsl->put_string_lf(format("SS  : %d", 1));
 	if (SDinstance.begin(1, SD_SCK_MHZ(10)))
