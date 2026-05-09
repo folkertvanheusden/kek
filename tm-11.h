@@ -26,6 +26,7 @@ class tm_11 : public device
 {
 private:
 	memory   *const m                  { nullptr };
+	bus      *const b                  { nullptr };
 	uint16_t        registers[6]       { 0       };
 	uint8_t         xfer_buffer[65536];
 	int             offset             { 0       };

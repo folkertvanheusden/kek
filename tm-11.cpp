@@ -10,7 +10,7 @@
 #include "memory.h"
 #include "utils.h"
 
-tm_11::tm_11(bus *const b): m(b->getRAM())
+tm_11::tm_11(bus *const b): m(b->getRAM()), b(b)
 {
 }
 
@@ -100,7 +100,7 @@ uint16_t tm_11::read_word(const uint16_t addr)
 		vtemp = 0;
 	}
 
-	TRACE("TM-11 read addr %o: %o", addr, vtemp);
+	DOLOG(debug, false, "TM-11 read addr %o: %o", addr, vtemp);
 
 	return vtemp;
 }
@@ -123,20 +123,20 @@ void tm_11::write_byte(const uint16_t addr, const uint8_t v)
 
 void tm_11::write_word(const uint16_t addr, uint16_t v)
 {
-	TRACE("TM-11 write %o: %o", addr, v);
+	DOLOG(debug, false, "TM-11 write %o: %o", addr, v);
 
 	if (addr == TM_11_MTC) {
 		if (v & 1) { // GO
-			const int func = (v >> 1) & 7; // FUNCTION
+			const int func   = (v >> 1) & 7; // FUNCTION
 			const int reclen = 512;
 
-			TRACE("invoke %d", func);
+			DOLOG(debug, false, "TM-11 invoke %d", func);
 
 			if (func == 0) { // off-line
 				v = 128; // TODO set error if error
 			}
 			else if (func == 1) { // read
-				TRACE("reading %d bytes from offset %d", reclen, offset);
+				DOLOG(debug, false, "reading %d bytes from offset %d", reclen, offset);
 				if (fread(xfer_buffer, 1, reclen, fh) != reclen)
 					DOLOG(info, true, "failed: %s", strerror(errno));
 				for(int i=0; i<reclen; i++)
@@ -165,13 +165,20 @@ void tm_11::write_word(const uint16_t addr, uint16_t v)
 				offset = 0;
 				v = 128; // TODO set error if error
 			}
+
+			if (v & 64)  // interrupt enabled
+				b->getCpu()->queue_interrupt(5, 0224);
+		}
+		else {
+			if ((v & 0101) == 0100)  // IE, no GO also triggers an interrupt
+				b->getCpu()->queue_interrupt(5, 0224);
 		}
 	}
 	else if (addr == TM_11_MTCMA) {
 		v &= ~1;
-		TRACE("Set DMA address to %o", v);
+		DOLOG(debug, false, "Set DMA address to %o", v);
 	}
 
-	TRACE("set register %o to %o", addr, v);
+	DOLOG(debug, false, "set register %o to %o", addr, v);
 	registers[(addr - TM_11_BASE) / 2] = v;
 }
