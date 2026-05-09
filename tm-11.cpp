@@ -51,8 +51,8 @@ void tm_11::show_state(console *const cnsl) const
 	cnsl->put_string_lf(format("MTCMA : %06o", registers[3]));
 	cnsl->put_string_lf(format("MTD   : %06o", registers[4]));
 	cnsl->put_string_lf(format("MTRD  : %06o", registers[5]));
-	cnsl->put_string_lf(format("offset: %d",   offset      ));
-	cnsl->put_string_lf(format("tape file: %s", tape_file.c_str()));
+	cnsl->put_string_lf(format("offset: %d"  , offset      ));
+	cnsl->put_string_lf(format("file  : %s"  , tape_file.c_str()));
 }
 
 void tm_11::reset()
@@ -129,45 +129,55 @@ void tm_11::write_word(const uint16_t addr, uint16_t v)
 		if (v & 1) { // GO
 			const int func   = (v >> 1) & 7; // FUNCTION
 			const int reclen = 512;
+			bool      ok     = true;
 
 			DOLOG(debug, false, "TM-11 invoke %d", func);
 
 			if (func == 0) { // off-line
-				v = 128; // TODO set error if error
 			}
 			else if (func == 1) { // read
-				DOLOG(debug, false, "reading %d bytes from offset %d", reclen, offset);
-				if (fread(xfer_buffer, 1, reclen, fh) != reclen)
-					DOLOG(info, true, "failed: %s", strerror(errno));
-				for(int i=0; i<reclen; i++)
-					m->write_byte(registers[(TM_11_MTCMA - TM_11_BASE) / 2] + i, xfer_buffer[i]);
+				uint32_t mem_offset = registers[(TM_11_MTCMA - TM_11_BASE) / 2];
+				DOLOG(debug, false, "reading %d bytes from offset %d to %06o", reclen, offset, mem_offset);
+				if (fseek(fh, offset, SEEK_SET) != 0)
+					ok = false;
+				if (ok && fread(xfer_buffer, 1, reclen, fh) != reclen)
+					ok = false;
+				else {
+					for(int i=0; i<reclen; i++)
+						m->write_byte(mem_offset + i, xfer_buffer[i]);
+				}
 				offset += reclen;
-
-				v = 128; // TODO set error if error
 			}
 			else if (func == 2) { // write
+				uint32_t mem_offset = registers[(TM_11_MTCMA - TM_11_BASE) / 2];
+				DOLOG(debug, false, "writing %d bytes to offset %d from %06o", reclen, offset, mem_offset);
 				for(int i=0; i<reclen; i++)
-					xfer_buffer[i] = m->read_byte(registers[(TM_11_MTCMA - TM_11_BASE) / 2] + i);
-				fwrite(xfer_buffer, 1, reclen, fh);
+					xfer_buffer[i] = m->read_byte(mem_offset + i);
+				if (fseek(fh, offset, SEEK_SET) != 0)
+					ok = false;
+				if (ok && fwrite(xfer_buffer, 1, reclen, fh) != 0)
+					ok = false;
 				offset += reclen;
-				v = 128; // TODO
 			}
 			else if (func == 4) { // space forward
 				offset += reclen;
-				v = 128; // TODO
 			}
 			else if (func == 5) { // space backward
 				if (offset >= reclen)
 					offset -= reclen;
-				v = 128; // TODO
+				else {
+					offset  = 0;
+					ok = false;
+				}
 			}
 			else if (func == 7) { // rewind
 				offset = 0;
-				v = 128; // TODO set error if error
 			}
 
 			if (v & 64)  // interrupt enabled
 				b->getCpu()->queue_interrupt(5, 0224);
+
+			v = ok ? 128 : 32768;
 		}
 		else {
 			if ((v & 0101) == 0100)  // IE, no GO also triggers an interrupt

@@ -1,4 +1,4 @@
-// (C) 2018-2024 by Folkert van Heusden
+// (C) 2018-2026 by Folkert van Heusden
 // Released under MIT license
 
 #if defined(ESP32)
@@ -28,14 +28,13 @@ void loadbin(bus *const b, uint16_t base, const char *const file)
 	fclose(fh);
 }
 
-void set_boot_loader(bus *const b, const bootloader_t which)
+std::optional<uint16_t> set_boot_loader(bus *const b, const bootloader_t which)
 {
-	cpu       *const c      = b->getCpu();
-
-	uint16_t         offset = 0;
-	uint16_t         start  = 0;
-	const uint16_t  *bl     = nullptr;
-	int              size   = 0;
+	cpu              *const c      = b->getCpu();
+	uint16_t                offset = 0;
+	std::optional<uint16_t> start;
+	const uint16_t         *bl     = nullptr;
+	int                     size   = 0;
 
 	if (which == BL_RK05) {
 		DOLOG(debug, false, "Enabling RK05 bootloader");
@@ -85,18 +84,33 @@ void set_boot_loader(bus *const b, const bootloader_t which)
 
 		static const uint16_t rp06_code[] = {
 			012701, 0176700, 012700, 0176704, 012740, 0177000, 012740, 000071, 012700, 0, 000110, 000000
-
 		};
 
 		size = sizeof(rp06_code)/sizeof(rp06_code[0]);
 
 		bl = rp06_code;
 	}
+	else if (which == BL_TM11) {
+		DOLOG(debug, false, "Enabling TM1 bootloader");
+		start = offset = 010000;
 
-	for(uint16_t i=0; i<size; i++)
-		b->write_word(uint16_t(offset + i * 2), bl[i]);
+		static const uint16_t tm11_code[] = {
+				012700, 0001000, 0010006, 0010046, 0012701, 0000001, 0010037, 0172526, 0012737,
+				0177000, 0172524, 0012737, 0000003, 0172522, 0032737, 0000200, 0172522, 0001774,
+				0000207
+		};
 
-	c->set_register(7, start);
+		size = sizeof(tm11_code)/sizeof(tm11_code[0]);
+
+		bl = tm11_code;
+	}
+
+	if (start.has_value()) {
+		for(uint16_t i=0; i<size; i++)
+			b->write_word(uint16_t(offset + i * 2), bl[i]);
+	}
+
+	return start;
 }
 
 std::optional<uint16_t> load_tape(bus *const b, const std::string & file)
@@ -189,9 +203,6 @@ std::optional<uint16_t> load_tape(bus *const b, const std::string & file)
 #else
 	fclose(fh);
 #endif
-
-	if (start.has_value() == false)
-		start = 0200;  // assume BIC file
 
 	return start;
 }

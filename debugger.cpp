@@ -1480,11 +1480,9 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 	}
 }
 
-void run_bic(console *const cnsl, bus *const b, std::atomic_uint32_t *const stop_event, const uint16_t start_addr)
+void simple_run(console *const cnsl, bus *const b, std::atomic_uint32_t *const stop_event)
 {
 	cpu *const c = b->getCpu();
-
-	c->set_register(7, start_addr);
 
 	*cnsl->get_running_flag() = true;
 
