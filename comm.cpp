@@ -1,4 +1,4 @@
-// (C) 2024 by Folkert van Heusden
+// (C) 2024-2025 by Folkert van Heusden
 // Released under MIT license
 
 #include "gen.h"
@@ -11,6 +11,7 @@
 #endif
 #if defined(ESP32)
 #include "comm_esp32_hardwareserial.h"
+#include "comm_esp32_SC16IS752.h"
 #endif
 #if IS_POSIX
 #include "comm_posix_tty.h"
@@ -19,6 +20,11 @@
 #include "comm_tcp_socket_server.h"
 #include "log.h"
 
+
+#if defined(ESP32)
+SC16IS752 *comm::ser2_inst_1 { nullptr };
+SC16IS752 *comm::ser2_inst_2 { nullptr };
+#endif
 
 comm::comm()
 {
@@ -40,6 +46,12 @@ void comm::println(const std::string & in)
 	send_data(reinterpret_cast<const uint8_t *>("\r\n"), 2);
 }
 
+void comm::set_comm(SC16IS752 *const a, SC16IS752 *const b)
+{
+	ser2_inst_1 = a;
+	ser2_inst_2 = b;
+}
+
 comm *comm::deserialize(const JsonVariantConst j, bus *const b)
 {
         std::string   type = j["comm-backend-type"];
@@ -51,6 +63,8 @@ comm *comm::deserialize(const JsonVariantConst j, bus *const b)
 	else if (type == "tcp-client")
                 d = comm_tcp_socket_client::deserialize(j);
 #if defined(ESP32)
+	else if (type == "SC16IS752-serial")
+                d = comm_esp32_SC16IS752::deserialize(j, ser2_inst_1, ser2_inst_2);
 	else if (type == "hardware-serial")
                 d = comm_esp32_hardwareserial::deserialize(j);
 #endif
