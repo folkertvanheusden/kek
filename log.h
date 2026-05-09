@@ -47,7 +47,7 @@ void set_terminal(console *const cnsl);
 #endif
 #endif
 
-#if defined(TURBO) || defined(NDEBUG)
+#if defined(TURBO)
 #define TRACE(fmt, ...) do { } while(0)
 #else
 #define TRACE(fmt, ...) do {			\
