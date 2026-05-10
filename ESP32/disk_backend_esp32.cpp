@@ -64,7 +64,7 @@ bool disk_backend_esp32::read(const off_t offset, const size_t n, uint8_t *const
 	DOLOG(debug, false, "disk_backend_esp32::read: read %zu bytes from offset %zu", n, offset);
 
 	if (!fh->seek(offset)) {
-		DOLOG(ll_error, true, "seek error %s", strerror(errno));
+		DOLOG(ll_error, true, "seek error %02x", fh->getError());
 		emit_error();
 		return false;
 	}
@@ -73,7 +73,7 @@ bool disk_backend_esp32::read(const off_t offset, const size_t n, uint8_t *const
 
 	ssize_t rc = fh->read(target, n);
 	if (size_t(rc) != n) {
-       		DOLOG(ll_error, true, "fread error: %s (%zd/%zu)", strerror(errno), rc, n);
+		DOLOG(ll_error, true, "fread error: %02x (%zd/%zu)", fh->getError(), rc, n);
 		emit_error();
 		return false;
 	}
@@ -88,7 +88,7 @@ bool disk_backend_esp32::write(const off_t offset, const size_t n, const uint8_t
 	DOLOG(debug, false, "disk_backend_esp32::write: write %zu bytes to offset %zu", n, offset);
 
 	if (!fh->seek(offset)) {
-		DOLOG(ll_error, true, "seek error %s", strerror(errno));
+		DOLOG(ll_error, true, "seek error %02x", fh->getError());
 		emit_error();
 		return false;
 	}
@@ -97,7 +97,7 @@ bool disk_backend_esp32::write(const off_t offset, const size_t n, const uint8_t
 
 	ssize_t rc = fh->write(from, n);
 	if (size_t(rc) != n) {
-		DOLOG(ll_error, true, "RK05 fwrite error %s (%zd/%zu)", strerror(errno), rc, n);
+		DOLOG(ll_error, true, "RK05 fwrite error %02x (%zd/%zu)", fh->getError(), rc, n);
 		emit_error();
 		return false;
 	}
