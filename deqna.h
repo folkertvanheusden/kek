@@ -21,7 +21,7 @@
 #define DEQNA_VECTOR  0174454
 #define DEQNA_CSR     0174456
 #define DEQNA_END    (DEQNA_CSR + 2)
-
+#define DEQNA_IRQ_LEVEL    4
 #define DEQNA_MAX_N_QUEUED 4
 
 class deqna : public device

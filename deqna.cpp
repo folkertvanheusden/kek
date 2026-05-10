@@ -235,9 +235,10 @@ void deqna::receiver_high()
 				if (registers[7] & 64) {  // IE
 					uint16_t vector = registers[6] & 0x3fc;
 					DOLOG(debug, false, "deqna(rx): packet queued, trigger %06o", vector);
-					b->getCpu()->queue_interrupt(5, vector);
+					b->getCpu()->queue_interrupt(DEQNA_IRQ_LEVEL, vector);
 					queued = true;
 				}
+				registers[7] |= 32;
 				break;
 			}
 			if (ph & 0x4000)
@@ -338,7 +339,7 @@ void deqna::transmitter()
 			if (registers[7] & 64) {  // IE
 				uint16_t vector = registers[6] & 0x3fc;
 				DOLOG(debug, false, "deqna(tx): packet sent, trigger %06o", vector);
-				b->getCpu()->queue_interrupt(5, vector);
+				b->getCpu()->queue_interrupt(DEQNA_IRQ_LEVEL, vector);
 			}
 		}
 
