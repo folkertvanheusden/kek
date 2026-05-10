@@ -59,7 +59,7 @@ void tm_11::reset()
 {
 	memset(registers,   0x00, sizeof registers  );
 	memset(xfer_buffer, 0x00, sizeof xfer_buffer);
-	if (fseek(fh, 0, SEEK_SET) != 0)
+	if (fh && fseek(fh, 0, SEEK_SET) != 0)
 		DOLOG(warning, false, "TM-11 rewind error");
 }
 
