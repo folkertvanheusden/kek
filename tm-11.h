@@ -3,8 +3,9 @@
 
 #pragma once
 
-#include <stdint.h>
-#include <stdio.h>
+#include <cstdint>
+#include <cstdio>
+#include <optional>
 #include <string>
 
 #include "bus.h"
@@ -26,11 +27,16 @@ class tm_11 : public device
 {
 private:
 	memory   *const m                  { nullptr };
+	bus      *const b                  { nullptr };
 	uint16_t        registers[6]       { 0       };
-	uint8_t         xfer_buffer[65536];
-	int             offset             { 0       };
+	uint8_t         xfer_buffer[10240];
 	FILE           *fh                 { nullptr };
 	std::string     tape_file;
+
+	std::optional<unsigned> find_data_record_forward ();
+	std::optional<unsigned> find_data_record_backward();
+	bool skip_trailer_forward ();
+	bool skip_trailer_backward();
 
 public:
 	tm_11(bus *const b);

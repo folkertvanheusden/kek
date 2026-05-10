@@ -56,6 +56,8 @@ extern comm_esp32_SC16IS752 *SC16IS752_com_b[2];
 #include "rp2040.h"
 #endif
 
+bool init_sd();
+
 void configure_network(console *const cnsl);
 void check_network(console *const cnsl);
 void start_network(console *const cnsl);
@@ -108,27 +110,7 @@ void start_disk(console *const cnsl)
 	cnsl->put_string_lf(format("SCK : %d", int(SCK )));
 #endif
 
-#if defined(ESP32_WT_ETH01)
-	if (SDinstance.begin(SdioConfig(FIFO_SDIO)))
-		disk_started = true;
-#elif defined(SEEED_XIAO_S3)
-	cnsl->put_string_lf(format("SS  : %d", 1));
-	if (SDinstance.begin(1, SD_SCK_MHZ(10)))
-		disk_started = true;
-#elif !defined(BUILD_FOR_RP2040)
-	cnsl->put_string_lf(format("SS  : %d", int(SS)));
-	if (SDinstance.begin(SS, SD_SCK_MHZ(15)))
-		disk_started = true;
-#else
-#error What microcontroller is this?
-#endif
-	if (!disk_started) {
-		auto err = SDinstance.sdErrorCode();
-		if (err)
-			cnsl->put_string_lf(format("SDerror: 0x%x, data: 0x%x", err, SDinstance.sdErrorData()));
-		else
-			cnsl->put_string_lf("Failed to initialize SD card");
-	}
+	init_sd();
 #endif
 }
 
@@ -360,8 +342,11 @@ std::optional<disk_backend *> select_disk_backend(console *const cnsl)
 	if (ch == '1')
 		return select_disk_file(cnsl);
 
-	if (ch == '2')
-		return select_nbd_server(cnsl);
+	if (ch == '2') {
+		if (network_configured)
+			return select_nbd_server(cnsl);
+		cnsl->put_string_lf("Please configure network first (cfgnet)");
+	}
 
 	return { };
 #endif
@@ -415,9 +400,11 @@ void configure_disk(bus *const b, console *const cnsl)
 			}
 		}
 		else if (ch == '2') {
-			set_boot_loader(b, bl);
-
-			cnsl->put_string_lf("Bootloader loaded");
+			auto bl_addr = set_boot_loader(b, bl);
+			if (bl_addr.has_value()) {
+				cnsl->put_string_lf("Bootloader loaded");
+				b->getCpu()->setPC(bl_addr.value());
+			}
 		}
 		else {
 			int slot = ch - 'A';
@@ -901,7 +888,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		auto a_it = kv.find("a");
 
 		if (a_it == kv.end())
-			cnsl->put_string_lf("getmem: parameter missing?");
+			cnsl->put_string_lf("Parameter(s) missing");
 		else {
 			uint16_t a = std::stoi(a_it->second, nullptr, 8);
 			cnsl->put_string_lf(format("MEM %06o = %03o", a, c->getBus()->read_byte(a)));
@@ -911,7 +898,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 	}
 	else if (parts[0] == "d" || parts[0] == "deposit") {
 		if (parts.size() != 3)
-			cnsl->put_string_lf("deposit: parameter(s) missing");
+			cnsl->put_string_lf("Parameter(s) missing");
 		else {
 			uint16_t v = std::stoi(parts[2], nullptr, 8);
 			if (parts[1] == "pc" || parts[1] == "PC") {
@@ -930,7 +917,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		auto v_it = kv.find("v");
 
 		if (a_it == kv.end() || v_it == kv.end())
-			cnsl->put_string_lf("setmem: parameter missing?");
+			cnsl->put_string_lf("Parameter(s) missing");
 		else {
 			uint16_t a = std::stoi(a_it->second, nullptr, 8);
 			uint8_t  v = std::stoi(v_it->second, nullptr, 8);
@@ -994,7 +981,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		if (parts.size() == 2)
 			mmu_resolve(cnsl, b, std::stoi(parts[1], nullptr, 8));
 		else
-			cnsl->put_string_lf("Parameter missing");
+			cnsl->put_string_lf("Parameter(s) missing");
 
 		return true;
 	}
@@ -1014,7 +1001,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 	}
 	else if (parts[0] == "examine" || parts[0] == "e") {
 		if (parts.size() < 3)
-			cnsl->put_string_lf("parameter missing");
+			cnsl->put_string_lf("Parameter(s) missing");
 		else {
 			uint32_t addr = std::stoi(parts[1], nullptr, 8);
 			int      n    = parts.size() == 4 ? std::stoi(parts[3]) : 1;
@@ -1111,18 +1098,6 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 
 		return true;
 	}
-	else if (parts[0] == "bl" && parts.size() == 2) {
-		if (parts.at(1) == "rk05")
-			set_boot_loader(b, BL_RK05);
-		else if (parts.at(1) == "rl02")
-			set_boot_loader(b, BL_RL02);
-		else if (parts.at(1) == "rp06" || parts[1] == "rp07")
-			set_boot_loader(b, BL_RP06);
-		else
-			cnsl->put_string_lf("???");
-
-		return true;
-	}
 	else if (parts[0] == "trl") {
 		if (parts.size() == 1)
 			state->t_rl.reset();
@@ -1183,8 +1158,12 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		set_kw11_l_interrupt_freq(cnsl, b, std::stoi(parts.at(1)));
 		return true;
 	}
-	else if (parts[0] == "setsl" && parts.size() == 3) {
-		if (setloghost(parts.at(1).c_str(), parse_ll(parts[2])) == false)
+	else if (parts[0] == "setsl") {
+		if (parts.size() != 3)
+			cnsl->put_string_lf("Parameter(s) missing");
+		else if (network_configured == false)
+			cnsl->put_string_lf("Please configure network first (cfgnet)");
+		else if (setloghost(parts.at(1).c_str(), parse_ll(parts[2])) == false)
 			cnsl->put_string_lf("Failed parsing IP address");
 		else
 			send_syslog(info, "Hello, world!");
@@ -1223,7 +1202,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 	}
 	else if (parts[0] == "bic") {
 		if (parts.size() != 2)
-			cnsl->put_string_lf("BIC/LDA parameter missing");
+			cnsl->put_string_lf("Parameter(s) missing");
 		else {
 			auto rc = load_tape(b, parts[1].c_str());
 			if (rc.has_value()) {
@@ -1331,7 +1310,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			"                registers",
 			"trace/t       - toggle tracing",
 			"setll x,y     - set loglevel: terminal,file",
-			"setsl x,y     - set syslog target: requires a hostname and a loglevel",
+			"setsl hst ll  - set syslog target: requires a hostname and a loglevel",
 			"pts x         - enable (1) / disable (0) timestamps",
 			"turbo         - toggle turbo mode (cannot be interrupted)",
 			"debug         - enable CPU debug mode",
@@ -1359,7 +1338,6 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			"ult           - unload tape",
 			"stats         - show run statistics",
 			"ramsize x     - set ram size (page (8 kB) count, decimal)",
-			"bl            - set bootloader (rl02, rk05, rp06 or rp07)",
 			"cdz11         - configure DZ11 device",
 			"serdz11       - store DZ11 device settings",
 			"dserdz11      - load DZ11 device settings",
@@ -1480,11 +1458,9 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 	}
 }
 
-void run_bic(console *const cnsl, bus *const b, std::atomic_uint32_t *const stop_event, const uint16_t start_addr)
+void simple_run(console *const cnsl, bus *const b, std::atomic_uint32_t *const stop_event)
 {
 	cpu *const c = b->getCpu();
-
-	c->set_register(7, start_addr);
 
 	*cnsl->get_running_flag() = true;
 

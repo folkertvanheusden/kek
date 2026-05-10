@@ -1,4 +1,4 @@
-// (C) 2018-2024 by Folkert van Heusden
+// (C) 2018-2026 by Folkert van Heusden
 // Released under MIT license
 
 #include <fcntl.h>
@@ -8,6 +8,8 @@
 #include "error.h"
 #include "log.h"
 
+#define RETRY_COUNT 4
+bool init_sd();
 
 static SdFat sd;
 
@@ -64,21 +66,23 @@ bool disk_backend_esp32::read(const off_t offset, const size_t n, uint8_t *const
 	DOLOG(debug, false, "disk_backend_esp32::read: read %zu bytes from offset %zu", n, offset);
 
 	if (!fh->seek(offset)) {
-		DOLOG(ll_error, true, "seek error %s", strerror(errno));
+		DOLOG(ll_error, true, "seek error %02x", fh->getError());
 		emit_error();
 		return false;
 	}
 
 	yield();
 
-	ssize_t rc = fh->read(target, n);
-	if (size_t(rc) != n) {
-       		DOLOG(ll_error, true, "fread error: %s (%zd/%zu)", strerror(errno), rc, n);
+	for(int i=0; i<RETRY_COUNT; i++) {
+		ssize_t rc = fh->read(target, n);
+		if (size_t(rc) == n)
+			break;
+		DOLOG(ll_error, true, "%d] fread error: %02x (%zd/%zu)", i, fh->getError(), rc, n);
 		emit_error();
-		return false;
+		if (!init_sd())
+			DOLOG(ll_error, true, "(re-)init SD failed");
+		yield();
 	}
-
-	yield();
 
 	return true;
 }
@@ -88,21 +92,23 @@ bool disk_backend_esp32::write(const off_t offset, const size_t n, const uint8_t
 	DOLOG(debug, false, "disk_backend_esp32::write: write %zu bytes to offset %zu", n, offset);
 
 	if (!fh->seek(offset)) {
-		DOLOG(ll_error, true, "seek error %s", strerror(errno));
+		DOLOG(ll_error, true, "seek error %02x", fh->getError());
 		emit_error();
 		return false;
 	}
 
 	yield();
 
-	ssize_t rc = fh->write(from, n);
-	if (size_t(rc) != n) {
-		DOLOG(ll_error, true, "RK05 fwrite error %s (%zd/%zu)", strerror(errno), rc, n);
+	for(int i=0; i<RETRY_COUNT; i++) {
+		ssize_t rc = fh->write(from, n);
+		if (size_t(rc) == n)
+			break;
+		DOLOG(ll_error, true, "%d] fwrite error %02x (%zd/%zu)", i, fh->getError(), rc, n);
 		emit_error();
-		return false;
+		if (!init_sd())
+			DOLOG(ll_error, true, "(re-)init SD failed");
+		yield();
 	}
-
-	yield();
 
 	return true;
 }

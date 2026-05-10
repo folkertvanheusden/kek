@@ -55,7 +55,7 @@ void kw11_l::begin(console *const cnsl)
 	this->cnsl = cnsl;
 
 #if defined(ESP32) || defined(BUILD_FOR_RP2040)
-	xTaskCreate(&thread_wrapper_kw11, "kw11-l", 2048, this, 1, nullptr);
+	xTaskCreate(&thread_wrapper_kw11, "kw11-l", 2048, this, 2, nullptr);
 
 #if defined(BUILD_FOR_RP2040)
 	xSemaphoreGive(lf_csr_lock);  // initialize

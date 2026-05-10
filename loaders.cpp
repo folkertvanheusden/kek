@@ -1,4 +1,4 @@
-// (C) 2018-2024 by Folkert van Heusden
+// (C) 2018-2026 by Folkert van Heusden
 // Released under MIT license
 
 #if defined(ESP32)
@@ -28,14 +28,13 @@ void loadbin(bus *const b, uint16_t base, const char *const file)
 	fclose(fh);
 }
 
-void set_boot_loader(bus *const b, const bootloader_t which)
+std::optional<uint16_t> set_boot_loader(bus *const b, const bootloader_t which)
 {
-	cpu       *const c      = b->getCpu();
-
-	uint16_t         offset = 0;
-	uint16_t         start  = 0;
-	const uint16_t  *bl     = nullptr;
-	int              size   = 0;
+	cpu              *const c      = b->getCpu();
+	uint16_t                offset = 0;
+	std::optional<uint16_t> start;
+	const uint16_t         *bl     = nullptr;
+	int                     size   = 0;
 
 	if (which == BL_RK05) {
 		DOLOG(debug, false, "Enabling RK05 bootloader");
@@ -61,34 +60,6 @@ void set_boot_loader(bus *const b, const bootloader_t which)
 		DOLOG(debug, false, "Enabling RL02 bootloader");
 		start = offset = 01000;
 
-		/* from https://www.pdp-11.nl/peripherals/disk/rl-info.html
-		static const uint16_t rl02_code[] = {
-			0012701,
-			0174400,
-			0012761,
-			0000013,
-			0000004,
-			0012711,
-			0000004,
-			0105711,
-			0100376,
-			0005061,
-			0000002,
-			0005061,
-			0000004,
-			0012761,
-			0177400,
-			0000006,
-			0012711,
-			0000014,
-			0105711,
-			0100376,
-			0005007
-		};
-
-		size = 21;
-		*/
-
 		// from http://gunkies.org/wiki/RL11_disk_controller
 		static const uint16_t rl02_code[] = {
 			0012700,
@@ -113,18 +84,33 @@ void set_boot_loader(bus *const b, const bootloader_t which)
 
 		static const uint16_t rp06_code[] = {
 			012701, 0176700, 012700, 0176704, 012740, 0177000, 012740, 000071, 012700, 0, 000110, 000000
-
 		};
 
 		size = sizeof(rp06_code)/sizeof(rp06_code[0]);
 
 		bl = rp06_code;
 	}
+	else if (which == BL_TM11) {
+		DOLOG(debug, false, "Enabling TM1 bootloader");
+		start = offset = 010000;
 
-	for(uint16_t i=0; i<size; i++)
-		b->write_word(uint16_t(offset + i * 2), bl[i]);
+		static const uint16_t tm11_code[] = {
+				012700, 0001000, 0010006, 0010046, 0012701, 0000001, 0010037, 0172526, 0012737,
+				0177000, 0172524, 0012737, 0000003, 0172522, 0032737, 0000200, 0172522, 0001774,
+				0000207
+		};
 
-	c->set_register(7, start);
+		size = sizeof(tm11_code)/sizeof(tm11_code[0]);
+
+		bl = tm11_code;
+	}
+
+	if (start.has_value()) {
+		for(uint16_t i=0; i<size; i++)
+			b->write_word(uint16_t(offset + i * 2), bl[i]);
+	}
+
+	return start;
 }
 
 std::optional<uint16_t> load_tape(bus *const b, const std::string & file)
@@ -144,10 +130,9 @@ std::optional<uint16_t> load_tape(bus *const b, const std::string & file)
 #endif
 
 	std::optional<uint16_t> start;
+	uint8_t                 buffer[6];
 
 	for(;;) {
-		uint8_t buffer[6];
-
 #if defined(ESP32)
 		if (fh.read(buffer, 6) != 6)
 			break;
@@ -185,11 +170,6 @@ std::optional<uint16_t> load_tape(bus *const b, const std::string & file)
 				break;
 			}
 #else
-			if (feof(fh)) {
-				DOLOG(warning, true, "short read");
-				break;
-			}
-
 			int c = fgetc(fh);
 			if (c == -1) {
 				DOLOG(warning, true, "read failure");
@@ -217,9 +197,6 @@ std::optional<uint16_t> load_tape(bus *const b, const std::string & file)
 #else
 	fclose(fh);
 #endif
-
-	if (start.has_value() == false)
-		start = 0200;  // assume BIC file
 
 	return start;
 }
