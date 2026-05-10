@@ -46,7 +46,7 @@ static bool invoke_if_ioctl(const std::string & dev_name, const int ioctl_nr, if
 	return false;
 }
 
-static int open_tun(const std::string & dev_name, const uint8_t mac_address[6])
+static int open_tun(const std::string & dev_name)
 {
 	int fd      = -1;
 	int temp_fd = -1;
@@ -77,16 +77,6 @@ static int open_tun(const std::string & dev_name, const uint8_t mac_address[6])
 		if (invoke_if_ioctl(dev_name, SIOCSIFFLAGS, &ifr_tap) == false)
 			break;
 
-		if (invoke_if_ioctl(dev_name, SIOCGIFHWADDR, &ifr_tap) == false)
-			break;
-		if (ifr_tap.ifr_hwaddr.sa_family != ARPHRD_ETHER) {
-			DOLOG(ll_error, false, "unexpected adress family %d", ifr_tap.ifr_hwaddr.sa_family);
-			break;
-		}
-		memcpy(ifr_tap.ifr_hwaddr.sa_data, mac_address, 6);
-		if (invoke_if_ioctl(dev_name, SIOCSIFHWADDR, &ifr_tap) == false)
-			break;
-
 		close(temp_fd);
 
 		return fd;
@@ -114,7 +104,7 @@ bool deqna::begin()
 {
 	bool rc = false;
 #if defined(linux)
-	dev_fd = open_tun("pdp", mac_address);
+	dev_fd = open_tun("pdp");
 	rc = dev_fd != -1;
 #endif
 	th_rx_low  = new std::thread(&deqna::receiver_low, this);
