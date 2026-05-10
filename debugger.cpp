@@ -110,7 +110,7 @@ void start_disk(console *const cnsl)
 
 #if defined(SEEED_XIAO_S3)
 	cnsl->put_string_lf(format("SS  : %d", 1));
-	if (SDinstance.begin(1, SD_SCK_MHZ(4)))
+	if (SDinstance.begin(1, SD_SCK_MHZ(1)))
 		disk_started = true;
 #elif !defined(BUILD_FOR_RP2040)
 	cnsl->put_string_lf(format("SS  : %d", int(SS)));
@@ -360,7 +360,7 @@ std::optional<disk_backend *> select_disk_backend(console *const cnsl)
 	if (ch == '2') {
 		if (network_configured)
 			return select_nbd_server(cnsl);
-		cnsl->put_string_lf("Start network first");
+		cnsl->put_string_lf("Please configure network first (cfgnet)");
 	}
 
 	return { };
@@ -903,7 +903,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		auto a_it = kv.find("a");
 
 		if (a_it == kv.end())
-			cnsl->put_string_lf("getmem: parameter missing?");
+			cnsl->put_string_lf("Parameter(s) missing");
 		else {
 			uint16_t a = std::stoi(a_it->second, nullptr, 8);
 			cnsl->put_string_lf(format("MEM %06o = %03o", a, c->getBus()->read_byte(a)));
@@ -913,7 +913,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 	}
 	else if (parts[0] == "d" || parts[0] == "deposit") {
 		if (parts.size() != 3)
-			cnsl->put_string_lf("deposit: parameter(s) missing");
+			cnsl->put_string_lf("Parameter(s) missing");
 		else {
 			uint16_t v = std::stoi(parts[2], nullptr, 8);
 			if (parts[1] == "pc" || parts[1] == "PC") {
@@ -932,7 +932,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		auto v_it = kv.find("v");
 
 		if (a_it == kv.end() || v_it == kv.end())
-			cnsl->put_string_lf("setmem: parameter missing?");
+			cnsl->put_string_lf("Parameter(s) missing");
 		else {
 			uint16_t a = std::stoi(a_it->second, nullptr, 8);
 			uint8_t  v = std::stoi(v_it->second, nullptr, 8);
@@ -996,7 +996,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		if (parts.size() == 2)
 			mmu_resolve(cnsl, b, std::stoi(parts[1], nullptr, 8));
 		else
-			cnsl->put_string_lf("Parameter missing");
+			cnsl->put_string_lf("Parameter(s) missing");
 
 		return true;
 	}
@@ -1016,7 +1016,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 	}
 	else if (parts[0] == "examine" || parts[0] == "e") {
 		if (parts.size() < 3)
-			cnsl->put_string_lf("parameter missing");
+			cnsl->put_string_lf("Parameter(s) missing");
 		else {
 			uint32_t addr = std::stoi(parts[1], nullptr, 8);
 			int      n    = parts.size() == 4 ? std::stoi(parts[3]) : 1;
@@ -1173,8 +1173,12 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		set_kw11_l_interrupt_freq(cnsl, b, std::stoi(parts.at(1)));
 		return true;
 	}
-	else if (parts[0] == "setsl" && parts.size() == 3) {
-		if (setloghost(parts.at(1).c_str(), parse_ll(parts[2])) == false)
+	else if (parts[0] == "setsl") {
+		if (parts.size() != 3)
+			cnsl->put_string_lf("Parameter(s) missing");
+		else if (network_configured == false)
+			cnsl->put_string_lf("Please configure network first (cfgnet)");
+		else if (setloghost(parts.at(1).c_str(), parse_ll(parts[2])) == false)
 			cnsl->put_string_lf("Failed parsing IP address");
 		else
 			send_syslog(info, "Hello, world!");
@@ -1213,7 +1217,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 	}
 	else if (parts[0] == "bic") {
 		if (parts.size() != 2)
-			cnsl->put_string_lf("BIC/LDA parameter missing");
+			cnsl->put_string_lf("Parameter(s) missing");
 		else {
 			auto rc = load_tape(b, parts[1].c_str());
 			if (rc.has_value()) {
@@ -1321,7 +1325,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			"                registers",
 			"trace/t       - toggle tracing",
 			"setll x,y     - set loglevel: terminal,file",
-			"setsl x,y     - set syslog target: requires a hostname and a loglevel",
+			"setsl hst ll  - set syslog target: requires a hostname and a loglevel",
 			"pts x         - enable (1) / disable (0) timestamps",
 			"turbo         - toggle turbo mode (cannot be interrupted)",
 			"debug         - enable CPU debug mode",
