@@ -108,12 +108,9 @@ void start_disk(console *const cnsl)
 	cnsl->put_string_lf(format("SCK : %d", int(SCK )));
 #endif
 
-#if defined(ESP32_WT_ETH01)
-	if (SDinstance.begin(SdioConfig(FIFO_SDIO)))
-		disk_started = true;
-#elif defined(SEEED_XIAO_S3)
+#if defined(SEEED_XIAO_S3)
 	cnsl->put_string_lf(format("SS  : %d", 1));
-	if (SDinstance.begin(1, SD_SCK_MHZ(10)))
+	if (SDinstance.begin(1, SD_SCK_MHZ(4)))
 		disk_started = true;
 #elif !defined(BUILD_FOR_RP2040)
 	cnsl->put_string_lf(format("SS  : %d", int(SS)));
@@ -415,9 +412,11 @@ void configure_disk(bus *const b, console *const cnsl)
 			}
 		}
 		else if (ch == '2') {
-			set_boot_loader(b, bl);
-
-			cnsl->put_string_lf("Bootloader loaded");
+			auto bl_addr = set_boot_loader(b, bl);
+			if (bl_addr.has_value()) {
+				cnsl->put_string_lf("Bootloader loaded");
+				b->getCpu()->setPC(bl_addr.value());
+			}
 		}
 		else {
 			int slot = ch - 'A';
@@ -1111,18 +1110,6 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 
 		return true;
 	}
-	else if (parts[0] == "bl" && parts.size() == 2) {
-		if (parts.at(1) == "rk05")
-			set_boot_loader(b, BL_RK05);
-		else if (parts.at(1) == "rl02")
-			set_boot_loader(b, BL_RL02);
-		else if (parts.at(1) == "rp06" || parts[1] == "rp07")
-			set_boot_loader(b, BL_RP06);
-		else
-			cnsl->put_string_lf("???");
-
-		return true;
-	}
 	else if (parts[0] == "trl") {
 		if (parts.size() == 1)
 			state->t_rl.reset();
@@ -1359,7 +1346,6 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			"ult           - unload tape",
 			"stats         - show run statistics",
 			"ramsize x     - set ram size (page (8 kB) count, decimal)",
-			"bl            - set bootloader (rl02, rk05, rp06 or rp07)",
 			"cdz11         - configure DZ11 device",
 			"serdz11       - store DZ11 device settings",
 			"dserdz11      - load DZ11 device settings",
