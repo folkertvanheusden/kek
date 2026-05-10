@@ -357,10 +357,20 @@ void deqna::write_word(const uint16_t addr, const uint16_t v)
 	registers[reg_nr] = v;
 
 	if (addr == DEQNA_CSR) {
-		uint16_t new_csr = old_v & 0x7834;  // clear RI/XI and bits settable by software
-		new_csr |= (v & 0x074b);  // only allow certain bits
-		new_csr &= ~(v & 0x8080);         // if SW writes 1 to RI or XI, clear them
-		registers[7] = new_csr;
+		uint16_t new_csr = v;
+
+		if (v & 32768)  // clear RI
+			new_csr &= ~32768;
+		if (v & 128)  // clear TI
+			new_csr &= ~128;
+		new_csr &= ~2;  // ignore software reset
+
+		new_csr &= ~0x7834;  // these are read only
+		new_csr |= old_v & 0x7834;  // copy from old set
+
+		new_csr &= ~0x0800;  // reserved bit
+
+		registers[reg_nr] = new_csr;
 	}
 	else if (addr == DEQNA_RX_BDLH) {
 		registers[7] &= ~32;  // RX buffers set, no more invalid
