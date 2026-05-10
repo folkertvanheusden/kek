@@ -107,7 +107,7 @@ bool deqna::begin()
 	dev_fd = open_tun("pdp");
 	rc = dev_fd != -1;
 #endif
-	th_rx_low  = new std::thread(&deqna::receiver_low, this);
+	th_rx_low  = new std::thread(&deqna::receiver_low,  this);
 	th_rx_high = new std::thread(&deqna::receiver_high, this);
 	return rc;
 }
@@ -145,6 +145,8 @@ void deqna::queue_rx_packet(const uint8_t *const in, const size_t n)
 // to process it. this allows loopback
 void deqna::receiver_low()
 {
+	set_thread_name("deqna:rx_low");
+
 	pollfd fds[] { { dev_fd, POLLIN, 0 } };
 
 	while(!stop_flag) {
@@ -168,10 +170,13 @@ void deqna::receiver_low()
 		if (memcmp(buffer, mac_address, 6) != 0 && memcmp(buffer, bc_addr, 6) != 0)
 			continue;
 
-		if (registers[7] & 1)  // receiver enabled?
+		if (registers[7] & 1) {  // receiver enabled?
+			DOLOG(debug, false, "deqna packet received from real Ethernet");
 			queue_rx_packet(buffer, byte_cnt);
-		else
-			DOLOG(info, false, "deqna dropped packet: receiver not enabled");
+		}
+		else {
+			DOLOG(debug, false, "deqna dropped packet: receiver not enabled");
+		}
 	}
 
 	DOLOG(info, false, "deqna LOW RECEIVER THREAD TERMINATING");
@@ -179,6 +184,8 @@ void deqna::receiver_low()
 
 void deqna::receiver_high()
 {
+	set_thread_name("deqna:rx_high");
+
 	uint32_t p_buffers = ((registers[3] & 63) << 16) | registers[2];
 
 	while(!stop_flag) {
@@ -414,7 +421,8 @@ void deqna::write_word(const uint16_t addr, const uint16_t v)
 			new_csr &= ~32768;
 		if (v & 128)  // clear TI
 			new_csr &= ~128;
-		new_csr &= ~2;  // ignore software reset
+		if (v & 2)
+			new_csr &= ~2;  // ignore software reset
 
 		new_csr &= ~0x7834;  // these are read only
 		new_csr |= old_v & 0x7834;  // copy from old set
