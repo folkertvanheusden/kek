@@ -219,13 +219,13 @@ void help()
 	printf("-h       this help\n");
 	printf("-D x     deserialize state from file\n");
 	printf("-P       when serializing state to file (in the debugger), include an overlay: changes to disk-files are then non-persistent, they only exist in the state-dump\n");
-	printf("-T t.bin load file as a binary tape file (like simh \"load\" command), also for .BIC files\n");
-	printf("-B       run tape file as a unit test (for .BIC files)\n");
+	printf("-T t.bin load file as a binary tape file (like simh \"load\" command), also see -B\n");
+	printf("-B x     1: only load tape (default), 2: load & boot tape, 3: run as a unit test (for .BIC files)\n");
 	printf("-r d.img load file as a disk device\n");
 	printf("-N host:port  use NBD-server as disk device (like -r)\n");
 	printf("-R x     select disk type (rk05, rl02, rp06 or rp07)\n");
 	printf("-p 123   set CPU start pointer to octal value\n");
-	printf("-b       enable bootloader (builtin)\n");
+	printf("-b x     enable builtin bootloader, see -R for values (+ \"tm11\") of x\n");
 	printf("-n       ncurses UI\n");
 	printf("-d       enable debugger\n");
 	printf("-f x     first process the commands from file x before entering the debugger\n");
@@ -249,11 +249,10 @@ int main(int argc, char *argv[])
 	std::vector<disk_backend *> disk_files;
 	std::string  disk_type = "rk05";
 
-	bool          run_debugger  = false;
+	bool          run_debugger = false;
 	std::optional<std::string> debugger_init;
 
-	bool          enable_bootloader = false;
-	bootloader_t  bootloader        = BL_NONE;
+	bootloader_t  bootloader   = BL_NONE;
 
 	const char  *logfile   = nullptr;
 	log_level_t  ll_screen = none;
@@ -261,11 +260,10 @@ int main(int argc, char *argv[])
 	bool         timestamp = true;
 	bool         ll_set    = false;
 
-	uint16_t     start_addr= 01000;
-	bool         sa_set    = false;
+	std::optional<uint16_t> start_addr;
 
 	std::string  tape;
-	bool         is_bic    = false;
+	enum { just_load, load_and_run, load_and_run_bic } tape_mode = just_load;
 
 	uint16_t     console_switches = 0;
 	std::string  blinkenlights_ip;
@@ -285,7 +283,7 @@ int main(int argc, char *argv[])
 	int          tcp_port_offset = default_port_offset;
 
 	int  opt          = -1;
-	while((opt = getopt(argc, argv, "hD:T:Br:R:p:ndf:tL:bl:s:Q:N:J:XS:P1:m:Q:28:")) != -1)
+	while((opt = getopt(argc, argv, "hD:T:B:r:R:p:ndf:tL:b:l:s:Q:N:J:XS:P1:m:Q:28:")) != -1)
 	{
 		switch(opt) {
 			case 'h':
@@ -335,8 +333,17 @@ int main(int argc, char *argv[])
 				  }
 
 			case 'b':
-				enable_bootloader = true;
-				break;
+				  if (strcmp(optarg, "rk05") == 0)
+					  bootloader = BL_RK05;
+				  else if (strcmp(optarg, "rl02") == 0)
+					  bootloader = BL_RL02;
+				  else if (strcmp(optarg, "rp06") == 0 || strcmp(optarg, "rp07") == 0)
+					  bootloader = BL_RP06;
+				  else if (strcmp(optarg, "tm11") == 0)
+					  bootloader = BL_TM11;
+				  else 
+					  error_exit(false, "Internal error: bootloader type %s not understood", optarg);
+				  break;
 
 			case 'd':
 				run_debugger = true;
@@ -354,8 +361,17 @@ int main(int argc, char *argv[])
 				tape = optarg;
 				break;
 
-			case 'B':
-				is_bic = true;
+			case 'B': {
+					  int temp = std::stoi(optarg);
+					  if (temp == 1)
+						  tape_mode = just_load;
+					  else if (temp == 2)
+						  tape_mode = load_and_run;
+					  else if (temp == 3)
+						  tape_mode = load_and_run_bic;
+					  else
+						error_exit(false, "Tape usage mode");
+				}
 				break;
 
 			case 'R':
@@ -379,7 +395,6 @@ int main(int argc, char *argv[])
 
 			case 'p':
 				start_addr = std::stoi(optarg, nullptr, 8);
-				sa_set     = true;
 				break;
 
 			case 'L': {
@@ -476,29 +491,20 @@ int main(int argc, char *argv[])
 		b->add_RP06(rp06_dev);
 
 		if (disk_type == "rk05") {
-			bootloader = BL_RK05;
-
 			for(auto & file: disk_files)
 				rk05_dev->access_disk_backends()->push_back(file);
 		}
 		else if (disk_type == "rl02") {
-			bootloader = BL_RL02;
-
 			for(auto & file: disk_files)
 				rl02_dev->access_disk_backends()->push_back(file);
 		}
 		else if (disk_type == "rp06" || disk_type == "rp07") {
-			bootloader = BL_RP06;
-
 			for(auto & file: disk_files)
 				rp06_dev->access_disk_backends()->push_back(file);
 		}
 		else {
 			error_exit(false, "Internal error: disk-type %s not understood", disk_type.c_str());
 		}
-
-		if (enable_bootloader)
-			set_boot_loader(b, bootloader);
 	}
 	else {
 		auto rc = deserialize_file(deserialize);
@@ -573,17 +579,27 @@ int main(int argc, char *argv[])
 
 	std::atomic_bool interrupt_emulation { false };
 
-	std::optional<uint16_t> bic_start;
-	if (tape.empty() == false) {
-		bic_start = load_tape(b, tape);
-		if (bic_start.has_value() == false)
-			return 1;  // fail
-
-		b->getCpu()->set_register(7, bic_start.value());
+	if (bootloader != BL_NONE) {
+		auto bl_addr = set_boot_loader(b, bootloader);
+		if (start_addr.has_value() == false)
+			start_addr = bl_addr;
 	}
 
-	if (sa_set)
-		b->getCpu()->set_register(7, start_addr);
+	if (tape.empty() == false) {
+		if (tape_mode == load_and_run_bic) {
+			auto tape_start = load_tape(b, tape);
+			if (tape_start.has_value())
+				start_addr = tape_start;
+			else
+				tape_start = 0200;
+		}
+		else if (tape_mode == load_and_run || tape_mode == just_load) {
+			tm_11_->load(tape);
+		}
+	}
+
+	if (start_addr.has_value())
+		b->getCpu()->set_register(7, start_addr.value());
 
 	DOLOG(info, true, "Start running at %06o", b->getCpu()->get_register(7));
 
@@ -604,8 +620,8 @@ int main(int argc, char *argv[])
 
 	b->getKW11_L()->begin(cnsl);
 
-	if (is_bic)
-		run_bic(cnsl, b, &event, bic_start.value());
+	if (tape_mode == load_and_run_bic || tape_mode == load_and_run)
+		simple_run(cnsl, b, &event);
 	else if (run_debugger || (bootloader == BL_NONE && tape.empty()))
 		debugger(cnsl, b, &event, debugger_init);
 	else {

@@ -84,6 +84,32 @@ static void console_thread_wrapper_panel(void *const c)
 	vTaskSuspend(nullptr);
 }
 
+#if !IS_POSIX
+bool init_sd()
+{
+  bool disk_started = false;
+#if defined(SEEED_XIAO_S3)
+	cnsl->put_string_lf(format("SS  : %d", 1));
+	if (SDinstance.begin(1, SD_SCK_MHZ(1)))
+		disk_started = true;
+#elif !defined(BUILD_FOR_RP2040)
+	cnsl->put_string_lf(format("SS  : %d", int(SS)));
+	if (SDinstance.begin(SS, SD_SCK_MHZ(15)))
+		disk_started = true;
+#else
+#error What microcontroller is this?
+#endif
+	if (!disk_started) {
+		auto err = SDinstance.sdErrorCode();
+		if (err)
+			DOLOG(ll_error, true, "SDerror: 0x%x, data: 0x%x", err, SDinstance.sdErrorData());
+		else
+			DOLOG(ll_error, true, "Failed to initialize SD card");
+	}
+  return disk_started;
+}
+#endif
+
 #if !defined(BUILD_FOR_RP2040)
 void set_hostname()
 {
