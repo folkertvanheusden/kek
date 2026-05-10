@@ -186,8 +186,6 @@ void deqna::receiver_high()
 {
 	set_thread_name("deqna:rx_high");
 
-	uint32_t p_buffers = ((registers[3] & 63) << 16) | registers[2];
-
 	while(!stop_flag) {
 		// receive list invalid?
 		if (registers[7] & 32) {
@@ -208,6 +206,8 @@ void deqna::receiver_high()
 		DOLOG(debug, false, "deqna(rx): Ethernet packet received (%zu bytes, from %02x:%02x:%02x:%02x:%02x:%02x, type: %04x)",
 				byte_cnt,
 				buffer[6], buffer[7], buffer[8], buffer[9], buffer[10], buffer[11], (buffer[12] << 8) | buffer[13]);
+
+		uint32_t p_buffers = ((registers[3] & 63) << 16) | registers[2];
 
 		// push into pdp memory
 		bool     queued    = false;
