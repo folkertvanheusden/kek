@@ -4,8 +4,11 @@
 #pragma once
 
 #include <atomic>
+#include <condition_variable>
 #include <cstdint>
+#include <mutex>
 #include <thread>
+#include <vector>
 
 #include "bus.h"
 #include "device.h"
@@ -19,6 +22,8 @@
 #define DEQNA_CSR     0174456
 #define DEQNA_END    (DEQNA_CSR + 2)
 
+#define DEQNA_MAX_N_QUEUED 4
+
 class deqna : public device
 {
 private:
@@ -27,10 +32,16 @@ private:
 	uint8_t          mac_address[6] { 0       };
 	int              dev_fd         { -1      };
 	std::atomic_bool stop_flag      { false   };
-	std::thread     *th_rx          { nullptr };
+	std::thread     *th_rx_low      { nullptr };
+	std::thread     *th_rx_high     { nullptr };
+	std::mutex       lock;
+	std::condition_variable cv;
+	std::vector<std::pair<uint8_t *, size_t> > received;
 
-	void receiver   ();
-	void transmitter();
+	void queue_rx_packet(const uint8_t *const in, const size_t n);
+	void receiver_low   ();
+	void receiver_high  ();
+	void transmitter    ();
 
 public:
 	deqna(bus *const b, const uint8_t mac_address[6]);

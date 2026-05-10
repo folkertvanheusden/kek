@@ -117,34 +117,47 @@ bool deqna::begin()
 	dev_fd = open_tun("pdp", mac_address);
 	rc = dev_fd != -1;
 #endif
-	th_rx = new std::thread(&deqna::receiver, this);
+	th_rx_low  = new std::thread(&deqna::receiver_low, this);
+	th_rx_high = new std::thread(&deqna::receiver_high, this);
 	return rc;
 }
 
 deqna::~deqna()
 {
-	if (th_rx) {
-		stop_flag = true;
-		th_rx->join();
-		delete th_rx;
+	stop_flag = true;
+	if (th_rx_low) {
+		th_rx_low->join();
+		delete th_rx_low;
+	}
+	if (th_rx_high) {
+		th_rx_high->join();
+		delete th_rx_high;
 	}
 	if (dev_fd != -1)
 		close(dev_fd);
 }
 
-void deqna::receiver()
+void deqna::queue_rx_packet(const uint8_t *const in, const size_t n)
+{
+	std::unique_lock<std::mutex> lck(lock);
+	if (received.size() < DEQNA_MAX_N_QUEUED) {
+		uint8_t *copy = new uint8_t[n];
+		memcpy(copy, in, n);
+		received.push_back({ copy, n });
+		cv.notify_one();
+	}
+	else {
+		DOLOG(debug, false, "deqna: rx queue full, packet dropped");
+	}
+}
+
+// receiver pushes packets on a queue and signals another thread
+// to process it. this allows loopback
+void deqna::receiver_low()
 {
 	pollfd fds[] { { dev_fd, POLLIN, 0 } };
 
-	uint32_t p_buffers = ((registers[3] & 63) << 16) | registers[2];
-
 	while(!stop_flag) {
-		// receive list invalid?
-		if (registers[7] & 32) {
-			myusleep(100000);
-			continue;
-		}
-
 		int rc = poll(fds, 1, 100);
 		if (rc == -1) {
 			DOLOG(info, false, "deqna: tun device gone?");
@@ -158,17 +171,50 @@ void deqna::receiver()
 		if (byte_cnt <= 0)
 			break;
 
+		if (byte_cnt < 14)
+			continue;
+
 		// only for us or broadcast
 		if (memcmp(buffer, mac_address, 6) != 0 && memcmp(buffer, bc_addr, 6) != 0)
 			continue;
 
-		DOLOG(debug, false, "deqna(rx): Ethernet packet received");
+		if (registers[7] & 1)  // receiver enabled?
+			queue_rx_packet(buffer, byte_cnt);
+		else
+			DOLOG(info, false, "deqna dropped packet: receiver not enabled");
+	}
+
+	DOLOG(info, false, "deqna LOW RECEIVER THREAD TERMINATING");
+}
+
+void deqna::receiver_high()
+{
+	uint32_t p_buffers = ((registers[3] & 63) << 16) | registers[2];
+
+	while(!stop_flag) {
+		// receive list invalid?
+		if (registers[7] & 32) {
+			myusleep(100000);
+			continue;
+		}
+
+		std::unique_lock<std::mutex> lck(lock);
+		while(received.empty() && stop_flag == false)
+			cv.wait_for(lck, std::chrono::milliseconds(1050));
+		if (stop_flag)
+			break;
+		
+		const uint8_t *const buffer   = received.front().first;
+		const size_t         byte_cnt = received.front().second;
+		received.erase(received.begin());
+
+		DOLOG(debug, false, "deqna(rx): Ethernet packet received (%zu bytes)", byte_cnt);
 
 		// push into pdp memory
 		bool     queued    = false;
 		// a descriptor is 6 words
 		while(p_buffers + 12 <= b->get_memory_size()) {
-			auto     flags = b->read_unibus_word(p_buffers + 0 * 2);
+			//auto     flags = b->read_unibus_word(p_buffers + 0 * 2);
 			auto     ph    = b->read_unibus_word(p_buffers + 1 * 2);
 			auto     pl    = b->read_unibus_word(p_buffers + 2 * 2);
 			uint32_t chain = ((ph & 63) << 16) | pl;
@@ -180,9 +226,9 @@ void deqna::receiver()
 				break;
 			}
 			if ((ph & 0x4000) == 0) {  // chain? no, use as buffer
-				DOLOG(debug, false, "deqna(rx): %08o is not a chain pointer, use as buffer-pointer", chain);
+				DOLOG(debug, false, "deqna(rx): %08o is not a chain pointer, use as buffer-pointer (%d bytes)", chain, length);
 				b->write_unibus_word(p_buffers + 0 * 2, 0xffff);  // processed
-				for(int i=0; i<std::min(byte_cnt, length); i++)
+				for(size_t i=0; i<std::min(byte_cnt, size_t(length)); i++)
 					b->write_unibus_byte(chain + i, buffer[i]);
 
 				uint16_t temp1 = b->read_unibus_word(p_buffers + 4 * 2);  // status word 1
@@ -206,11 +252,13 @@ void deqna::receiver()
 				p_buffers += 12;
 		}
 
+		delete [] buffer;
+
 		if (!queued)
 			DOLOG(debug, false, "deqna(rx): packet NOT queued");
 	}
 
-	DOLOG(info, false, "deqna RECEIVER THREAD TERMINATING");
+	DOLOG(info, false, "deqna HIGH RECEIVER THREAD TERMINATING");
 }
 
 void deqna::transmitter()
@@ -256,7 +304,7 @@ void deqna::transmitter()
 
 				DOLOG(info, false, "flags: %06o, ph: %06o, status1: %06o, status2: %06o", flags, ph, b->read_unibus_word(p_buffers + 4 * 2), b->read_unibus_word(p_buffers + 5 * 2));
 
-				for(int i=0; i<length && buffer_offset < sizeof(buffer); i++)
+				for(int i=0; i<length && size_t(buffer_offset) < sizeof(buffer); i++)
 					buffer[buffer_offset++] = b->read_unibus_byte(chain + i);
 			}
 
@@ -269,10 +317,18 @@ void deqna::transmitter()
 				DOLOG(warning, false, "deqna(tx): failed transmitting - empty buffer");
 			}
 			else {
-				int tx_rc = write(dev_fd, buffer, buffer_offset);
-				if (tx_rc <= 0) {
-					DOLOG(warning, false, "deqna(tx): failed transmitting - device down?");
-					break;
+				bool crs08 = registers[7] & 256;
+				if (crs08 == false) {
+					bool crs09 = registers[7] & 512;
+					DOLOG(debug, false, "deqna(tx): %sloopback", crs09 ? "extended " : "");
+					queue_rx_packet(buffer, buffer_offset);
+				}
+				else {  // push on the wire
+					int tx_rc = write(dev_fd, buffer, buffer_offset);
+					if (tx_rc <= 0) {
+						DOLOG(warning, false, "deqna(tx): failed transmitting - device down?");
+						break;
+					}
 				}
 
 				buffer_offset = 0;
@@ -284,11 +340,11 @@ void deqna::transmitter()
 			uint16_t temp = registers[7];
 			DOLOG(debug, false, "deqna(tx): register 7=0x%04x", temp);
 			registers[7] |= 128;  // XI
+			queued = true;
 			if (registers[7] & 64) {  // IE
 				uint16_t vector = registers[6] & 0x3fc;
 				DOLOG(debug, false, "deqna(tx): packet sent, trigger %06o", vector);
 				b->getCpu()->queue_interrupt(5, vector);
-				queued = true;
 			}
 		}
 
@@ -301,6 +357,8 @@ void deqna::transmitter()
 			p_buffers += 12;
 	}
 
+	registers[7] |= 16;
+
 	if (!queued)
 		DOLOG(debug, false, "deqna(tx): packet NOT queued");
 }
@@ -312,8 +370,11 @@ void deqna::reset()
 	for(int i=0; i<8; i++)
 		registers[i] = 0;
 	registers[6] = 0774;
-	registers[7] = 32 |  // receive list invalid
-		16;  // transmit list invalid
+	registers[7] = 
+		1  |  // software reset
+		16 |  // transmit list invalid
+		32 |  // receive list invalid
+		0x1000;  // power ok
 }
 
 void deqna::show_state(console *const cnsl) const
@@ -329,7 +390,7 @@ uint16_t deqna::read_word(const uint16_t addr)
 		rc = mac_address[reg_nr];
 
 	if (reg_nr == 7) {  // CSR
-//		rc |= 0x2000;  // carrier detected
+		rc |= 0x2000;  // carrier detected
 		rc |= 0x1000;  // fuse ok
 	}
 
