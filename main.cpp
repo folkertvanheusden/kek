@@ -532,7 +532,7 @@ int main(int argc, char *argv[])
 		rp06_dev->begin();
 		b->add_RP06(rp06_dev);
 
-		uint8_t mac_address[] { 0x52, 0x55, 0x01, 0x8a, 0xd8, 0xd3 };
+		uint8_t mac_address[] { 0x08, 0x00, 0x2b, 0x8a, 0xd8, 0xd3 };  // randomize last 3 digits? or from cfg? TODO
 		auto deqna_dev = new deqna(b, mac_address);
 		if (deqna_dev->begin())
 			b->add_DEQNA(deqna_dev);
