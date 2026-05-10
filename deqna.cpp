@@ -318,8 +318,8 @@ void deqna::transmitter()
 				DOLOG(warning, false, "deqna(tx): failed transmitting - empty buffer");
 			}
 			else {
-				bool crs08 = registers[7] & 256;
-				if (crs08 == false) {
+				bool crs08 = registers[7] & 256; // bit 8
+				if (crs08 == false) {  // active low
 					bool crs09 = registers[7] & 512;
 					DOLOG(debug, false, "deqna(tx): %sloopback", crs09 ? "extended " : "");
 					queue_rx_packet(buffer, buffer_offset);
