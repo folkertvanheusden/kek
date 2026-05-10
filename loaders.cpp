@@ -130,10 +130,9 @@ std::optional<uint16_t> load_tape(bus *const b, const std::string & file)
 #endif
 
 	std::optional<uint16_t> start;
+	uint8_t                 buffer[6];
 
 	for(;;) {
-		uint8_t buffer[6];
-
 #if defined(ESP32)
 		if (fh.read(buffer, 6) != 6)
 			break;
@@ -171,11 +170,6 @@ std::optional<uint16_t> load_tape(bus *const b, const std::string & file)
 				break;
 			}
 #else
-			if (feof(fh)) {
-				DOLOG(warning, true, "short read");
-				break;
-			}
-
 			int c = fgetc(fh);
 			if (c == -1) {
 				DOLOG(warning, true, "read failure");
