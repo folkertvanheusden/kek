@@ -357,8 +357,11 @@ std::optional<disk_backend *> select_disk_backend(console *const cnsl)
 	if (ch == '1')
 		return select_disk_file(cnsl);
 
-	if (ch == '2')
-		return select_nbd_server(cnsl);
+	if (ch == '2') {
+		if (network_configured)
+			return select_nbd_server(cnsl);
+		cnsl->put_string_lf("Start network first");
+	}
 
 	return { };
 #endif
