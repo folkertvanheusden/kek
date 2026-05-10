@@ -232,8 +232,9 @@ void deqna::receiver_high()
 				temp1 &= 0x3fff;  // upper 2 bits 0 is "This buffer contains the last segment of a message with no errors."
 				b->write_unibus_word(p_buffers + 4 * 2, temp1);
 
-				b->write_unibus_word(p_buffers + 4 * 2, (byte_cnt & 0x0700) | 0x00f8);  // FIXME odd byte count
-				b->write_unibus_word(p_buffers + 5 * 2, ((byte_cnt & 0xff) << 8) | (byte_cnt & 0xff));  // mirrored
+				size_t temp = std::max(byte_cnt, size_t(60)) - 60;  // frames are padded
+				b->write_unibus_word(p_buffers + 4 * 2, (temp & 0x0700) | 0x00f8);  // FIXME odd byte count
+				b->write_unibus_word(p_buffers + 5 * 2, ((temp & 0xff) << 8) | (temp & 0xff));  // mirrored
 				registers[7] |= 0x8000;  // RI
 				if (registers[7] & 64) {  // IE
 					uint16_t vector = registers[6] & 0x3fc;
