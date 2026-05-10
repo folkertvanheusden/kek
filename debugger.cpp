@@ -56,6 +56,8 @@ extern comm_esp32_SC16IS752 *SC16IS752_com_b[2];
 #include "rp2040.h"
 #endif
 
+bool init_sd();
+
 void configure_network(console *const cnsl);
 void check_network(console *const cnsl);
 void start_network(console *const cnsl);
@@ -108,24 +110,7 @@ void start_disk(console *const cnsl)
 	cnsl->put_string_lf(format("SCK : %d", int(SCK )));
 #endif
 
-#if defined(SEEED_XIAO_S3)
-	cnsl->put_string_lf(format("SS  : %d", 1));
-	if (SDinstance.begin(1, SD_SCK_MHZ(1)))
-		disk_started = true;
-#elif !defined(BUILD_FOR_RP2040)
-	cnsl->put_string_lf(format("SS  : %d", int(SS)));
-	if (SDinstance.begin(SS, SD_SCK_MHZ(15)))
-		disk_started = true;
-#else
-#error What microcontroller is this?
-#endif
-	if (!disk_started) {
-		auto err = SDinstance.sdErrorCode();
-		if (err)
-			cnsl->put_string_lf(format("SDerror: 0x%x, data: 0x%x", err, SDinstance.sdErrorData()));
-		else
-			cnsl->put_string_lf("Failed to initialize SD card");
-	}
+	init_sd();
 #endif
 }
 
