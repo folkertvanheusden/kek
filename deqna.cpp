@@ -228,10 +228,6 @@ void deqna::receiver_high()
 				for(size_t i=0; i<std::min(byte_cnt, size_t(length)); i++)
 					b->write_unibus_byte(chain + i, buffer[i]);
 
-				uint16_t temp1 = b->read_unibus_word(p_buffers + 4 * 2);  // status word 1
-				temp1 &= 0x3fff;  // upper 2 bits 0 is "This buffer contains the last segment of a message with no errors."
-				b->write_unibus_word(p_buffers + 4 * 2, temp1);
-
 				size_t temp = std::max(byte_cnt, size_t(60)) - 60;  // frames are padded
 				b->write_unibus_word(p_buffers + 4 * 2, (temp & 0x0700) | 0x00f8);  // FIXME odd byte count
 				b->write_unibus_word(p_buffers + 5 * 2, ((temp & 0xff) << 8) | (temp & 0xff));  // mirrored
