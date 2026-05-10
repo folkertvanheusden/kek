@@ -503,8 +503,8 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 		if (tty_ && a >= PDP11TTY_BASE && a < PDP11TTY_END)
 			return word_mode == wm_byte ? tty_->read_byte(a) : tty_->read_word(a);
 
-			if (dc11_ && a >= DC11_BASE && a < DC11_END)
-				return word_mode == wm_byte ? dc11_->read_byte(a) : dc11_->read_word(a);
+		if (dc11_ && a >= DC11_BASE && a < DC11_END)
+			return word_mode == wm_byte ? dc11_->read_byte(a) : dc11_->read_word(a);
 
 		if (dz11_ && a >= DZ11_BASE && a < DZ11_END)
 			return word_mode == wm_byte ? dz11_->read_byte(a) : dz11_->read_word(a);
@@ -846,10 +846,11 @@ bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 	return false;
 }
 
-void bus::write_unibus_word(const uint32_t a, const uint16_t value)
+void bus::write_unibus_word(const uint32_t a, const uint16_t v)
 {
+	TRACE("write_unibus_word[%08o]=%06o (%04x)", a, v, v);
 	if (a < m->get_memory_size())
-		m->write_word(a, value);
+		m->write_word(a, v);
 }
 
 void bus::write_physical(const uint32_t a, const uint16_t value)
@@ -922,7 +923,7 @@ uint16_t bus::read_unibus_word(const uint32_t a) const
 	uint16_t v = 0;
 	if (a < m->get_memory_size())
 		v = m->read_word(a);
-	TRACE("read_unibus_byte[%08o]=%06o", a, v);
+	TRACE("read_unibus_word[%08o]=%06o (0x%04x)", a, v, v);
 	return v;
 }
 
@@ -931,13 +932,13 @@ uint8_t bus::read_unibus_byte(const uint32_t a) const
 	uint8_t v = 0;
 	if (a < m->get_memory_size())
 		v = m->read_byte(a);
-	TRACE("read_unibus_byte[%08o]=%03o", a, v);
+	TRACE("read_unibus_byte[%08o]=%03o (0x%02x)", a, v, v);
 	return v;
 }
 
 void bus::write_unibus_byte(const uint32_t a, const uint8_t v)
 {
-	TRACE("write_unibus_byte[%08o]=%03o", a, v);
+	TRACE("write_unibus_byte[%08o]=%03o (0x%02x)", a, v, v);
 	if (a < m->get_memory_size())
 		m->write_byte(a, v);
 }
