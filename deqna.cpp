@@ -205,7 +205,9 @@ void deqna::receiver_high()
 		const size_t         byte_cnt = received.front().second;
 		received.erase(received.begin());
 
-		DOLOG(debug, false, "deqna(rx): Ethernet packet received (%zu bytes)", byte_cnt);
+		DOLOG(debug, false, "deqna(rx): Ethernet packet received (%zu bytes, from %02x:%02x:%02x:%02x:%02x:%02x, type: %04x)",
+				byte_cnt,
+				buffer[6], buffer[7], buffer[8], buffer[9], buffer[10], buffer[11], (buffer[12] << 8) | buffer[13]);
 
 		// push into pdp memory
 		bool     queued    = false;
@@ -238,7 +240,7 @@ void deqna::receiver_high()
 					b->getCpu()->queue_interrupt(DEQNA_IRQ_LEVEL, vector);
 					queued = true;
 				}
-				registers[7] |= 32;
+				//registers[7] |= 32;
 				break;
 			}
 			if (ph & 0x4000)
@@ -308,6 +310,10 @@ void deqna::transmitter()
 		}
 
 		if (ph & 0x2000) {  // END bit
+			DOLOG(debug, false, "deqna(tx): packet for %02x:%02x:%02x:%02x:%02x:%02x, type: %04x", 
+				buffer[0], buffer[1], buffer[2], buffer[3], buffer[4], buffer[5],
+				(buffer[12] << 8) | buffer[13]);
+
 			if (buffer_offset == 0) {
 				DOLOG(warning, false, "deqna(tx): failed transmitting - empty buffer");
 			}
@@ -332,8 +338,6 @@ void deqna::transmitter()
 			b->write_unibus_word(p_buffers + 4 * 2, 0x2000);  // all good
 			b->write_unibus_word(p_buffers + 5 * 2, 0);  // TDR
 
-			uint16_t temp = registers[7];
-			DOLOG(debug, false, "deqna(tx): register 7=0x%04x", temp);
 			registers[7] |= 128;  // XI
 			queued = true;
 			if (registers[7] & 64) {  // IE
