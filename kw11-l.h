@@ -41,7 +41,7 @@ public:
 	kw11_l(bus *const b);
 	virtual ~kw11_l();
 
-	void     reset() override;
+	void     reset(const bool hard) override;
 
 	void     show_state(console *const cnsl) const override;
 

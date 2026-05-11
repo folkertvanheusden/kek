@@ -38,12 +38,13 @@ rk05::~rk05()
 
 void rk05::begin()
 {
-	reset();
+	reset(true);
 }
 
-void rk05::reset()
+void rk05::reset(const bool hard)
 {
-	memset(registers, 0x00, sizeof registers);
+	if (hard)
+		memset(registers, 0x00, sizeof registers);
 }
 
 void rk05::show_state(console *const cnsl) const

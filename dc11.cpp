@@ -136,7 +136,7 @@ void dc11::operator()()
 	DOLOG(info, true, "DC11 thread terminating");
 }
 
-void dc11::reset()
+void dc11::reset(const bool reset)
 {
 }
 

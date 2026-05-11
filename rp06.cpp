@@ -38,14 +38,16 @@ rp06::~rp06()
 
 void rp06::begin()
 {
-	reset();
+	reset(true);
 }
 
-void rp06::reset()
+void rp06::reset(const bool hard)
 {
-	memset(registers, 0x00, sizeof registers);
+	if (hard) {
+		memset(registers, 0x00, sizeof registers);
 
-	registers[reg_num(RP06_DS)] = default_DS;
+		registers[reg_num(RP06_DS)] = default_DS;
+	}
 }
 
 void rp06::show_state(console *const cnsl) const

@@ -20,7 +20,7 @@ public:
 
 	uint32_t get_memory_size() const { return size; }
 
-	void reset();
+	void reset(const bool hard);
 
 	JsonDocument serialize() const;
 	static memory *deserialize(const JsonVariantConst j);

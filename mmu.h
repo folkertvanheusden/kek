@@ -79,7 +79,7 @@ public:
 
 	void     mmudebug(const uint16_t a);
 
-	void     reset() override;
+	void     reset(const bool hard) override;
 
 	void     dump_par_pdr(console *const cnsl, const int run_mode, const bool d, const std::string & name, const int state, const std::optional<int> & selection) const;
 	void     show_state(console *const cnsl) const override;

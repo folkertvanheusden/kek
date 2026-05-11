@@ -87,7 +87,7 @@ public:
 	JsonDocument serialize() const;
 	static bus *deserialize(const JsonDocument j, console *const cnsl, std::atomic_uint32_t *const event);
 
-	void reset() override;
+	void reset(const bool hard) override;
 	void init ();
 
 	void show_state(console *const cnsl) const override;
