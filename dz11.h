@@ -78,7 +78,7 @@ public:
 
 	comm_io * get_comm_interfaces() { return io_channels; }
 
-	void reset() override;
+	void reset(const bool hard) override;
 
 	void show_state(console *const cnsl) const override;
 

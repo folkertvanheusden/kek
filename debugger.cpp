@@ -981,6 +981,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		if (parts.size() == 1)
 			cnsl->put_string_lf("Parameter(s) missing");
 		else if (parts[1] == "reset") {
+<<<<<<< HEAD
 			if (parts.size() != 3)
 				cnsl->put_string_lf("Parameter(s) missing");
 
@@ -992,6 +993,31 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 					cnsl->put_string_lf(format("Device \"%s\" is not known", parts[2].c_str()));
 				else
 					dev->reset();
+=======
+			if (parts.size() < 3)
+				cnsl->put_string_lf("Parameter(s) missing");
+			else {
+				bool        hard = false;
+				std::string name;
+
+				if (parts.size() == 4) {
+					name = parts[3];
+					hard = parts[2] == "hard";
+				}
+				else {
+					name = parts[2];
+				}
+
+				if (name == "cpu")
+					show_cpu_state(cnsl, c);
+				else {
+					device *dev = name_to_dev(b, name);
+					if (dev == nullptr)
+						cnsl->put_string_lf(format("Device \"%s\" is not known", name.c_str()));
+					else
+						dev->reset(hard);
+				}
+>>>>>>> master
 			}
 		}
 		else {
@@ -1081,8 +1107,13 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		return true;
 	}
 	else if (cmd == "reset" || cmd == "r") {
+		bool hard = parts.size() == 2 && parts[1] == "hard";
 		*stop_event = EVENT_NONE;
-		b->reset();
+		b->reset(hard);
+		if (hard) {
+			b->getRAM()->reset(true);
+			b->getCpu()->reset();
+		}
 		cnsl->put_string_lf("resetted");
 		return true;
 	}
@@ -1348,7 +1379,12 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			"bt            - show backtrace - need to enable debug first",
 			"strace x      - start tracing from address - invoke without address to disable",
 			"trl x         - set trace run-level (0...3), empty for all",
+<<<<<<< HEAD
 			"state [reset] x - dump state of (or reset) a device: rl02, rk05, rp06, rp07, mmu, tm11, kw11l, cpu, dc11, dz11 or deqna",
+=======
+			"state x       - dump state of a device: rl02, rk05, rp06, rp07, mmu, tm11, kw11l, cpu, dc11 or dz11",
+			"state [reset [hard]] x - dump state of (or reset) a device: rl02, rk05, rp06, rp07, mmu, tm11, kw11l, cpu, dc11 or dz11",
+>>>>>>> master
 			"mmures x      - resolve a virtual address",
 			"qi            - show queued interrupts",
 			"setpc x       - set PC to value (octal)",

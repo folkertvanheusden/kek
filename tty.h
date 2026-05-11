@@ -55,7 +55,7 @@ public:
 	JsonDocument serialize();
 	static tty *deserialize(const JsonVariantConst j, bus *const b, console *const cnsl);
 
-	void reset();
+	void reset(const bool hard);
 
 	uint8_t read_byte(const uint16_t addr);
 	uint16_t read_word(const uint16_t addr);

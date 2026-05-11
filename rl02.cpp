@@ -46,14 +46,16 @@ rl02::~rl02()
 
 void rl02::begin()
 {
-	reset();
+	reset(true);
 }
 
-void rl02::reset()
+void rl02::reset(const bool hard)
 {
-	memset(registers,   0x00, sizeof registers  );
-	memset(xfer_buffer, 0x00, sizeof xfer_buffer);
-	memset(mpr,         0x00, sizeof mpr        );
+	if (hard) {
+		memset(registers,   0x00, sizeof registers  );
+		memset(xfer_buffer, 0x00, sizeof xfer_buffer);
+		memset(mpr,         0x00, sizeof mpr        );
+	}
 
 	track  = 0;
 	head   = 0;

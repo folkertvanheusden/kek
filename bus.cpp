@@ -29,7 +29,7 @@ bus::bus()
 	mmu_    = new mmu();
 	kw11_l_ = new kw11_l(this);
 
-	reset();
+	reset(true);
 }
 
 bus::~bus()
@@ -150,34 +150,34 @@ void bus::set_memory_size(const int n_pages)
 void bus::init()
 {
 	if (m)
-		m->reset();
+		m->reset(true);
 	if (c)
 		c->reset();
-	reset();
+	reset(true);
 }
 
-void bus::reset()
+void bus::reset(const bool hard)
 {
 	if (mmu_)
-		mmu_->reset();
+		mmu_->reset(hard);
 	if (tm11)
-		tm11->reset();
+		tm11->reset(hard);
 	if (rk05_)
-		rk05_->reset();
+		rk05_->reset(hard);
 	if (rl02_)
-		rl02_->reset();
+		rl02_->reset(hard);
 	if (tty_)
-		tty_->reset();
+		tty_->reset(hard);
 	if (kw11_l_)
-		kw11_l_->reset();
+		kw11_l_->reset(hard);
 	if (dz11_)
-		dz11_->reset();
+		dz11_->reset(hard);
 	if (dc11_)
-		dc11_->reset();
+		dc11_->reset(hard);
 	if (rp06_)
-		rp06_->reset();
+		rp06_->reset(hard);
 	if (deqna_)
-		deqna_->reset();
+		deqna_->reset(hard);
 
 	mmu_->setMMR0(0);
 	mmu_->setMMR3(0);
@@ -266,6 +266,14 @@ void bus::del_DZ11()
 {
 	delete dz11_;
 	dz11_ = nullptr;
+}
+
+void monitor_access(const uint32_t a, const uint16_t virt, const uint16_t pc, const bool is_write, const uint16_t v)
+{
+	if ((a >= 01613600 && a < 01613653) || (a >= 01503274 && a < 01503274 + 12)) {
+//		settrace(true);
+		DOLOG(debug, false, "Access (%s) to monitored address %08o (%06o) from %06o, value %06o", is_write ? "write" : "read", a, virt, pc, v);
+	}
 }
 
 uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm_selection_t mode_selection, const d_i_space_t space)
@@ -560,6 +568,8 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 	else
 		temp = m->read_word(m_offset);
 
+	monitor_access(m_offset, addr_in, c->getPC(), false, temp);
+
 	TRACE("READ from %06o/%07o %c %c: %06o (%s)", addr_in, m_offset, space == d_space ? 'D' : 'I', word_mode == wm_byte ? 'B' : 'W', temp, mode_selection == rm_prev ? "prev" : "cur");
 
 	return temp;
@@ -837,6 +847,8 @@ bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 	}
 
 	mmu_->set_page_accessed(page_index);
+
+	monitor_access(m_offset, addr_in, c->getPC(), true, value);
 
 	if (word_mode == wm_byte)
 		m->write_byte(m_offset, value);

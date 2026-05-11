@@ -144,7 +144,7 @@ public:
 	std::vector<std::pair<uint16_t, std::string> > get_stack_trace() const;
 
 	void     reset();
-	bool     step();
+	bool     step ();
 
 	void     push_stack(const uint16_t v);
 	uint16_t pop_stack();

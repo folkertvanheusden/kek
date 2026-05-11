@@ -12,7 +12,7 @@ constexpr const int di_ena_mask[4] = { 4, 2, 0, 1 };
 
 mmu::mmu()
 {
-	reset();
+	reset(true);
 }
 
 mmu::~mmu()
@@ -24,14 +24,15 @@ void mmu::begin(memory *const m, cpu *const c)
 	this->m = m;
 	this->c = c;
 
-	reset();
+	reset(true);
 }
 
-void mmu::reset()
+void mmu::reset(const bool hard)
 {
-	memset(pages, 0x00, sizeof pages);
-
-	CPUERR = MMR0 = MMR1 = MMR2 = MMR3 = PIR = CSR = 0;
+	if (hard) {
+		memset(pages, 0x00, sizeof pages);
+		CPUERR = MMR0 = MMR1 = MMR2 = MMR3 = PIR = CSR = 0;
+	}
 	update_io_base();
 }
 
