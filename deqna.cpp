@@ -230,7 +230,6 @@ void deqna::receiver_high()
 			int      length = ((~len & 0xffff) + 1) * 2;
 			if ((ph & 0x8000) == 0) {  // valid?
 				DOLOG(debug, false, "deqna(rx): %08o is an end maker", p_buffers);
-				registers[7] |= 32;
 				break;
 			}
 			if ((ph & 0x4000) == 0) {  // chain? no, use as buffer
@@ -252,7 +251,6 @@ void deqna::receiver_high()
 					b->getCpu()->queue_interrupt(DEQNA_IRQ_LEVEL, vector);
 					queued = true;
 				}
-				//registers[7] |= 32;
 				break;
 			}
 			if (ph & 0x4000)
@@ -262,6 +260,8 @@ void deqna::receiver_high()
 		}
 
 		delete [] buffer;
+
+		registers[7] |= 32;
 
 		if (!queued)
 			DOLOG(debug, false, "deqna(rx): packet NOT queued");
