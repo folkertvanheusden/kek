@@ -947,7 +947,8 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		return true;
 	}
 	else if (parts[0] == "trace" || parts[0] == "t") {
-		settrace(!gettrace());
+		if (parts.size() == 2)
+			settrace(parts[1] == "on" || parts[1] == "ON");
 
 		cnsl->put_string_lf(format("Tracing set to %s", gettrace() ? "ON" : "OFF"));
 
