@@ -3,9 +3,11 @@
 #include <fcntl.h>
 #include <poll.h>
 #include <unistd.h>
+#if defined(linux)
 #include <linux/if.h>
 #include <linux/if_arp.h>
 #include <linux/if_tun.h>
+#endif
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 
