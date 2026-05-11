@@ -97,7 +97,7 @@ deqna::deqna(bus *const b, const uint8_t mac_address[6]) :
 	b(b)
 {
 	memcpy(this->mac_address, mac_address, sizeof this->mac_address);
-	reset();
+	reset(true);
 }
 
 bool deqna::begin()
@@ -125,6 +125,15 @@ deqna::~deqna()
 	}
 	if (dev_fd != -1)
 		close(dev_fd);
+	purge_buffers();
+}
+
+void deqna::purge_buffers()
+{
+	std::unique_lock<std::mutex> lck(lock);
+	for(auto & buffer: received)
+		delete [] buffer.first;
+	received.clear();
 }
 
 void deqna::queue_rx_packet(const uint8_t *const in, const size_t n)
@@ -208,31 +217,34 @@ void deqna::receiver_high()
 				buffer[6], buffer[7], buffer[8], buffer[9], buffer[10], buffer[11], (buffer[12] << 8) | buffer[13]);
 
 		uint32_t p_buffers = ((registers[3] & 63) << 16) | registers[2];
+		DOLOG(debug, false, "deqna(rx): RBL is at %08o", p_buffers);
 
 		// push into pdp memory
 		bool     queued    = false;
 		// a descriptor is 6 words
 		while(p_buffers + 12 <= b->get_memory_size()) {
-			//auto     flags = b->read_unibus_word(p_buffers + 0 * 2);
 			auto     ph    = b->read_unibus_word(p_buffers + 1 * 2);
 			auto     pl    = b->read_unibus_word(p_buffers + 2 * 2);
 			uint32_t chain = ((ph & 63) << 16) | pl;
 			auto     len   = b->read_unibus_word(p_buffers + 3 * 2);  // buffer length, 2s complement
 			int      length = ((~len & 0xffff) + 1) * 2;
 			if ((ph & 0x8000) == 0) {  // valid?
-				DOLOG(debug, false, "deqna(rx): %08o is an invalid RX descr", p_buffers);
-				p_buffers = ((registers[3] & 63) << 16) | registers[2];
+				DOLOG(debug, false, "deqna(rx): %08o is an end maker", p_buffers);
+				registers[7] |= 32;
 				break;
 			}
 			if ((ph & 0x4000) == 0) {  // chain? no, use as buffer
+				DOLOG(info, false, "deqna(rx): flags: %06o, ph: %06o, status1: %06o, status2: %06o", b->read_unibus_word(p_buffers + 0 * 2), ph, b->read_unibus_word(p_buffers + 4 * 2), b->read_unibus_word(p_buffers + 5 * 2));
 				DOLOG(debug, false, "deqna(rx): %08o is not a chain pointer, use as buffer-pointer (%d bytes)", chain, length);
-				b->write_unibus_word(p_buffers + 0 * 2, 0xffff);  // processed
+				b->write_unibus_word(p_buffers + 0 * 2, 0xffff);  // processing
 				for(size_t i=0; i<std::min(byte_cnt, size_t(length)); i++)
 					b->write_unibus_byte(chain + i, buffer[i]);
 
 				size_t temp = std::max(byte_cnt, size_t(60)) - 60;  // frames are padded
 				b->write_unibus_word(p_buffers + 4 * 2, (temp & 0x0700) | 0x00f8);  // FIXME odd byte count
 				b->write_unibus_word(p_buffers + 5 * 2, ((temp & 0xff) << 8) | (temp & 0xff));  // mirrored
+				b->write_unibus_word(p_buffers + 0 * 2, 0x0200 | 0x0100);  // processed
+				b->write_unibus_word(p_buffers + 1 * 2, 0);
 				registers[7] |= 0x8000;  // RI
 				if (registers[7] & 64) {  // IE
 					uint16_t vector = registers[6] & 0x3fc;
@@ -299,7 +311,7 @@ void deqna::transmitter()
 					break;
 				}
 
-				DOLOG(info, false, "flags: %06o, ph: %06o, status1: %06o, status2: %06o", flags, ph, b->read_unibus_word(p_buffers + 4 * 2), b->read_unibus_word(p_buffers + 5 * 2));
+				DOLOG(info, false, "deqna(tx): flags: %06o, ph: %06o, status1: %06o, status2: %06o", flags, ph, b->read_unibus_word(p_buffers + 4 * 2), b->read_unibus_word(p_buffers + 5 * 2));
 
 				for(int i=0; i<length && size_t(buffer_offset) < sizeof(buffer); i++)
 					buffer[buffer_offset++] = b->read_unibus_byte(chain + i);
@@ -362,22 +374,28 @@ void deqna::transmitter()
 		DOLOG(debug, false, "deqna(tx): packet NOT queued");
 }
 
-void deqna::reset()
+void deqna::reset(const bool hard)
 {
-	DOLOG(debug, false, "deqna reset");
+	DOLOG(debug, false, "deqna %s reset", hard ? "hard" : "soft");
 
-	for(int i=0; i<8; i++)
-		registers[i] = 0;
-	registers[6] = 0774;
-	registers[7] = 
-		1  |  // software reset
-		16 |  // transmit list invalid
-		32 |  // receive list invalid
-		0x1000;  // power ok
+	if (hard) {
+		for(int i=0; i<8; i++)
+			registers[i] = 0;
+		registers[6] = 0774;
+		registers[7] = 
+			1  |  // software reset
+			16 |  // transmit list invalid
+			32 |  // receive list invalid
+			0x1000;  // power ok
+	}
+
+	purge_buffers();
 }
 
 void deqna::show_state(console *const cnsl) const
 {
+	std::unique_lock<std::mutex> lck(lock);
+	cnsl->put_string_lf(format("%zu packets queued", received.size()));
 }
 
 uint16_t deqna::read_word(const uint16_t addr)

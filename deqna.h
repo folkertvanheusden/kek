@@ -34,7 +34,7 @@ private:
 	std::atomic_bool stop_flag      { false   };
 	std::thread     *th_rx_low      { nullptr };
 	std::thread     *th_rx_high     { nullptr };
-	std::mutex       lock;
+	mutable std::mutex lock;
 	std::condition_variable cv;
 	std::vector<std::pair<uint8_t *, size_t> > received;
 
@@ -42,6 +42,7 @@ private:
 	void receiver_low   ();
 	void receiver_high  ();
 	void transmitter    ();
+	void purge_buffers  ();
 
 public:
 	deqna(bus *const b, const uint8_t mac_address[6]);
@@ -49,7 +50,7 @@ public:
 
 	bool begin();
 
-	void reset() override;
+	void reset(const bool hard) override;
 
 	void show_state(console *const cnsl) const override;
 
