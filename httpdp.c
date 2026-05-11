@@ -1,3 +1,5 @@
+/* Written by Folkert van Heusden */
+/* MIT license */
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
