@@ -727,6 +727,29 @@ void set_kw11_l_interrupt_freq(console *const cnsl, bus *const b, const int freq
 		cnsl->put_string_lf("Frequency out of range");
 }
 
+device *name_to_dev(bus *const b, const std::string & name)
+{
+	if (name == "rl02")
+		return b->getRL02();
+	if (name == "mmu")
+		return b->getMMU();
+	if (name == "rk05")
+		return b->getRK05();
+	if (name == "dc11")
+		return b->getDC11();
+	if (name == "dz11")
+		return b->getDZ11();
+	if (name == "tm11")
+		return b->getTM11();
+	if (name == "kw11l")
+		return b->getKW11_L();
+	if (name == "rp06" || name == "rp07")
+		return b->getRP06();
+	if (name == "deqna")
+		return b->getDEQNA();
+	return nullptr;
+}
+
 struct debugger_state {
 	int32_t trace_start_addr { -1    };
 	int     n_single_step    {  1    };
@@ -951,33 +974,53 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		return true;
 	}
 	else if (parts[0] == "trace" || parts[0] == "t") {
-		settrace(!gettrace());
+		if (parts.size() == 2)
+			settrace(parts[1] == "on" || parts[1] == "ON");
 
 		cnsl->put_string_lf(format("Tracing set to %s", gettrace() ? "ON" : "OFF"));
 
 		return true;
 	}
 	else if (parts[0] == "state") {
-		if (parts[1] == "rl02")
-			b->getRL02()->show_state(cnsl);
-		else if (parts[1] == "mmu")
-			b->getMMU() ->show_state(cnsl);
-		else if (parts[1] == "rk05")
-			b->getRK05()->show_state(cnsl);
-		else if (parts[1] == "dc11")
-			b->getDC11()->show_state(cnsl);
-		else if (parts[1] == "dz11")
-			b->getDZ11()->show_state(cnsl);
-		else if (parts[1] == "tm11")
-			b->getTM11()->show_state(cnsl);
-		else if (parts[1] == "kw11l")
-			b->getKW11_L()->show_state(cnsl);
-		else if (parts[1] == "rp06" || parts[1] == "rp07")
-			b->getRP06()->show_state(cnsl);
-		else if (parts[1] == "cpu")
-			show_cpu_state(cnsl, c);
-		else
-			cnsl->put_string_lf(format("Device \"%s\" is not known", parts[1].c_str()));
+		if (parts.size() == 1)
+			cnsl->put_string_lf("Parameter(s) missing");
+		else if (parts[1] == "reset") {
+			if (parts.size() < 3)
+				cnsl->put_string_lf("Parameter(s) missing");
+			else {
+				bool        hard = false;
+				std::string name;
+
+				if (parts.size() == 4) {
+					name = parts[3];
+					hard = parts[2] == "hard";
+				}
+				else {
+					name = parts[2];
+				}
+
+				if (name == "cpu")
+					show_cpu_state(cnsl, c);
+				else {
+					device *dev = name_to_dev(b, name);
+					if (dev == nullptr)
+						cnsl->put_string_lf(format("Device \"%s\" is not known", name.c_str()));
+					else
+						dev->reset(hard);
+				}
+			}
+		}
+		else {
+			if (parts[1] == "cpu")
+				show_cpu_state(cnsl, c);
+			else {
+				device *dev = name_to_dev(b, parts[1]);
+				if (dev == nullptr)
+					cnsl->put_string_lf(format("Device \"%s\" is not known", parts[1].c_str()));
+				else
+					dev->show_state(cnsl);
+			}
+		}
 
 		return true;
 	}
@@ -1054,8 +1097,13 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		return true;
 	}
 	else if (cmd == "reset" || cmd == "r") {
+		bool hard = parts.size() == 2 && parts[1] == "hard";
 		*stop_event = EVENT_NONE;
-		b->reset();
+		b->reset(hard);
+		if (hard) {
+			b->getRAM()->reset(true);
+			b->getCpu()->reset();
+		}
 		cnsl->put_string_lf("resetted");
 		return true;
 	}
@@ -1322,7 +1370,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			"bt            - show backtrace - need to enable debug first",
 			"strace x      - start tracing from address - invoke without address to disable",
 			"trl x         - set trace run-level (0...3), empty for all",
-			"state x       - dump state of a device: rl02, rk05, rp06, rp07, mmu, tm11, kw11l, cpu, dc11 or dz11",
+			"state [reset [hard]] x - dump state of (or reset) a device: rl02, rk05, rp06, rp07, mmu, tm11, kw11l, cpu, dc11 or dz11",
 			"mmures x      - resolve a virtual address",
 			"qi            - show queued interrupts",
 			"setpc x       - set PC to value (octal)",

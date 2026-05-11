@@ -29,7 +29,7 @@ void tm_11::unload()
 
 	tape_file.clear();
 
-	reset();
+	reset(true);
 }
 
 void tm_11::load(const std::string & file)
@@ -40,7 +40,7 @@ void tm_11::load(const std::string & file)
 	fh = fopen(file.c_str(), "rb");
 	tape_file = file;
 
-	reset();
+	reset(true);
 }
 
 void tm_11::show_state(console *const cnsl) const
@@ -55,10 +55,13 @@ void tm_11::show_state(console *const cnsl) const
 	cnsl->put_string_lf(format("file  : %s"  , tape_file.c_str()));
 }
 
-void tm_11::reset()
+void tm_11::reset(const bool hard)
 {
-	memset(registers,   0x00, sizeof registers  );
-	memset(xfer_buffer, 0x00, sizeof xfer_buffer);
+	if (hard) {
+		memset(registers,   0x00, sizeof registers  );
+		memset(xfer_buffer, 0x00, sizeof xfer_buffer);
+	}
+
 	if (fh && fseek(fh, 0, SEEK_SET) != 0)
 		DOLOG(warning, false, "TM-11 rewind error");
 }

@@ -249,10 +249,10 @@ int main(int argc, char *argv[])
 	std::vector<disk_backend *> disk_files;
 	std::string  disk_type = "rk05";
 
-	bool          run_debugger = false;
+	bool          run_debugger  = false;
 	std::optional<std::string> debugger_init;
 
-	bootloader_t  bootloader   = BL_NONE;
+	bootloader_t  bootloader        = BL_NONE;
 
 	const char  *logfile   = nullptr;
 	log_level_t  ll_screen = none;
@@ -343,7 +343,7 @@ int main(int argc, char *argv[])
 					  bootloader = BL_TM11;
 				  else 
 					  error_exit(false, "Internal error: bootloader type %s not understood", optarg);
-				  break;
+				break;
 
 			case 'd':
 				run_debugger = true;
@@ -489,6 +489,13 @@ int main(int argc, char *argv[])
 		auto rp06_dev = new rp06(b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag(), disk_type == "rp07");
 		rp06_dev->begin();
 		b->add_RP06(rp06_dev);
+
+		uint8_t mac_address[] { 0x08, 0x00, 0x2b, 0x8a, 0xd8, 0xd3 };  // randomize last 3 digits? or from cfg? TODO
+		auto deqna_dev = new deqna(b, mac_address);
+		if (deqna_dev->begin())
+			b->add_DEQNA(deqna_dev);
+		else
+			DOLOG(ll_alert, true, "Failed to setup DEQNA device");
 
 		if (disk_type == "rk05") {
 			for(auto & file: disk_files)

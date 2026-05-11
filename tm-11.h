@@ -45,7 +45,7 @@ public:
 	void load(const std::string & file);
 	void unload();
 
-	void reset() override;
+	void reset(const bool hard) override;
 
 	void show_state(console *const cnsl) const override;
 

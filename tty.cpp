@@ -33,7 +33,7 @@ tty::tty(console *const c, bus *const b) :
 	c(c),
 	b(b)
 {
-	reset();
+	reset(true);
 
 #if defined(BUILD_FOR_RP2040)
 	xSemaphoreGive(chars_lock);  // initialize
@@ -56,9 +56,10 @@ tty::~tty()
 #endif
 }
 
-void tty::reset()
+void tty::reset(const bool hard)
 {
-	memset(registers, 0x00, sizeof registers);
+	if (hard)
+		memset(registers, 0x00, sizeof registers);
 }
 
 uint8_t tty::read_byte(const uint16_t addr)

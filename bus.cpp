@@ -1,4 +1,4 @@
-// (C) 2018-2024 by Folkert van Heusden
+// (C) 2018-2026 by Folkert van Heusden
 // Released under MIT license
 
 #include "gen.h"
@@ -9,6 +9,7 @@
 
 #include "bus.h"
 #include "cpu.h"
+#include "deqna.h"
 #include "dz11.h"
 #include "kw11-l.h"
 #include "log.h"
@@ -28,7 +29,7 @@ bus::bus()
 	mmu_    = new mmu();
 	kw11_l_ = new kw11_l(this);
 
-	reset();
+	reset(true);
 }
 
 bus::~bus()
@@ -40,9 +41,10 @@ bus::~bus()
 	delete rl02_;
 	delete tty_;
 	delete mmu_;
-	delete m;
 	delete dz11_;
 	delete rp06_;
+	delete deqna_;
+	delete m;
 }
 
 JsonDocument bus::serialize() const
@@ -78,6 +80,7 @@ JsonDocument bus::serialize() const
 
 	// TODO: tm11
 
+	// TODO: deqna
 	return j_out;
 }
 
@@ -120,6 +123,8 @@ bus *bus::deserialize(const JsonDocument j, console *const cnsl, std::atomic_uin
 
 	// TODO: tm11
 
+	// TODO: deqna
+
 	return b;
 }
 
@@ -145,35 +150,43 @@ void bus::set_memory_size(const int n_pages)
 void bus::init()
 {
 	if (m)
-		m->reset();
+		m->reset(true);
 	if (c)
 		c->reset();
-	reset();
+	reset(true);
 }
 
-void bus::reset()
+void bus::reset(const bool hard)
 {
 	if (mmu_)
-		mmu_->reset();
+		mmu_->reset(hard);
 	if (tm11)
-		tm11->reset();
+		tm11->reset(hard);
 	if (rk05_)
-		rk05_->reset();
+		rk05_->reset(hard);
 	if (rl02_)
-		rl02_->reset();
+		rl02_->reset(hard);
 	if (tty_)
-		tty_->reset();
+		tty_->reset(hard);
 	if (kw11_l_)
-		kw11_l_->reset();
+		kw11_l_->reset(hard);
 	if (dz11_)
-		dz11_->reset();
+		dz11_->reset(hard);
 	if (dc11_)
-		dc11_->reset();
+		dc11_->reset(hard);
 	if (rp06_)
-		rp06_->reset();
+		rp06_->reset(hard);
+	if (deqna_)
+		deqna_->reset(hard);
 
 	mmu_->setMMR0(0);
 	mmu_->setMMR3(0);
+}
+
+void bus::add_DEQNA(deqna *const deqna_)
+{
+	delete this->deqna_;
+	this->deqna_ = deqna_;
 }
 
 void bus::add_RP06(rp06 *const rp06_)
@@ -253,6 +266,14 @@ void bus::del_DZ11()
 {
 	delete dz11_;
 	dz11_ = nullptr;
+}
+
+void monitor_access(const uint32_t a, const uint16_t virt, const uint16_t pc, const bool is_write, const uint16_t v)
+{
+	if ((a >= 01613600 && a < 01613653) || (a >= 01503274 && a < 01503274 + 12)) {
+//		settrace(true);
+		DOLOG(debug, false, "Access (%s) to monitored address %08o (%06o) from %06o, value %06o", is_write ? "write" : "read", a, virt, pc, v);
+	}
 }
 
 uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm_selection_t mode_selection, const d_i_space_t space)
@@ -499,6 +520,9 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 		if (rp06_ && a >= RP06_BASE && a < RP06_END)
 			return word_mode == wm_byte ? rp06_->read_byte(a) : rp06_->read_word(a);
 
+		if (deqna_ && a >= DEQNA_BASE && a < DEQNA_END)
+			return word_mode == wm_byte ? deqna_->read_byte(a) : deqna_->read_word(a);
+
 		// LO size register field must be all 1s, so subtract 1
 		uint32_t system_size = m->get_memory_size() / 64 - 1;
 		if (system_size == 0177777)
@@ -543,6 +567,8 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 		temp = m->read_byte(m_offset);
 	else
 		temp = m->read_word(m_offset);
+
+	monitor_access(m_offset, addr_in, c->getPC(), false, temp);
 
 	TRACE("READ from %06o/%07o %c %c: %06o (%s)", addr_in, m_offset, space == d_space ? 'D' : 'I', word_mode == wm_byte ? 'B' : 'W', temp, mode_selection == rm_prev ? "prev" : "cur");
 
@@ -729,10 +755,10 @@ bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 			return false;
 		}
 
-		if (dc11_ && a >= DC11_BASE && a < DC11_END) {
-			word_mode == wm_byte ? dc11_->write_byte(a, value) : dc11_->write_word(a, value);
-			return false;
-		}
+			if (dc11_ && a >= DC11_BASE && a < DC11_END) {
+				word_mode == wm_byte ? dc11_->write_byte(a, value) : dc11_->write_word(a, value);
+				return false;
+			}
 
 		if (dz11_ && a >= DZ11_BASE && a < DZ11_END) {
 			word_mode == wm_byte ? dz11_->write_byte(a, value) : dz11_->write_word(a, value);
@@ -741,6 +767,11 @@ bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 
 		if (rp06_ && a >= RP06_BASE && a < RP06_END) {
 			word_mode == wm_byte ? rp06_->write_byte(a, value) : rp06_->write_word(a, value);
+			return false;
+		}
+
+		if (deqna_ && a >= DEQNA_BASE && a < DEQNA_END) {
+			word_mode == wm_byte ? deqna_->write_byte(a, value) : deqna_->write_word(a, value);
 			return false;
 		}
 
@@ -817,12 +848,21 @@ bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 
 	mmu_->set_page_accessed(page_index);
 
+	monitor_access(m_offset, addr_in, c->getPC(), true, value);
+
 	if (word_mode == wm_byte)
 		m->write_byte(m_offset, value);
 	else
 		m->write_word(m_offset, value);
 
 	return false;
+}
+
+void bus::write_unibus_word(const uint32_t a, const uint16_t v)
+{
+	TRACE("write_unibus_word[%08o]=%06o (%04x)", a, v, v);
+	if (a < m->get_memory_size())
+		m->write_word(a, v);
 }
 
 void bus::write_physical(const uint32_t a, const uint16_t value)
@@ -889,18 +929,28 @@ void bus::write_word(const uint16_t a, const uint16_t value, const d_i_space_t s
 	write(a, wm_word, value, rm_cur, s);
 }
 
-uint8_t bus::read_unibus_byte(const uint32_t a)
+// TODO check for odd address
+uint16_t bus::read_unibus_word(const uint32_t a) const
+{
+	uint16_t v = 0;
+	if (a < m->get_memory_size())
+		v = m->read_word(a);
+	TRACE("read_unibus_word[%08o]=%06o (0x%04x)", a, v, v);
+	return v;
+}
+
+uint8_t bus::read_unibus_byte(const uint32_t a) const
 {
 	uint8_t v = 0;
 	if (a < m->get_memory_size())
 		v = m->read_byte(a);
-	TRACE("read_unibus_byte[%08o]=%03o", a, v);
+	TRACE("read_unibus_byte[%08o]=%03o (0x%02x)", a, v, v);
 	return v;
 }
 
 void bus::write_unibus_byte(const uint32_t a, const uint8_t v)
 {
-	TRACE("write_unibus_byte[%08o]=%03o", a, v);
+	TRACE("write_unibus_byte[%08o]=%03o (0x%02x)", a, v, v);
 	if (a < m->get_memory_size())
 		m->write_byte(a, v);
 }

@@ -40,12 +40,13 @@ set(APP_SOURCES
   console_posix.cpp
   cpu.cpp
   dc11.cpp
-  dz11.cpp
   debugger.cpp
+  deqna.cpp
   device.cpp
   disk_backend.cpp
   disk_backend_file.cpp
   disk_backend_nbd.cpp
+  dz11.cpp
   error.cpp
   kw11-l.cpp
   loaders.cpp

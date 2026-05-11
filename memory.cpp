@@ -18,7 +18,7 @@ memory::memory(const uint32_t size): size(size)
 	if (psramFound()) {
 		DOLOG(info, false, "Using PSRAM");
 		m = reinterpret_cast<uint8_t *>(ps_malloc(size));
-		reset();
+		reset(true);
 	}
 	else {
 		m = reinterpret_cast<uint8_t *>(calloc(1, size));
@@ -33,9 +33,10 @@ memory::~memory()
 	free(m);
 }
 
-void memory::reset()
+void memory::reset(const bool hard)
 {
-	memset(m, 0x00, size);
+	if (hard)
+		memset(m, 0x00, size);
 }
 
 JsonDocument memory::serialize() const

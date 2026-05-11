@@ -31,7 +31,7 @@ dz11::dz11(bus *const b, comm_io *const io_channels):
 	connected     .resize(dz11_n_lines);
 	parity_setting.resize(dz11_n_lines);
 
-	reset();
+	reset(true);
 	registers[0] = 0x8000;
 }
 
@@ -189,10 +189,12 @@ void dz11::operator()()
 	DOLOG(info, true, "DZ11 thread terminating");
 }
 
-void dz11::reset()
+void dz11::reset(const bool hard)
 {
-	for(int i=0; i<4; i++)
-		registers[i] = 0;
+	if (hard) {
+		for(int i=0; i<4; i++)
+			registers[i] = 0;
+	}
 }
 
 bool dz11::is_rx_interrupt_enabled() const
@@ -221,7 +223,7 @@ uint16_t dz11::read_word(const uint16_t addr)
 
 	if (addr == DZ11_CSR) {
 		if (registers[reg] & 0x10)  // CLR
-			reset();  // vtemp is not affected so will be ...1. once when read
+			reset(true);  // vtemp is not affected so will be ...1. once when read
 
 		vtemp &= ~128;
 		for(int i=0; i<dz11_n_lines; i++) {
@@ -328,7 +330,7 @@ void dz11::write_word(const uint16_t addr, const uint16_t v)
 		bool clr = v & 16;
 
 		if (clr) {  // CLR
-			reset();
+			reset(true);
 			registers[0] &= ~16;
 			trigger_interrupt(false);
 		}

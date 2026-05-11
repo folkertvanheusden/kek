@@ -136,7 +136,7 @@ public:
 	std::vector<std::pair<uint16_t, std::string> > get_stack_trace() const;
 
 	void     reset();
-	bool     step();
+	bool     step ();
 
 	uint32_t calc_instruction_duration(const uint16_t pc) const;  // nanoseconds
 

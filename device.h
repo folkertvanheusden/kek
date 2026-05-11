@@ -11,7 +11,7 @@ public:
 	virtual ~device() {
 	}
 
-	virtual void reset() = 0;
+	virtual void reset(const bool hard) = 0;
 
 	virtual void show_state(console *const cnsl) const = 0;
 

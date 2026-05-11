@@ -54,7 +54,7 @@ public:
 	virtual ~rp06();
 
 	void begin() override;
-	void reset() override;
+	void reset(const bool hard) override;
 
 	void show_state(console *const cnsl) const override;
 

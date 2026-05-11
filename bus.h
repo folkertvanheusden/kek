@@ -11,6 +11,7 @@
 #include <stdio.h>
 
 #include "device.h"
+#include "deqna.h"
 #include "dc11.h"
 #include "dz11.h"
 #include "mmu.h"
@@ -51,6 +52,7 @@
 
 class console;
 class cpu;
+class deqna;
 class kw11_l;
 class memory;
 class tm_11;
@@ -74,6 +76,7 @@ private:
 	dc11    *dc11_   { nullptr };
 	dz11    *dz11_   { nullptr };
 	rp06    *rp06_   { nullptr };
+	deqna   *deqna_  { nullptr };
 
 	uint16_t microprogram_break_register { 0 };
 
@@ -87,7 +90,7 @@ public:
 	JsonDocument serialize() const;
 	static bus *deserialize(const JsonDocument j, console *const cnsl, std::atomic_uint32_t *const event);
 
-	void reset() override;
+	void reset(const bool hard) override;
 	void init ();
 
 	void show_state(console *const cnsl) const override;
@@ -99,6 +102,7 @@ public:
 	uint16_t get_console_leds() { return console_leds; }
 
 	void set_memory_size(const int n_pages);
+	uint32_t get_memory_size() const { return m->get_memory_size(); }
 
 	void add_ram   (memory *const m      );
 	void add_cpu   (cpu    *const c      );
@@ -113,6 +117,7 @@ public:
 	// required to release devices when doing a reload
 	void del_DZ11  ();
 	void add_RP06  (rp06   *const rp06_  );
+	void add_DEQNA (deqna  *const deqna_ );
 
 	memory *getRAM()    { return m;       }
 	cpu    *getCpu()    { return c;       }
@@ -125,13 +130,15 @@ public:
 	dz11   *getDZ11()   { return dz11_;   }
 	tm_11  *getTM11()   { return tm11;    }
 	rp06   *getRP06()   { return rp06_;   }
+	deqna  *getDEQNA()  { return deqna_;  }
 
 	uint16_t read(const uint16_t a, const word_mode_t word_mode, const rm_selection_t mode_selection, const d_i_space_t s = i_space);
 	uint8_t  read_byte(const uint16_t a) override { return read(a, wm_byte, rm_cur); }
 	uint16_t read_word(const uint16_t a, const d_i_space_t s);
 	uint16_t read_word(const uint16_t a) override { return read_word(a, i_space); }
 	std::optional<uint16_t> peek_word(const int run_mode, const uint16_t a);
-	uint8_t  read_unibus_byte(const uint32_t a);
+	uint8_t  read_unibus_byte(const uint32_t a) const;
+	uint16_t read_unibus_word(const uint32_t a) const;
 	uint16_t read_physical(const uint32_t a);
 	uint16_t read_physical_byte(const uint32_t a);
 
@@ -141,4 +148,5 @@ public:
 	void     write_word(const uint16_t a, const uint16_t value, const d_i_space_t s);
 	void     write_word(const uint16_t a, const uint16_t value) override { write_word(a, value, i_space); }
 	void     write_physical(const uint32_t a, const uint16_t value);
+	void     write_unibus_word(const uint32_t a, const uint16_t value);
 };

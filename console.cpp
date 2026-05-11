@@ -300,7 +300,7 @@ void console::put_char(const char c)
 		tx = 0;
 	else if (c == 10) {
 		if (debug_buffer.empty() == false) {
-			TRACE("TTY: %s", debug_buffer.c_str());
+			DOLOG(debug, false, "TTY: %s", debug_buffer.c_str());
 
 			debug_buffer.clear();
 		}
