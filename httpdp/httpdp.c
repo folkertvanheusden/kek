@@ -8,9 +8,21 @@
 #include <unistd.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 char *response = "HTTP/1.0 200 PDP11/70 says OK\r\n\r\n";
 char *default_file = "index.html";
+
+void sighandler(sig)
+int sig;
+{
+	int status = 0;
+	int pid = 0;
+	while((pid = waitpid(-1, &status, WNOHANG)) > 0) {
+	        printf("Handler: Reaped child %d\n", pid);
+	}
+}
 
 int
 main(argc, argv)
@@ -23,7 +35,7 @@ char *argv[];
     setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
     signal(SIGPIPE, SIG_IGN);
-    signal(SIGCHLD, SIG_IGN);
+    signal(SIGCHLD, sighandler);
 
     memset(&address, 0x00, sizeof address);
     address.sin_family = AF_INET;
