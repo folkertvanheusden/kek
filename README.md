@@ -51,6 +51,7 @@ Also make sure to configure networking ('startnet') to be able to connect (using
 
 ESP32
 -----
+Preferably an ESP32-S3.
 The ESP32 version needs platformio to be build.
 
     cd ESP32
@@ -90,22 +91,6 @@ The RP2040 version needs platformio to be build.
     pio run
 
 Then copy RP2040/.pio/build/BUILD\_FOR\_RP2040/firmware.uf2 to the PICO.
-
-
-SHA2017-badge
--------------
-This procedure will remove the default micropython environment.
-Maybe you can undo that, but I have not tried that.
-
-* esptool.py erase\_flash
-
-* pio run -e SHA2017-badge
-
-* esptool.py --chip esp32 --port /dev/ttyUSB0 --baud 921600 --before default\_reset --after hard\_reset write\_flash -z --flash\_mode dio --flash\_freq 80m --flash\_size detect 0x1000 ./.pio/build/ESP32-wemos/bootloader.bin
-
-* pio run -e SHA2017-badge -t upload
-
-After this, you can connect a serial terminal to /dev/ttyUSB0 at 115k2 bps.
 
 
 more info
