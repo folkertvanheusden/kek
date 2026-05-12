@@ -78,7 +78,7 @@ void reset_benchmark(bus *const b)
 {
         cpu *const c = b->getCpu();
 	c->reset();
-	b->reset();
+	b->reset(true);
 
 	for(uint16_t a = 0; a<benchmark_raw_len; a++)
 		b->write_byte(a + base, benchmark_raw[a]);
