@@ -23,6 +23,7 @@ char *argv[];
     setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
     signal(SIGPIPE, SIG_IGN);
+    signal(SIGCHLD, SIG_IGN);
 
     memset(&address, 0x00, sizeof address);
     address.sin_family = AF_INET;
