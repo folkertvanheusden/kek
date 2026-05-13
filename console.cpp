@@ -85,7 +85,7 @@ int console::get_char()
 	return c.value();
 }
 
-std::optional<char> console::wait_char(const int timeout_ms)
+std::optional<int> console::wait_char(const int timeout_ms)
 {
 	auto c = input_buffer.pop(timeout_ms);
 	if (c.has_value() == false)
