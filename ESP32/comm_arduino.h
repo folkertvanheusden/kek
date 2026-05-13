@@ -1,16 +1,18 @@
-// (C) 2024 by Folkert van Heusden
+// (C) 2024-2026 by Folkert van Heusden
 // Released under MIT license
 
 #include "gen.h"
 #include <Arduino.h>
 #include "comm.h"
+#include "my_lock.h"
 
 
 class comm_arduino: public comm
 {
 private:
-	Stream *const s;
+	Stream *const s    { nullptr };
 	std::string   name;
+	my_lock       lock;
 
 public:
 	comm_arduino(Stream *const s, const std::string & name);

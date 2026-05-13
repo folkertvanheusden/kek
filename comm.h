@@ -6,12 +6,11 @@
 #include "gen.h"
 #include <cstddef>
 #include <cstdint>
-#include <mutex>
-#include <shared_mutex>
 #include <string>
 #include <vector>
 
 #include "ArduinoJson.h"
+#include "my_lock.h"
 
 #if defined(ESP32)
 #include <SC16IS752.h>
@@ -55,8 +54,8 @@ public:
 
 struct comm_io
 {
-	mutable std::shared_mutex lock;
-	std::vector<comm *>       channels;
+	mutable my_lock     lock;
+	std::vector<comm *> channels;
 
 	comm_io(const int max_n) {
 		channels.resize(max_n);
@@ -72,7 +71,7 @@ struct comm_io
 	}
 
 	JsonDocument serialize() const {
-		std::unique_lock<std::shared_mutex> lck(lock);
+		my_unique_lock lck(&lock);
 
 		JsonDocument j_empty;
 		j_empty["comm-backend-type"] = "none";
@@ -96,7 +95,7 @@ struct comm_io
 	}
 
 	bool set_device(const int idx, comm *const p) {
-		std::unique_lock<std::shared_mutex> lck(lock);
+		my_unique_lock lck(&lock);
 		if (channels[idx] && channels[idx]->need_dealloc() == true)
 			delete channels[idx];
 		channels[idx] = p;
@@ -104,58 +103,58 @@ struct comm_io
 	}
 
 	bool is_defined(const int idx) {
-		std::shared_lock<std::shared_mutex> lck(lock);
+		my_unique_lock lck(&lock);
 		return channels[idx] != nullptr;
 	}
 
 	void unload_device(const int idx) {
-		std::unique_lock<std::shared_mutex> lck(lock);
+		my_unique_lock lck(&lock);
 		delete channels[idx];
 		channels[idx] = nullptr;
 	}
 
 	std::string get_identifier(const int idx) {
-		std::shared_lock<std::shared_mutex> lck(lock);
+		my_unique_lock lck(&lock);
 		if (channels[idx])
 			return channels[idx]->get_identifier();
 		return "NOT CONNECTED";
 	}
 
 	bool is_connected(const int idx) {
-		std::shared_lock<std::shared_mutex> lck(lock);
+		my_unique_lock lck(&lock);
 		if (channels[idx])
 			return channels[idx]->is_connected();
 		return false;
 	}
 
 	bool has_data(const int idx) {
-		std::shared_lock<std::shared_mutex> lck(lock);
+		my_unique_lock lck(&lock);
 		if (channels[idx])
 			return channels[idx]->has_data();
 		return false;
 	}
 
 	uint8_t get_byte(const int idx) {
-		std::shared_lock<std::shared_mutex> lck(lock);
+		my_unique_lock lck(&lock);
 		if (channels[idx])
 			return channels[idx]->get_byte();
 		return 0xee;
 	}
 
 	void send_data(const int idx, const uint8_t *const in, const size_t n) const {
-		std::shared_lock<std::shared_mutex> lck(lock);
+		my_unique_lock lck(&lock);
 		if (channels[idx])
 			channels[idx]->send_data(in, n);
 	}
 
         void println(const int idx, const char *const s) const {
-		std::shared_lock<std::shared_mutex> lck(lock);
+		my_unique_lock lck(&lock);
 		if (channels[idx])
 			channels[idx]->println(s);
 	}
 
         void println(const int idx, const std::string & in) const {
-		std::shared_lock<std::shared_mutex> lck(lock);
+		my_unique_lock lck(&lock);
 		if (channels[idx])
 			channels[idx]->println(in);
 	}

@@ -117,4 +117,38 @@ comm_esp32_hardwareserial *comm_esp32_hardwareserial::deserialize(const JsonVari
 
 	return r;
 }
+
+// scan for SC16IS752 devices
+bool i2c_probe(const byte addr)
+{
+    Wire.beginTransmission(addr);
+    if (Wire.endTransmission() == 0) {
+      cs->println(format("i2c device found at %02x", addr));
+      return true;
+    }
+    return false;
+}
+
+void test_SC16IS752(SC16IS752 *const p, const uint8_t which)
+{
+  cs->println(format("PING result for SC16IS752 @ 0x%02x: %d", which, p->ping()));
+}
+
+void search_SC16IS752()
+{
+  cs->println("Scanning i2c bus for SC16IS752 devices...");
+  Wire.begin();
+  if (i2c_probe(0x4d)) {
+    SC16IS752_a        = new SC16IS752(SC16IS750_PROTOCOL_I2C, 0x4d);
+    SC16IS752_com_a[0] = new comm_esp32_SC16IS752(SC16IS752_a, 0, 0);
+    SC16IS752_com_a[1] = new comm_esp32_SC16IS752(SC16IS752_a, 0, 1);
+    test_SC16IS752(SC16IS752_a, 0x4d);
+  }
+  if (i2c_probe(0x4e)) {
+    SC16IS752_b = new SC16IS752(SC16IS750_PROTOCOL_I2C, 0x4e);
+    SC16IS752_com_b[0] = new comm_esp32_SC16IS752(SC16IS752_a, 1, 0);
+    SC16IS752_com_b[1] = new comm_esp32_SC16IS752(SC16IS752_a, 1, 1);
+    test_SC16IS752(SC16IS752_a, 0x4e);
+  }
+}
 #endif

@@ -6,12 +6,12 @@
 #include <atomic>
 #include <condition_variable>
 #include <cstdint>
-#include <mutex>
 #include <thread>
 #include <vector>
 
 #include "bus.h"
 #include "device.h"
+#include "my_lock.h"
 
 #define DEQNA_BASE    0174440
 #define DEQNA_RX_BDLL 0174444
@@ -34,13 +34,10 @@ private:
 	std::atomic_bool stop_flag      { false   };
 	std::thread     *th_rx_low      { nullptr };
 	std::thread     *th_rx_high     { nullptr };
-	mutable std::mutex lock;
-	std::condition_variable cv;
-	std::vector<std::pair<uint8_t *, size_t> > received;
+	mutable my_lock  lock;
+	my_threadsafe_queue<std::pair<uint8_t *, size_t> > received;
 
 	void queue_rx_packet(const uint8_t *const in, const size_t n);
-	void receiver_low   ();
-	void receiver_high  ();
 	void transmitter    ();
 	void purge_buffers  ();
 
@@ -50,10 +47,15 @@ public:
 
 	bool begin();
 
+	// need to be public for the thread wrappers
+	void receiver_low   ();
+	void receiver_high  ();
+
 	void reset(const bool hard) override;
 
 	void show_state(console *const cnsl) const override;
 
+	uint8_t  read_byte(const uint16_t addr) override;
 	uint16_t read_word(const uint16_t addr) override;
 
 	void write_byte(const uint16_t addr, const uint8_t  v) override;

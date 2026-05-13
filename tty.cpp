@@ -36,10 +36,6 @@ tty::tty(console *const c, bus *const b) :
 	reset(true);
 
 #if defined(BUILD_FOR_RP2040)
-	xSemaphoreGive(chars_lock);  // initialize
-#endif
-
-#if defined(BUILD_FOR_RP2040)
 	xTaskCreate(&thread_wrapper_tty, "tty", 2048, this, 1, nullptr);
 #else
 	th = new std::thread(std::ref(*this));
@@ -84,11 +80,7 @@ uint16_t tty::read_word(const uint16_t addr)
 	uint16_t  vtemp  = registers[reg];
 	bool      notify = false;
 
-#if defined(BUILD_FOR_RP2040)
-	xSemaphoreTake(chars_lock, portMAX_DELAY);
-#else
-	std::unique_lock<std::mutex> lck(chars_lock);
-#endif
+	my_unique_lock lck(&chars_lock);
 
 	if (addr == PDP11TTY_TKS) {
 		bool have_char = chars.empty() == false;
@@ -113,10 +105,6 @@ uint16_t tty::read_word(const uint16_t addr)
 		vtemp |= 128;
 	}
 
-#if defined(BUILD_FOR_RP2040)
-	xSemaphoreGive(chars_lock);
-#endif
-
 	TRACE("PDP11TTY read addr %o (%s): %d, 7bit: %d", addr, regnames[reg], vtemp, vtemp & 127);
 
 	registers[reg] = vtemp;
@@ -133,18 +121,8 @@ void tty::operator()()
 
 	while(!stop_flag) {
 		if (c->poll_char()) {
-#if defined(BUILD_FOR_RP2040)
-			xSemaphoreTake(chars_lock, portMAX_DELAY);
-#else
-			std::unique_lock<std::mutex> lck(chars_lock);
-#endif
-
+			my_unique_lock lck(&chars_lock);
 			chars.push_back(c->get_char());
-
-#if defined(BUILD_FOR_RP2040)
-			xSemaphoreGive(chars_lock);
-#endif
-
 			notify_rx();
 		}
 		else {

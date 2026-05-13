@@ -1,4 +1,4 @@
-// (C) 2024 by Folkert van Heusden
+// (C) 2024-2026 by Folkert van Heusden
 // Released under MIT license
 
 #include "gen.h"
@@ -7,6 +7,7 @@
 #include <thread>
 
 #include "comm.h"
+#include "my_lock.h"
 #include "utils.h"
 
 #if defined(_WIN32)
@@ -26,7 +27,7 @@ private:
 	std::atomic_bool stop_flag { false          };
 	SOCKET           fd        { INVALID_SOCKET };
 	SOCKET           cfd       { INVALID_SOCKET };
-        std::mutex       cfd_lock;
+        my_lock          cfd_lock;
 	std::thread     *th        { nullptr        };
 
 public:

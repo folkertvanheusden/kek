@@ -1,13 +1,16 @@
-// (C) 2024 by Folkert van Heusden
+// (C) 2024-2026 by Folkert van Heusden
 // Released under MIT license
 
 #include "gen.h"
 #include <atomic>
+#if !defined(BUILD_FOR_RP2040)
 #include <mutex>
+#endif
 #include <string>
 #include <thread>
 
 #include "comm.h"
+#include "my_lock.h"
 #include "utils.h"
 
 #if defined(_WIN32)
@@ -26,7 +29,7 @@ private:
 	const int         port      { -1             };
 	std::atomic_bool  stop_flag { false          };
 	SOCKET            cfd       { INVALID_SOCKET };
-        std::mutex        cfd_lock;
+        my_lock           cfd_lock;
 	std::thread      *th        { nullptr        };
 
 public:

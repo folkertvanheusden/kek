@@ -11,7 +11,9 @@
 #else
 #include "disk_backend_esp32.h"
 #endif
+#if !defined(BUILD_FOR_RP2040)
 #include "disk_backend_nbd.h"
+#endif
 
 
 disk_backend::disk_backend()
@@ -100,9 +102,12 @@ disk_backend *disk_backend::deserialize(const JsonVariantConst j)
 
 	disk_backend *d    = nullptr;
 
-	if (type == "nbd")
+	if (false) {
+	}
+#if !defined(BUILD_FOR_RP2040)
+	else if (type == "nbd")
 		d = disk_backend_nbd::deserialize(j);
-
+#endif
 #if IS_POSIX
 	else if (type == "file")
 		d = disk_backend_file::deserialize(j);

@@ -22,6 +22,15 @@
 
 const char *const dc11_register_names[] { "RCSR", "RBUF", "TSCR", "TBUF" };
 
+#if defined(ESP32) || defined(BUILD_FOR_RP2040)
+static void thread_wrapper_dc11(void *p)
+{
+	dc11 *const dc11_ = reinterpret_cast<dc11 *>(p);
+
+	dc11_->operator()();
+}
+#endif
+
 dc11::dc11(bus *const b, comm_io *const io_channels):
 	b(b),
 	io_channels(io_channels)  // FIXME must be 4 elements
@@ -50,7 +59,7 @@ void dc11::show_state(console *const cnsl) const
 
 		cnsl->put_string_lf(" identifier: " + io_channels->get_identifier(i));
 
-		std::unique_lock<std::mutex> lck(input_lock[i]);
+		my_unique_lock lck(&input_lock[i]);
 		cnsl->put_string_lf(format(" Characters in buffer: %zu", recv_buffers[i].size()));
 
 		cnsl->put_string_lf(format(" RX interrupt enabled: %s", is_rx_interrupt_enabled(i) ? "true": "false" ));
@@ -60,7 +69,11 @@ void dc11::show_state(console *const cnsl) const
 
 bool dc11::begin()
 {
+#if defined(ESP32) || defined(BUILD_FOR_RP2040)
+	xTaskCreate(&thread_wrapper_dc11, "dc11", 3072, this, 1, nullptr);
+#else
 	th = new std::thread(std::ref(*this));
+#endif
 
 	return true;
 }
@@ -95,7 +108,7 @@ void dc11::operator()()
 		myusleep(10000);  // TODO replace polling
 
 		for(size_t line_nr=0; line_nr<dc11_n_lines; line_nr++) {
-			std::unique_lock<std::mutex> lck(input_lock[line_nr]);
+			my_unique_lock lck(&input_lock[line_nr]);
 
 			// (dis-)connected?
 			bool is_connected  = io_channels->is_connected(line_nr);
@@ -166,7 +179,7 @@ uint16_t dc11::read_word(const uint16_t addr)
 	int      line_nr = reg / 4;
 	int      sub_reg = reg & 3;
 
-	std::unique_lock<std::mutex> lck(input_lock[line_nr]);
+	my_unique_lock lck(&input_lock[line_nr]);
 
 	uint16_t vtemp   = registers[reg];
 
@@ -247,7 +260,7 @@ void dc11::write_word(const uint16_t addr, const uint16_t v)
 	int line_nr = reg / 4;
 	int sub_reg = reg & 3;
 
-	std::unique_lock<std::mutex> lck(input_lock[line_nr]);
+	my_unique_lock lck(&input_lock[line_nr]);
 
 	TRACE("DC11: write register %06o (\"%s\", %d line_nr %d) to %06o", addr, dc11_register_names[sub_reg], sub_reg, line_nr, v);
 

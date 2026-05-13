@@ -53,6 +53,7 @@ set(APP_SOURCES
   log.cpp
   memory.cpp
   mmu.cpp
+  my_lock.cpp
   rk05.cpp
   rl02.cpp
   rp06.cpp

@@ -9,7 +9,9 @@
 
 #include "bus.h"
 #include "cpu.h"
+#if !defined(BUILD_FOR_RP2040)
 #include "deqna.h"
+#endif
 #include "dz11.h"
 #include "kw11-l.h"
 #include "log.h"
@@ -43,7 +45,9 @@ bus::~bus()
 	delete mmu_;
 	delete dz11_;
 	delete rp06_;
+#if !defined(BUILD_FOR_RP2040)
 	delete deqna_;
+#endif
 	delete m;
 }
 
@@ -176,18 +180,22 @@ void bus::reset(const bool hard)
 		dc11_->reset(hard);
 	if (rp06_)
 		rp06_->reset(hard);
+#if !defined(BUILD_FOR_RP2040)
 	if (deqna_)
 		deqna_->reset(hard);
+#endif
 
 	mmu_->setMMR0(0);
 	mmu_->setMMR3(0);
 }
 
+#if !defined(BUILD_FOR_RP2040)
 void bus::add_DEQNA(deqna *const deqna_)
 {
 	delete this->deqna_;
 	this->deqna_ = deqna_;
 }
+#endif
 
 void bus::add_RP06(rp06 *const rp06_)
 {
@@ -520,8 +528,10 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 		if (rp06_ && a >= RP06_BASE && a < RP06_END)
 			return word_mode == wm_byte ? rp06_->read_byte(a) : rp06_->read_word(a);
 
+#if !defined(BUILD_FOR_RP2040)
 		if (deqna_ && a >= DEQNA_BASE && a < DEQNA_END)
 			return word_mode == wm_byte ? deqna_->read_byte(a) : deqna_->read_word(a);
+#endif
 
 		// LO size register field must be all 1s, so subtract 1
 		uint32_t system_size = m->get_memory_size() / 64 - 1;
@@ -770,10 +780,12 @@ bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 			return false;
 		}
 
+#if !defined(BUILD_FOR_RP2040)
 		if (deqna_ && a >= DEQNA_BASE && a < DEQNA_END) {
 			word_mode == wm_byte ? deqna_->write_byte(a, value) : deqna_->write_word(a, value);
 			return false;
 		}
+#endif
 
 		if (a >= 0172100 && a <= 0172137) {  // MM11-LP parity
 			TRACE("WRITE-I/O MM11-LP parity (%06o): %o", a, value);

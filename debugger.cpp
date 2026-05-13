@@ -20,8 +20,10 @@
 #if IS_POSIX
 #include "comm_posix_tty.h"
 #endif
+#if !defined(BUILD_FOR_RP2040)
 #include "comm_tcp_socket_client.h"
 #include "comm_tcp_socket_server.h"
+#endif
 #include "console.h"
 #include "cpu.h"
 #if defined(ESP32)
@@ -34,7 +36,9 @@
 #else
 #include "disk_backend_esp32.h"
 #endif
+#if !defined(BUILD_FOR_RP2040)
 #include "disk_backend_nbd.h"
+#endif
 #include "kw11-l.h"
 #include "loaders.h"
 #include "log.h"
@@ -53,8 +57,6 @@ bool network_configured = false;
 
 extern comm_esp32_SC16IS752 *SC16IS752_com_a[2];
 extern comm_esp32_SC16IS752 *SC16IS752_com_b[2];
-#elif defined(BUILD_FOR_RP2040)
-#include "rp2040.h"
 #endif
 
 bool init_sd();
@@ -66,7 +68,7 @@ void start_network(console *const cnsl);
 constexpr const bool network_configured = true;
 #endif
 
-#if !defined(BUILD_FOR_RP2040) && !defined(linux) && !defined(_WIN32)
+#if !defined(linux) && !defined(_WIN32)
 extern SdFs SDinstance;
 #endif
 
@@ -142,7 +144,7 @@ void ls_l(console *const cnsl)
 
 	closedir(dir);
 #elif defined(BUILD_FOR_RP2040)
-	File root = SDinstance.open("/");
+	auto root = SDinstance.open("/");
 
 	for(;;) {
 		auto entry = root.openNextFile();
@@ -150,9 +152,10 @@ void ls_l(console *const cnsl)
 			break;
 
 		if (!entry.isDirectory()) {
-			cnsl->put_string(entry.name());
-			cnsl->put_string("\t\t");
-			cnsl->put_string_lf(format("%ld", entry.size()));
+			char buffer[32] { };
+			entry.getName(buffer, sizeof buffer);
+			// cnsl->put_string(entry.name());
+			cnsl->put_string_lf(format("%s\t\t%ld", buffer, entry.size()));
 		}
 
 		entry.close();
@@ -276,7 +279,10 @@ void configure_comm(console *const cnsl, comm_io *const device_list)
 		int  ch_opt = wait_for_key("1. TCP client, 2. TCP server, 3. serial device, 4. SC16IS752, 9. to abort", cnsl, { '1', '2', '3', '4', '9' });
 		bool rc     = false;
 
-		if (ch_opt == '1') {
+		if (false) {
+		}
+#if !defined(BUILD_FOR_RP2040)
+		else if (ch_opt == '1') {
 			std::string temp_host = cnsl->read_line("host: ");
 			std::string temp_port = temp_host.empty() ? "" : cnsl->read_line("port: ");
 
@@ -290,6 +296,7 @@ void configure_comm(console *const cnsl, comm_io *const device_list)
 				rc = device_list->set_device(device_nr, new comm_tcp_socket_server(std::stoi(temp), ch_dev == 'y'));
 			}
 		}
+#endif
 		else if (ch_opt == '3') {
 #if IS_POSIX
 			std::string temp_dev     = cnsl->read_line("device: ");
@@ -745,8 +752,10 @@ device *name_to_dev(bus *const b, const std::string & name)
 		return b->getKW11_L();
 	if (name == "rp06" || name == "rp07")
 		return b->getRP06();
+#if !defined(BUILD_FOR_RP2040)
 	if (name == "deqna")
 		return b->getDEQNA();
+#endif
 	return nullptr;
 }
 
@@ -1178,9 +1187,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 	else if (cmd == "debug") {
 		bool new_mode = !c->get_debug();
 		c->set_debug(new_mode);
-
 		cnsl->put_string_lf(format("Debug mode set to %s", new_mode ? "ON" : "OFF"));
-
 		return true;
 	}
 	else if (parts[0] == "setll" && parts.size() == 2) {

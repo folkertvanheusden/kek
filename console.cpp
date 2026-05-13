@@ -1,6 +1,7 @@
 // (C) 2018-2026 by Folkert van Heusden
 // Released under MIT license
 
+#include "gen.h"
 #include <cassert>
 #include <chrono>
 #include <optional>
@@ -11,13 +12,10 @@
 #include <string.h>
 
 #include "console.h"
-#include "gen.h"
 #include "log.h"
 #include "utils.h"
 
 #if defined(BUILD_FOR_RP2040)
-#include "rp2040.h"
-
 void thread_wrapper_console(void *p)
 {
 	console *const consolel = reinterpret_cast<console *>(p);
@@ -32,10 +30,6 @@ console::console(std::atomic_uint32_t *const stop_event, const int t_width, cons
 	t_height(t_height)
 {
 	screen_buffer = new char[t_width * t_height]();
-
-#if defined(BUILD_FOR_RP2040)
-	xSemaphoreGive(input_lock);  // initialize
-#endif
 }
 
 console::~console()
@@ -80,110 +74,33 @@ void console::stop_thread()
 
 bool console::poll_char()
 {
-#if defined(BUILD_FOR_RP2040)
-	xSemaphoreTake(input_lock, portMAX_DELAY);
-#else
-	std::unique_lock<std::mutex> lck(input_lock);
-#endif
-
-	bool rc = input_buffer.empty() == false;
-
-#if defined(BUILD_FOR_RP2040)
-	xSemaphoreGive(input_lock);
-#endif
-
-	return rc;
+	return input_buffer.is_empty() == false;
 }
 
 int console::get_char()
 {
-#if defined(BUILD_FOR_RP2040)
-	xSemaphoreTake(input_lock, portMAX_DELAY);
-#else
-	std::unique_lock<std::mutex> lck(input_lock);
-#endif
-
-	char c = -1;
-
-	if (input_buffer.empty() == false) {
-		c = input_buffer.at(0);
-
-		input_buffer.erase(input_buffer.begin() + 0);
-	}
-
-#if defined(BUILD_FOR_RP2040)
-	xSemaphoreGive(input_lock);
-#endif
-	return c;
+	auto c = wait_char(100);
+	if (c.has_value() == false)
+		return -1;
+	return c.value();
 }
 
-std::optional<char> console::wait_char(const int timeout_ms)
+std::optional<int> console::wait_char(const int timeout_ms)
 {
-#if defined(BUILD_FOR_RP2040)
-	uint8_t rc = 0;
-	if (xQueueReceive(have_data, &rc, timeout_ms / portTICK_PERIOD_MS) == pdFALSE || rc == 0)
-		return { };
-
-	std::optional<char> c { };
-
-	xSemaphoreTake(input_lock, portMAX_DELAY);
-
-	if (input_buffer.empty() == false) {
-		c = input_buffer.at(0);
-
-		input_buffer.erase(input_buffer.begin() + 0);
-	}
-
-	xSemaphoreGive(input_lock);
-
-	return c;
-#else
-	std::unique_lock<std::mutex> lck(input_lock);
-
-	using namespace std::chrono_literals;
-
-	if (input_buffer.empty() == false || have_data.wait_for(lck, timeout_ms * 1ms) == std::cv_status::no_timeout) {
-		if (input_buffer.empty() == false) {
-			int c = input_buffer.at(0);
-
-			input_buffer.erase(input_buffer.begin() + 0);
-
-			return c;
-		}
-	}
-
-	return { };
-#endif
+	auto c = input_buffer.pop(timeout_ms);
+	if (c.has_value() == false)
+		return -1;
+	return c.value();
 }
 
 void console::unget_char(const char c)
 {
-#if defined(BUILD_FOR_RP2040)
-	xSemaphoreTake(input_lock, portMAX_DELAY);
-#else
-	std::unique_lock<std::mutex> lck(input_lock);
-#endif
-
-	input_buffer.push_back(c);
-
-#if defined(BUILD_FOR_RP2040)
-	xSemaphoreGive(input_lock);
-#endif
+	input_buffer.push_front(c);
 }
 
 void console::flush_input()
 {
-#if defined(BUILD_FOR_RP2040)
-	xSemaphoreTake(input_lock, portMAX_DELAY);
-#else
-	std::unique_lock<std::mutex> lck(input_lock);
-#endif
-
 	input_buffer.clear();
-
-#if defined(BUILD_FOR_RP2040)
-	xSemaphoreGive(input_lock);
-#endif
 }
 
 void console::emit_backspace()
@@ -373,25 +290,8 @@ void console::operator()()
 			*stop_event = EVENT_INTERRUPT;
 		else if (running_flag == false && c == 12)  // ^l
 			refresh_virtual_terminal();
-		else {
-#if defined(BUILD_FOR_RP2040)
-			xSemaphoreTake(input_lock, portMAX_DELAY);
-#else
-			std::unique_lock<std::mutex> lck(input_lock);
-#endif
-
-			input_buffer.push_back(c);
-
-#if defined(BUILD_FOR_RP2040)
-			xSemaphoreGive(input_lock);
-
-			uint8_t value = 1;
-			if (xQueueSend(have_data, &value, portMAX_DELAY) == pdFALSE)
-				TRACE("xQueueSend failed");
-#else
-			have_data.notify_all();
-#endif
-		}
+		else
+			input_buffer.push(c);
 	}
 
 	TRACE("Console thread terminating");

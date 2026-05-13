@@ -1,11 +1,9 @@
-// (C) 2024 by Folkert van Heusden
+// (C) 2024-2026 by Folkert van Heusden
 // Released under MIT license
 
 #include "gen.h"
 
-#if defined(ESP32)
-#include <driver/uart.h>
-
+#if defined(ESP32) || defined(BUILD_FOR_RP2040)
 #include "comm_arduino.h"
 #include "utils.h"
 
@@ -35,30 +33,27 @@ bool comm_arduino::is_connected()
 
 bool comm_arduino::has_data()
 {
+	my_unique_lock lck(&lock);
 	return s->available();
 }
 
 uint8_t comm_arduino::get_byte()
 {
-	while(!has_data())
-		vTaskDelay(5 / portTICK_PERIOD_MS);
-
+	my_unique_lock lck(&lock);
 	return s->read();
 }
 
 void comm_arduino::send_data(const uint8_t *const in, const size_t n)
 {
+	my_unique_lock lck(&lock);
 	s->write(in, n);
 }
 
 JsonDocument comm_arduino::serialize() const
 {
 	JsonDocument j;
-
 	j["comm-backend-type"] = "arduino";
-
 	j["name"] = name;
-
 	return j;
 }
 
@@ -66,7 +61,6 @@ comm_arduino *comm_arduino::deserialize(const JsonVariantConst j)
 {
 	comm_arduino *r = new comm_arduino(&Serial, j["name"].as<std::string>());
 	r->begin();  // TODO error-checking
-
 	return r;
 }
 #endif

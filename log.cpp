@@ -16,9 +16,14 @@
 #include <Arduino.h>
 #include "esp_sntp.h"
 #endif
+#if defined(BUILD_FOR_RP2040)
+#include <Arduino.h>
+#include <WiFiUdp.h>
+#else
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#endif
 #endif
 #include <sys/types.h>
 
@@ -32,7 +37,12 @@
 
 
 static const char *logfile           = strdup("/tmp/kek.log");
+#if defined(BUILD_FOR_RP2040)
+static WiFiUDP     udp;
+static std::string syslog_host;
+#else
 static sockaddr_in syslog_ip_addr    = { };
+#endif
 static bool        is_file           = true;
 log_level_t        log_level_file    = warning;
 log_level_t        log_level_screen  = warning;
@@ -94,17 +104,19 @@ void setlogfile(const char *const lf, const log_level_t ll_file, const log_level
 
 bool setloghost(const char *const host, const log_level_t ll)
 {
+	is_file        = false;
+	log_level_file = ll;
+	l_timestamp    = false;
+
+#if defined(BUILD_FOR_RP2040)
+	syslog_host    = host;
+	return true;
+#else
 	syslog_ip_addr.sin_family = AF_INET;
 	bool ok = inet_pton(AF_INET, host, &syslog_ip_addr.sin_addr) == 1;
 	syslog_ip_addr.sin_port   = htons(514);
-
-	is_file        = false;
-
-	log_level_file = ll;
-
-	l_timestamp    = false;
-
 	return ok;
+#endif
 }
 
 void setll(const log_level_t ll_screen, const log_level_t ll_file)
@@ -123,11 +135,17 @@ void send_syslog(const int ll, const std::string & what)
 {
 	std::string msg = format("<%d>PDP11 %s", 16 * 8 + ll, what.c_str());
 
+#if defined(BUILD_FOR_RP2040)
+        udp.beginPacket(syslog_host.c_str(), 514);
+        udp.write(msg.c_str(), msg.size());
+        udp.endPacket();
+#else
 	int s = socket(AF_INET, SOCK_DGRAM, 0);
 	if (s != -1) {
 		(void)sendto(s, msg.c_str(), msg.size(), 0, reinterpret_cast<sockaddr *>(&syslog_ip_addr), sizeof syslog_ip_addr);
 		close(s);
 	}
+#endif
 }
 
 void closelog()

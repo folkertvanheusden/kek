@@ -5,7 +5,6 @@
 #include <atomic>
 #include <condition_variable>
 #include <cstdint>
-#include <mutex>
 #include <thread>
 #include <vector>
 
@@ -14,10 +13,11 @@
 #include "gen.h"
 #include "bus.h"
 #include "log.h"
+#include "my_lock.h"
 
 class bus;
 
-#if defined(POSIX)
+#if IS_POSIX
 // 8 interfaces
 constexpr const int dz11_n_lines = 8;
 #else
@@ -54,7 +54,7 @@ private:
 	std::vector<psetting> parity_setting;
 
 	std::vector<char>     recv_buffers[dz11_n_lines];
-        mutable std::mutex    input_lock;
+        mutable my_lock       input_lock;
 
 	void trigger_interrupt(const bool is_tx);
 	bool is_rx_interrupt_enabled() const;

@@ -1,4 +1,4 @@
-// (C) 2018-2024 by Folkert van Heusden
+// (C) 2018-2026 by Folkert van Heusden
 // Released under MIT license
 
 #include "gen.h"
@@ -9,6 +9,7 @@
 #include "bus.h"
 #include "console.h"
 #include "device.h"
+#include "my_lock.h"
 
 
 class kw11_l: public device
@@ -17,11 +18,9 @@ private:
 	bus         *const b          { nullptr };
 	console           *cnsl       { nullptr };
 
-#if defined(BUILD_FOR_RP2040)
-	SemaphoreHandle_t lf_csr_lock { xSemaphoreCreateBinary() };
-#else
+	my_lock            lc_csr_lock;
+#if !defined(BUILD_FOR_RP2040)
 	std::thread       *th         { nullptr };
-	std::mutex         lf_csr_lock;
 #endif
 	int                int_frequency { 50   };
 	uint16_t           lf_csr     { 0       };
@@ -54,6 +53,7 @@ public:
 	void     begin(console *const cnsl);
 	void     operator()();
 
+	uint8_t  read_byte(const uint16_t a) override;
 	uint16_t read_word(const uint16_t a) override;
 
 	void     write_byte(const uint16_t addr, const uint8_t  v) override;

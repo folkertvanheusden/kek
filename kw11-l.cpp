@@ -1,6 +1,7 @@
-// (C) 2018-2024 by Folkert van Heusden
+// (C) 2018-2026 by Folkert van Heusden
 // Released under MIT license
 
+#include "gen.h"
 #include <unistd.h>
 
 #include "console.h"
@@ -9,15 +10,9 @@
 #include "log.h"
 #include "utils.h"
 
-#if defined(ESP32)
-#include "esp32.h"
-#elif defined(BUILD_FOR_RP2040)
-#include "rp2040.h"
-#endif
-
 
 #if defined(ESP32) || defined(BUILD_FOR_RP2040)
-void thread_wrapper_kw11(void *p)
+static void thread_wrapper_kw11(void *p)
 {
 	kw11_l *const kw11l = reinterpret_cast<kw11_l *>(p);
 
@@ -56,10 +51,6 @@ void kw11_l::begin(console *const cnsl)
 
 #if defined(ESP32) || defined(BUILD_FOR_RP2040)
 	xTaskCreate(&thread_wrapper_kw11, "kw11-l", 2048, this, 2, nullptr);
-
-#if defined(BUILD_FOR_RP2040)
-	xSemaphoreGive(lf_csr_lock);  // initialize
-#endif
 #else
 	th = new std::thread(std::ref(*this));
 #endif
@@ -68,11 +59,7 @@ void kw11_l::begin(console *const cnsl)
 void kw11_l::reset(const bool hard)
 {
 	if (hard) {
-#if defined(BUILD_FOR_RP2040)
-		xSemaphoreTake(lf_csr_lock, portMAX_DELAY);
-#else
-		std::unique_lock<std::mutex> lck(lf_csr_lock);
-#endif
+		my_unique_lock lck(&lc_csr_lock);
 		lf_csr = 0;
 	}
 }
@@ -87,19 +74,8 @@ void kw11_l::do_interrupt()
 
 int kw11_l::get_interrupt_frequency()
 {
-
-#if defined(BUILD_FOR_RP2040)
-	xSemaphoreTake(lf_csr_lock, portMAX_DELAY);
-#else
-	std::unique_lock<std::mutex> lck(lf_csr_lock);
-#endif
-
-	int cur_int_freq = int_frequency;
-
-#if defined(BUILD_FOR_RP2040)
-	xSemaphoreGive(lf_csr_lock);
-#endif
-	return cur_int_freq;
+	my_unique_lock lck(&lc_csr_lock);
+	return int_frequency;
 }
 
 void kw11_l::operator()()
@@ -121,6 +97,14 @@ void kw11_l::operator()()
 	TRACE("KW11-L thread terminating");
 }
 
+uint8_t kw11_l::read_byte(const uint16_t addr)
+{
+	uint16_t v = read_word(addr & ~1);
+	if (addr & 1)
+		return v >> 8;
+	return v;
+}
+
 uint16_t kw11_l::read_word(const uint16_t a)
 {
 	if (a != ADDR_LFC) {
@@ -128,34 +112,15 @@ uint16_t kw11_l::read_word(const uint16_t a)
 		return 0;
 	}
 
-#if defined(BUILD_FOR_RP2040)
-	xSemaphoreTake(lf_csr_lock, portMAX_DELAY);
-#else
-	std::unique_lock<std::mutex> lck(lf_csr_lock);
-#endif
+	my_unique_lock lck(&lc_csr_lock);
 
-	uint16_t temp = lf_csr;
-
-#if defined(BUILD_FOR_RP2040)
-	xSemaphoreGive(lf_csr_lock);
-#endif
-
-	return temp;
+	return lf_csr;
 }
 
 void kw11_l::set_interrupt_frequency(const int Hz)
 {
-#if defined(BUILD_FOR_RP2040)
-	xSemaphoreTake(lf_csr_lock, portMAX_DELAY);
-#else
-	std::unique_lock<std::mutex> lck(lf_csr_lock);
-#endif
-
+	my_unique_lock lck(&lc_csr_lock);
 	int_frequency = Hz;
-
-#if defined(BUILD_FOR_RP2040)
-	xSemaphoreGive(lf_csr_lock);
-#endif
 }
 
 void kw11_l::write_byte(const uint16_t addr, const uint8_t value)
@@ -165,11 +130,8 @@ void kw11_l::write_byte(const uint16_t addr, const uint8_t value)
 		return;
 	}
 
-#if defined(BUILD_FOR_RP2040)
-	xSemaphoreTake(lf_csr_lock, portMAX_DELAY);
-#else
-	std::unique_lock<std::mutex> lck(lf_csr_lock);
-#endif
+	my_unique_lock lck(&lc_csr_lock);
+
 	uint16_t vtemp = lf_csr;
 	
 	if (addr & 1) {
@@ -191,49 +153,22 @@ void kw11_l::write_word(const uint16_t a, const uint16_t value)
 		return;
 	}
 
-#if defined(BUILD_FOR_RP2040)
-	xSemaphoreTake(lf_csr_lock, portMAX_DELAY);
-#else
-	std::unique_lock<std::mutex> lck(lf_csr_lock);
-#endif
+	my_unique_lock lck(&lc_csr_lock);
 
 	TRACE("WRITE-I/O set line frequency clock/status register: %06o", value);
 	lf_csr = value;
-#if defined(BUILD_FOR_RP2040)
-	xSemaphoreGive(lf_csr_lock);
-#endif
 }
 
 void kw11_l::set_lf_crs_b7()
 {
-#if defined(BUILD_FOR_RP2040)
-	xSemaphoreTake(lf_csr_lock, portMAX_DELAY);
-#else
-	std::unique_lock<std::mutex> lck(lf_csr_lock);
-#endif
-
+	my_unique_lock lck(&lc_csr_lock);
 	lf_csr |= 128;
-
-#if defined(BUILD_FOR_RP2040)
-	xSemaphoreGive(lf_csr_lock);
-#endif
 }
 
 uint8_t kw11_l::get_lf_crs()
 {
-#if defined(BUILD_FOR_RP2040)
-	xSemaphoreTake(lf_csr_lock, portMAX_DELAY);
-#else
-	std::unique_lock<std::mutex> lck(lf_csr_lock);
-#endif
-
-	uint8_t rc = lf_csr;
-
-#if defined(BUILD_FOR_RP2040)
-	xSemaphoreGive(lf_csr_lock);
-#endif
-
-	return rc;
+	my_unique_lock lck(&lc_csr_lock);
+	return lf_csr;
 }
 
 JsonDocument kw11_l::serialize()
