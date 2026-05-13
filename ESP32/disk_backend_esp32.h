@@ -1,12 +1,10 @@
-// (C) 2018-2024 by Folkert van Heusden
+// (C) 2018-2026 by Folkert van Heusden
 // Released under MIT license
 
 #include <string>
 
 #include "disk_backend.h"
-#if defined(BUILD_FOR_RP2040)
-#include "rp2040.h"
-#else
+#if defined(ESP32)
 #include "esp32.h"
 #endif
 

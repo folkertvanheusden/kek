@@ -1,14 +1,17 @@
 // (C) 2018-2026 by Folkert van Heusden
 // Released under MIT license
 
+#include "gen.h"
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <atomic>
+#include <cstdint>
 #include <LittleFS.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 #if defined(BUILD_FOR_RP2040)
+#include <WiFi.h>
 #else
 #include <WiFi.h>
 #include <Wire.h>
@@ -26,10 +29,14 @@
 #include "blinkenlights.h"
 #include "comm.h"
 #include "comm_arduino.h"
+#if defined(ESP32)
 #include "comm_esp32_hardwareserial.h"
+#endif
+#if !defined(BUILD_FOR_RP2040)
 #include "comm_esp32_SC16IS752.h"
 #include "comm_tcp_socket_client.h"
 #include "comm_tcp_socket_server.h"
+#endif
 #include "console_esp32.h"
 #include "cpu.h"
 #include "debugger.h"
@@ -39,12 +46,6 @@
 #include "disk_backend_nbd.h"
 #endif
 #include "error.h"
-#if defined(BUILD_FOR_RP2040)
-#include "rp2040.h"
-#else
-#include "esp32.h"
-#endif
-#include "gen.h"
 #include "kw11-l.h"
 #include "loaders.h"
 #include "memory.h"
@@ -61,18 +62,21 @@ console *cnsl = nullptr;
 
 uint16_t exec_addr = 0;
 
-#if !defined(BUILD_FOR_RP2040)
 SdFs     SDinstance;
-#endif
 
 std::atomic_uint32_t  stop_event         { EVENT_NONE };
 std::atomic_bool     *running            { nullptr    };
 bool                  trace_output       { false      };
 comm                 *cs                 { nullptr    };  // Console Serial
+#if !defined(BUILD_FOR_RP2040)
 SC16IS752            *SC16IS752_a        { nullptr    };
 SC16IS752            *SC16IS752_b        { nullptr    };
 comm_esp32_SC16IS752 *SC16IS752_com_a[2] { nullptr    };
 comm_esp32_SC16IS752 *SC16IS752_com_b[2] { nullptr    };
+#endif
+#if defined(BUILD_FOR_RP2040)
+WiFiMulti multi;
+#endif
 blinkenlights        bl;
 
 static void console_thread_wrapper_panel(void *const c)
@@ -92,12 +96,10 @@ bool init_sd()
 	cnsl->put_string_lf(format("SS  : %d", 1));
 	if (SDinstance.begin(1, SD_SCK_MHZ(1)))
 		disk_started = true;
-#elif !defined(BUILD_FOR_RP2040)
+#else
 	cnsl->put_string_lf(format("SS  : %d", int(SS)));
 	if (SDinstance.begin(SS, SD_SCK_MHZ(15)))
 		disk_started = true;
-#else
-#error What microcontroller is this?
 #endif
 	if (!disk_started) {
 		auto err = SDinstance.sdErrorCode();
@@ -110,7 +112,7 @@ bool init_sd()
 }
 #endif
 
-#if !defined(BUILD_FOR_RP2040)
+#if defined(ESP32)
 void set_hostname()
 {
   uint64_t mac    = ESP.getEfuseMac();
@@ -183,12 +185,82 @@ void check_network(console *const c)
 	c->put_string_lf("");
 	c->put_string_lf(format("Local IP address: %s", WiFi.localIP().toString().c_str()));
 }
+#elif defined(BUILD_FOR_RP2040)
+void set_hostname()
+{
+  // TODO (serial number)
+  WiFi.setHostname("PDP11");
+}
+
+const char *mac_to_string(uint8_t mac[6]) {
+  static char s[20];
+  sprintf(s, "%02x:%02x:%02x:%02x:%02x:%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+  return s;
+}
+
+const char *enc_to_string(uint8_t enc) {
+  switch (enc) {
+    case ENC_TYPE_NONE: return "NONE";
+    case ENC_TYPE_TKIP: return "WPA";
+    case ENC_TYPE_CCMP: return "WPA2";
+    case ENC_TYPE_AUTO: return "AUTO";
+  }
+  return "UNKN";
+}
+
+void configure_network(console *const c)
+{
+  auto cnt = WiFi.scanNetworks();
+  if (cnt) {
+    c->put_string_lf(format("Found %d WiFi networks", cnt));
+    c->put_string_lf(format("%32s %5s %17s %2s %4s", "SSID", "ENC", "BSSID        ", "CH", "RSSI"));
+    for(auto i = 0; i < cnt; i++) {
+      uint8_t bssid[6];
+      WiFi.BSSID(i, bssid);
+      c->put_string_lf(format("%32s %5s %17s %2d %4ld", WiFi.SSID(i), enc_to_string(WiFi.encryptionType(i)), mac_to_string(bssid), WiFi.channel(i), WiFi.RSSI(i)));
+    }
+  }
+  else {
+    c->put_string_lf("No WiFi networks found");
+  }
+
+	std::string wifi_ap = c->read_line("Enter SSID[|PSK]: ");
+	if (wifi_ap.empty())
+		return;
+
+	auto parts = split(wifi_ap, "|");
+	if (parts.size() > 2) {
+		c->put_string_lf("Invalid SSID/PSK: should not contain '|'");
+		return;
+	}
+
+	c->put_string_lf(format("Connecting to SSID \"%s\"", parts[0].c_str()));
+
+  if (parts.size() == 2)
+    multi.addAP(parts[0].c_str(), parts[1].c_str());
+  else
+    multi.addAP(parts[0].c_str(), "");
+
+  if (multi.run() == WL_CONNECTED)
+    c->put_string_lf("Connected");
+  else
+    c->put_string_lf("NOT connected");
+}
+
+void check_network(console *const c)
+{
+	c->put_string_lf("");
+	c->put_string_lf(format("Local IP address: %s", WiFi.localIP().toString().c_str()));
+}
+#endif
 
 void start_network(console *const c)
 {
 	WiFi.mode(WIFI_STA);
+#if defined(ESP32)
 	WiFi.useStaticBuffers(true);
 	WiFi.begin();
+#endif
 
 	wait_network(c);
 
@@ -210,6 +282,7 @@ void start_network(console *const c)
 				DOLOG(warning, false, "Failed to configure device");
 #endif
 
+#if !defined(BUILD_FOR_RP2040)
 		DOLOG(info, false, "Configuring TCP sockets for the remaining DZ11 slots");
 		for(size_t i=0; i<dz11_n_lines; i++) {
       if (io_channels->is_defined(i))
@@ -219,13 +292,16 @@ void start_network(console *const c)
 			if (io_channels->set_device(i, new comm_tcp_socket_server(port, true)) == false)
 				DOLOG(warning, false, "Failed to configure device");
 		}
+#endif
 
 		dz11 *dz11_ = new dz11(b, io_channels);
 		dz11_->begin();
 		b->add_DZ11(dz11_);
 
+#if defined(ESP32)
 		cs->println("* Starting (NTP-) clock");
 		set_clock_reference("pool.ntp.org");
+#endif
 	}
 }
 
@@ -236,7 +312,6 @@ void recall_configuration(console *const cnsl)
 
 	// TODO
 }
-#endif
 
 #if defined(ESP32)
 void heap_caps_alloc_failed_hook(size_t requested_size, uint32_t caps, const char *function_name)
@@ -245,49 +320,15 @@ void heap_caps_alloc_failed_hook(size_t requested_size, uint32_t caps, const cha
 }
 #endif
 
-// scan for SC16IS752 devices
-bool i2c_probe(const byte addr)
-{
-    Wire.beginTransmission(addr);
-    if (Wire.endTransmission() == 0) {
-      cs->println(format("i2c device found at %02x", addr));
-      return true;
-    }
-    return false;
-}
-
-void test_SC16IS752(SC16IS752 *const p, const uint8_t which)
-{
-  cs->println(format("PING result for SC16IS752 @ 0x%02x: %d", which, p->ping()));
-}
-
-void search_SC16IS752()
-{
-  cs->println("Scanning i2c bus for SC16IS752 devices...");
-  Wire.begin();
-  if (i2c_probe(0x4d)) {
-    SC16IS752_a        = new SC16IS752(SC16IS750_PROTOCOL_I2C, 0x4d);
-    SC16IS752_com_a[0] = new comm_esp32_SC16IS752(SC16IS752_a, 0, 0);
-    SC16IS752_com_a[1] = new comm_esp32_SC16IS752(SC16IS752_a, 0, 1);
-    test_SC16IS752(SC16IS752_a, 0x4d);
-  }
-  if (i2c_probe(0x4e)) {
-    SC16IS752_b = new SC16IS752(SC16IS750_PROTOCOL_I2C, 0x4e);
-    SC16IS752_com_b[0] = new comm_esp32_SC16IS752(SC16IS752_a, 1, 0);
-    SC16IS752_com_b[1] = new comm_esp32_SC16IS752(SC16IS752_a, 1, 1);
-    test_SC16IS752(SC16IS752_a, 0x4e);
-  }
-}
-
 void setup() {
 	Serial.begin(115200);
 	while(!Serial)
 		delay(100);
 #if defined(ESP32)
   esp_log_level_set("*", ESP_LOG_INFO);
-#endif
 
   heap_caps_check_integrity_all(true);
+#endif
 
 	cs = new comm_arduino(&Serial, "Serial");
 	cs->println("PDP11 emulator, by Folkert van Heusden");
@@ -297,29 +338,14 @@ void setup() {
 #if defined(ESP32)
   search_SC16IS752();
   cs->set_comm(SC16IS752_a, SC16IS752_b);
-#endif
 
   uint32_t freq = 0;
   esp_clk_tree_src_get_freq_hz(SOC_MOD_CLK_CPU, ESP_CLK_TREE_SRC_FREQ_PRECISION_EXACT, &freq);
 	cs->println(format("# cores: %d, CPU frequency: %u Hz", SOC_CPU_CORES_NUM, freq));
 
-#if defined(ESP32)
 	heap_caps_register_failed_alloc_callback(heap_caps_alloc_failed_hook);
 
 	set_hostname();
-#endif
-
-#if defined(BUILD_FOR_RP2040)
-	SPI.setRX(MISO);
-	SPI.setTX(MOSI);
-	SPI.setSCK(SCK);
-
-	for(int i=0; i<3; i++) {
-		if (SDinstance.begin(false, SD_SCK_MHZ(10), SPI))
-			break;
-
-		cs->println("Cannot initialize SD card");
-	}
 #endif
 
 #if defined(BUILD_FOR_RP2040)

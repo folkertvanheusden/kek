@@ -4,12 +4,14 @@
 #pragma once
 
 #include <atomic>
-#include <condition_variable>
 #include <optional>
 #include <string>
+#if !defined(BUILD_FOR_RP2040)
 #include <thread>
+#endif
 #include <vector>
 
+#include "my_lock.h"
 #include "utils.h"
 
 #if defined(_WIN32)
@@ -23,14 +25,7 @@ class bus;
 class console
 {
 private:
-	std::vector<char>       input_buffer;
-#if defined(BUILD_FOR_RP2040)
-	QueueHandle_t           have_data  { xQueueCreate(16, 1)      };
-	SemaphoreHandle_t       input_lock { xSemaphoreCreateBinary() };
-#else
-	std::condition_variable have_data;
-	std::mutex              input_lock;
-#endif
+	my_threadsafe_queue<char> input_buffer;
 
 protected:
 	std::atomic_uint32_t   *const stop_event { nullptr };

@@ -1,15 +1,20 @@
 // reference: https://treasures.scss.tcd.ie/hardware/TCD-SCSS-T.20141120.008/EK-DELQA-UG-002.pdf
+#include "gen.h"
 #include <cstring>
 #include <fcntl.h>
+#if !defined(BUILD_FOR_RP2040)
+#if defined(IS_POSIX)
 #include <poll.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#endif
+#endif
 #include <unistd.h>
 #if defined(linux)
 #include <linux/if.h>
 #include <linux/if_arp.h>
 #include <linux/if_tun.h>
 #endif
-#include <sys/ioctl.h>
-#include <sys/socket.h>
 
 #include "deqna.h"
 #include "log.h"
@@ -17,6 +22,21 @@
 
 constexpr const uint8_t bc_addr[] { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 
+#if defined(BUILD_FOR_RP2040)
+static void thread_wrapper_receiver_low(void *p)
+{
+       deqna *const deqna_ = reinterpret_cast<deqna *>(p);
+
+       deqna_->receiver_low();
+}
+
+static void thread_wrapper_receiver_high(void *p)
+{
+       deqna *const deqna_ = reinterpret_cast<deqna *>(p);
+
+       deqna_->receiver_high();
+}
+#endif
 
 #if defined(linux)
 static void set_ifr_name(ifreq *ifr, const std::string & dev_name)
@@ -109,8 +129,13 @@ bool deqna::begin()
 	dev_fd = open_tun("pdp");
 	rc = dev_fd != -1;
 #endif
+#if defined(BUILD_FOR_RP2040)
+	xTaskCreate(&thread_wrapper_receiver_low,  "deqna-rl", 3072, this, 1, nullptr);
+	xTaskCreate(&thread_wrapper_receiver_high, "deqna-rh", 3072, this, 1, nullptr);
+#else
 	th_rx_low  = new std::thread(&deqna::receiver_low,  this);
 	th_rx_high = new std::thread(&deqna::receiver_high, this);
+#endif
 	return rc;
 }
 
@@ -132,20 +157,19 @@ deqna::~deqna()
 
 void deqna::purge_buffers()
 {
-	std::unique_lock<std::mutex> lck(lock);
-	for(auto & buffer: received)
-		delete [] buffer.first;
-	received.clear();
+	while(received.is_empty() == false) {
+		auto item = received.pop(1000);
+		if (item.has_value())
+			delete [] item.value().first;
+	}
 }
 
 void deqna::queue_rx_packet(const uint8_t *const in, const size_t n)
 {
-	std::unique_lock<std::mutex> lck(lock);
-	if (received.size() < DEQNA_MAX_N_QUEUED) {
+	if (received.aprox_size() < DEQNA_MAX_N_QUEUED) {
 		uint8_t *copy = new uint8_t[n];
 		memcpy(copy, in, n);
-		received.push_back({ copy, n });
-		cv.notify_one();
+		received.push({ copy, n });
 	}
 	else {
 		DOLOG(debug, false, "deqna: rx queue full, packet dropped");
@@ -158,6 +182,7 @@ void deqna::receiver_low()
 {
 	set_thread_name("deqna:rx_low");
 
+#if defined(IS_POSIX)
 	pollfd fds[] { { dev_fd, POLLIN, 0 } };
 
 	while(!stop_flag) {
@@ -189,6 +214,7 @@ void deqna::receiver_low()
 			DOLOG(debug, false, "deqna dropped packet: receiver not enabled");
 		}
 	}
+#endif
 
 	DOLOG(info, false, "deqna LOW RECEIVER THREAD TERMINATING");
 }
@@ -204,15 +230,17 @@ void deqna::receiver_high()
 			continue;
 		}
 
-		std::unique_lock<std::mutex> lck(lock);
-		while(received.empty() && stop_flag == false)
-			cv.wait_for(lck, std::chrono::milliseconds(1050));
+		std::optional<std::pair<uint8_t *, size_t> > item;
+		while(!stop_flag) {
+			item = received.pop(100);
+			if (item.has_value())
+				break;
+		}
 		if (stop_flag)
 			break;
 		
-		const uint8_t *const buffer   = received.front().first;
-		const size_t         byte_cnt = received.front().second;
-		received.erase(received.begin());
+		const uint8_t *const buffer   = item.value().first;
+		const size_t         byte_cnt = item.value().second;
 
 		DOLOG(debug, false, "deqna(rx): Ethernet packet received (%zu bytes, from %02x:%02x:%02x:%02x:%02x:%02x, type: %04x)",
 				byte_cnt,
@@ -396,7 +424,7 @@ void deqna::reset(const bool hard)
 
 void deqna::show_state(console *const cnsl) const
 {
-	std::unique_lock<std::mutex> lck(lock);
+	my_unique_lock lck(&lock);
 	cnsl->put_string_lf(format("%zu packets queued", received.size()));
 }
 

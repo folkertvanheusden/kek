@@ -41,3 +41,7 @@ typedef enum { rm_prev, rm_cur } rm_selection_t;
 #if defined(ESP32)
 #include "esp32.h"
 #endif
+
+#if defined(BUILD_FOR_RP2040)
+#include "rp2040.h"
+#endif

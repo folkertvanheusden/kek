@@ -1,6 +1,7 @@
 // (C) 2018-2026 by Folkert van Heusden
 // Released under MIT license
 
+#include "gen.h"
 #include <unistd.h>
 
 #include "console.h"
@@ -9,15 +10,9 @@
 #include "log.h"
 #include "utils.h"
 
-#if defined(ESP32)
-#include "esp32.h"
-#elif defined(BUILD_FOR_RP2040)
-#include "rp2040.h"
-#endif
-
 
 #if defined(ESP32) || defined(BUILD_FOR_RP2040)
-void thread_wrapper_kw11(void *p)
+static void thread_wrapper_kw11(void *p)
 {
 	kw11_l *const kw11l = reinterpret_cast<kw11_l *>(p);
 
@@ -100,6 +95,14 @@ void kw11_l::operator()()
 	}
 
 	TRACE("KW11-L thread terminating");
+}
+
+uint8_t kw11_l::read_byte(const uint16_t addr)
+{
+	uint16_t v = read_word(addr & ~1);
+	if (addr & 1)
+		return v >> 8;
+	return v;
 }
 
 uint16_t kw11_l::read_word(const uint16_t a)

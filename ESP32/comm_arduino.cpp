@@ -1,11 +1,9 @@
-// (C) 2024 by Folkert van Heusden
+// (C) 2024-2026 by Folkert van Heusden
 // Released under MIT license
 
 #include "gen.h"
 
-#if defined(ESP32)
-#include <driver/uart.h>
-
+#if defined(ESP32) || defined(BUILD_FOR_RP2040)
 #include "comm_arduino.h"
 #include "utils.h"
 

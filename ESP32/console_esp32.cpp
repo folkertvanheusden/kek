@@ -4,14 +4,21 @@
 #if defined(NEOPIXELS_PIN)
 #include <Adafruit_NeoPixel.h>
 #endif
+#include <stdint.h>
 #include <stdio.h>
 #include <unistd.h>
 
+#if !defined(BUILD_FOR_RP2040)
 #include "blinkenlights.h"
+#endif
 #include "bus.h"
 #include "console_esp32.h"
 #include "cpu.h"
+#if defined(BUILD_FOR_RP2040)
+#include "rp2040.h"
+#else
 #include "esp32.h"
+#endif
 #include "error.h"
 #include "utils.h"
 
@@ -114,8 +121,10 @@ void console_esp32::panel_update_thread()
 	while(!stop_panel) {
 		vTaskDelay(1000 / (portTICK_PERIOD_MS * refreshrate));
 
+#if !defined(BUILD_FOR_RP2040)
 		if (p_blinkenlights)
 			p_blinkenlights->push(b, running_flag);
+#endif
 
 		try {
 			// note that these are approximately as there's no mutex on the emulation

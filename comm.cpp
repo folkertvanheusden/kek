@@ -16,8 +16,10 @@
 #if IS_POSIX
 #include "comm_posix_tty.h"
 #endif
+#if !defined(BUILD_FOR_RP2040)
 #include "comm_tcp_socket_client.h"
 #include "comm_tcp_socket_server.h"
+#endif
 #include "log.h"
 
 
@@ -60,10 +62,14 @@ comm *comm::deserialize(const JsonVariantConst j, bus *const b)
 
         comm *d    = nullptr;
 
-        if (type == "tcp-server")
+	if (false) {
+	}
+#if !defined(BUILD_FOR_RP2040)
+        elsif (type == "tcp-server")
                 d = comm_tcp_socket_server::deserialize(j);
 	else if (type == "tcp-client")
                 d = comm_tcp_socket_client::deserialize(j);
+#endif
 #if defined(ESP32)
 	else if (type == "SC16IS752-serial")
                 d = comm_esp32_SC16IS752::deserialize(j, ser2_inst_1, ser2_inst_2);

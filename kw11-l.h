@@ -53,6 +53,7 @@ public:
 	void     begin(console *const cnsl);
 	void     operator()();
 
+	uint8_t  read_byte(const uint16_t a) override;
 	uint16_t read_word(const uint16_t a) override;
 
 	void     write_byte(const uint16_t addr, const uint8_t  v) override;

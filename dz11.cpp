@@ -24,6 +24,15 @@
 
 const char *const dz11_register_names[] { "R0_CSR", "R2_RBUF_LPR", "R4_TCR", "R6_MSR_TDR" };
 
+#if defined(ESP32) || defined(BUILD_FOR_RP2040)
+static void thread_wrapper_dz11(void *p)
+{
+	dz11 *const dz11_ = reinterpret_cast<dz11 *>(p);
+
+	dz11_->operator()();
+}
+#endif
+
 dz11::dz11(bus *const b, comm_io *const io_channels):
 	b(b),
 	io_channels(io_channels)
@@ -52,7 +61,7 @@ dz11::~dz11()
 void dz11::show_state(console *const cnsl) const
 {
 	for(size_t i=0; i<dz11_n_lines; i++) {
-		std::unique_lock<std::mutex> lck(input_lock);
+		my_unique_lock lck(&input_lock);
 		std::string out = format(" line %zu: %zu characters in buffer, ", i + 1, recv_buffers[i].size());
 		if (connected[i] == NOT_CONNECTED)
 			out += "not connected";
@@ -74,7 +83,11 @@ void dz11::show_state(console *const cnsl) const
 
 bool dz11::begin()
 {
+#if defined(ESP32) || defined(BUILD_FOR_RP2040)
+	xTaskCreate(&thread_wrapper_dz11, "dz11", 3072, this, 1, nullptr);
+#else
 	th = new std::thread(std::ref(*this));
+#endif
 
 	return true;
 }
@@ -107,7 +120,7 @@ void dz11::wait_connected(const int line_nr) const
 	for(;;) {
 		usleep(1000);
 
-		std::unique_lock<std::mutex> lck(input_lock);
+		my_unique_lock lck(&input_lock);
 		if (connected[line_nr] != NOT_CONNECTED)
 			break;
 	}
@@ -118,7 +131,7 @@ void dz11::wait_have_data(const int line_nr) const
 	for(;;) {
 		usleep(1000);
 
-		std::unique_lock<std::mutex> lck(input_lock);
+		my_unique_lock lck(&input_lock);
 		if (recv_buffers[line_nr].empty() == false)
 			break;
 	}
@@ -135,7 +148,7 @@ void dz11::operator()()
 		myusleep(10000);  // TODO replace polling
 
 		for(int line_nr=0; line_nr<dz11_n_lines; line_nr++) {
-			std::unique_lock<std::mutex> lck(input_lock);
+			my_unique_lock lck(&input_lock);
 
 			// (dis-)connected?
 			bool is_connected  = io_channels->is_connected(line_nr);
@@ -217,7 +230,7 @@ uint8_t dz11::read_byte(const uint16_t addr)
 
 uint16_t dz11::read_word(const uint16_t addr)
 {
-	std::unique_lock<std::mutex> lck(input_lock);
+	my_unique_lock lck(&input_lock);
 	int      reg   = (addr - DZ11_BASE) / 2;
 	uint16_t vtemp = registers[reg];
 
@@ -325,7 +338,7 @@ void dz11::write_word(const uint16_t addr, const uint16_t v)
 	uint16_t v_set = v;
 	TRACE("DZ11: write %06o to register %06o (\"%s\", %d)", v, addr, dz11_register_names[reg], reg);
 
-	std::unique_lock<std::mutex> lck(input_lock);
+	my_unique_lock lck(&input_lock);
 	if (addr == DZ11_CSR) {
 		bool clr = v & 16;
 

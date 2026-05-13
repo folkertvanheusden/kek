@@ -5,16 +5,21 @@
 #include <cstring>
 #include <map>
 #include <optional>
-#if !defined(ESP32)
+#if !defined(ESP32) && !defined(BUILD_FOR_RP2040)
 #include <poll.h>
 #endif
 #include <string>
 #include <unistd.h>
 #include <vector>
-#if defined(ESP32)
+#if defined(BUILD_FOR_RP2040)
+#include <WiFi.h>
+#endif
+#if defined(ESP32) || defined(BUILD_FOR_RP2040)
 #include <WiFiUdp.h>
+#if defined(ESP32)
 #include <lwip/netdb.h>
 #include <lwip/sockets.h>
+#endif
 #else
 #include <arpa/inet.h>
 #include <sys/socket.h>
@@ -24,6 +29,10 @@
 #include "bus.h"
 #include "log.h"
 
+#if defined(BUILD_FOR_RP2040)
+constexpr const int local_port = 2000;
+WiFiUDP udp;
+#endif
 
 // this code does not check all the data returned by the server
 // because of code size restraints
@@ -164,6 +173,35 @@ static bool validate_reply(const rpc_msg_reply *const rmsg, const uint32_t xid)
 
 static const std::pair<const rpc_msg_reply *, int> exchange_message(const std::string & server, const int port, const uint32_t xid, const std::vector<uint8_t> & msg)
 {
+	constexpr const int max_reply_size = 1500;
+	uint8_t            *reply          = nullptr;
+	int                 packet_size    = 0;
+
+#if defined(BUILD_FOR_RP2040)
+	udp.begin(local_port);
+	udp.beginPacket(server.c_str(), port);
+	udp.write(msg.data(), msg.size());
+	udp.endPacket();
+
+	auto start = millis();
+	while(millis() - start < 1000) {
+		int packet_size = udp.parsePacket();
+		if (packet_size > 0) {
+			reply = new uint8_t[packet_size];
+			if (!reply) {
+				DOLOG(ll_critical, true, "malloc issue");
+				return { nullptr, 0 };
+			}
+			udp.read(reply, packet_size);
+			break;
+		}
+	}
+
+	if (!reply) {
+		DOLOG(debug, false, "Timeout waiting for RPC reply");
+		return { nullptr, 0 };
+	}
+#else
 	int fd = socket(AF_INET, SOCK_DGRAM, 0);
 	if (fd == -1) {
 		DOLOG(debug, false, "Cannot create socket: %s", strerror(errno));
@@ -196,21 +234,22 @@ static const std::pair<const rpc_msg_reply *, int> exchange_message(const std::s
 		return { nullptr, 0 };
 	}
 
-	constexpr const int max_reply_size = 1500;
-	uint8_t  *reply = new uint8_t[max_reply_size];
+	uint8_t  *reply       = new uint8_t[max_reply_size];
 	if (!reply) {
 		DOLOG(ll_critical, true, "malloc issue: %s", strerror(errno));
+		close(fd);
 		return { nullptr, 0 };
 	}
-	int       rc = recv(fd, reply, max_reply_size, 0);
+	int       packet_size = recv(fd, reply, max_reply_size, 0);
 	close(fd);
-	if (rc <= 0) {
+#endif
+	if (packet_size <= 0) {
 		DOLOG(debug, false, "recv failed: %s", strerror(errno));
 		delete [] reply;
 		return { nullptr, 0 };
 	}
-	if (rc % 4) {
-		DOLOG(debug, false, "invalid message length (%d)", rc);
+	if (packet_size % 4) {
+		DOLOG(debug, false, "invalid message length (%d)", packet_size);
 		delete [] reply;
 		return { nullptr, 0 };
 	}
@@ -218,12 +257,11 @@ static const std::pair<const rpc_msg_reply *, int> exchange_message(const std::s
 	const rpc_msg_reply *rmsg = reinterpret_cast<const rpc_msg_reply *>(reply);
 
 	if (validate_reply(rmsg, xid) == false) {
-		close(fd);
 		delete [] reply;
 		return { nullptr, 0 };
 	}
 
-	return { rmsg, rc / 4 };
+	return { rmsg, packet_size / 4 };
 }
 
 static void free_rpc_msg_reply(const rpc_msg_reply *p)
@@ -560,7 +598,7 @@ bool blinkenlights::begin()
 
 bool blinkenlights::set_target(const std::string & ip)
 {
-	std::unique_lock<std::mutex> lck(controls_lock);
+	my_unique_lock lck(&controls_lock);
 	valid  = false;
 	server = ip;
 
@@ -613,7 +651,7 @@ bool blinkenlights::set_target(const std::string & ip)
 
 void blinkenlights::push(bus *const b, const bool running_flag)
 {
-	std::unique_lock<std::mutex> lck(controls_lock);
+	my_unique_lock lck(&controls_lock);
 	if (!valid)
 		return;
 	auto panel             = controls.find("11/70");

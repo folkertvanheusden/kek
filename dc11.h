@@ -5,7 +5,6 @@
 #include <atomic>
 #include <condition_variable>
 #include <cstdint>
-#include <mutex>
 #include <thread>
 #include <vector>
 
@@ -14,6 +13,7 @@
 #include "gen.h"
 #include "bus.h"
 #include "log.h"
+#include "my_lock.h"
 
 #define DC11_RCSR 0174000 // receiver status register
 #define DC11_BASE DC11_RCSR
@@ -35,8 +35,8 @@ private:
 	comm_io          *const io_channels { nullptr };
 	std::vector<bool> connected;
 
-	std::vector<char>   recv_buffers[dc11_n_lines];
-        mutable std::mutex  input_lock  [dc11_n_lines];
+	std::vector<char> recv_buffers[dc11_n_lines];
+        mutable my_lock   input_lock  [dc11_n_lines];
 
 	void trigger_interrupt(const int line_nr, const bool is_tx);
 	bool is_rx_interrupt_enabled(const int line_nr) const;

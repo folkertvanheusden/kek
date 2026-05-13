@@ -1,12 +1,12 @@
-// (C) 2024 by Folkert van Heusden
+// (C) 2024-2026 by Folkert van Heusden
 // Released under MIT license
 
 #include "gen.h"
 
-#if defined(ESP32)
+#if defined(ESP32) || defined(BUILD_FOR_RP2040)
 #include <Arduino.h>
 #endif
-#if defined(ESP32)
+#if defined(ESP32) || defined(BUILD_FOR_RP2040)
 #include <lwip/netdb.h>
 #include <lwip/sockets.h>
 #include <arpa/inet.h>

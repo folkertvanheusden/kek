@@ -3,6 +3,9 @@
 #include <mutex>
 #include <string>
 
+#include "my_lock.h"
+
+
 class  bus;
 struct control_info;
 
@@ -11,7 +14,7 @@ private:
 	std::string server;
 	int         udp_port    { 0     };
 	// panel, control-name, control-mea
-	std::mutex  controls_lock;
+	my_lock     controls_lock;
 	bool        valid       { false };
 	std::map<std::string, std::map<std::string, control_info> > controls;
 

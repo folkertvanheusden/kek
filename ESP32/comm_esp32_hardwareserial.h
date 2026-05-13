@@ -1,4 +1,4 @@
-// (C) 2024 by Folkert van Heusden
+// (C) 2024-2026 by Folkert van Heusden
 // Released under MIT license
 
 #include "gen.h"
@@ -33,3 +33,5 @@ public:
 
 	void    send_data(const uint8_t *const in, const size_t n) override;
 };
+
+void search_SC16IS752();
