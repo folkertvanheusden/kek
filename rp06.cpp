@@ -14,9 +14,9 @@
 #include "utils.h"
 
 
-unsigned NSECT       = 22;               // sectors per track
-unsigned NTRAC       = 19;               // tracks per cylinder
-unsigned SECTOR_SIZE = 512;
+                unsigned NSECT       = 22;               // sectors per track
+                unsigned NTRAC       = 19;               // tracks per cylinder
+constexpr const unsigned SECTOR_SIZE = 512;
 constexpr const uint16_t default_DS  = uint16_t(rp06::ds_bits::DPR) /* drive present */ | uint16_t(rp06::ds_bits::MOL) /* medium on-line */ | uint16_t(rp06::ds_bits::VV) /* volume valid */ | uint16_t(rp06::ds_bits::DRY) /* drive ready */;
 
 constexpr const char *regnames[] { "Control", "Status", "Error register 1", "Maintenance", "Attention summary", "Desired sector/track address", "Error register 1", "Look ahead", "Drive type", "Serial no", "Offset", "Desired cylinder address", "Current cylinder address", "Error register 2", "Error register 3", "ECC position", "ECC pattern" };
