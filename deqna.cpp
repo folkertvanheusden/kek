@@ -330,7 +330,7 @@ void deqna::show_state(console *const cnsl) const
 	cnsl->put_string_lf(format("MAC: %02x:%02x:%02x:%02x:%02x:%02x", mac_address[0], mac_address[1], mac_address[2], mac_address[3], mac_address[4], mac_address[5]));
 	cnsl->put_string_lf(format("%zu packets queued", received.aprox_size()));
 	for(int i=0; i<8; i++)
-		cnsl->put_string_lf(format("reg %d: %06o", uint64_t(registers[i])));
+		cnsl->put_string_lf(format("reg %d: %06o", i, uint64_t(registers[i])));
 	cnsl->put_string_lf(format("rx total  : %6" PRIu64, uint64_t(total_n_rx_pkts)));
 	cnsl->put_string_lf(format("rx dropped: %6" PRIu64, uint64_t(total_n_rx_drop)));
 	cnsl->put_string_lf(format("tx total  : %6" PRIu64, uint64_t(total_n_tx_pkts)));
