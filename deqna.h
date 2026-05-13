@@ -11,6 +11,7 @@
 
 #include "bus.h"
 #include "device.h"
+#include "eth_transport.h"
 #include "my_lock.h"
 
 #define DEQNA_BASE    0174440
@@ -28,6 +29,7 @@ class deqna : public device
 {
 private:
 	bus             *const b        { nullptr };
+	eth_transport   *const eth_dev  { nullptr };
 	std::atomic_uint16_t registers[8] { 0     };  // accessed from multiple threads
 	uint8_t          mac_address[6] { 0       };
 	int              dev_fd         { -1      };
@@ -46,7 +48,7 @@ private:
 	void purge_buffers  ();
 
 public:
-	deqna(bus *const b, const uint8_t mac_address[6]);
+	deqna(bus *const b, const uint8_t mac_address[6], eth_transport *const eth_dev);
 	virtual ~deqna();
 
 	bool begin();

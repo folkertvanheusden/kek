@@ -47,6 +47,8 @@ set(APP_SOURCES
   disk_backend_nbd.cpp
   dz11.cpp
   error.cpp
+  eth_transport.cpp
+  eth_transport_linux.cpp
   kw11-l.cpp
   loaders.cpp
   log.cpp

@@ -2,20 +2,7 @@
 #include "gen.h"
 #include <cinttypes>
 #include <cstring>
-#include <fcntl.h>
-#if !defined(BUILD_FOR_RP2040)
-#if defined(IS_POSIX)
-#include <poll.h>
-#include <sys/ioctl.h>
-#include <sys/socket.h>
-#endif
-#endif
 #include <unistd.h>
-#if defined(linux)
-#include <linux/if.h>
-#include <linux/if_arp.h>
-#include <linux/if_tun.h>
-#endif
 
 #include "deqna.h"
 #include "log.h"
@@ -39,85 +26,9 @@ static void thread_wrapper_receiver_high(void *p)
 }
 #endif
 
-#if defined(linux)
-static void set_ifr_name(ifreq *ifr, const std::string & dev_name)
-{
-	memset(ifr->ifr_name, 0x00, IFNAMSIZ);
-	size_t copy_name_n = std::min(size_t(IFNAMSIZ), dev_name.size());
-	memcpy(ifr->ifr_name, dev_name.c_str(), copy_name_n);
-}
-
-static bool invoke_if_ioctl(const std::string & dev_name, const int ioctl_nr, ifreq *const p)
-{
-	int temp_fd = socket(AF_INET, SOCK_DGRAM, 0);
-	if (temp_fd == -1)
-		DOLOG(ll_error, false, "create socket failed");
-	else {
-		set_ifr_name(p, dev_name);
-
-		bool ok = true;
-		if (ioctl(temp_fd, ioctl_nr, p) == -1) {
-			DOLOG(ll_error, false, "deqna: ioctl %d failed: %s", ioctl_nr, strerror(errno));
-			ok = false;
-		}
-
-		close(temp_fd);
-
-		return ok;
-	}
-
-	return false;
-}
-
-static int open_tun(const std::string & dev_name)
-{
-	int fd      = -1;
-	int temp_fd = -1;
-
-	do {
-		fd = open("/dev/net/tun", O_RDWR);
-		if (fd == -1) {
-			DOLOG(ll_error, false, "cannot open /dev/net/tun");
-			break;
-		}
-
-		if (fcntl(fd, F_SETFD, FD_CLOEXEC) == -1) {
-			DOLOG(ll_error, false, "FD_CLOEXEC on fd failed");
-			break;
-		}
-
-		ifreq ifr_tap { };
-		ifr_tap.ifr_flags = IFF_TAP | IFF_NO_PI;
-		set_ifr_name(&ifr_tap, dev_name);
-
-		if (ioctl(fd, TUNSETIFF, &ifr_tap) == -1) {
-			DOLOG(ll_error, false, "ioctl TUNSETIFF failed");
-			break;
-		}
-
-		//
-		ifr_tap.ifr_flags = IFF_UP | IFF_RUNNING | IFF_BROADCAST;
-		if (invoke_if_ioctl(dev_name, SIOCSIFFLAGS, &ifr_tap) == false)
-			break;
-
-		close(temp_fd);
-
-		return fd;
-	}
-	while(0);
-
-	if (temp_fd != -1)
-		close(temp_fd);
-
-	if (fd != -1)
-		close(fd);
-
-	return -1;
-}
-#endif
-
-deqna::deqna(bus *const b, const uint8_t mac_address[6]) :
-	b(b)
+deqna::deqna(bus *const b, const uint8_t mac_address[6], eth_transport *const eth_dev):
+	b(b),
+	eth_dev(eth_dev)
 {
 	memcpy(this->mac_address, mac_address, sizeof this->mac_address);
 	reset(true);
@@ -125,11 +36,6 @@ deqna::deqna(bus *const b, const uint8_t mac_address[6]) :
 
 bool deqna::begin()
 {
-	bool rc = false;
-#if defined(linux)
-	dev_fd = open_tun("pdp");
-	rc = dev_fd != -1;
-#endif
 #if defined(BUILD_FOR_RP2040)
 	xTaskCreate(&thread_wrapper_receiver_low,  "deqna-rl", 3072, this, 1, nullptr);
 	xTaskCreate(&thread_wrapper_receiver_high, "deqna-rh", 3072, this, 1, nullptr);
@@ -137,7 +43,7 @@ bool deqna::begin()
 	th_rx_low  = new std::thread(&deqna::receiver_low,  this);
 	th_rx_high = new std::thread(&deqna::receiver_high, this);
 #endif
-	return rc;
+	return true;
 }
 
 deqna::~deqna()
@@ -151,8 +57,6 @@ deqna::~deqna()
 		th_rx_high->join();
 		delete th_rx_high;
 	}
-	if (dev_fd != -1)
-		close(dev_fd);
 	purge_buffers();
 }
 
@@ -184,43 +88,31 @@ void deqna::receiver_low()
 {
 	set_thread_name("deqna:rx_low");
 
-#if defined(IS_POSIX)
-	pollfd fds[] { { dev_fd, POLLIN, 0 } };
-
 	while(!stop_flag) {
-		int rc = poll(fds, 1, 100);
-		if (rc == -1) {
-			DOLOG(info, false, "deqna: tun device gone?");
-			break;
-		}
-		if (rc == 0)
+		auto pkt = eth_dev->get(100);
+		if (pkt.first == nullptr)
 			continue;
 
 		total_n_rx_pkts++;
 
-		uint8_t buffer[1514];
-		int byte_cnt = read(dev_fd, buffer, sizeof buffer);
-		if (byte_cnt <= 0)
-			break;
-
-		if (byte_cnt < 14) {
+		if (pkt.second < 14) {
 			total_n_rx_drop++;
+			delete [] pkt.first;
 			continue;
 		}
 
 		// only for us or broadcast
-		if (memcmp(buffer, mac_address, 6) != 0 && memcmp(buffer, bc_addr, 6) != 0)
-			continue;
-
-		if (registers[7] & 1) {  // receiver enabled?
-			DOLOG(debug, false, "deqna packet received from real Ethernet");
-			queue_rx_packet(buffer, byte_cnt);
+		if (memcmp(pkt.first, mac_address, 6) == 0 || memcmp(pkt.first, bc_addr, 6) == 0) {
+			if (registers[7] & 1) {  // receiver enabled?
+				DOLOG(debug, false, "deqna packet received from real Ethernet");
+				queue_rx_packet(pkt.first, pkt.second);
+			}
+			else {
+				DOLOG(debug, false, "deqna dropped packet: receiver not enabled");
+			}
 		}
-		else {
-			DOLOG(debug, false, "deqna dropped packet: receiver not enabled");
-		}
+		delete [] pkt.first;
 	}
-#endif
 
 	DOLOG(info, false, "deqna LOW RECEIVER THREAD TERMINATING");
 }
@@ -379,11 +271,7 @@ void deqna::transmitter()
 					queue_rx_packet(buffer, buffer_offset);
 				}
 				else {  // push on the wire
-					int tx_rc = write(dev_fd, buffer, buffer_offset);
-					if (tx_rc <= 0) {
-						DOLOG(warning, false, "deqna(tx): failed transmitting - device down?");
-						break;
-					}
+					eth_dev->transmit(buffer, buffer_offset);
 				}
 
 				buffer_offset = 0;
