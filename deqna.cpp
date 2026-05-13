@@ -1,5 +1,6 @@
 // reference: https://treasures.scss.tcd.ie/hardware/TCD-SCSS-T.20141120.008/EK-DELQA-UG-002.pdf
 #include "gen.h"
+#include <cinttypes>
 #include <cstring>
 #include <fcntl.h>
 #if !defined(BUILD_FOR_RP2040)
@@ -173,6 +174,7 @@ void deqna::queue_rx_packet(const uint8_t *const in, const size_t n)
 	}
 	else {
 		DOLOG(debug, false, "deqna: rx queue full, packet dropped");
+		total_n_rx_drop++;
 	}
 }
 
@@ -194,13 +196,17 @@ void deqna::receiver_low()
 		if (rc == 0)
 			continue;
 
+		total_n_rx_pkts++;
+
 		uint8_t buffer[1514];
 		int byte_cnt = read(dev_fd, buffer, sizeof buffer);
 		if (byte_cnt <= 0)
 			break;
 
-		if (byte_cnt < 14)
+		if (byte_cnt < 14) {
+			total_n_rx_drop++;
 			continue;
+		}
 
 		// only for us or broadcast
 		if (memcmp(buffer, mac_address, 6) != 0 && memcmp(buffer, bc_addr, 6) != 0)
@@ -293,8 +299,10 @@ void deqna::receiver_high()
 
 		registers[7] |= 32;
 
-		if (!queued)
+		if (!queued) {
+			total_n_rx_drop++;
 			DOLOG(debug, false, "deqna(rx): packet NOT queued");
+		}
 	}
 
 	DOLOG(info, false, "deqna HIGH RECEIVER THREAD TERMINATING");
@@ -302,9 +310,13 @@ void deqna::receiver_high()
 
 void deqna::transmitter()
 {
+	total_n_tx_pkts++;
+
 	// sender list invalid?
-	if (registers[7] & 16)
+	if (registers[7] & 16) {
+		total_n_tx_drop++;
 		return;
+	}
 
 	uint8_t buffer[1514];
 	int     buffer_offset = 0;
@@ -400,8 +412,10 @@ void deqna::transmitter()
 
 	registers[7] |= 16;
 
-	if (!queued)
+	if (!queued) {
+		total_n_tx_drop++;
 		DOLOG(debug, false, "deqna(tx): packet NOT queued");
+	}
 }
 
 void deqna::reset(const bool hard)
@@ -424,7 +438,14 @@ void deqna::reset(const bool hard)
 
 void deqna::show_state(console *const cnsl) const
 {
+	cnsl->put_string_lf(format("MAC: %02x:%02x:%02x:%02x:%02x:%02x", mac_address[0], mac_address[1], mac_address[2], mac_address[3], mac_address[4], mac_address[5]));
 	cnsl->put_string_lf(format("%zu packets queued", received.aprox_size()));
+	for(int i=0; i<8; i++)
+		cnsl->put_string_lf(format("reg %d: %06o", uint64_t(registers[i])));
+	cnsl->put_string_lf(format("rx total  : %6" PRIu64, uint64_t(total_n_rx_pkts)));
+	cnsl->put_string_lf(format("rx dropped: %6" PRIu64, uint64_t(total_n_rx_drop)));
+	cnsl->put_string_lf(format("tx total  : %6" PRIu64, uint64_t(total_n_tx_pkts)));
+	cnsl->put_string_lf(format("tx dropped: %6" PRIu64, uint64_t(total_n_tx_drop)));
 }
 
 uint8_t deqna::read_byte(const uint16_t addr)

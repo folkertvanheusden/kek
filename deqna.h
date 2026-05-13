@@ -36,6 +36,10 @@ private:
 	std::thread     *th_rx_high     { nullptr };
 	mutable my_lock  lock;
 	my_threadsafe_queue<std::pair<uint8_t *, size_t> > received;
+	std::atomic_uint64_t total_n_rx_pkts { 0 };
+	std::atomic_uint64_t total_n_rx_drop { 0 };
+	std::atomic_uint64_t total_n_tx_pkts { 0 };
+	std::atomic_uint64_t total_n_tx_drop { 0 };
 
 	void queue_rx_packet(const uint8_t *const in, const size_t n);
 	void transmitter    ();
