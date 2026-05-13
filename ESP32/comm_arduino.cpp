@@ -40,8 +40,6 @@ bool comm_arduino::has_data()
 uint8_t comm_arduino::get_byte()
 {
 	my_unique_lock lck(&lock);
-	while(s->available() == 0)
-		vTaskDelay(5 / portTICK_PERIOD_MS);
 	return s->read();
 }
 
