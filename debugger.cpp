@@ -604,6 +604,9 @@ void show_run_statistics(console *const cnsl, cpu *const c)
 #if defined(ESP32)
 	cnsl->put_string_lf(format("Free RAM (decimal bytes): %d", ESP.getFreeHeap()));
 	cnsl->put_string_lf(format("Free SPI-RAM: %d", heap_caps_get_free_size(MALLOC_CAP_SPIRAM)));
+#elif defined(BUILD_FOR_RP2040)
+	cnsl->put_string_lf(format("Free RAM (decimal bytes): %d", rp2040.getFreeHeap()));
+	cnsl->put_string_lf(format("Clock frequency: %d", rp2040.f_cpu()));
 #endif
 
 	auto stats = c->get_mips_rel_speed({ }, { });
@@ -1345,6 +1348,8 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 	else if (cmd == "quit" || cmd == "q") {
 #if defined(ESP32)
 		ESP.restart();
+#elif defined(BUILD_FOR_RP2040)
+		rp2040.reboot();
 #endif
 		return false;
 	}
