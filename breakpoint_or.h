@@ -11,7 +11,7 @@ private:
 	const std::vector<breakpoint *> triggers;
 
 public:
-	breakpoint_or(bus *const b, const std::vector<breakpoint *> & triggers);
+	breakpoint_or(bus *const b, const std::vector<breakpoint *> & triggers, const bp_action action);
 	virtual ~breakpoint_or();
 
 	virtual std::optional<std::string> is_triggered() const override;

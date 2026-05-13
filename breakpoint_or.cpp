@@ -2,8 +2,8 @@
 #include "utils.h"
 
 
-breakpoint_or::breakpoint_or(bus *const b, const std::vector<breakpoint *> & triggers):
-	breakpoint(b),
+breakpoint_or::breakpoint_or(bus *const b, const std::vector<breakpoint *> & triggers, const bp_action action):
+	breakpoint(b, action),
 	triggers(triggers)
 {
 }

@@ -18,12 +18,12 @@ private:
 	std::string get_name(hwreg_t reg) const;
 
 public:
-	breakpoint_register(bus *const b, const int register_nr, const std::set<uint16_t> & values);
+	breakpoint_register(bus *const b, const int register_nr, const std::set<uint16_t> & values, const bp_action action);
 	virtual ~breakpoint_register();
 
 	virtual std::optional<std::string> is_triggered() const override;
 
-	static std::pair<breakpoint_register *, std::optional<std::string> > parse(bus *const b, const std::string & in);
+	static std::pair<breakpoint_register *, std::optional<std::string> > parse(bus *const b, const std::string & in, const bp_action action);
 
 	virtual std::string emit() const override;
 };

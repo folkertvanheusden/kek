@@ -5,4 +5,4 @@
 #include "bus.h"
 
 
-std::pair<breakpoint *, std::optional<std::string> > parse_breakpoint(bus *const b, const std::string & in);
+std::pair<breakpoint *, std::optional<std::string> > parse_breakpoint(bus *const b, const std::string & in, const breakpoint::bp_action action);

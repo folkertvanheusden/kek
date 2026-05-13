@@ -803,22 +803,36 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 
 		*stop_event = EVENT_NONE;
 	}
-	else if ((parts[0] == "sbp" || parts[0] == "cbp") && parts.size() >= 2){
+	else if ((parts[0] == "sbp" || parts[0] == "cbp") && parts.size() >= 3){
 		if (parts[0] == "sbp") {
-			std::size_t space = cmd.find(" ");
+			std::size_t space1 = cmd.find(" ");
+			std::size_t space2 = cmd.find(" ", space1 + 1);
 
-			std::pair<breakpoint *, std::optional<std::string> > rc = parse_breakpoint(b, cmd.substr(space + 1));
+			breakpoint::bp_action action     = breakpoint::invalid;
+			std::string           action_str = cmd.substr(space1 + 1, space2 - (space1 + 1));
+			if (action_str == "break" || action_str == "stop")
+				action = breakpoint::stop_running;
+			else if (action_str == "trace")
+				action = breakpoint::start_tracing;
+			else if (action_str == "log")
+				action = breakpoint::only_log_entry;
+			else
+				cnsl->put_string_lf(format("\"%s\" is an unknown breakpoint action", action_str.c_str()));
 
-			if (rc.first == nullptr) {
-				if (rc.second.has_value())
-					cnsl->put_string_lf(rc.second.value());
-				else
-					cnsl->put_string_lf("not set");
-			}
-			else {
-				int id = c->set_breakpoint(rc.first);
+			if (action != breakpoint::invalid) {
+				std::pair<breakpoint *, std::optional<std::string> > rc = parse_breakpoint(b, cmd.substr(space2 + 1), action);
 
-				cnsl->put_string_lf(format("Breakpoint has id: %d", id));
+				if (rc.first == nullptr) {
+					if (rc.second.has_value())
+						cnsl->put_string_lf(rc.second.value());
+					else
+						cnsl->put_string_lf("not set");
+				}
+				else {
+					int id = c->set_breakpoint(rc.first);
+
+					cnsl->put_string_lf(format("Breakpoint has id: %d", id));
+				}
 			}
 		}
 		else {
@@ -1369,10 +1383,10 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			"reset/r       - reset cpu/bus/etc",
 			"single/s      - run 1 instruction (implicit 'disassemble' command)",
 			"sbp/cbp/lbp   - set/clear/list breakpoint(s)",
-			"                e.g.: (pc=0123 and memwv[04000]=0200,0300 and (r4=07,05 or r5=0456))",
+			"                e.g.: action (pc=0123 and memwv[04000]=0200,0300 and (r4=07,05 or r5=0456))",
 			"                values seperated by ',', char after mem is w/b (word/byte), then",
 			"                follows v/p (virtual/physical), all octal values, mmr0-3 and psw are",
-			"                registers",
+			"                registers. \"action\" can be stop, trace or log.",
 			"trace/t       - toggle tracing",
 			"setll x,y     - set loglevel: terminal,file",
 			"setsl hst ll  - set syslog target: requires a hostname and a loglevel",
@@ -1461,9 +1475,18 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			}
 
 			auto bp_result = c->check_breakpoint();
-			if (bp_result.has_value() && !state->single_step) {
-				cnsl->put_string_lf("Breakpoint: " + bp_result.value());
-				break;
+			if (bp_result.has_value()) {
+				if (bp_result.value().first.get_action() == breakpoint::bp_action::stop_running) {
+					cnsl->put_string_lf("Breakpoint: " + bp_result.value().second);
+					if (!state->single_step)
+						break;
+				}
+				else if (bp_result.value().first.get_action() == breakpoint::bp_action::start_tracing) {
+					settrace(true);
+				}
+				else if (bp_result.value().first.get_action() == breakpoint::bp_action::only_log_entry) {
+					DOLOG(debug, false, "Breakpoint: %s", bp_result.value().second.c_str());
+				}
 			}
 
 			c->step();

@@ -5,10 +5,11 @@
 #include "utils.h"
 
 
-breakpoint_register::breakpoint_register(bus *const b, const int register_nr, const std::set<uint16_t> & values) :
-	breakpoint(b),
+breakpoint_register::breakpoint_register(bus *const b, const int register_nr, const std::set<uint16_t> & values, const bp_action action) :
+	breakpoint(b, action),
 	c(b->getCpu()),
-	register_nr(register_nr), values(values)
+	register_nr(register_nr),
+	values(values)
 {
 }
 
@@ -72,7 +73,7 @@ std::optional<std::string> breakpoint_register::is_triggered() const
 	return get_name(hwreg_t(register_nr)) + "=" + format("%06o", v);
 }
 
-std::pair<breakpoint_register *, std::optional<std::string> > breakpoint_register::parse(bus *const b, const std::string & in)
+std::pair<breakpoint_register *, std::optional<std::string> > breakpoint_register::parse(bus *const b, const std::string & in, const bp_action action)
 {
 	auto parts = split(in, "=");
 	if (parts.size() != 2)
@@ -93,21 +94,21 @@ std::pair<breakpoint_register *, std::optional<std::string> > breakpoint_registe
 		if (nr < 0 || nr > 7)
 			return { nullptr, "register: register id invalid" };
 
-		return { new breakpoint_register(b, nr, values), { } };
+		return { new breakpoint_register(b, nr, values, action), { } };
 	}
 	else if (key == "SP" || key == "sp") {
-		return { new breakpoint_register(b, 6, values), { } };
+		return { new breakpoint_register(b, 6, values, action), { } };
 	}
 	else if (key == "PC" || key == "pc") {
-		return { new breakpoint_register(b, 7, values), { } };
+		return { new breakpoint_register(b, 7, values, action), { } };
 	}
 	else if (key.substr(0, 3) == "MMR" || key.substr(0, 3) == "mmr") {
 		int which = key[3] - '0';
 
-		return { new breakpoint_register(b, hr_mmr0 + which, values), { } };
+		return { new breakpoint_register(b, hr_mmr0 + which, values, action), { } };
 	}
 	else if (key.substr(0, 3) == "PSW" || key.substr(0, 3) == "psw") {
-		return { new breakpoint_register(b, hr_psw, values), { } };
+		return { new breakpoint_register(b, hr_psw, values, action), { } };
 	}
 
 	return { nullptr, { } };

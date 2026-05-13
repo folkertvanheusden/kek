@@ -45,12 +45,12 @@ void cpu::init_interrupt_queue()
 		queued_interrupts[level].clear();
 }
 
-std::optional<std::string> cpu::check_breakpoint()
+std::optional<std::pair<breakpoint &, const std::string> > cpu::check_breakpoint()
 {
 	for(auto & bp: breakpoints) {
 		auto rc = bp.second->is_triggered();
 		if (rc.has_value())
-			return rc;
+			return { { *bp.second, rc.value() } };
 	}
 
 	return { };
