@@ -14,6 +14,7 @@
 #include "log.h"
 #include "utils.h"
 
+// https://www.rfc-editor.org/rfc/rfc7348
 
 constexpr const int max_pkt_size = 1512;
 
@@ -45,6 +46,7 @@ void eth_transport_vxlan::transmit(const uint8_t *const data, const size_t n_byt
 {
 	size_t   wrapped_n = n_bytes + 8;
 	uint8_t *wrapped   = new uint8_t[wrapped_n]();
+	wrapped[0] = 0x08;
 	memcpy(&wrapped[8], data, n_bytes);
 
 #if defined(BUILD_FOR_RP2040)
