@@ -424,8 +424,10 @@ void cpu::queue_interrupt(const uint8_t level, const uint16_t vector)
 #if defined(BUILD_FOR_RP2040)
 	xSemaphoreGive(qi_lock);
 
-	uint8_t value = 1;
-	xQueueSend(qi_q, &value, portMAX_DELAY);
+	if (uxQueueMessagesWaiting(qi_q) == 0) {
+		uint8_t value = 1;
+		xQueueSend(qi_q, &value, portMAX_DELAY);
+	}
 #else
 	qi_cv.notify_one();
 #endif
@@ -1593,10 +1595,8 @@ bool cpu::misc_operations(const uint16_t instr)
 			{
 				uint64_t start = get_us();
 #if defined(BUILD_FOR_RP2040)
-				if (check_pending_interrupts() == false) {
-					uint8_t rc = 0;
-					xQueueReceive(qi_q, &rc, 0);
-				}
+				uint8_t rc = 0;
+				xQueueReceive(qi_q, &rc, check_pending_interrupts() ? 0 : portMAX_DELAY);
 #else
 				std::unique_lock<std::mutex> lck(qi_lock);
 				if (check_pending_interrupts() == false)
