@@ -344,9 +344,10 @@ void setup() {
 	cs->println(format("# cores: %d, CPU frequency: %u Hz", SOC_CPU_CORES_NUM, freq));
 
 	heap_caps_register_failed_alloc_callback(heap_caps_alloc_failed_hook);
+#endif
+  cs->println(format("FreeRTOS granularity: %d", portTICK_PERIOD_MS));
 
 	set_hostname();
-#endif
 
 #if defined(BUILD_FOR_RP2040)
 	LittleFSConfig cfg;
