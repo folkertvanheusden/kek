@@ -61,6 +61,9 @@ private:
 
 public:
 	my_threadsafe_queue() {
+#if defined(BUILD_FOR_RP2040)
+		xSemaphoreGive(l);  // init
+#endif
 	}
 
 	~my_threadsafe_queue() {
