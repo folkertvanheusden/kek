@@ -58,6 +58,7 @@ deqna::~deqna()
 		delete th_rx_high;
 	}
 	purge_buffers();
+	delete eth_dev;
 }
 
 void deqna::purge_buffers()
@@ -407,4 +408,12 @@ void deqna::write_word(const uint16_t addr, const uint16_t v)
 	else if (addr == DEQNA_VECTOR) {
 		registers[reg_nr] &= 0x7fd;  // mask off unused bits but keep QE_VEC_ID enabled
 	}
+}
+
+void get_deqna_mac(uint8_t *const to)
+{
+	uint8_t mac_address[] { 0x08, 0x00, 0x2b, 0x8a, 0xd8, 0xd3 };
+	for(int i=3; i<6; i++)  // retrieve from a persistent file TODO
+		mac_address[i] = rand();
+	memcpy(to, mac_address, 6);
 }

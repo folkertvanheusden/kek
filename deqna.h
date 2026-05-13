@@ -67,3 +67,5 @@ public:
 	void write_byte(const uint16_t addr, const uint8_t  v) override;
 	void write_word(const uint16_t addr, const uint16_t v) override;
 };
+
+void get_deqna_mac(uint8_t *const to);

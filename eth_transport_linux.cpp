@@ -103,6 +103,7 @@ eth_transport_linux::~eth_transport_linux()
 bool eth_transport_linux::begin()
 {
 	fd = open_tun(dev_name);
+	return fd != -1;
 }
 
 void eth_transport_linux::transmit(const uint8_t *const data, const size_t n_bytes)
