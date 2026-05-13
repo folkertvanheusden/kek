@@ -234,13 +234,13 @@ static const std::pair<const rpc_msg_reply *, int> exchange_message(const std::s
 		return { nullptr, 0 };
 	}
 
-	uint8_t  *reply       = new uint8_t[max_reply_size];
+	reply = new uint8_t[max_reply_size];
 	if (!reply) {
 		DOLOG(ll_critical, true, "malloc issue: %s", strerror(errno));
 		close(fd);
 		return { nullptr, 0 };
 	}
-	int       packet_size = recv(fd, reply, max_reply_size, 0);
+	packet_size = recv(fd, reply, max_reply_size, 0);
 	close(fd);
 #endif
 	if (packet_size <= 0) {

@@ -424,8 +424,15 @@ void deqna::reset(const bool hard)
 
 void deqna::show_state(console *const cnsl) const
 {
-	my_unique_lock lck(&lock);
-	cnsl->put_string_lf(format("%zu packets queued", received.size()));
+	cnsl->put_string_lf(format("%zu packets queued", received.aprox_size()));
+}
+
+uint8_t deqna::read_byte(const uint16_t addr)
+{
+	uint16_t v = read_word(addr & ~1);
+	if (addr & 1)
+		return v >> 8;
+	return v;
 }
 
 uint16_t deqna::read_word(const uint16_t addr)

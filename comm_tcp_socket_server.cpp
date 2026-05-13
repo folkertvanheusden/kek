@@ -100,14 +100,14 @@ bool comm_tcp_socket_server::begin()
 
 bool comm_tcp_socket_server::is_connected()
 {
-	std::unique_lock<std::mutex> lck(cfd_lock);
+	my_unique_lock lck(&cfd_lock);
 
 	return cfd != INVALID_SOCKET;
 }
 
 bool comm_tcp_socket_server::has_data()
 {
-	std::unique_lock<std::mutex> lck(cfd_lock);
+	my_unique_lock lck(&cfd_lock);
 #if defined(_WIN32)
 	WSAPOLLFD fds[] { { cfd, POLLIN, 0 } };
 	int rc = WSAPoll(fds, 1, 0);
@@ -124,14 +124,14 @@ uint8_t comm_tcp_socket_server::get_byte()
 	int use_fd = -1;
 
 	{
-		std::unique_lock<std::mutex> lck(cfd_lock);
+		my_unique_lock lck(&cfd_lock);
 		use_fd = cfd;
 	}
 
 	uint8_t c = 0;
 	if (read(use_fd, &c, 1) <= 0) {
 		DOLOG(warning, false, " comm_tcp_socket_server::get_byte failed");
-		std::unique_lock<std::mutex> lck(cfd_lock);
+		my_unique_lock lck(&cfd_lock);
 		close(cfd);
 		cfd = INVALID_SOCKET;
 	}
@@ -145,7 +145,7 @@ void comm_tcp_socket_server::send_data(const uint8_t *const in, const size_t n)
 	size_t         len = n;
 
 	while(len > 0) {
-		std::unique_lock<std::mutex> lck(cfd_lock);
+		my_unique_lock lck(&cfd_lock);
 		int rc = write(cfd, p, len);
 		if (rc <= 0) {  // TODO error checking
 			DOLOG(warning, false, " comm_tcp_socket_server::send_data failed");
@@ -215,7 +215,7 @@ void comm_tcp_socket_server::operator()()
 		if (rc == 0)
 			continue;
 
-		std::unique_lock<std::mutex> lck(cfd_lock);
+		my_unique_lock lck(&cfd_lock);
 
 		// disconnect any existing client session
 		// yes, one can 'DOS' with this

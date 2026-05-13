@@ -50,13 +50,13 @@ template<typename T>
 class my_threadsafe_queue
 {
 private:
-	std::deque<T>           q;
+	std::deque<T>             q;
 #if defined(BUILD_FOR_RP2040)
-        QueueHandle_t           cv { xQueueCreate(16, 1)      };
-        SemaphoreHandle_t       l  { xSemaphoreCreateBinary() };
+        QueueHandle_t             cv { xQueueCreate(16, 1)      };
+        mutable SemaphoreHandle_t l { xSemaphoreCreateBinary() };
 #else
-        std::condition_variable cv;
-        std::mutex              l;
+        std::condition_variable   cv;
+        mutable std::mutex        l;
 #endif
 
 public:
@@ -151,7 +151,7 @@ public:
 #endif
 	}
 
-	size_t aprox_size() {
+	size_t aprox_size() const {
 #if defined(BUILD_FOR_RP2040)
 		xSemaphoreTake(l, portMAX_DELAY);
 		auto rc = q.size();

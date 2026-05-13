@@ -65,7 +65,7 @@ comm *comm::deserialize(const JsonVariantConst j, bus *const b)
 	if (false) {
 	}
 #if !defined(BUILD_FOR_RP2040)
-        elsif (type == "tcp-server")
+	else if (type == "tcp-server")
                 d = comm_tcp_socket_server::deserialize(j);
 	else if (type == "tcp-client")
                 d = comm_tcp_socket_client::deserialize(j);
