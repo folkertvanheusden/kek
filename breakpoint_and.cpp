@@ -2,8 +2,8 @@
 #include "utils.h"
 
 
-breakpoint_and::breakpoint_and(bus *const b, const std::vector<breakpoint *> & triggers):
-	breakpoint(b),
+breakpoint_and::breakpoint_and(bus *const b, const std::vector<breakpoint *> & triggers, const bp_action action):
+	breakpoint(b, action),
 	triggers(triggers)
 {
 }

@@ -5,8 +5,8 @@
 #include "utils.h"
 
 
-breakpoint_memory::breakpoint_memory(bus *const b, const uint32_t addr, const word_mode_t word_mode, const bool is_virtual, const std::set<uint16_t> & values):
-	breakpoint(b),
+breakpoint_memory::breakpoint_memory(bus *const b, const uint32_t addr, const word_mode_t word_mode, const bool is_virtual, const std::set<uint16_t> & values, const bp_action action):
+	breakpoint(b, action),
 	addr(addr),
 	word_mode(word_mode),
 	is_virtual(is_virtual),
@@ -40,7 +40,7 @@ std::optional<std::string> breakpoint_memory::is_triggered() const
 	return format("MEM%c%c[%08o]=%06o", word_mode == wm_byte ? 'B' : 'W', is_virtual ? 'V' : 'P', addr, v);
 }
 
-std::pair<breakpoint_memory *, std::optional<std::string> > breakpoint_memory::parse(bus *const b, const std::string & in)
+std::pair<breakpoint_memory *, std::optional<std::string> > breakpoint_memory::parse(bus *const b, const std::string & in, const bp_action action)
 {
 	auto parts = split(in, "=");
 	if (parts.size() != 2)
@@ -62,7 +62,7 @@ std::pair<breakpoint_memory *, std::optional<std::string> > breakpoint_memory::p
 	std::size_t end_marker = key.find(']');
 	uint32_t    addr       = std::stoi(key.substr(6, end_marker - 6), nullptr, 8);
 
-	return { new breakpoint_memory(b, addr, wm, is_virtual, values), { } };
+	return { new breakpoint_memory(b, addr, wm, is_virtual, values, action), { } };
 }
 
 std::string breakpoint_memory::emit() const

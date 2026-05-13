@@ -53,12 +53,12 @@ void cpu::emulation_start()
 	wait_time     = 0;
 }
 
-std::optional<std::string> cpu::check_breakpoint()
+std::optional<std::pair<breakpoint &, const std::string> > cpu::check_breakpoint()
 {
 	for(auto & bp: breakpoints) {
 		auto rc = bp.second->is_triggered();
 		if (rc.has_value())
-			return rc;
+			return { { *bp.second, rc.value() } };
 	}
 
 	return { };

@@ -122,7 +122,7 @@ public:
 	JsonDocument serialize();
 	static cpu *deserialize(const JsonVariantConst j, bus *const b, std::atomic_uint32_t *const event);
 
-	std::optional<std::string>  check_breakpoint();
+	std::optional<std::pair<breakpoint &, const std::string> > check_breakpoint();
 	int                         set_breakpoint(breakpoint *const bp);
 	bool                        remove_breakpoint(const int bp_id);
 	std::map<int, breakpoint *> list_breakpoints();
