@@ -49,6 +49,7 @@ set(APP_SOURCES
   error.cpp
   eth_transport.cpp
   eth_transport_linux.cpp
+  eth_transport_vxlan.cpp
   kw11-l.cpp
   loaders.cpp
   log.cpp

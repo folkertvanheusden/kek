@@ -29,6 +29,7 @@
 #include "dz11.h"
 #include "eth_transport.h"
 #include "eth_transport_linux.h"
+#include "eth_transport_vxlan.h"
 #include "gen.h"
 #include "kw11-l.h"
 #include "loaders.h"
@@ -278,7 +279,7 @@ void help()
 	printf("-2       set DZ-11 tcp-socket sessions to initialize as a telnet session\n");
 	printf("-8 x     setup a blinkenlights/PiDP11 connection on IP-address x\n");
 	printf("-Q x     use x as port offset instead of %d\n", default_port_offset);
-	printf("-I x     setup a DEQNA device with Ethernet type x ('linux' (tap), 'vxlan')\n");
+	printf("-I x[,y,z] setup a DEQNA device with Ethernet type x ('linux' (tap), 'vxlan': y=ip,z=port)\n");
 }
 
 int main(int argc, char *argv[])
@@ -542,15 +543,19 @@ int main(int argc, char *argv[])
 		b->add_RP06(rp06_dev);
 
 		if (deqna_type.empty() == false) {
+			auto parts = split(deqna_type, ",");
 			eth_transport *et = nullptr;
 
-			if (deqna_type == "linux")
+			if (parts[0] == "linux")
 				et = new eth_transport_linux("pdp");
-			else if (deqna_type == "vxlan") {
-				// TODO
+			else if (parts[0] == "vxlan") {
+				if (parts.size() != 3)
+					error_exit(false, "vxlan: incorrect number of parameters");
+
+				et = new eth_transport_vxlan(parts[1], std::stoi(parts[2]));
 			}
 			else {
-				error_exit(false, "Link layer \"%s\" is not known", deqna_type.c_str());
+				error_exit(false, "Link layer \"%s\" is not known", parts[0].c_str());
 			}
 
 			if (!et->begin())
