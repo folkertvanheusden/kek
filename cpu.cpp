@@ -1,6 +1,7 @@
 // (C) 2018-2026 by Folkert van Heusden
 // Released under MIT license
 
+#include "gen.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,7 +10,6 @@
 #include "breakpoint.h"
 #include "bus.h"
 #include "cpu.h"
-#include "gen.h"
 #include "log.h"
 #include "utils.h"
 
@@ -1547,11 +1547,12 @@ bool cpu::misc_operations(const uint16_t instr)
 		case 0b0000000000000001: // WAIT
 			{
 #if defined(BUILD_FOR_RP2040)
-				uint8_t rc = 0;
-				xQueueReceive(qi_q, &rc, 0);
+				if (check_pending_interrupts() == false) {
+					uint8_t rc = 0;
+					xQueueReceive(qi_q, &rc, 0);
+				}
 #else
 				std::unique_lock<std::mutex> lck(qi_lock);
-
 				if (check_pending_interrupts() == false)
 					qi_cv.wait(lck);
 #endif
