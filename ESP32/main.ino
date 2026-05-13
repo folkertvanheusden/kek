@@ -365,7 +365,9 @@ void setup() {
 	cs->println("* Allocate memory");
 	uint32_t n_pages = DEFAULT_N_PAGES;
 
-#if !defined(BUILD_FOR_RP2040)
+#if defined(BUILD_FOR_RP2040)
+	cs->println(format("Free RAM after init (decimal bytes): %d", rp2040.getFreeHeap()));
+#else
 	cs->println(format("Free RAM after init (decimal bytes): %d", ESP.getFreeHeap()));
 
 	if (psramInit()) {
@@ -434,10 +436,12 @@ void setup() {
 	xTaskCreate(&console_thread_wrapper_panel, "panel", 3072, cnsl, 1, nullptr);
 #endif
 
-#if !defined(BUILD_FOR_RP2040)
+#if defined(BUILD_FOR_RP2040)
+	uint32_t free_heap = rp2040.getFreeHeap();
+#else
 	uint32_t free_heap = ESP.getFreeHeap();
-	cs->println(format("Free RAM after init: %d decimal bytes", free_heap));
 #endif
+	cs->println(format("Free RAM after init: %d decimal bytes", free_heap));
 
 	cs->println("* Starting console");
 	cnsl->start_thread();
