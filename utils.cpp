@@ -80,11 +80,9 @@ unsigned long get_ms()
 #if defined(ESP32) || defined(BUILD_FOR_RP2040)
 	return millis();
 #else
-	timeval tv;
-
+	timeval tv { };
 	// TODO replace gettimeofday by clock_gettime
 	gettimeofday(&tv, NULL);
-
 	return tv.tv_sec * 1000 + tv.tv_usec / 1000;
 #endif
 }
@@ -95,17 +93,15 @@ uint64_t get_us()
 	return micros();
 #else
 	timeval tv { };
-
 	// TODO replace gettimeofday by clock_gettime
 	gettimeofday(&tv, NULL);
-
 	return tv.tv_sec * 1000000l + tv.tv_usec;
 #endif
 }
 
 int parity(int v)
 {
-	return __builtin_parity(v); // TODO
+	return __builtin_parity(v);
 }
 
 void myusleep(uint64_t us)
@@ -116,12 +112,10 @@ void myusleep(uint64_t us)
 
 		if (n_ms >= portTICK_PERIOD_MS) {
 			vTaskDelay(n_ms / portTICK_PERIOD_MS);
-
 			us -= n_ms * 1000;
 		}
 		else {
 			delayMicroseconds(us);
-
 			break;
 		}
 	}
@@ -135,7 +129,6 @@ void myusleep(uint64_t us)
 		timespec rem { 0, 0 };
 
 		int rc = nanosleep(&req, &rem);
-
 		if (rc == 0 || (rc == -1 && errno != EINTR))
 			break;
 
@@ -198,16 +191,14 @@ ssize_t WRITE(int fd, const char *whereto, size_t len)
 {
 	ssize_t cnt=0;
 
-	while(len > 0)
-	{
+	while(len > 0) {
 		ssize_t rc = write(fd, whereto, len);
 
 		if (rc == -1)
 			return -1;
 		else if (rc == 0)
 			return -1;
-		else
-		{
+		else {
 			whereto += rc;
 			len -= rc;
 			cnt += rc;
@@ -221,16 +212,14 @@ ssize_t READ(int fd, char *whereto, size_t len)
 {
 	ssize_t cnt=0;
 
-	while(len > 0)
-	{
+	while(len > 0) {
 		ssize_t rc = read(fd, whereto, len);
 
 		if (rc == -1)
 			return -1;
 		else if (rc == 0)
 			break;
-		else
-		{
+		else {
 			whereto += rc;
 			len -= rc;
 			cnt += rc;
