@@ -1548,14 +1548,27 @@ bool cpu::misc_operations(const uint16_t instr)
 
 		case 0b0000000000000001: // WAIT
 			{
+				uint64_t start = get_us();
+				bool     int_  = false;
+
+				do
+				{
+					// wait for 100 ms. if no interrupt for 1,5 seconds, then maybe things are stuck?
 #if defined(BUILD_FOR_RP2040)
-				uint8_t rc = 0;
-				xQueueReceive(qi_q, &rc, check_pending_interrupts() ? 0 : portMAX_DELAY);
+					uint8_t rc = 0;
+					xQueueReceive(qi_q, &rc, check_pending_interrupts() ? 0 : 100 / portTICK_PERIOD_MS);
 #else
-				std::unique_lock<std::mutex> lck(qi_lock);
-				if (check_pending_interrupts() == false)
-					qi_cv.wait(lck);
+					using namespace std::chrono_literals;
+					std::unique_lock<std::mutex> lck(qi_lock);
+					if (check_pending_interrupts() == false)
+						qi_cv.wait_for(lck, 100 * 1ms);
 #endif
+					if (wait_stuck == false && get_us() - start > 1500000) {
+						wait_stuck = true;
+						DOLOG(debug, true, "cpu: WAIT/KW11-L stuck? no interrupts seen for 1,5 seconds");
+					}
+				}
+				while(check_pending_interrupts() == false);
 			}
 
 			TRACE("WAIT returned");

@@ -122,7 +122,7 @@ void myusleep(uint64_t us)
 #else
 	timespec req;
 
-	req.tv_sec = us / 1000000l;
+	req.tv_sec  = us / 1000000l;
 	req.tv_nsec = (us % 1000000l) * 1000l;
 
 	for(;;) {
