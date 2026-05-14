@@ -1010,7 +1010,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 
 		return true;
 	}
-	else if (parts[0] == "state") {
+	else if (parts[0] == "state" || parts[0] == "show") {
 		if (parts.size() == 1)
 			cnsl->put_string_lf("Parameter(s) missing");
 		else if (parts[1] == "reset") {
@@ -1366,7 +1366,9 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		}
 
 		if (dev) {
-			if (dev->begin())
+			if (!network_configured)
+				cnsl->put_string_lf("Please configure network first (cfgnet)");
+			else if (dev->begin())
 				b->add_DEQNA(new deqna(b, mac, dev));
 			else
 				delete dev;
