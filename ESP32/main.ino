@@ -22,7 +22,6 @@
 #if defined(ESP32)
 #include "esp_clk_tree.h"
 #include "esp_heap_caps.h"
-#include <SC16IS752.h>
 #include "esp_pthread.h"
 #endif
 
@@ -68,12 +67,6 @@ std::atomic_uint32_t  stop_event         { EVENT_NONE };
 std::atomic_bool     *running            { nullptr    };
 bool                  trace_output       { false      };
 comm                 *cs                 { nullptr    };  // Console Serial
-#if !defined(BUILD_FOR_RP2040)
-SC16IS752            *SC16IS752_a        { nullptr    };
-SC16IS752            *SC16IS752_b        { nullptr    };
-comm_esp32_SC16IS752 *SC16IS752_com_a[2] { nullptr    };
-comm_esp32_SC16IS752 *SC16IS752_com_b[2] { nullptr    };
-#endif
 #if defined(BUILD_FOR_RP2040)
 WiFiMulti multi;
 #endif
@@ -336,8 +329,7 @@ void setup() {
 	cs->println("Build on: " __DATE__ " " __TIME__);
 
 #if defined(ESP32)
-  search_SC16IS752();
-  cs->set_comm(SC16IS752_a, SC16IS752_b);
+  search_SC16IS752(cs);
 
   uint32_t freq = 0;
   esp_clk_tree_src_get_freq_hz(SOC_MOD_CLK_CPU, ESP_CLK_TREE_SRC_FREQ_PRECISION_EXACT, &freq);

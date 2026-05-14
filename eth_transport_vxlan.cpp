@@ -3,6 +3,11 @@
 #include <unistd.h>
 #if defined(BUILD_FOR_RP2040)
 #include <WiFiUdp.h>
+#elif defined(ESP32)
+#include <arpa/inet.h>
+#include <lwip/netdb.h>
+#include <lwip/sockets.h>
+#include <sys/socket.h>
 #else
 #include <poll.h>
 #include <arpa/inet.h>

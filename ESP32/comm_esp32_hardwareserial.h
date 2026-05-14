@@ -34,4 +34,6 @@ public:
 	void    send_data(const uint8_t *const in, const size_t n) override;
 };
 
-void search_SC16IS752();
+class comm;
+
+void search_SC16IS752(comm *const c);

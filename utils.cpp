@@ -16,6 +16,9 @@
 #include <netinet/tcp.h>
 #include <sys/socket.h>
 #endif
+#if defined(ESP32)
+#include <lwip/sockets.h>
+#endif
 
 #include <ArduinoJson.h>
 #include <errno.h>

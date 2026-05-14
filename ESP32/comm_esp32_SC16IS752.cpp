@@ -4,6 +4,8 @@
 #include "gen.h"
 
 #if defined(ESP32)
+#include <SC16IS752.h>
+#include <Wire.h>
 #include <driver/uart.h>
 
 #include "comm_esp32_SC16IS752.h"
@@ -81,5 +83,46 @@ void comm_esp32_SC16IS752::configure_port(const int baud_rate)
 	else
 		parent->beginB(baud_rate);
 	this->baud_rate = baud_rate;
+}
+
+SC16IS752            *SC16IS752_a        { nullptr    };
+SC16IS752            *SC16IS752_b        { nullptr    };
+comm_esp32_SC16IS752 *SC16IS752_com_a[2] { nullptr    };
+comm_esp32_SC16IS752 *SC16IS752_com_b[2] { nullptr    };
+
+// scan for SC16IS752 devices
+bool i2c_probe(comm *const cs, const byte addr)
+{
+    Wire.beginTransmission(addr);
+    if (Wire.endTransmission() == 0) {
+      cs->println(format("i2c device found at %02x", addr));
+      return true;
+    }
+    return false;
+}
+
+void test_SC16IS752(comm *const cs, SC16IS752 *const p, const uint8_t which)
+{
+  cs->println(format("PING result for SC16IS752 @ 0x%02x: %d", which, p->ping()));
+}
+
+void search_SC16IS752(comm *const cs)
+{
+  cs->println("Scanning i2c bus for SC16IS752 devices...");
+  Wire.begin();
+  if (i2c_probe(cs, 0x4d)) {
+    SC16IS752_a        = new SC16IS752(SC16IS750_PROTOCOL_I2C, 0x4d);
+    SC16IS752_com_a[0] = new comm_esp32_SC16IS752(SC16IS752_a, 0, 0);
+    SC16IS752_com_a[1] = new comm_esp32_SC16IS752(SC16IS752_a, 0, 1);
+    test_SC16IS752(cs, SC16IS752_a, 0x4d);
+  }
+  if (i2c_probe(cs, 0x4e)) {
+    SC16IS752_b = new SC16IS752(SC16IS750_PROTOCOL_I2C, 0x4e);
+    SC16IS752_com_b[0] = new comm_esp32_SC16IS752(SC16IS752_a, 1, 0);
+    SC16IS752_com_b[1] = new comm_esp32_SC16IS752(SC16IS752_a, 1, 1);
+    test_SC16IS752(cs, SC16IS752_a, 0x4e);
+  }
+
+  cs->set_comm(SC16IS752_a, SC16IS752_b);
 }
 #endif
