@@ -776,17 +776,18 @@ struct debugger_state {
 
 bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b, std::atomic_uint32_t *const stop_event, const std::string & cmd)
 {
-	cpu  *const c = b->getCpu();
-	auto parts    = split(cmd,   " ");
-	auto kv       = split(parts, "=");
+	cpu  *const c   = b->getCpu();
+	auto parts      = split(cmd,   " ");
+	auto kv         = split(parts, "=");
+	bool go_verbose = false;
 
 	if (parts.empty())
 		return true;
 
-	if (cmd == "go" || cmd == "fg") {
+	if (parts[0] == "go" || parts[0] == "fg") {
 		state->single_step = false;
-
 		*stop_event = EVENT_NONE;
+		go_verbose = parts.size() == 2 && parts[1] == "-v";
 	}
 	else if (parts[0] == "benchmark") {
 		*cnsl->get_running_flag() = true;  // enable the KW11-L interrupt
@@ -1505,7 +1506,8 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 	else {
 		reset_cpu = false;
 
-		uint64_t took = 0;
+		uint64_t since = get_us();
+		uint64_t took  = 0;
 		while(*stop_event == EVENT_NONE) {
 			if (state->trace_start_addr != -1 && c->getPC() == state->trace_start_addr)
 				settrace(true);
@@ -1538,8 +1540,8 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			if (state->single_step && --state->n_single_step == 0)
 				break;
 		}
-		if (gettrace())
-			cnsl->put_string_lf(format("Took %.3f emulated milliseconds", took / 1000000.));
+		if (gettrace() || go_verbose)
+			cnsl->put_string_lf(format("Took %.3f emulated milliseconds, %.3f wall clock time", took / 1000000., (get_us() - since) / 1000000.));
 	}
 
 	*cnsl->get_running_flag() = false;
