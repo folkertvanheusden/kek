@@ -12,7 +12,8 @@ class eth_transport_vxlan: public eth_transport
 {
 private:
 	const std::string peer;
-	const int port         { 4789 };
+	const int         port { 4789 };
+	const uint32_t    id   { 0    };
 #if defined(BUILD_FOR_RP2040)
 	WiFiUDP   udp;
 #else
@@ -20,7 +21,7 @@ private:
 #endif
 
 public:
-	eth_transport_vxlan(const std::string & peer, const int port = 4789);
+	eth_transport_vxlan(const std::string & peer, const int port = 4789, const uint32_t id = 0);
 	virtual ~eth_transport_vxlan();
 
 	bool begin() override;

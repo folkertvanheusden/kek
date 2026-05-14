@@ -1356,10 +1356,12 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		}
 #endif
 		else if (pars[0] == "vxlan") {
-			if (pars.size() != 3)
-				cnsl->put_string_lf("Invalid parameter count");
-			else
+			if (pars.size() == 3)
 				dev = new eth_transport_vxlan(pars[1], std::stoi(pars[2]));
+			else if (pars.size() == 4)
+				dev = new eth_transport_vxlan(pars[1], std::stoi(pars[2]), std::stoi(pars[3]));
+			else
+				cnsl->put_string_lf("Invalid parameter count");
 		}
 		else {
 			cnsl->put_string_lf(format("\"%s\" is not understood or parameters missing", pars[0].c_str()));

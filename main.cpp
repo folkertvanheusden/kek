@@ -244,7 +244,7 @@ void help()
 	printf("-2       set DZ-11 tcp-socket sessions to initialize as a telnet session\n");
 	printf("-8 x     setup a blinkenlights/PiDP11 connection on IP-address x\n");
 	printf("-Q x     use x as port offset instead of %d\n", default_port_offset);
-	printf("-I x[,y,z] setup a DEQNA device with Ethernet type x ('linux' (tap), 'vxlan': y=ip,z=port)\n");
+	printf("-I x[,y,z,[a]] setup a DEQNA device with Ethernet type x ('linux' (tap), 'vxlan': y=ip,z=port,a=id)\n");
 }
 
 int main(int argc, char *argv[])
@@ -508,10 +508,12 @@ int main(int argc, char *argv[])
 			if (parts[0] == "linux")
 				et = new eth_transport_linux("pdp");
 			else if (parts[0] == "vxlan") {
-				if (parts.size() != 3)
+				if (parts.size() == 3)
+					et = new eth_transport_vxlan(parts[1], std::stoi(parts[2]));
+				else if (parts.size() == 4)
+					et = new eth_transport_vxlan(parts[1], std::stoi(parts[2]), std::stoi(parts[3]));
+				else
 					error_exit(false, "vxlan: incorrect number of parameters");
-
-				et = new eth_transport_vxlan(parts[1], std::stoi(parts[2]));
 			}
 			else {
 				error_exit(false, "Link layer \"%s\" is not known", parts[0].c_str());

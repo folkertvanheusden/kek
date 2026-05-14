@@ -23,9 +23,10 @@
 
 constexpr const int max_pkt_size = 1512;
 
-eth_transport_vxlan::eth_transport_vxlan(const std::string & peer, const int port):
+eth_transport_vxlan::eth_transport_vxlan(const std::string & peer, const int port, const uint32_t id):
 	peer(peer),
-	port(port)
+	port(port),
+	id(id)
 {
 }
 
@@ -63,7 +64,7 @@ bool eth_transport_vxlan::begin()
 
 std::string eth_transport_vxlan::identifier() const
 {
-	return format("vxlan:%s:%d", peer.c_str(), port);
+	return format("vxlan:%s:%d/%d", peer.c_str(), port, id);
 }
 
 void eth_transport_vxlan::transmit(const uint8_t *const data, const size_t n_bytes)
@@ -71,6 +72,9 @@ void eth_transport_vxlan::transmit(const uint8_t *const data, const size_t n_byt
 	size_t   wrapped_n = n_bytes + 8;
 	uint8_t *wrapped   = new uint8_t[wrapped_n]();
 	wrapped[0] = 0x08;
+	wrapped[4] = id >> 16;
+	wrapped[5] = id >> 8;
+	wrapped[6] = id;
 	memcpy(&wrapped[8], data, n_bytes);
 
 #if defined(BUILD_FOR_RP2040)
@@ -93,7 +97,7 @@ void eth_transport_vxlan::transmit(const uint8_t *const data, const size_t n_byt
 
 std::pair<uint8_t *, size_t> eth_transport_vxlan::get(const int timeout)
 {
-	uint8_t *pkt       = nullptr;
+	uint8_t *pkt         = nullptr;
 	size_t   packet_size = 0;
 #if defined(BUILD_FOR_RP2040)
 	auto start = millis();
@@ -128,6 +132,13 @@ std::pair<uint8_t *, size_t> eth_transport_vxlan::get(const int timeout)
 	packet_size = rc2;
 #endif
 	if (packet_size < 14 + 8) {
+		delete [] pkt;
+		return { nullptr, 0 };
+	}
+
+	uint32_t their_id = (pkt[4] << 16) | (pkt[5] << 8) | pkt[6];
+	if (pkt[0] != 0x08 || their_id != id) {
+		DOLOG(debug, false, "vxlan id mismatch: %02x != %02x", their_id, id);
 		delete [] pkt;
 		return { nullptr, 0 };
 	}
