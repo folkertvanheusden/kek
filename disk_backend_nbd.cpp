@@ -87,6 +87,8 @@ bool disk_backend_nbd::begin(const bool snapshots)
 
 bool disk_backend_nbd::connect(const bool retry)
 {
+	TRACE("disk_backend_nbd::connect %sretry", retry ? "":"no ");
+
 	do {
 		// LOOP until connected, logging message, exponential backoff?
 		addrinfo *res     = nullptr;
@@ -99,34 +101,29 @@ bool disk_backend_nbd::connect(const bool retry)
 		snprintf(port_str, sizeof port_str, "%u", port);
 
 		int rc = getaddrinfo(host.c_str(), port_str, &hints, &res);
-
 		if (rc != 0) {
 #ifdef ESP32
 			DOLOG(ll_error, true, "disk_backend_nbd: cannot resolve \"%s\":%s", host.c_str(), port_str);
 #else
 			DOLOG(ll_error, true, "disk_backend_nbd: cannot resolve \"%s\":%s: %s", host.c_str(), port_str, gai_strerror(rc));
 #endif
-
-			sleep(1);
-
+			usleep(101000);
 			continue;
 		}
 
 		for(addrinfo *p = res; p != NULL; p = p->ai_next) {
-			if ((fd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
+			if ((fd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1)
 				continue;
-			}
 
 			if (::connect(fd, p->ai_addr, p->ai_addrlen) == -1) {
 				close(fd);
 				fd = -1;
+				freeaddrinfo(res);
 				DOLOG(ll_error, true, "disk_backend_nbd: cannot connect");
 				continue;
 			}
-
 			break;
 		}
-
 		freeaddrinfo(res);
 
 		struct __attribute__ ((packed)) {
@@ -138,6 +135,7 @@ bool disk_backend_nbd::connect(const bool retry)
 		} nbd_hello { };
 
 		if (fd != -1) {
+			TRACE("disk_backend_nbd::connect nbd_hello");
 			if (READ(fd, reinterpret_cast<char *>(&nbd_hello), sizeof nbd_hello) != sizeof nbd_hello) {
 				close(fd);
 				fd = -1;
@@ -146,6 +144,7 @@ bool disk_backend_nbd::connect(const bool retry)
 		}
 
 		if (fd != -1 && memcmp(nbd_hello.magic1, "NBDMAGIC", 8) != 0) {
+			TRACE("disk_backend_nbd::connect NBDMAGIC");
 			close(fd);
 			fd = -1;
 			DOLOG(warning, true, "disk_backend_nbd::connect: magic invalid");
@@ -164,7 +163,6 @@ bool disk_backend_nbd::connect(const bool retry)
 bool disk_backend_nbd::read(const off_t offset_in, const size_t n, uint8_t *const target, const size_t sector_size)
 {
 	TRACE("disk_backend_nbd::read: read %zu bytes from offset %zu", n, offset_in);
-
 	if (n == 0)
 		return true;
 
@@ -184,7 +182,6 @@ bool disk_backend_nbd::read(const off_t offset_in, const size_t n, uint8_t *cons
 
 		if (fd == -1 && !connect(true)) {
 			DOLOG(warning, true, "disk_backend_nbd::read: (re-)connect");
-			sleep(1);
 			continue;
 		}
 
@@ -201,11 +198,12 @@ bool disk_backend_nbd::read(const off_t offset_in, const size_t n, uint8_t *cons
 		nbd_request.offset = HTONLL(uint64_t(offset));
 		nbd_request.length = htonl(sector_size);
 
+		TRACE("NBD: send READ request");
 		if (WRITE(fd, reinterpret_cast<const char *>(&nbd_request), sizeof nbd_request) != sizeof nbd_request) {
 			DOLOG(warning, true, "disk_backend_nbd::read: problem sending request");
 			close(fd);
 			fd = -1;
-			sleep(1);
+			usleep(101000);
 			continue;
 		}
 
@@ -215,11 +213,12 @@ bool disk_backend_nbd::read(const off_t offset_in, const size_t n, uint8_t *cons
 			uint64_t handle;
 		} nbd_reply;
 
+		TRACE("NBD: receiving READ reply header");
 		if (READ(fd, reinterpret_cast<char *>(&nbd_reply), sizeof nbd_reply) != sizeof nbd_reply) {
 			DOLOG(warning, true, "disk_backend_nbd::read: problem receiving reply header");
 			close(fd);
 			fd = -1;
-			sleep(1);
+			usleep(101000);
 			continue;
 		}
 
@@ -227,7 +226,7 @@ bool disk_backend_nbd::read(const off_t offset_in, const size_t n, uint8_t *cons
 			DOLOG(warning, true, "disk_backend_nbd::read: bad reply header %08x", nbd_reply.magic);
 			close(fd);
 			fd = -1;
-			sleep(1);
+			usleep(101000);
 			continue;
 		}
 
@@ -237,11 +236,12 @@ bool disk_backend_nbd::read(const off_t offset_in, const size_t n, uint8_t *cons
 			return false;
 		}
 
+		TRACE("NBD: receiving READ reply payload");
 		if (READ(fd, reinterpret_cast<char *>(target), sector_size) != ssize_t(sector_size)) {
 			DOLOG(warning, true, "disk_backend_nbd::read: problem receiving payload");
 			close(fd);
 			fd = -1;
-			sleep(1);
+			usleep(101000);
 			continue;
 		}
 
@@ -265,9 +265,9 @@ bool disk_backend_nbd::write(const off_t offset, const size_t n, const uint8_t *
 #endif
 
 	do {
-		if (!connect(true)) {
+		if (fd == -1 && !connect(true)) {
 			DOLOG(warning, true, "disk_backend_nbd::write: (re-)connect");
-			sleep(1);
+			usleep(101000);
 			continue;
 		}
 
@@ -288,7 +288,7 @@ bool disk_backend_nbd::write(const off_t offset, const size_t n, const uint8_t *
 			DOLOG(warning, true, "disk_backend_nbd::write: problem sending request");
 			close(fd);
 			fd = -1;
-			sleep(1);
+			usleep(101000);
 			continue;
 		}
 
@@ -296,7 +296,7 @@ bool disk_backend_nbd::write(const off_t offset, const size_t n, const uint8_t *
 			DOLOG(warning, true, "disk_backend_nbd::write: problem sending payload");
 			close(fd);
 			fd = -1;
-			sleep(1);
+			usleep(101000);
 			continue;
 		}
 
@@ -310,7 +310,7 @@ bool disk_backend_nbd::write(const off_t offset, const size_t n, const uint8_t *
 			DOLOG(warning, true, "disk_backend_nbd::write: problem receiving reply header");
 			close(fd);
 			fd = -1;
-			sleep(1);
+			usleep(101000);
 			continue;
 		}
 
@@ -318,7 +318,7 @@ bool disk_backend_nbd::write(const off_t offset, const size_t n, const uint8_t *
 			DOLOG(warning, true, "disk_backend_nbd::write: bad reply header %08x", nbd_reply.magic);
 			close(fd);
 			fd = -1;
-			sleep(1);
+			usleep(101000);
 			continue;
 		}
 
