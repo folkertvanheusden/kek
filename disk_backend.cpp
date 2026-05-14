@@ -11,7 +11,7 @@
 #else
 #include "disk_backend_esp32.h"
 #endif
-#if !defined(BUILD_FOR_RP2040)
+#if !defined(BUILD_FOR_PICO2W)
 #include "disk_backend_nbd.h"
 #endif
 
@@ -104,7 +104,7 @@ disk_backend *disk_backend::deserialize(const JsonVariantConst j)
 
 	if (false) {
 	}
-#if !defined(BUILD_FOR_RP2040)
+#if !defined(BUILD_FOR_PICO2W)
 	else if (type == "nbd")
 		d = disk_backend_nbd::deserialize(j);
 #endif

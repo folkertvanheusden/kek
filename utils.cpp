@@ -3,7 +3,7 @@
 
 #include "gen.h"
 
-#if defined(ESP32) || defined(BUILD_FOR_RP2040)
+#if defined(ESP32) || defined(BUILD_FOR_PICO2W)
 #include <Arduino.h>
 #include <LittleFS.h>
 #elif defined(_WIN32)
@@ -51,7 +51,7 @@ void setBit(uint16_t & v, const int bit, const bool vb)
 
 std::string format(const char *const fmt, ...)
 {
-#if defined(BUILD_FOR_RP2040) || defined(ESP32)
+#if defined(BUILD_FOR_PICO2W) || defined(ESP32)
 	char buffer[384];
         va_list ap;
 
@@ -77,7 +77,7 @@ std::string format(const char *const fmt, ...)
 
 unsigned long get_ms()
 {
-#if defined(ESP32) || defined(BUILD_FOR_RP2040)
+#if defined(ESP32) || defined(BUILD_FOR_PICO2W)
 	return millis();
 #else
 	timeval tv { };
@@ -89,7 +89,7 @@ unsigned long get_ms()
 
 uint64_t get_us()
 {
-#if defined(BUILD_FOR_RP2040)
+#if defined(BUILD_FOR_PICO2W)
 	return micros();
 #else
 	timeval tv { };
@@ -106,7 +106,7 @@ int parity(int v)
 
 void myusleep(uint64_t us)
 {
-#if defined(ESP32) || defined(BUILD_FOR_RP2040)
+#if defined(ESP32) || defined(BUILD_FOR_PICO2W)
 	for(;;) {
 		uint64_t n_ms = us / 1000;
 
@@ -167,7 +167,7 @@ std::vector<std::string> split(std::string in, std::string splitter)
 
 void set_thread_name(std::string name)
 {
-#if !defined(ESP32) && !defined(BUILD_FOR_RP2040)
+#if !defined(ESP32) && !defined(BUILD_FOR_PICO2W)
 	if (name.length() > 15)
 		name = name.substr(0, 15);
 
@@ -247,7 +247,7 @@ bool set_nodelay(const int fd)
 #if defined(__FreeBSD__) || defined(ESP32) || defined(_WIN32)
         if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<char *>(&flags), sizeof(flags)) == -1)
 		return false;
-#elif !defined(BUILD_FOR_RP2040)
+#elif !defined(BUILD_FOR_PICO2W)
         if (setsockopt(fd, SOL_TCP, TCP_NODELAY, reinterpret_cast<void *>(&flags), sizeof(flags)) == -1)
 		return false;
 #endif
@@ -255,7 +255,7 @@ bool set_nodelay(const int fd)
 	return true;
 }
 
-#if !defined(BUILD_FOR_RP2040)
+#if !defined(BUILD_FOR_PICO2W)
 std::string get_endpoint_name(const int fd)
 {
 	sockaddr_in addr { };
@@ -306,7 +306,7 @@ std::optional<JsonDocument> deserialize_file(const std::string & filename)
 
 std::string file_in_user_home(const std::string & file)
 {
-#if defined(BUILD_FOR_RP2040) || defined(ESP32)
+#if defined(BUILD_FOR_PICO2W) || defined(ESP32)
 	return "/" + file;
 #else
 	passwd *pw = getpwuid(getuid());

@@ -18,8 +18,7 @@ private:
 
 protected:
 	int wait_for_char_ll(const short timeout) override;
-
-	void put_char_ll(const char c) override;
+	void put_char_ll    (const char c) override;
 
 public:
 	console_esp32(std::atomic_uint32_t *const stop_event, comm *const io_port, const int t_width, const int t_height);

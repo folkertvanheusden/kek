@@ -8,13 +8,13 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#if !defined(BUILD_FOR_RP2040)
+#if !defined(BUILD_FOR_PICO2W)
 #include "blinkenlights.h"
 #endif
 #include "bus.h"
 #include "console_esp32.h"
 #include "cpu.h"
-#if defined(BUILD_FOR_RP2040)
+#if defined(BUILD_FOR_PICO2W)
 #include "rp2040.h"
 #else
 #include "esp32.h"
@@ -78,7 +78,7 @@ void console_esp32::panel_update_thread()
 
 	cpu *const c = b->getCpu();
 
-#if !defined(BUILD_FOR_RP2040) && defined(NEOPIXELS_PIN)
+#if !defined(BUILD_FOR_PICO2W) && defined(NEOPIXELS_PIN)
 	constexpr const uint8_t n_leds = 64;
 #if defined(RGBW_PIXELS)
 	Adafruit_NeoPixel pixels(n_leds, NEOPIXELS_PIN, NEO_RGBW);
@@ -121,7 +121,7 @@ void console_esp32::panel_update_thread()
 	while(!stop_panel) {
 		vTaskDelay(1000 / (portTICK_PERIOD_MS * refreshrate));
 
-#if !defined(BUILD_FOR_RP2040)
+#if !defined(BUILD_FOR_PICO2W)
 		if (p_blinkenlights)
 			p_blinkenlights->push(b, running_flag);
 #endif

@@ -1,7 +1,7 @@
 #include "gen.h"
 #include <cstdint>
 #include <string>
-#if defined(BUILD_FOR_RP2040)
+#if defined(BUILD_FOR_PICO2W)
 #include <WiFiUdp.h>
 #endif
 
@@ -14,7 +14,7 @@ private:
 	const std::string peer;
 	const int         port { 4789 };
 	const uint32_t    id   { 0    };
-#if defined(BUILD_FOR_RP2040)
+#if defined(BUILD_FOR_PICO2W)
 	WiFiUDP   udp;
 #else
 	int       fd           { -1   };

@@ -22,7 +22,7 @@
 
 const char *const dc11_register_names[] { "RCSR", "RBUF", "TSCR", "TBUF" };
 
-#if defined(ESP32) || defined(BUILD_FOR_RP2040)
+#if defined(ESP32) || defined(BUILD_FOR_PICO2W)
 static void thread_wrapper_dc11(void *p)
 {
 	dc11 *const dc11_ = reinterpret_cast<dc11 *>(p);
@@ -69,7 +69,7 @@ void dc11::show_state(console *const cnsl) const
 
 bool dc11::begin()
 {
-#if defined(ESP32) || defined(BUILD_FOR_RP2040)
+#if defined(ESP32) || defined(BUILD_FOR_PICO2W)
 	xTaskCreate(&thread_wrapper_dc11, "dc11", 3072, this, 1, nullptr);
 #else
 	th = new std::thread(std::ref(*this));

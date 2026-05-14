@@ -3,7 +3,7 @@
 #include "gen.h"
 
 #include <deque>
-#if defined(BUILD_FOR_RP2040)
+#if defined(BUILD_FOR_PICO2W)
 #include <semphr.h>
 #else
 #include <condition_variable>
@@ -17,7 +17,7 @@
 class my_lock
 {
 private:
-#if defined(BUILD_FOR_RP2040)
+#if defined(BUILD_FOR_PICO2W)
 	SemaphoreHandle_t l { xSemaphoreCreateBinary() };
 #else
 	std::mutex        l;
@@ -51,7 +51,7 @@ class my_threadsafe_queue
 {
 private:
 	std::deque<T>             q;
-#if defined(BUILD_FOR_RP2040)
+#if defined(BUILD_FOR_PICO2W)
         QueueHandle_t             cv { xQueueCreate(16, 1)      };
         mutable SemaphoreHandle_t l { xSemaphoreCreateBinary() };
 #else
@@ -61,7 +61,7 @@ private:
 
 public:
 	my_threadsafe_queue() {
-#if defined(BUILD_FOR_RP2040)
+#if defined(BUILD_FOR_PICO2W)
 		xSemaphoreGive(l);  // init
 #endif
 	}
@@ -70,7 +70,7 @@ public:
 	}
 
 	void push_front(T value) {
-#if defined(BUILD_FOR_RP2040)
+#if defined(BUILD_FOR_PICO2W)
 		xSemaphoreTake(l, portMAX_DELAY);
 		q.push_front(std::move(value));
 		uint8_t v = 1;
@@ -86,7 +86,7 @@ public:
 	}
 
 	void push(T value) {
-#if defined(BUILD_FOR_RP2040)
+#if defined(BUILD_FOR_PICO2W)
 		xSemaphoreTake(l, portMAX_DELAY);
 		q.push_back(std::move(value));
 		uint8_t v = 1;
@@ -102,7 +102,7 @@ public:
 	}
 
 	std::optional<T> pop(const int timeout_ms) {
-#if defined(BUILD_FOR_RP2040)
+#if defined(BUILD_FOR_PICO2W)
 		uint8_t rc = 0;
 		if (xQueueReceive(cv, &rc, timeout_ms / portTICK_PERIOD_MS) == pdFALSE || rc == 0)
 			return { };
@@ -132,7 +132,7 @@ public:
 	}
 
 	bool is_empty() {
-#if defined(BUILD_FOR_RP2040)
+#if defined(BUILD_FOR_PICO2W)
 		xSemaphoreTake(l, portMAX_DELAY);
 		auto rc = q.empty();
 		xSemaphoreGive(l);
@@ -144,7 +144,7 @@ public:
 	}
 
 	void clear() {
-#if defined(BUILD_FOR_RP2040)
+#if defined(BUILD_FOR_PICO2W)
 		xSemaphoreTake(l, portMAX_DELAY);
 		q.clear();
 		xSemaphoreGive(l);
@@ -155,7 +155,7 @@ public:
 	}
 
 	size_t aprox_size() const {
-#if defined(BUILD_FOR_RP2040)
+#if defined(BUILD_FOR_PICO2W)
 		xSemaphoreTake(l, portMAX_DELAY);
 		auto rc = q.size();
 		xSemaphoreGive(l);

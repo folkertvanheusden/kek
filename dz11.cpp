@@ -24,7 +24,7 @@
 
 const char *const dz11_register_names[] { "R0_CSR", "R2_RBUF_LPR", "R4_TCR", "R6_MSR_TDR" };
 
-#if defined(ESP32) || defined(BUILD_FOR_RP2040)
+#if defined(ESP32) || defined(BUILD_FOR_PICO2W)
 static void thread_wrapper_dz11(void *p)
 {
 	dz11 *const dz11_ = reinterpret_cast<dz11 *>(p);
@@ -83,7 +83,7 @@ void dz11::show_state(console *const cnsl) const
 
 bool dz11::begin()
 {
-#if defined(ESP32) || defined(BUILD_FOR_RP2040)
+#if defined(ESP32) || defined(BUILD_FOR_PICO2W)
 	xTaskCreate(&thread_wrapper_dz11, "dz11", 3072, this, 1, nullptr);
 #else
 	th = new std::thread(std::ref(*this));

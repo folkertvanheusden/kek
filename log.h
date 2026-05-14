@@ -30,7 +30,7 @@ void set_terminal(console *const cnsl);
 #ifdef TURBO
 #define DOLOG(ll, always, fmt, ...) do { } while(0)
 #else
-#if defined(ESP32)
+#if defined(ESP32) || defined(BUILD_FOR_PICO2W)
 #define DOLOG(ll, always, fmt, ...) do {				\
 	extern log_level_t log_level_file, log_level_screen;		\
 									\

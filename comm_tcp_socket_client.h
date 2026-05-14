@@ -3,7 +3,7 @@
 
 #include "gen.h"
 #include <atomic>
-#if !defined(BUILD_FOR_RP2040)
+#if !defined(BUILD_FOR_PICO2W)
 #include <mutex>
 #endif
 #include <string>

@@ -15,7 +15,7 @@
 #include "log.h"
 #include "utils.h"
 
-#if defined(BUILD_FOR_RP2040)
+#if defined(BUILD_FOR_PICO2W)
 void thread_wrapper_console(void *p)
 {
 	console *const consolel = reinterpret_cast<console *>(p);
@@ -51,7 +51,7 @@ void console::start_thread()
 
 	stop_thread_flag = false;
 
-#if defined(BUILD_FOR_RP2040)
+#if defined(BUILD_FOR_PICO2W)
 	xTaskCreate(&thread_wrapper_console, "console", 2048, this, 1, nullptr);
 #else
 	th = new std::thread(std::ref(*this));
@@ -60,7 +60,7 @@ void console::start_thread()
 
 void console::stop_thread()
 {
-#if !defined(ESP32) && !defined(BUILD_FOR_RP2040)
+#if !defined(ESP32) && !defined(BUILD_FOR_PICO2W)
 	if (th) {
 		stop_thread_flag = true;
 

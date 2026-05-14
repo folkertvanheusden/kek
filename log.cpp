@@ -16,7 +16,7 @@
 #include <Arduino.h>
 #include "esp_sntp.h"
 #endif
-#if defined(BUILD_FOR_RP2040)
+#if defined(BUILD_FOR_PICO2W)
 #include <Arduino.h>
 #include <WiFiUdp.h>
 #else
@@ -37,7 +37,7 @@
 
 
 static const char *logfile           = strdup("/tmp/kek.log");
-#if defined(BUILD_FOR_RP2040)
+#if defined(BUILD_FOR_PICO2W)
 static WiFiUDP     udp;
 static std::string syslog_host;
 #else
@@ -108,7 +108,7 @@ bool setloghost(const char *const host, const log_level_t ll)
 	log_level_file = ll;
 	l_timestamp    = false;
 
-#if defined(BUILD_FOR_RP2040)
+#if defined(BUILD_FOR_PICO2W)
 	syslog_host    = host;
 	return true;
 #else
@@ -135,7 +135,7 @@ void send_syslog(const int ll, const std::string & what)
 {
 	std::string msg = format("<%d>PDP11 %s", 16 * 8 + ll, what.c_str());
 
-#if defined(BUILD_FOR_RP2040)
+#if defined(BUILD_FOR_PICO2W)
         udp.beginPacket(syslog_host.c_str(), 514);
         udp.write(msg.c_str(), msg.size());
         udp.endPacket();
@@ -159,7 +159,7 @@ void closelog()
 
 void dolog(const log_level_t ll, const char *fmt, ...)
 {
-#if !defined(BUILD_FOR_RP2040)
+#if !defined(BUILD_FOR_PICO2W)
 	if (!log_fh && logfile != nullptr) {
 #if !defined(ESP32)
 		log_fh = fopen(logfile, "a+");

@@ -6,7 +6,7 @@
 #include <atomic>
 #include <optional>
 #include <string>
-#if !defined(BUILD_FOR_RP2040)
+#if !defined(BUILD_FOR_PICO2W)
 #include <thread>
 #endif
 #include <vector>
@@ -33,7 +33,7 @@ protected:
 	blinkenlights          *p_blinkenlights  { nullptr };
 
 	bus                    *b                { nullptr };
-#if !defined(BUILD_FOR_RP2040)
+#if !defined(BUILD_FOR_PICO2W)
 	std::thread            *th               { nullptr };
 	std::thread            *th_panel         { nullptr };
 #endif

@@ -1,4 +1,4 @@
-// (C) 2018-2024 by Folkert van Heusden
+// (C) 2018-2026 by Folkert van Heusden
 // Released under MIT license
 
 #pragma once
@@ -8,6 +8,7 @@
 #include <optional>
 #include <string>
 
+#include "gen.h"
 #include "bus.h"
 #include "device.h"
 
@@ -29,7 +30,11 @@ private:
 	memory   *const m                  { nullptr };
 	bus      *const b                  { nullptr };
 	uint16_t        registers[6]       { 0       };
+#if defined(BUILD_FOR_PICO2W)
+	uint8_t         xfer_buffer[1024];
+#else
 	uint8_t         xfer_buffer[10240];
+#endif
 	FILE           *fh                 { nullptr };
 	std::string     tape_file;
 

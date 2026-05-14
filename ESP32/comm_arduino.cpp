@@ -3,7 +3,7 @@
 
 #include "gen.h"
 
-#if defined(ESP32) || defined(BUILD_FOR_RP2040)
+#if defined(ESP32) || defined(BUILD_FOR_PICO2W)
 #include "comm_arduino.h"
 #include "utils.h"
 

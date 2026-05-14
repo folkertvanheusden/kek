@@ -10,7 +10,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#if defined(BUILD_FOR_RP2040)
+#if defined(BUILD_FOR_PICO2W)
 #include <WiFi.h>
 #else
 #include <WiFi.h>
@@ -31,7 +31,7 @@
 #if defined(ESP32)
 #include "comm_esp32_hardwareserial.h"
 #endif
-#if !defined(BUILD_FOR_RP2040)
+#if !defined(BUILD_FOR_PICO2W)
 #include "comm_esp32_SC16IS752.h"
 #include "comm_tcp_socket_client.h"
 #include "comm_tcp_socket_server.h"
@@ -41,7 +41,7 @@
 #include "debugger.h"
 #include "disk_backend.h"
 #include "disk_backend_esp32.h"
-#if !defined(BUILD_FOR_RP2040)
+#if !defined(BUILD_FOR_PICO2W)
 #include "disk_backend_nbd.h"
 #endif
 #include "error.h"
@@ -67,9 +67,6 @@ std::atomic_uint32_t  stop_event         { EVENT_NONE };
 std::atomic_bool     *running            { nullptr    };
 bool                  trace_output       { false      };
 comm                 *cs                 { nullptr    };  // Console Serial
-#if defined(BUILD_FOR_RP2040)
-WiFiMulti multi;
-#endif
 blinkenlights        bl;
 
 static void console_thread_wrapper_panel(void *const c)
@@ -105,55 +102,25 @@ bool init_sd()
 }
 #endif
 
-#if defined(ESP32)
-void set_hostname()
-{
-  uint64_t mac    = ESP.getEfuseMac();
-  uint8_t *chipid = reinterpret_cast<uint8_t *>(&mac);
-
-  char name[32];
-  snprintf(name, sizeof name, "PDP11-%02x%02x%02x%02x", chipid[2], chipid[3], chipid[4], chipid[5]);
-
-  WiFi.setHostname(name);
+const char *mac_to_string(uint8_t mac[6]) {
+  static char s[20];
+  sprintf(s, "%02x:%02x:%02x:%02x:%02x:%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+  return s;
 }
 
-void configure_network(console *const c)
-{
-	WiFi.disconnect();
-
-	WiFi.persistent(true);
-	WiFi.setAutoReconnect(true);
-	WiFi.useStaticBuffers(true);
-	WiFi.mode(WIFI_STA);
-
-	c->put_string_lf("Scanning for wireless networks...");
-	int n_ssids = WiFi.scanNetworks();
-
-	c->put_string_lf("Wireless networks:");
-	for(int i=0; i<n_ssids; i++)
-		c->put_string_lf(format("\t%s", WiFi.SSID(i).c_str()));
-
-	c->flush_input();
-
-	std::string wifi_ap = c->read_line("Enter SSID[|PSK]: ");
-	if (wifi_ap.empty())
-		return;
-
-	auto parts = split(wifi_ap, "|");
-	if (parts.size() > 2) {
-		c->put_string_lf("Invalid SSID/PSK: should not contain '|'");
-		return;
-	}
-
-	c->put_string_lf(format("Connecting to SSID \"%s\"", parts.at(0).c_str()));
-
-	if (parts.size() == 1)
-		WiFi.begin(parts.at(0).c_str());
-	else
-		WiFi.begin(parts.at(0).c_str(), parts.at(1).c_str());
+const char *enc_to_string(uint8_t enc) {
+#if defined(BUILD_FOR_PICO2W)
+  switch (enc) {
+    case ENC_TYPE_NONE: return "NONE";
+    case ENC_TYPE_TKIP: return "WPA";
+    case ENC_TYPE_CCMP: return "WPA2";
+    case ENC_TYPE_AUTO: return "AUTO";
+  }
+#endif
+  return "UNKN";
 }
 
-void wait_network(console *const c)
+bool wait_network(console *const c)
 {
 	constexpr const int timeout = 10 * 3;
 
@@ -167,9 +134,136 @@ void wait_network(console *const c)
 		i++;
 	}
 
-	if (i == timeout)
+	if (i == timeout) {
 		c->put_string_lf("Time out connecting");
+    return false;
+  }
+
+  return true;
 }
+
+void finish_start_network(console *const c)
+{
+  if (wait_network(c)) {
+    c->put_string_lf("");
+    c->put_string_lf(format("Local IP address: %s", WiFi.localIP().toString().c_str()));
+
+    static bool dz11_loaded = false;
+    if (!dz11_loaded) {
+      dz11_loaded = true;
+
+      comm_io *io_channels = new comm_io(dz11_n_lines);
+
+      cs->println("* Adding DZ11");
+#if !defined(BUILD_FOR_PICO2W) && defined(TTY_SERIAL_RX)
+      uint32_t bitrate = get_configuration_uint32(SERIAL_CFG_FILE, 115200);
+
+      cs->println(format("* Init TTY (on DZ11), baudrate: %d bps, RX: %d, TX: %d", bitrate, TTY_SERIAL_RX, TTY_SERIAL_TX));
+      if (io_channels->set_device(0, new comm_esp32_hardwareserial(uart_port_t(1), TTY_SERIAL_RX, TTY_SERIAL_TX, bitrate)) == false)
+        DOLOG(warning, false, "Failed to configure device");
+#endif
+
+#if !defined(BUILD_FOR_PICO2W)
+      DOLOG(info, false, "Configuring TCP sockets for the remaining DZ11 slots");
+      for(size_t i=0; i<dz11_n_lines; i++) {
+        if (io_channels->is_defined(i))
+          continue;
+        int port = 1100 + i;
+        DOLOG(info, false, "Configuring TCP socket on port %d for DZ11", port);
+        if (io_channels->set_device(i, new comm_tcp_socket_server(port, true)) == false)
+          DOLOG(warning, false, "Failed to configure device");
+      }
+#endif
+
+      dz11 *dz11_ = new dz11(b, io_channels);
+      dz11_->begin();
+      b->add_DZ11(dz11_);
+
+#if defined(ESP32)
+      cs->println("* Starting (NTP-) clock");
+      set_clock_reference("pool.ntp.org");
+#endif
+    }
+  }
+}
+
+void configure_network(console *const c, const std::optional<std::string> & pars)
+{
+	WiFi.disconnect();
+
+	WiFi.persistent(true);
+#if defined(ESP32)
+	WiFi.setAutoReconnect(true);
+	WiFi.useStaticBuffers(true);
+#endif
+	WiFi.mode(WIFI_STA);
+  delay(500);
+
+  std::string wifi_ap;
+
+  if (pars.has_value() == false) {
+    c->put_string_lf("Scanning for wireless networks...");
+    auto cnt = WiFi.scanNetworks();
+    if (cnt) {
+      c->put_string_lf(format("Found %d WiFi networks", cnt));
+      c->put_string_lf(format("%32s %5s %17s %2s %4s", "SSID", "ENC", "BSSID        ", "CH", "RSSI"));
+      for(auto i = 0; i < cnt; i++) {
+        uint8_t bssid[6];
+        WiFi.BSSID(i, bssid);
+        c->put_string_lf(format("%32s %5s %17s %2d %4ld", WiFi.SSID(i), enc_to_string(WiFi.encryptionType(i)), mac_to_string(bssid), WiFi.channel(i), WiFi.RSSI(i)));
+      }
+    }
+    else if (cnt < 0) {
+      c->put_string_lf(format("Error during wifi scan: %d", cnt));
+    }
+    else {
+      c->put_string_lf("No WiFi networks found");
+    }
+
+    c->flush_input();
+
+    wifi_ap = c->read_line("Enter SSID[|PSK]: ");
+    if (wifi_ap.empty())
+      return;
+  }
+  else {
+    wifi_ap = pars.value();
+  }
+
+	auto parts = split(wifi_ap, "|");
+	if (parts.size() > 2) {
+		c->put_string_lf("Invalid SSID/PSK: should not contain '|'");
+		return;
+	}
+
+	c->put_string_lf(format("Connecting to SSID \"%s\"", parts.at(0).c_str()));
+
+	if (parts.size() == 1)
+		WiFi.begin(parts.at(0).c_str());
+	else
+		WiFi.begin(parts.at(0).c_str(), parts.at(1).c_str());
+
+  finish_start_network(c);
+}
+
+#if defined(ESP32)
+void set_hostname()
+{
+  uint64_t mac    = ESP.getEfuseMac();
+  uint8_t *chipid = reinterpret_cast<uint8_t *>(&mac);
+
+  char name[32];
+  snprintf(name, sizeof name, "PDP11-%02x%02x%02x%02x", chipid[2], chipid[3], chipid[4], chipid[5]);
+
+  WiFi.setHostname(name);
+}
+#elif defined(BUILD_FOR_PICO2W)
+void set_hostname()
+{
+  // TODO (serial number)
+  WiFi.setHostname("PDP11");
+}
+#endif
 
 void check_network(console *const c)
 {
@@ -178,74 +272,6 @@ void check_network(console *const c)
 	c->put_string_lf("");
 	c->put_string_lf(format("Local IP address: %s", WiFi.localIP().toString().c_str()));
 }
-#elif defined(BUILD_FOR_RP2040)
-void set_hostname()
-{
-  // TODO (serial number)
-  WiFi.setHostname("PDP11");
-}
-
-const char *mac_to_string(uint8_t mac[6]) {
-  static char s[20];
-  sprintf(s, "%02x:%02x:%02x:%02x:%02x:%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-  return s;
-}
-
-const char *enc_to_string(uint8_t enc) {
-  switch (enc) {
-    case ENC_TYPE_NONE: return "NONE";
-    case ENC_TYPE_TKIP: return "WPA";
-    case ENC_TYPE_CCMP: return "WPA2";
-    case ENC_TYPE_AUTO: return "AUTO";
-  }
-  return "UNKN";
-}
-
-void configure_network(console *const c)
-{
-  auto cnt = WiFi.scanNetworks();
-  if (cnt) {
-    c->put_string_lf(format("Found %d WiFi networks", cnt));
-    c->put_string_lf(format("%32s %5s %17s %2s %4s", "SSID", "ENC", "BSSID        ", "CH", "RSSI"));
-    for(auto i = 0; i < cnt; i++) {
-      uint8_t bssid[6];
-      WiFi.BSSID(i, bssid);
-      c->put_string_lf(format("%32s %5s %17s %2d %4ld", WiFi.SSID(i), enc_to_string(WiFi.encryptionType(i)), mac_to_string(bssid), WiFi.channel(i), WiFi.RSSI(i)));
-    }
-  }
-  else {
-    c->put_string_lf("No WiFi networks found");
-  }
-
-	std::string wifi_ap = c->read_line("Enter SSID[|PSK]: ");
-	if (wifi_ap.empty())
-		return;
-
-	auto parts = split(wifi_ap, "|");
-	if (parts.size() > 2) {
-		c->put_string_lf("Invalid SSID/PSK: should not contain '|'");
-		return;
-	}
-
-	c->put_string_lf(format("Connecting to SSID \"%s\"", parts[0].c_str()));
-
-  if (parts.size() == 2)
-    multi.addAP(parts[0].c_str(), parts[1].c_str());
-  else
-    multi.addAP(parts[0].c_str(), "");
-
-  if (multi.run() == WL_CONNECTED)
-    c->put_string_lf("Connected");
-  else
-    c->put_string_lf("NOT connected");
-}
-
-void check_network(console *const c)
-{
-	c->put_string_lf("");
-	c->put_string_lf(format("Local IP address: %s", WiFi.localIP().toString().c_str()));
-}
-#endif
 
 void start_network(console *const c)
 {
@@ -255,47 +281,7 @@ void start_network(console *const c)
 	WiFi.begin();
 #endif
 
-	wait_network(c);
-
-	c->put_string_lf("");
-	c->put_string_lf(format("Local IP address: %s", WiFi.localIP().toString().c_str()));
-
-	static bool dz11_loaded = false;
-	if (!dz11_loaded) {
-		dz11_loaded = true;
-
-    comm_io *io_channels = new comm_io(dz11_n_lines);
-
-		cs->println("* Adding DZ11");
-#if !defined(BUILD_FOR_RP2040) && defined(TTY_SERIAL_RX)
-		uint32_t bitrate = get_configuration_uint32(SERIAL_CFG_FILE, 115200);
-
-		cs->println(format("* Init TTY (on DZ11), baudrate: %d bps, RX: %d, TX: %d", bitrate, TTY_SERIAL_RX, TTY_SERIAL_TX));
-    if (io_channels->set_device(0, new comm_esp32_hardwareserial(uart_port_t(1), TTY_SERIAL_RX, TTY_SERIAL_TX, bitrate)) == false)
-				DOLOG(warning, false, "Failed to configure device");
-#endif
-
-#if !defined(BUILD_FOR_RP2040)
-		DOLOG(info, false, "Configuring TCP sockets for the remaining DZ11 slots");
-		for(size_t i=0; i<dz11_n_lines; i++) {
-      if (io_channels->is_defined(i))
-        continue;
-			int port = 1100 + i;
-			DOLOG(info, false, "Configuring TCP socket on port %d for DZ11", port);
-			if (io_channels->set_device(i, new comm_tcp_socket_server(port, true)) == false)
-				DOLOG(warning, false, "Failed to configure device");
-		}
-#endif
-
-		dz11 *dz11_ = new dz11(b, io_channels);
-		dz11_->begin();
-		b->add_DZ11(dz11_);
-
-#if defined(ESP32)
-		cs->println("* Starting (NTP-) clock");
-		set_clock_reference("pool.ntp.org");
-#endif
-	}
+  finish_start_network(c);
 }
 
 void recall_configuration(console *const cnsl)
@@ -341,7 +327,7 @@ void setup() {
 
 	set_hostname();
 
-#if defined(BUILD_FOR_RP2040)
+#if defined(BUILD_FOR_PICO2W)
 	LittleFSConfig cfg;
 	cfg.setAutoFormat(false);
 
@@ -357,7 +343,7 @@ void setup() {
 	cs->println("* Allocate memory");
 	uint32_t n_pages = DEFAULT_N_PAGES;
 
-#if defined(BUILD_FOR_RP2040)
+#if defined(BUILD_FOR_PICO2W)
 	cs->println(format("Free RAM after init (decimal bytes): %d", rp2040.getFreeHeap()));
 #else
 	cs->println(format("Free RAM after init (decimal bytes): %d", ESP.getFreeHeap()));
@@ -386,7 +372,7 @@ void setup() {
 	c = new cpu(b, &stop_event);
 	b->add_cpu(c);
 
-#if defined(ESP32) || defined(BUILD_FOR_RP2040)
+#if defined(ESP32) || defined(BUILD_FOR_PICO2W)
 	cnsl = new console_esp32(&stop_event, cs, 80, 25);
 #endif
 	cnsl->set_bus(b);
@@ -423,12 +409,12 @@ void setup() {
 	pinMode(HEARTBEAT_PIN, OUTPUT);
 #endif
 
-#if !defined(BUILD_FOR_RP2040) && (defined(NEOPIXELS_PIN) || defined(HEARTBEAT_PIN))
+#if !defined(BUILD_FOR_PICO2W) && (defined(NEOPIXELS_PIN) || defined(HEARTBEAT_PIN))
 	cs->println("Starting panel");
 	xTaskCreate(&console_thread_wrapper_panel, "panel", 3072, cnsl, 1, nullptr);
 #endif
 
-#if defined(BUILD_FOR_RP2040)
+#if defined(BUILD_FOR_PICO2W)
 	uint32_t free_heap = rp2040.getFreeHeap();
 #else
 	uint32_t free_heap = ESP.getFreeHeap();

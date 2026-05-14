@@ -21,7 +21,7 @@ typedef enum { rm_prev, rm_cur } rm_selection_t;
 #define IS_POSIX 0
 #endif
 
-#if defined(ESP32) || defined(BUILD_FOR_RP2040)
+#if defined(ESP32) || defined(BUILD_FOR_PICO2W)
 // ESP32 goes in a crash-loop when allocating 128kB
 // see also https://github.com/espressif/esp-idf/issues/1934
 #define DEFAULT_N_PAGES 12  // was 10
@@ -30,7 +30,7 @@ typedef enum { rm_prev, rm_cur } rm_selection_t;
 #define DEFAULT_N_PAGES 31
 #endif
 
-#if defined(ESP32) || defined(BUILD_FOR_RP2040)
+#if defined(ESP32) || defined(BUILD_FOR_PICO2W)
 #define SERIAL_CFG_FILE        "serial.json"
 #define BLINKENLIGHTS_CFG_FILE "blinkenlights.dat"
 #else
@@ -42,6 +42,6 @@ typedef enum { rm_prev, rm_cur } rm_selection_t;
 #include "esp32.h"
 #endif
 
-#if defined(BUILD_FOR_RP2040)
+#if defined(BUILD_FOR_PICO2W)
 #include "rp2040.h"
 #endif

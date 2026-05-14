@@ -11,7 +11,7 @@
 
 constexpr const uint8_t bc_addr[] { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 
-#if defined(BUILD_FOR_RP2040)
+#if defined(BUILD_FOR_PICO2W)
 static void thread_wrapper_receiver_low(void *p)
 {
        deqna *const deqna_ = reinterpret_cast<deqna *>(p);
@@ -37,7 +37,7 @@ deqna::deqna(bus *const b, const uint8_t mac_address[6], eth_transport *const et
 
 bool deqna::begin()
 {
-#if defined(BUILD_FOR_RP2040)
+#if defined(BUILD_FOR_PICO2W)
 	xTaskCreate(&thread_wrapper_receiver_low,  "deqna-rl", 3072, this, 1, nullptr);
 	xTaskCreate(&thread_wrapper_receiver_high, "deqna-rh", 3072, this, 1, nullptr);
 #else

@@ -20,7 +20,7 @@
 #if IS_POSIX
 #include "comm_posix_tty.h"
 #endif
-#if !defined(BUILD_FOR_RP2040)
+#if !defined(BUILD_FOR_PICO2W)
 #include "comm_tcp_socket_client.h"
 #include "comm_tcp_socket_server.h"
 #endif
@@ -37,9 +37,7 @@
 #else
 #include "disk_backend_esp32.h"
 #endif
-#if !defined(BUILD_FOR_RP2040)
 #include "disk_backend_nbd.h"
-#endif
 #if defined(linux)
 #include "eth_transport_linux.h"
 #endif
@@ -54,7 +52,7 @@
 
 extern blinkenlights bl;
 
-#if defined(ESP32) || defined(BUILD_FOR_RP2040)
+#if defined(ESP32) || defined(BUILD_FOR_PICO2W)
 bool network_configured = false;
 #if defined(ESP32)
 #include "esp32.h"
@@ -66,7 +64,7 @@ extern comm_esp32_SC16IS752 *SC16IS752_com_b[2];
 
 bool init_sd();
 
-void configure_network(console *const cnsl);
+void configure_network(console *const cnsl, const std::optional<std::string> & pars);
 void check_network(console *const cnsl);
 void start_network(console *const cnsl);
 #else
@@ -79,7 +77,6 @@ extern SdFs SDinstance;
 
 #define DZ11_CFG_FILE "dz11.json"
 
-#if !defined(BUILD_FOR_RP2040)
 std::optional<disk_backend *> select_nbd_server(console *const cnsl)
 {
 	cnsl->flush_input();
@@ -101,7 +98,6 @@ std::optional<disk_backend *> select_nbd_server(console *const cnsl)
 
 	return d;
 }
-#endif
 
 void start_disk(console *const cnsl)
 {
@@ -148,7 +144,7 @@ void ls_l(console *const cnsl)
 	}
 
 	closedir(dir);
-#elif defined(BUILD_FOR_RP2040)
+#elif defined(BUILD_FOR_PICO2W)
 	auto root = SDinstance.open("/");
 
 	for(;;) {
@@ -286,7 +282,7 @@ void configure_comm(console *const cnsl, comm_io *const device_list)
 
 		if (false) {
 		}
-#if !defined(BUILD_FOR_RP2040)
+#if !defined(BUILD_FOR_PICO2W)
 		else if (ch_opt == '1') {
 			std::string temp_host = cnsl->read_line("host: ");
 			std::string temp_port = temp_host.empty() ? "" : cnsl->read_line("port: ");
@@ -345,9 +341,6 @@ void configure_comm(console *const cnsl, comm_io *const device_list)
 
 std::optional<disk_backend *> select_disk_backend(console *const cnsl)
 {
-#if defined(BUILD_FOR_RP2040)
-	return select_disk_file(cnsl);
-#else
 	int ch = wait_for_key("1. local disk, 2. network disk (NBD), 9. abort", cnsl, { '1', '2', '9' });
 	if (ch == '9')
 		return { };
@@ -362,7 +355,6 @@ std::optional<disk_backend *> select_disk_backend(console *const cnsl)
 	}
 
 	return { };
-#endif
 }
 
 void configure_disk(bus *const b, console *const cnsl)
@@ -613,7 +605,7 @@ void show_run_statistics(console *const cnsl, cpu *const c)
 #if defined(ESP32)
 	cnsl->put_string_lf(format("Free RAM (decimal bytes): %d", ESP.getFreeHeap()));
 	cnsl->put_string_lf(format("Free SPI-RAM: %d", heap_caps_get_free_size(MALLOC_CAP_SPIRAM)));
-#elif defined(BUILD_FOR_RP2040)
+#elif defined(BUILD_FOR_PICO2W)
 	cnsl->put_string_lf(format("Free RAM (decimal bytes): %d", rp2040.getFreeHeap()));
 	cnsl->put_string_lf(format("Clock frequency: %d", rp2040.f_cpu()));
 #endif
@@ -1126,10 +1118,13 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 
 		return true;
 	}
-#if defined(ESP32)
-	else if (cmd == "cfgnet") {
+#if defined(ESP32) || defined(BUILD_FOR_PICO2W)
+	else if (parts[0] == "cfgnet") {
 		network_configured = true;
-		configure_network(cnsl);
+		if (parts.size() == 2)
+			configure_network(cnsl, parts[1]);
+		else
+			configure_network(cnsl, { });
 		return true;
 	}
 	else if (cmd == "chknet") {
@@ -1142,6 +1137,8 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		network_configured = true;
 		return true;
 	}
+#endif
+#if defined(ESP32)
 	else if (parts[0] == "pm" && parts.size() == 2) {
 		reinterpret_cast<console_esp32 *>(cnsl)->set_panel_mode(parts[1] == "bits" ? console_esp32::PM_BITS : console_esp32::PM_POINTER);
 
@@ -1393,7 +1390,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 
 		return true;
 	}
-#if defined(BUILD_FOR_RP2040)
+#if defined(BUILD_FOR_PICO2W)
 	else if (cmd == "flash") {
 		int ch_opt = wait_for_key("y/n", cnsl, { 'y', 'n' });
 		if (ch_opt == 'y') {
@@ -1408,7 +1405,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		if (ch_opt == 'y') {
 #if defined(ESP32)
 			ESP.restart();
-#elif defined(BUILD_FOR_RP2040)
+#elif defined(BUILD_FOR_PICO2W)
 			rp2040.reboot();
 #endif
 			return false;
@@ -1420,7 +1417,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			"dis[assemble] - show current instruction (pc=/n=)",
 			"go            - run until trap or ^e",
 			"benchmark [-v]- run a benchmark",
-#if !defined(ESP32)
+#if !defined(ESP32) || defined(BUILD_FOR_PICO2W)
 			"quit/q        - stop emulator",
 #endif
 #if defined(BUILD_FOR_RP204o)
@@ -1473,7 +1470,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 #endif
 			"dp            - disable panel",
 			"refr [x]      - set panel refreshrate (fps)",
-#if defined(ESP32)
+#if defined(ESP32) || defined(BUILD_FOR_PICO2W)
 			"cfgnet        - configure network (e.g. WiFi)",
 			"startnet      - start network",
 			"chknet        - check network status",

@@ -5,16 +5,16 @@
 #include <cstring>
 #include <map>
 #include <optional>
-#if !defined(ESP32) && !defined(BUILD_FOR_RP2040)
+#if !defined(ESP32) && !defined(BUILD_FOR_PICO2W)
 #include <poll.h>
 #endif
 #include <string>
 #include <unistd.h>
 #include <vector>
-#if defined(BUILD_FOR_RP2040)
+#if defined(BUILD_FOR_PICO2W)
 #include <WiFi.h>
 #endif
-#if defined(ESP32) || defined(BUILD_FOR_RP2040)
+#if defined(ESP32) || defined(BUILD_FOR_PICO2W)
 #include <WiFiUdp.h>
 #if defined(ESP32)
 #include <lwip/netdb.h>
@@ -29,7 +29,7 @@
 #include "bus.h"
 #include "log.h"
 
-#if defined(BUILD_FOR_RP2040)
+#if defined(BUILD_FOR_PICO2W)
 constexpr const int local_port = 2000;
 WiFiUDP udp;
 #endif
@@ -177,7 +177,7 @@ static const std::pair<const rpc_msg_reply *, int> exchange_message(const std::s
 	uint8_t            *reply          = nullptr;
 	int                 packet_size    = 0;
 
-#if defined(BUILD_FOR_RP2040)
+#if defined(BUILD_FOR_PICO2W)
 	udp.begin(local_port);
 	udp.beginPacket(server.c_str(), port);
 	udp.write(msg.data(), msg.size());

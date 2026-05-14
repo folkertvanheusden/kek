@@ -76,7 +76,7 @@ Wiring of the MAX232 connection:
 Note that you need to use different pins for the MAX232 connection when you want to use the PSRAM of the ESP32.
 
 
-Raspberry PI PICO / RP2040
+Raspberry PI PICO2W
 --------------------------
 Wiring of SDCARD:
 * MISO: 16
@@ -85,12 +85,12 @@ Wiring of SDCARD:
 * SS  : 17
 * and of course connect VCC/GND of the SD-card
 
-The RP2040 version needs platformio to be build.
+The PICO2W version needs platformio to be build.
 
-    cd RP2040
+    cd PICO2W
     pio run
 
-Then copy RP2040/.pio/build/BUILD\_FOR\_RP2040/firmware.uf2 to the PICO.
+Then copy PICO2W/.pio/build/BUILD\_FOR\_PICO2W/firmware.uf2 to the PICO.
 
 
 more info

@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <signal.h>
-#if defined(ESP32) || defined(BUILD_FOR_RP2040)
+#if defined(ESP32) || defined(BUILD_FOR_PICO2W)
 #include <Arduino.h>
 #elif defined(_WIN32)
 #else
@@ -19,7 +19,7 @@
 
 [[ noreturn ]] void error_exit(bool sys_err, const char *format, ...)
 {
-#if defined(ESP32) || defined(BUILD_FOR_RP2040)
+#if defined(ESP32) || defined(BUILD_FOR_PICO2W)
 	printf("Fatal error: %s\n", format);
 #else
 	int e = errno;

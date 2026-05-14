@@ -3,10 +3,10 @@
 
 #include "gen.h"
 
-#if defined(ESP32) || defined(BUILD_FOR_RP2040)
+#if defined(ESP32) || defined(BUILD_FOR_PICO2W)
 #include <Arduino.h>
 #endif
-#if defined(ESP32) || defined(BUILD_FOR_RP2040)
+#if defined(ESP32) || defined(BUILD_FOR_PICO2W)
 #include <lwip/netdb.h>
 #include <lwip/sockets.h>
 #include <arpa/inet.h>

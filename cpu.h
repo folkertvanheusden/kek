@@ -63,7 +63,7 @@ private:
 	// vector, 8 levels
 	std::array<std::set<uint16_t>, 8> queued_interrupts;
 	std::atomic_bool        any_queued_interrupts { false };
-#if defined(BUILD_FOR_RP2040)
+#if defined(BUILD_FOR_PICO2W)
 	SemaphoreHandle_t       qi_lock { xSemaphoreCreateBinary() };
 	QueueHandle_t           qi_q    { xQueueCreate(16, 1)      };
 #else
