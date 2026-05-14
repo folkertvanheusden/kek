@@ -39,6 +39,10 @@
 #if !defined(BUILD_FOR_RP2040)
 #include "disk_backend_nbd.h"
 #endif
+#if defined(linux)
+#include "eth_transport_linux.h"
+#endif
+#include "eth_transport_vxlan.h"
 #include "kw11-l.h"
 #include "loaders.h"
 #include "log.h"
@@ -1334,6 +1338,43 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 
 		return true;
 	}
+	else if (parts[0] == "deqna" && parts.size() == 2) {
+		b->add_DEQNA(nullptr);  // disable & remove any existing
+
+		uint8_t mac[6] { };
+		get_deqna_mac(mac);
+
+		eth_transport *dev  = nullptr;
+		auto           pars = split(parts[1], ",");
+		if (false) {
+		}
+#if defined(linux)
+		if (pars[0] == "linux") {
+			if (pars.size() != 2)
+				cnsl->put_string_lf("Invalid parameter count");
+			else
+				dev = new eth_transport_linux(pars[1]);
+		}
+#endif
+		else if (pars[0] == "vxlan") {
+			if (pars.size() != 3)
+				cnsl->put_string_lf("Invalid parameter count");
+			else
+				dev = new eth_transport_vxlan(pars[1], std::stoi(pars[2]));
+		}
+		else {
+			cnsl->put_string_lf(format("\"%s\" is not understood or parameters missing", pars[0].c_str()));
+		}
+
+		if (dev) {
+			if (dev->begin())
+				b->add_DEQNA(new deqna(b, mac, dev));
+			else
+				delete dev;
+		}
+
+		return true;
+	}
 	else if (cmd == "cdz11") {
 		if (b->getDZ11())
 			configure_comm(cnsl, b->getDZ11()->get_comm_interfaces());
@@ -1436,6 +1477,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			"blights x     - enable blinkenlights on IP address x", 
 			"testdz11      - test DZ11",
 			"cfgdisk       - configure disk",
+			"deqna x[,y,z] - set deqna emulation to use (x): \"linux\" (tap) or \"vxlan\" (with host (y) & port (z))",
 			"log ...       - log a message to the logfile",
 			nullptr
 		};
@@ -1446,7 +1488,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		return true;
 	}
 	else {
-		cnsl->put_string_lf("?");
+		cnsl->put_string_lf(format("? (%s)", parts[0].c_str()));
 		return true;
 	}
 

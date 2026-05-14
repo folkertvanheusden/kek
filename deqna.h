@@ -11,6 +11,7 @@
 
 #include "bus.h"
 #include "device.h"
+#include "eth_transport.h"
 #include "my_lock.h"
 
 #define DEQNA_BASE    0174440
@@ -28,6 +29,7 @@ class deqna : public device
 {
 private:
 	bus             *const b        { nullptr };
+	eth_transport   *const eth_dev  { nullptr };
 	std::atomic_uint16_t registers[8] { 0     };  // accessed from multiple threads
 	uint8_t          mac_address[6] { 0       };
 	int              dev_fd         { -1      };
@@ -36,13 +38,17 @@ private:
 	std::thread     *th_rx_high     { nullptr };
 	mutable my_lock  lock;
 	my_threadsafe_queue<std::pair<uint8_t *, size_t> > received;
+	std::atomic_uint64_t total_n_rx_pkts { 0 };
+	std::atomic_uint64_t total_n_rx_drop { 0 };
+	std::atomic_uint64_t total_n_tx_pkts { 0 };
+	std::atomic_uint64_t total_n_tx_drop { 0 };
 
 	void queue_rx_packet(const uint8_t *const in, const size_t n);
 	void transmitter    ();
 	void purge_buffers  ();
 
 public:
-	deqna(bus *const b, const uint8_t mac_address[6]);
+	deqna(bus *const b, const uint8_t mac_address[6], eth_transport *const eth_dev);
 	virtual ~deqna();
 
 	bool begin();
@@ -61,3 +67,5 @@ public:
 	void write_byte(const uint16_t addr, const uint8_t  v) override;
 	void write_word(const uint16_t addr, const uint16_t v) override;
 };
+
+void get_deqna_mac(uint8_t *const to);

@@ -27,6 +27,9 @@
 #include "disk_backend_nbd.h"
 #include "dc11.h"
 #include "dz11.h"
+#include "eth_transport.h"
+#include "eth_transport_linux.h"
+#include "eth_transport_vxlan.h"
 #include "gen.h"
 #include "kw11-l.h"
 #include "loaders.h"
@@ -240,6 +243,7 @@ void help()
 	printf("-2       set DZ-11 tcp-socket sessions to initialize as a telnet session\n");
 	printf("-8 x     setup a blinkenlights/PiDP11 connection on IP-address x\n");
 	printf("-Q x     use x as port offset instead of %d\n", default_port_offset);
+	printf("-I x[,y,z] setup a DEQNA device with Ethernet type x ('linux' (tap), 'vxlan': y=ip,z=port)\n");
 }
 
 int main(int argc, char *argv[])
@@ -282,8 +286,10 @@ int main(int argc, char *argv[])
 
 	int          tcp_port_offset = default_port_offset;
 
+	std::string  deqna_type;
+
 	int  opt          = -1;
-	while((opt = getopt(argc, argv, "hD:T:B:r:R:p:ndf:tL:b:l:s:Q:N:J:XS:P1:m:Q:28:")) != -1)
+	while((opt = getopt(argc, argv, "hD:T:B:r:R:p:ndf:tL:b:l:s:Q:N:J:XS:P1:m:Q:28:I:")) != -1)
 	{
 		switch(opt) {
 			case 'h':
@@ -425,6 +431,10 @@ int main(int argc, char *argv[])
 				blinkenlights_ip = optarg;
 				break;
 
+			case 'I':
+				deqna_type = optarg;
+				break;
+
 			default:
 			        fprintf(stderr, "-%c is not understood\n", opt);
 				return 1;
@@ -490,12 +500,34 @@ int main(int argc, char *argv[])
 		rp06_dev->begin();
 		b->add_RP06(rp06_dev);
 
-		uint8_t mac_address[] { 0x08, 0x00, 0x2b, 0x8a, 0xd8, 0xd3 };  // randomize last 3 digits? or from cfg? TODO
-		auto deqna_dev = new deqna(b, mac_address);
-		if (deqna_dev->begin())
-			b->add_DEQNA(deqna_dev);
-		else
-			DOLOG(ll_alert, true, "Failed to setup DEQNA device");
+		if (deqna_type.empty() == false) {
+			auto parts = split(deqna_type, ",");
+			eth_transport *et = nullptr;
+
+			if (parts[0] == "linux")
+				et = new eth_transport_linux("pdp");
+			else if (parts[0] == "vxlan") {
+				if (parts.size() != 3)
+					error_exit(false, "vxlan: incorrect number of parameters");
+
+				et = new eth_transport_vxlan(parts[1], std::stoi(parts[2]));
+			}
+			else {
+				error_exit(false, "Link layer \"%s\" is not known", parts[0].c_str());
+			}
+
+			if (!et->begin())
+				error_exit(false, "Failed to initialize link layer for DEQNA");
+
+			uint8_t mac_address[] { 0x08, 0x00, 0x2b, 0x8a, 0xd8, 0xd3 };
+			for(int i=3; i<6; i++)  // retrieve from a persistent file TODO
+				mac_address[i] = rand();
+			auto deqna_dev = new deqna(b, mac_address, et);
+			if (deqna_dev->begin())
+				b->add_DEQNA(deqna_dev);
+			else
+				error_exit(false, "Failed to setup DEQNA device");
+		}
 
 		if (disk_type == "rk05") {
 			for(auto & file: disk_files)
