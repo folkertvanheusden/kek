@@ -38,6 +38,18 @@ bool eth_transport_vxlan::begin()
 		DOLOG(debug, false, "Cannot create socket: %s", strerror(errno));
 		return false;
 	}
+
+	sockaddr_in listen_addr { };
+	listen_addr.sin_family      = AF_INET;
+	listen_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+	listen_addr.sin_port        = htons(port);
+
+	if (bind(fd, reinterpret_cast<struct sockaddr *>(&listen_addr), sizeof(listen_addr)) == -1) {
+		DOLOG(warning, true, "Cannot bind to port %d: %s", port, strerror(errno));
+		close(fd);
+		fd = -1;
+		return false;
+	}
 #endif
 	return true;
 }
