@@ -26,8 +26,8 @@ private:
 	uint16_t           lf_csr     { 0       };
 	bool               wall_clock { true    };
 
-	int64_t            t_diff_sum { 0       };
-	uint64_t           n_t_diff   { 0       };
+	uint64_t           total_ticks{ 0       };
+	uint64_t           int_triggered { 0    };
 
 	std::atomic_bool   stop_flag  { false   };
 

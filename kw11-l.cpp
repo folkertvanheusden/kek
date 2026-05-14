@@ -2,6 +2,7 @@
 // Released under MIT license
 
 #include "gen.h"
+#include <cinttypes>
 #include <unistd.h>
 
 #include "console.h"
@@ -40,9 +41,7 @@ kw11_l::~kw11_l()
 void kw11_l::show_state(console *const cnsl) const
 {
 	cnsl->put_string_lf(format("CSR: %06o", lf_csr));
-
-	if (n_t_diff)
-		cnsl->put_string_lf(format("Average tick interrupt interval: %.3f ms", double(t_diff_sum) / n_t_diff));
+	cnsl->put_string_lf(format("%" PRIu64 " ticks, %" PRIu64 " interrupts", total_ticks, int_triggered));
 }
 
 void kw11_l::begin(console *const cnsl)
@@ -66,10 +65,13 @@ void kw11_l::reset(const bool hard)
 
 void kw11_l::do_interrupt()
 {
+	total_ticks++;
 	set_lf_crs_b7();
 
-	if (get_lf_crs() & 64)
+	if (get_lf_crs() & 64) {
+		int_triggered++;
 		b->getCpu()->queue_interrupt(6, 0100);
+	}
 }
 
 int kw11_l::get_interrupt_frequency()
