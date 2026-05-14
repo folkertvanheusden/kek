@@ -257,7 +257,7 @@ int main(int argc, char *argv[])
 	bool          run_debugger  = false;
 	std::optional<std::string> debugger_init;
 
-	bootloader_t  bootloader        = BL_NONE;
+	bootloader_t  bootloader    = BL_NONE;
 
 	const char  *logfile   = nullptr;
 	log_level_t  ll_screen = none;
@@ -289,7 +289,7 @@ int main(int argc, char *argv[])
 
 	std::string  deqna_type;
 
-	int  opt          = -1;
+	int  opt = -1;
 	while((opt = getopt(argc, argv, "hD:T:B:r:R:p:ndf:tL:b:l:s:Q:N:J:XS:P1:m:Q:28:I:")) != -1)
 	{
 		switch(opt) {
@@ -520,9 +520,8 @@ int main(int argc, char *argv[])
 			if (!et->begin())
 				error_exit(false, "Failed to initialize link layer for DEQNA");
 
-			uint8_t mac_address[] { 0x08, 0x00, 0x2b, 0x8a, 0xd8, 0xd3 };
-			for(int i=3; i<6; i++)  // retrieve from a persistent file TODO
-				mac_address[i] = rand();
+			uint8_t mac_address[8] { };
+			get_deqna_mac(mac_address);
 			auto deqna_dev = new deqna(b, mac_address, et);
 			if (deqna_dev->begin())
 				b->add_DEQNA(deqna_dev);

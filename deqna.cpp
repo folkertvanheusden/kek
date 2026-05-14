@@ -6,6 +6,7 @@
 
 #include "deqna.h"
 #include "log.h"
+#include "utils.h"
 
 
 constexpr const uint8_t bc_addr[] { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
@@ -413,8 +414,19 @@ void deqna::write_word(const uint16_t addr, const uint16_t v)
 
 void get_deqna_mac(uint8_t *const to)
 {
-	uint8_t mac_address[] { 0x08, 0x00, 0x2b, 0x8a, 0xd8, 0xd3 };
-	for(int i=3; i<6; i++)  // retrieve from a persistent file TODO
-		mac_address[i] = rand();
-	memcpy(to, mac_address, 6);
+	const std::string mac_file = ".deqna_mac.dat";
+	uint8_t mac_address[] { 0x08, 0x00, 0x2b, 0, 0, 0 };
+	std::string mac_str = get_configuration_string(mac_file, "");
+	if (mac_str.empty()) {
+		for(int i=3; i<6; i++)
+			mac_address[i] = rand();
+		memcpy(to, mac_address, 6);
+		put_configuration_string(mac_file, format("%02x%02x%02x%02x%02x%02x",
+					mac_address[0], mac_address[1], mac_address[2],
+					mac_address[3], mac_address[4], mac_address[5]));
+	}
+	else {
+		for(int i=0; i<6; i++)
+			to[i] = std::stoi(mac_str.substr(i * 2, 2), nullptr, 16);
+	}
 }
