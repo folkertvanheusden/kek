@@ -1214,6 +1214,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 	else if (parts[0] == "setll" && parts.size() == 2) {
 		auto ll_parts = split(parts[1], ",");
 
+#if IS_POSIX || defined(_WIN32)
 		if (ll_parts.size() != 2)
 			cnsl->put_string_lf("Loglevel for either screen or file missing");
 		else {
@@ -1222,7 +1223,10 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 
 			setll(ll_screen, ll_file);
 		}
-
+#else
+		log_level_t ll_screen  = parse_ll(ll_parts[0]);
+		setll(ll_screen, ll_error);
+#endif
 		return true;
 	}
 #if IS_POSIX
