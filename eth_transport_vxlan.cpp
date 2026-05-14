@@ -31,8 +31,10 @@ eth_transport_vxlan::eth_transport_vxlan(const std::string & peer, const int por
 
 eth_transport_vxlan::~eth_transport_vxlan()
 {
+#if !defined(BUILD_FOR_RP2040)
 	if (fd != -1)
 		close(fd);
+#endif
 }
 
 bool eth_transport_vxlan::begin()
@@ -86,25 +88,25 @@ void eth_transport_vxlan::transmit(const uint8_t *const data, const size_t n_byt
 
 std::pair<uint8_t *, size_t> eth_transport_vxlan::get(const int timeout)
 {
-	uint8_t *reply       = nullptr;
+	uint8_t *pkt       = nullptr;
 	size_t   packet_size = 0;
 #if defined(BUILD_FOR_RP2040)
 	auto start = millis();
 	while(millis() - start < timeout) {
 		int rc = udp.parsePacket();
 		if (rc > 0) {
-			reply = new uint8_t[rc];
-			if (!reply) {
+			pkt = new uint8_t[rc];
+			if (!pkt) {
 				DOLOG(ll_critical, true, "malloc issue");
 				return { nullptr, 0 };
 			}
-			udp.read(reply, rc);
+			udp.read(pkt, rc);
 			packet_size = rc;
 			break;
 		}
 	}
 
-	if (!reply)
+	if (!pkt)
 		return { nullptr, 0 };
 #else
 	pollfd fds[] { { fd, POLLIN, 0 } };
@@ -112,7 +114,7 @@ std::pair<uint8_t *, size_t> eth_transport_vxlan::get(const int timeout)
 	if (rc <= 0)
 		return { nullptr, 0 };
 
-	uint8_t *pkt = new uint8_t[max_pkt_size]();
+	pkt = new uint8_t[max_pkt_size]();
 	int      rc2 = recv(fd, pkt, max_pkt_size, 0);
 	if (rc2 == -1) {
 		delete [] pkt;

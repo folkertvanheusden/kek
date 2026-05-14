@@ -22,6 +22,7 @@
 #include "console_posix.h"
 #include "cpu.h"
 #include "debugger.h"
+#include "deqna.h"
 #include "disk_backend.h"
 #include "disk_backend_file.h"
 #include "disk_backend_nbd.h"

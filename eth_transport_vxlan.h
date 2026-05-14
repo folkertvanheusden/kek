@@ -1,6 +1,10 @@
 #include "gen.h"
 #include <cstdint>
 #include <string>
+#if defined(BUILD_FOR_RP2040)
+#include <WiFiUdp.h>
+#endif
+
 #include "eth_transport.h"
 
 

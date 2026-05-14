@@ -30,6 +30,7 @@
 #include "comm_esp32_hardwareserial.h"
 #include "comm_esp32_SC16IS752.h"
 #endif
+#include "deqna.h"
 #include "disk_backend.h"
 #if IS_POSIX || defined(_WIN32)
 #include "disk_backend_file.h"
@@ -759,10 +760,8 @@ device *name_to_dev(bus *const b, const std::string & name)
 		return b->getKW11_L();
 	if (name == "rp06" || name == "rp07")
 		return b->getRP06();
-#if !defined(BUILD_FOR_RP2040)
 	if (name == "deqna")
 		return b->getDEQNA();
-#endif
 	return nullptr;
 }
 

@@ -11,9 +11,6 @@
 #include <stdio.h>
 
 #include "device.h"
-#if !defined(BUILD_FOR_RP2040)
-#include "deqna.h"
-#endif
 #include "dc11.h"
 #include "dz11.h"
 #include "mmu.h"
@@ -50,9 +47,7 @@
 
 class console;
 class cpu;
-#if !defined(BUILD_FOR_RP2040)
 class deqna;
-#endif
 class kw11_l;
 class memory;
 class tm_11;
@@ -76,9 +71,7 @@ private:
 	dc11    *dc11_   { nullptr };
 	dz11    *dz11_   { nullptr };
 	rp06    *rp06_   { nullptr };
-#if !defined(BUILD_FOR_RP2040)
 	deqna   *deqna_  { nullptr };
-#endif
 
 	uint16_t microprogram_break_register { 0 };
 
@@ -119,9 +112,7 @@ public:
 	// required to release devices when doing a reload
 	void del_DZ11  ();
 	void add_RP06  (rp06   *const rp06_  );
-#if !defined(BUILD_FOR_RP2040)
 	void add_DEQNA (deqna  *const deqna_ );
-#endif
 
 	memory *getRAM()    { return m;       }
 	cpu    *getCpu()    { return c;       }
@@ -134,9 +125,7 @@ public:
 	dz11   *getDZ11()   { return dz11_;   }
 	tm_11  *getTM11()   { return tm11;    }
 	rp06   *getRP06()   { return rp06_;   }
-#if !defined(BUILD_FOR_RP2040)
 	deqna  *getDEQNA()  { return deqna_;  }
-#endif
 
 	uint16_t read(const uint16_t a, const word_mode_t word_mode, const rm_selection_t mode_selection, const d_i_space_t s = i_space);
 	uint8_t  read_byte(const uint16_t a) override { return read(a, wm_byte, rm_cur); }
