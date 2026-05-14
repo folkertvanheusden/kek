@@ -1393,6 +1393,16 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 
 		return true;
 	}
+#if defined(BUILD_FOR_RP2040)
+	else if (cmd == "flash") {
+		int ch_opt = wait_for_key("y/n", cnsl, { 'y', 'n' });
+		if (ch_opt == 'y') {
+			rp2040.rebootToBootloader();
+			return false;
+		}
+		return true;
+	}
+#endif
 	else if (cmd == "quit" || cmd == "q") {
 		int ch_opt = wait_for_key("y/n", cnsl, { 'y', 'n' });
 		if (ch_opt == 'y') {
@@ -1412,6 +1422,9 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			"benchmark [-v]- run a benchmark",
 #if !defined(ESP32)
 			"quit/q        - stop emulator",
+#endif
+#if defined(BUILD_FOR_RP204o)
+			"flash         - jump to the bootloader to allow flashing new firmware",
 #endif
 			"examine/e     - show memory address (<octal address> <p|v> [<n>])",
 			"reset/r       - reset cpu/bus/etc",
