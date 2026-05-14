@@ -766,7 +766,6 @@ device *name_to_dev(bus *const b, const std::string & name)
 }
 
 struct debugger_state {
-	int32_t trace_start_addr { -1    };
 	int     n_single_step    {  1    };
 	bool    turbo            { false };
 	bool    marker           { false };
@@ -1008,7 +1007,6 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			settrace(parts[1] == "on" || parts[1] == "ON");
 
 		cnsl->put_string_lf(format("Tracing set to %s", gettrace() ? "ON" : "OFF"));
-
 		return true;
 	}
 	else if (parts[0] == "state" || parts[0] == "show") {
@@ -1059,20 +1057,6 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			mmu_resolve(cnsl, b, std::stoi(parts[1], nullptr, 8));
 		else
 			cnsl->put_string_lf("Parameter(s) missing");
-
-		return true;
-	}
-	else if (parts[0] == "strace") {
-		if (parts.size() != 2) {
-			state->trace_start_addr = -1;
-
-			cnsl->put_string_lf("Tracing start address reset");
-		}
-		else {
-			state->trace_start_addr = std::stoi(parts[1], nullptr, 8);
-
-			cnsl->put_string_lf(format("Tracing start address set to %06o", state->trace_start_addr));
-		}
 
 		return true;
 	}
@@ -1190,9 +1174,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 	}
 	else if (cmd == "cls") {
 		const char cls[] = { 27, '[', '2', 'J', 27, '[', 'H', 12, 0 };
-
 		cnsl->put_string_lf(cls);
-
 		return true;
 	}
 	else if (cmd == "turbo") {
@@ -1406,19 +1388,22 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			cnsl->put_string_lf("Debug mode is disabled!");
 
 		auto backtrace = c->get_stack_trace();
-
 		for(auto & element: backtrace)
 			cnsl->put_string_lf(format("%06o %s", element.first, element.second.c_str()));
 
 		return true;
 	}
 	else if (cmd == "quit" || cmd == "q") {
+		int ch_opt = wait_for_key("y/n", cnsl, { 'y', 'n' });
+		if (ch_opt == 'y') {
 #if defined(ESP32)
-		ESP.restart();
+			ESP.restart();
 #elif defined(BUILD_FOR_RP2040)
-		rp2040.reboot();
+			rp2040.reboot();
 #endif
-		return false;
+			return false;
+		}
+		return true;
 	}
 	else if (cmd == "help" || cmd == "h" || cmd == "?") {
 		constexpr const char *const help[] = {
@@ -1513,9 +1498,6 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		uint64_t since = get_us();
 		uint64_t took  = 0;
 		while(*stop_event == EVENT_NONE) {
-			if (state->trace_start_addr != -1 && c->getPC() == state->trace_start_addr)
-				settrace(true);
-
 			if ((gettrace() || state->single_step) && (state->t_rl.has_value() == false || state->t_rl.value() == c->getPSW_runmode())) {
 				if (!state->single_step)
 					TRACE("---");
