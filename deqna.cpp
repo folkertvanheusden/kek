@@ -327,6 +327,7 @@ void deqna::reset(const bool hard)
 
 void deqna::show_state(console *const cnsl) const
 {
+	cnsl->put_string_lf("Transport: " + eth_dev->identifier());
 	cnsl->put_string_lf(format("MAC: %02x:%02x:%02x:%02x:%02x:%02x", mac_address[0], mac_address[1], mac_address[2], mac_address[3], mac_address[4], mac_address[5]));
 	cnsl->put_string_lf(format("%zu packets queued", received.aprox_size()));
 	for(int i=0; i<8; i++)

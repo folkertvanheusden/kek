@@ -61,6 +61,11 @@ bool eth_transport_vxlan::begin()
 	return true;
 }
 
+std::string eth_transport_vxlan::identifier() const
+{
+	return format("vxlan:%s:%d", peer.c_str(), port);
+}
+
 void eth_transport_vxlan::transmit(const uint8_t *const data, const size_t n_bytes)
 {
 	size_t   wrapped_n = n_bytes + 8;
