@@ -41,7 +41,7 @@ kw11_l::~kw11_l()
 void kw11_l::show_state(console *const cnsl) const
 {
 	cnsl->put_string_lf(format("CSR: %06o", lf_csr));
-	cnsl->put_string_lf(format("%" PRIu64 " ticks, %" PRIu64 " interrupts", total_ticks, int_triggered));
+	cnsl->put_string_lf(format("%" PRIu64 " total ticks, %" PRIu64 " while enabled, %" PRIu64 " interrupts", total_ticks, enabled_ticks, int_triggered));
 }
 
 void kw11_l::begin(console *const cnsl)
@@ -65,7 +65,7 @@ void kw11_l::reset(const bool hard)
 
 void kw11_l::do_interrupt()
 {
-	total_ticks++;
+	enabled_ticks++;
 	set_lf_crs_b7();
 
 	if (get_lf_crs() & 64) {
@@ -87,18 +87,17 @@ void kw11_l::operator()()
 	TRACE("Starting KW11-L thread");
 
 	while(!stop_flag) {
-		if (*cnsl->get_running_flag()) {
-			int f = 0;
-			{
-				my_unique_lock lck(&lc_csr_lock);
-				f = int_frequency;
-			}
-			myusleep(1000000 / f);  // usually 50 or 60 Hz
+		total_ticks++;
+
+		int f = 0;
+		{
+			my_unique_lock lck(&lc_csr_lock);
+			f = int_frequency;
+		}
+		myusleep(1000000 / f);  // usually 50 or 60 Hz
+
+		if (*cnsl->get_running_flag())
 			do_interrupt();
-		}
-		else {
-			myusleep(1000000 / 10);  // 10 Hz
-		}
 	}
 
 	TRACE("KW11-L thread terminating");

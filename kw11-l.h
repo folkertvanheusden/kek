@@ -26,8 +26,9 @@ private:
 	uint16_t           lf_csr     { 0       };
 	bool               wall_clock { true    };
 
-	uint64_t           total_ticks{ 0       };
-	uint64_t           int_triggered { 0    };
+	uint64_t           total_ticks   { 0       };
+	uint64_t           enabled_ticks { 0       };
+	uint64_t           int_triggered { 0       };
 
 	std::atomic_bool   stop_flag  { false   };
 
