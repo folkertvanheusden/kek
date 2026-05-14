@@ -50,7 +50,7 @@ void kw11_l::begin(console *const cnsl)
 	this->cnsl = cnsl;
 
 #if defined(ESP32) || defined(BUILD_FOR_RP2040)
-	xTaskCreate(&thread_wrapper_kw11, "kw11-l", 2048, this, 2, nullptr);
+	xTaskCreate(&thread_wrapper_kw11, "kw11-l", 3072, this, 2, nullptr);
 #else
 	th = new std::thread(std::ref(*this));
 #endif
