@@ -1553,7 +1553,7 @@ bool cpu::misc_operations(const uint16_t instr)
 
 				do
 				{
-					// wait for 100 ms. if no interrupt for 1,5 seconds, then maybe things are stuck?
+					// wait intervals of 100 ms. if no interrupt for 1,5 seconds, then maybe things are stuck.
 #if defined(BUILD_FOR_RP2040)
 					uint8_t rc = 0;
 					xQueueReceive(qi_q, &rc, check_pending_interrupts() ? 0 : 100 / portTICK_PERIOD_MS);
@@ -1562,6 +1562,7 @@ bool cpu::misc_operations(const uint16_t instr)
 					std::unique_lock<std::mutex> lck(qi_lock);
 					if (check_pending_interrupts() == false)
 						qi_cv.wait_for(lck, 100 * 1ms);
+					lck.unlock();
 #endif
 					if (wait_stuck == false && get_us() - start > 1500000) {
 						wait_stuck = true;
