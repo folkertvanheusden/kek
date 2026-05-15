@@ -15,7 +15,7 @@
 #include "console_esp32.h"
 #include "cpu.h"
 #if defined(BUILD_FOR_PICO2W)
-#include "rp2040.h"
+#include "pico2w.h"
 #else
 #include "esp32.h"
 #endif

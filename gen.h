@@ -43,5 +43,5 @@ typedef enum { rm_prev, rm_cur } rm_selection_t;
 #endif
 
 #if defined(BUILD_FOR_PICO2W)
-#include "rp2040.h"
+#include "pico2w.h"
 #endif
