@@ -26,6 +26,12 @@ disk_backend_esp32::~disk_backend_esp32()
 	delete fh;
 }
 
+void disk_backend_esp32::show_state(console *const cnsl) const
+{
+	cnsl->put_string_lf("identifier: " + get_identifier());
+	cnsl->put_string_lf(format("offset: %u", fh->curPosition()));
+}
+
 JsonDocument disk_backend_esp32::serialize() const
 {
 	JsonDocument j;

@@ -2,6 +2,7 @@
 
 #include <vector>
 
+#include "console.h"
 #include "device.h"
 #include "disk_backend.h"
 
@@ -21,4 +22,9 @@ public:
 	virtual void begin() = 0;
 
 	std::vector<disk_backend *> * access_disk_backends() { return &fhs; }
+	void show_disk_backends(console *cnsl) const {
+		cnsl->put_string_lf("Disk backend(s):");
+		for(auto d: fhs)
+			d->show_state(cnsl);
+	}
 };

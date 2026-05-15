@@ -1,4 +1,4 @@
-// (C) 2018-2024 by Folkert van Heusden
+// (C) 2018-2026 by Folkert van Heusden
 // Released under MIT license
 
 #include "gen.h"
@@ -12,8 +12,7 @@ class disk_backend_file : public disk_backend
 {
 private:
 	const std::string filename;
-
-	int fd { -1 };
+	int               fd       { -1 };
 
 public:
 	disk_backend_file(const std::string & filename);
@@ -23,6 +22,7 @@ public:
 	static disk_backend_file *deserialize(const JsonVariantConst j);
 
 	std::string get_identifier() const override { return filename; }
+	void show_state(console *const cnsl) const override;
 
 	bool begin(const bool snapshots) override;
 

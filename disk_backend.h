@@ -1,4 +1,4 @@
-// (C) 2018-2024 by Folkert van Heusden
+// (C) 2018-2026 by Folkert van Heusden
 // Released under MIT license
 
 #pragma once
@@ -11,6 +11,8 @@
 #include <string>
 #include <vector>
 #include <sys/types.h>
+
+#include "console.h"
 
 
 class disk_backend
@@ -35,6 +37,7 @@ public:
 	static disk_backend *deserialize(const JsonVariantConst j);
 
 	virtual std::string get_identifier() const = 0;
+	virtual void show_state(console *const cnsl) const = 0;
 
 	virtual bool begin(const bool disk_snapshots) = 0;
 

@@ -1,4 +1,4 @@
-// (C) 2018-2024 by Folkert van Heusden
+// (C) 2018-2026 by Folkert van Heusden
 // Released under MIT license
 
 #include <cassert>
@@ -54,14 +54,17 @@ disk_backend_nbd::~disk_backend_nbd()
 #endif
 }
 
+void disk_backend_nbd::show_state(console *const cnsl) const
+{
+	cnsl->put_string_lf("identifier: " + get_identifier());
+}
+
 JsonDocument disk_backend_nbd::serialize() const
 {
 	JsonDocument j;
 
 	j["disk-backend-type"] = "nbd";
-
 	j["overlay"] = serialize_overlay();
-
 	// TODO store checksum of backend
 	j["host"] = host.c_str();
 	j["port"] = port;

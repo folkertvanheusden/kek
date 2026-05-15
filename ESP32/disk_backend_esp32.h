@@ -25,6 +25,7 @@ public:
 	static disk_backend_esp32 *deserialize(const JsonVariantConst j);
 
 	std::string get_identifier() const { return filename; }
+	void show_state(console *const cnsl) const override;
 
 	bool begin(const bool dummy) override;
 

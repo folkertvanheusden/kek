@@ -34,6 +34,7 @@ public:
 	static disk_backend_nbd *deserialize(const JsonVariantConst j);
 
 	std::string get_identifier() const override { return format("%s:%d", host.c_str(), port); }
+	void show_state(console *const cnsl) const override;
 
 	bool begin(const bool snapshots) override;
 

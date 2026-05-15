@@ -45,13 +45,17 @@ void rp06::reset(const bool hard)
 {
 	if (hard) {
 		memset(registers, 0x00, sizeof registers);
-
 		registers[reg_num(RP06_DS)] = default_DS;
 	}
 }
 
 void rp06::show_state(console *const cnsl) const
 {
+	cnsl->put_string_lf(format("mode: %s", is_rp07 ? "rp07": "rp06"));
+	for(int i=0; i<32; i++)
+		cnsl->put_string_lf(format("reg %d: %06o", i, registers[i]));
+	cnsl->put_string_lf(format("offset: %u", compute_offset()));
+	show_disk_backends(cnsl);
 }
 
 JsonDocument rp06::serialize() const
