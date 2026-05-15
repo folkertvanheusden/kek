@@ -774,7 +774,8 @@ struct debugger_state {
 	bool     single_step        { false };
 	bool     pc_monitor_enabled { false };
 	unsigned pc_monitor_count   { 0 };
-	std::unordered_map<uint16_t, uint32_t> pc_monitor;
+	unsigned pc_monitor_counter { 0 };
+	std::unordered_map<uint16_t, std::pair<uint32_t, int> > pc_monitor;
 };
 
 bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b, std::atomic_uint32_t *const stop_event, const std::string & cmd)
@@ -1372,6 +1373,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 	else if (parts[0] == "pcmon" && parts.size() == 2) {
 		state->pc_monitor_enabled = true;
 		state->pc_monitor_count   = std::stoi(parts.at(1));
+		state->pc_monitor_counter = 0;
 		return true;
 	}
 	else if (cmd == "cdz11") {
@@ -1544,14 +1546,14 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 				}
 			}
 
-			if (state->pc_monitor_count) {
-				state->pc_monitor_count--;
+			if (state->pc_monitor_counter != state->pc_monitor_count) {
+				state->pc_monitor_counter++;
 				auto pc = c->getPC();
 				auto it = state->pc_monitor.find(pc);
 				if (it != state->pc_monitor.end())
-					it->second++;
+					it->second.first++;
 				else
-					state->pc_monitor.insert({ pc, 1 });
+					state->pc_monitor.insert({ pc, { 1, state->pc_monitor_counter } });
 			}
 
 			c->step();
@@ -1559,16 +1561,19 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			if (state->single_step && --state->n_single_step == 0)
 				break;
 
-			if (state->pc_monitor_enabled && state->pc_monitor_count == 0)
+			if (state->pc_monitor_enabled && state->pc_monitor_counter == state->pc_monitor_count)
 				break;
 		}
 		if (gettrace() || go_verbose)
 			cnsl->put_string_lf(format("Took %.3f emulated milliseconds, %.3f wall clock time", took / 1000000., (get_us() - since) / 1000000.));
 
 		if (state->pc_monitor_enabled) {
+			std::map<int, std::pair<uint16_t, uint32_t> > ordered;
 			for(auto & entry: state->pc_monitor)
-				cnsl->put_string_lf(format("%06o: %u", entry.first, entry.second));
+				ordered.insert({ entry.second.second, { entry.first, entry.second.first } });
 			state->pc_monitor.clear();
+			for(auto & entry: ordered)
+				cnsl->put_string_lf(format("%5d] %06o: %u", entry.first, entry.second.first, entry.second.second));
 			state->pc_monitor_enabled = false;
 		}
 	}
