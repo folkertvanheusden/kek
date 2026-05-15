@@ -72,6 +72,7 @@ void rl02::show_state(console *const cnsl) const
 	cnsl->put_string_lf(format("track : %d", track ));
 	cnsl->put_string_lf(format("head  : %d", head  ));
 	cnsl->put_string_lf(format("sector: %d", sector));
+	show_disk_backends(cnsl);
 }
 
 JsonDocument rl02::serialize() const

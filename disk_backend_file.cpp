@@ -1,4 +1,4 @@
-// (C) 2018-2024 by Folkert van Heusden
+// (C) 2018-2026 by Folkert van Heusden
 // Released under MIT license
 
 #include <cassert>
@@ -21,16 +21,18 @@ disk_backend_file::~disk_backend_file()
 	close(fd);
 }
 
+void disk_backend_file::show_state(console *const cnsl) const
+{
+	cnsl->put_string_lf("identifier: " + get_identifier());
+}
+
 JsonDocument disk_backend_file::serialize() const
 {
 	JsonDocument j;
 
 	j["disk-backend-type"] = "file";
-
 	j["overlay"] = serialize_overlay();
-
 	// TODO store checksum of backend
-
 	j["filename"] = filename;
 
 	return j;
@@ -50,10 +52,8 @@ bool disk_backend_file::begin(const bool snapshots)
 #endif
 
 	fd = open(filename.c_str(), O_RDWR);
-
 	if (fd == -1) {
 		DOLOG(ll_error, true, "disk_backend_file: cannot open \"%s\": %s", filename.c_str(), strerror(errno));
-
 		return false;
 	}
 

@@ -56,6 +56,7 @@ void rk05::show_state(console *const cnsl) const
 	cnsl->put_string_lf(format("BA     : %06o", registers[4]));
 	cnsl->put_string_lf(format("DA     : %06o", registers[5]));
 	cnsl->put_string_lf(format("DATABUF: %06o", registers[6]));
+	show_disk_backends(cnsl);
 }
 
 uint8_t rk05::read_byte(const uint16_t addr)
