@@ -766,11 +766,14 @@ device *name_to_dev(bus *const b, const std::string & name)
 }
 
 struct debugger_state {
-	int     n_single_step    {  1    };
-	bool    turbo            { false };
-	bool    marker           { false };
+	int      n_single_step      {  1    };
+	bool     turbo              { false };
+	bool     marker             { false };
 	std::optional<int> t_rl;  // trace runlevel
-	bool    single_step      { false };
+	bool     single_step        { false };
+	bool     pc_monitor_enabled { false };
+	unsigned pc_monitor_count   { 0 };
+	std::map<uint16_t, uint32_t> pc_monitor;
 };
 
 bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b, std::atomic_uint32_t *const stop_event, const std::string & cmd)
@@ -1365,6 +1368,11 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 
 		return true;
 	}
+	else if (parts[0] == "pcmon" && parts.size() == 2) {
+		state->pc_monitor_enabled = true;
+		state->pc_monitor_count   = std::stoi(parts.at(1));
+		return true;
+	}
 	else if (cmd == "cdz11") {
 		if (b->getDZ11())
 			configure_comm(cnsl, b->getDZ11()->get_comm_interfaces());
@@ -1456,6 +1464,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			"setmem ...    - set memory (a=) to value (v=), both in octal, one byte",
 			"getmem ...    - get memory (a=), in octal, one byte",
 			"toggle ...    - set switch (s=, 0...15 (decimal)) of the front panel to state (t=, 0 or 1)",
+			"pcmon x       - track for x cycles what memory addresses were read an instruction from",
 			"setinthz x    - set KW11-L interrupt frequency (Hz)",
 			"cls           - clear screen",
 			"dir           - list files",
@@ -1534,13 +1543,33 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 				}
 			}
 
+			if (state->pc_monitor_count) {
+				state->pc_monitor_count--;
+				auto pc = c->getPC();
+				auto it = state->pc_monitor.find(pc);
+				if (it != state->pc_monitor.end())
+					it->second++;
+				else
+					state->pc_monitor.insert({ pc, 1 });
+			}
+
 			c->step();
 
 			if (state->single_step && --state->n_single_step == 0)
 				break;
+
+			if (state->pc_monitor_enabled && state->pc_monitor_count == 0)
+				break;
 		}
 		if (gettrace() || go_verbose)
 			cnsl->put_string_lf(format("Took %.3f emulated milliseconds, %.3f wall clock time", took / 1000000., (get_us() - since) / 1000000.));
+
+		if (state->pc_monitor_enabled) {
+			for(auto & entry: state->pc_monitor)
+				cnsl->put_string_lf(format("%06o: %u", entry.first, entry.second));
+			state->pc_monitor.clear();
+			state->pc_monitor_enabled = false;
+		}
 	}
 
 	*cnsl->get_running_flag() = false;
