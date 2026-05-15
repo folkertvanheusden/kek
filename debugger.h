@@ -6,7 +6,7 @@
 #include "gen.h"
 
 
-int disassemble(cpu *const c, console *const cnsl, const uint16_t pc, const bool instruction_only);
+std::tuple<int, uint32_t, bool, std::string> disassemble(cpu *const c, console *const cnsl, const uint16_t pc, const bool instruction_only);
 void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const stop_event, const std::optional<std::string> & init);
 
 void simple_run(console *const cnsl, bus *const b, std::atomic_uint32_t *const stop_event);

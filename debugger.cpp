@@ -451,12 +451,12 @@ void configure_disk(bus *const b, console *const cnsl)
 	}
 }
 
-// returns size of instruction (in bytes) and duration
-std::pair<int, uint32_t> disassemble(cpu *const c, console *const cnsl, const uint16_t pc, const bool instruction_only)
+// returns size of instruction (in bytes), duration and if it was accessing something different from RAM/ROM
+std::tuple<int, uint32_t, bool, std::string> disassemble(cpu *const c, console *const cnsl, const uint16_t pc, const bool instruction_only)
 {
 	auto data      = c->disassemble(pc);
 	if (data.empty())
-		return { 2, 0 };  // problem!
+		return { 2, 0, true, "?" };  // problem!
 
 	auto registers = data["registers"];
 	auto psw       = data["psw"][0];
@@ -496,18 +496,16 @@ std::pair<int, uint32_t> disassemble(cpu *const c, console *const cnsl, const ui
 				instruction_values.c_str(),
 				instruction.c_str(), duration_f);
 
-	if (cnsl)
-		cnsl->put_string_lf(result);
-	else
-		DOLOG(debug, false, "%s", result.c_str());
-
 	std::string sp;
 	for(auto sp_val : data["sp"])
 		sp += (sp.empty() ? "" : ",") + sp_val;
 
 	DOLOG(debug, false, "SP: %s, MMR0/1/2/3: %s/%s/%s/%s", sp.c_str(), MMR0.c_str(), MMR1.c_str(), MMR2.c_str(), MMR3.c_str());
 
-	return { data["instruction-values"].size() * 2, duration };
+	if (cnsl)
+		cnsl->put_string_lf(result);
+
+	return { data["instruction-values"].size() * 2, duration, std::stoi(data["works-on-io"][0]), result };
 }
 
 std::map<std::string, std::string> split(const std::vector<std::string> & kv_array, const std::string & splitter)
@@ -606,6 +604,9 @@ void show_cpu_state(console *const cnsl, cpu *const c)
 			cnsl->put_string_lf("");
 		}
 	}
+	std::unordered_map<uint16_t, uint32_t> trap_counts = c->get_trap_counts();
+	for(auto & vector: trap_counts)
+		cnsl->put_string_lf(format("vector %06o count: %u", vector.first, vector.second));
 	cnsl->put_string_lf(format("stack limit register: %06o", c->get_stack_limit_register()));
 }
 
@@ -874,7 +875,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		bool show_registers = kv.find("pc") == kv.end();
 
 		for(int i=0; i<n; i++) {
-			pc += disassemble(c, cnsl, pc, !show_registers).first;
+			pc += std::get<0>(disassemble(c, cnsl, pc, !show_registers));
 			show_registers = false;
 		}
 
@@ -1520,15 +1521,20 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 	else {
 		reset_cpu = false;
 
-		uint64_t since = get_us();
-		uint64_t took  = 0;
+		uint64_t total_wait_duration = 0;
+		uint64_t wait_count          = 0;
+		uint16_t last_pc             = 0;
+		uint64_t since               = get_us();
+		uint64_t took                = 0;
+		uint64_t start_trap_count    = c->get_trap_counter();
+		std::unordered_map<uint16_t, uint32_t> trap_counts_before = c->get_trap_counts();
 		while(*stop_event == EVENT_NONE) {
 			if ((gettrace() || state->single_step) && (state->t_rl.has_value() == false || state->t_rl.value() == c->getPSW_runmode())) {
 				if (!state->single_step)
 					TRACE("---");
 
 				auto rc = disassemble(c, state->single_step ? cnsl : nullptr, c->getPC(), false);
-				took += rc.second;
+				took += std::get<1>(rc);
 			}
 
 			auto bp_result = c->check_breakpoint();
@@ -1546,9 +1552,10 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 				}
 			}
 
+			auto pc = c->getPC();
 			if (state->pc_monitor_counter != state->pc_monitor_count) {
 				state->pc_monitor_counter++;
-				auto pc = c->getPC();
+				last_pc = pc;
 				auto it = state->pc_monitor.find(pc);
 				if (it != state->pc_monitor.end())
 					it->second.first++;
@@ -1556,7 +1563,17 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 					state->pc_monitor.insert({ pc, { 1, state->pc_monitor_counter } });
 			}
 
-			c->step();
+			uint16_t instr = b->read_word(pc);
+			if (instr == 0) {  // WAIT
+				uint64_t wait_start = get_us();
+				c->step();
+				uint64_t wait_end = get_us();
+				total_wait_duration += wait_end - wait_start;
+				wait_count++;
+			}
+			else {
+				c->step();
+			}
 
 			if (state->single_step && --state->n_single_step == 0)
 				break;
@@ -1564,18 +1581,42 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			if (state->pc_monitor_enabled && state->pc_monitor_counter == state->pc_monitor_count)
 				break;
 		}
-		if (gettrace() || go_verbose)
-			cnsl->put_string_lf(format("Took %.3f emulated milliseconds, %.3f wall clock time", took / 1000000., (get_us() - since) / 1000000.));
+		uint64_t end_trap_count = c->get_trap_counter();
+		std::unordered_map<uint16_t, uint32_t> trap_counts_after = c->get_trap_counts();
 
 		if (state->pc_monitor_enabled) {
 			std::map<int, std::pair<uint16_t, uint32_t> > ordered;
 			for(auto & entry: state->pc_monitor)
 				ordered.insert({ entry.second.second, { entry.first, entry.second.first } });
 			state->pc_monitor.clear();
-			for(auto & entry: ordered)
-				cnsl->put_string_lf(format("%5d] %06o: %u", entry.first, entry.second.first, entry.second.second));
-			state->pc_monitor_enabled = false;
+			unsigned expected_count = state->pc_monitor_counter / ordered.size();
+			for(auto & entry: ordered) {
+				auto rc = disassemble(c, nullptr, entry.second.first, true);
+				cnsl->put_string_lf(format("%5d] %4u %c%c%c\t%s", entry.first, entry.second.second,
+							entry.second.second > expected_count ? '*' : ' ',
+							entry.second.first == last_pc ? 'L' : ' ',
+							std::get<2>(rc) ? 'I': ' ',
+							std::get<3>(rc).c_str()));
+			}
+			cnsl->put_string_lf(format("%zu counters in %u instructions", ordered.size(), state->pc_monitor_count));
 		}
+
+		if (gettrace() || go_verbose || state->pc_monitor_enabled) {
+			cnsl->put_string_lf(format("Took %.3f emulated ms, %.3f s wall clock time, avg. wait duration: %.3f us, traps: %zu",
+						took / 1000000.,  // took is nanoseconds
+						(get_us() - since) / 1000000.,
+						wait_count > 0 ? total_wait_duration / double(wait_count) : 0,
+					size_t(end_trap_count - start_trap_count)));
+			for(auto & trap : trap_counts_after) {
+				uint32_t cnt = trap.second; 
+				auto     it  = trap_counts_before.find(trap.first);
+				if (it != trap_counts_before.end())
+					cnt -= it->second;
+				cnsl->put_string_lf(format("trap vec %06o: %u", trap.first, cnt));
+			}
+		}
+
+		state->pc_monitor_enabled = false;
 	}
 
 	*cnsl->get_running_flag() = false;
