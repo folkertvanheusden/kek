@@ -1539,6 +1539,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 
 			auto bp_result = c->check_breakpoint();
 			if (bp_result.has_value()) {
+				DOLOG(debug, false, "Breakpoint: %s", bp_result.value().second.c_str());
 				if (bp_result.value().first.get_action() == breakpoint::bp_action::stop_running) {
 					cnsl->put_string_lf("Breakpoint: " + bp_result.value().second);
 					if (!state->single_step)

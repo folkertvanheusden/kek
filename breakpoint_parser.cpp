@@ -3,6 +3,7 @@
 
 #include "breakpoint.h"
 #include "breakpoint_and.h"
+#include "breakpoint_instruction.h"
 #include "breakpoint_memory.h"
 #include "breakpoint_or.h"
 #include "breakpoint_register.h"
@@ -99,6 +100,15 @@ std::pair<breakpoint *, std::optional<std::string> > parse_breakpoint(bus *const
 
 				if (rc_mem.first)
 					parsed.push_back(rc_mem.first);
+
+				auto rc_instruction = breakpoint_instruction::parse(b, parts[i], action);
+				if (rc_instruction.first == nullptr && rc_instruction.second.has_value()) {
+					delete_parsed(parsed);
+					return { nullptr, "not understood: " + rc_instruction.second.value() };
+				}
+
+				if (rc_instruction.first)
+					parsed.push_back(rc_instruction.first);
 			}
 		}
 	}
