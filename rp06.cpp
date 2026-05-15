@@ -54,7 +54,7 @@ void rp06::show_state(console *const cnsl) const
 {
 	cnsl->put_string_lf(format("mode: %s", is_rp07 ? "rp07": "rp06"));
 	for(int i=0; i<32; i += 4)
-		cnsl->put_string_lf(format("reg %d: %06o %06o %06o %06o", i,
+		cnsl->put_string_lf(format("reg %2d: %06o %06o %06o %06o", i,
 					registers[i + 0], registers[i + 1], registers[i + 2], registers[i + 3]));
 	cnsl->put_string_lf(format("offset: %u", compute_offset()));
 	cnsl->put_string_lf(format("total interrupts: %u, forwarded: %u", int_cnt_total, int_cnt));
