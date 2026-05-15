@@ -41,6 +41,8 @@ private:
 	bus     *const b       { nullptr };
 	bool     is_rp07       { false   };
 	uint16_t registers[32] {         };
+	unsigned int_cnt       { 0       };
+	unsigned int_cnt_total { 0       };
 
 	std::atomic_bool *const disk_read_activity  { nullptr };
 	std::atomic_bool *const disk_write_activity { nullptr };

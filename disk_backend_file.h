@@ -21,7 +21,7 @@ public:
 	JsonDocument serialize() const override;
 	static disk_backend_file *deserialize(const JsonVariantConst j);
 
-	std::string get_identifier() const override { return filename; }
+	std::string get_identifier() const override { return "file:" + filename; }
 	void show_state(console *const cnsl) const override;
 
 	bool begin(const bool snapshots) override;
