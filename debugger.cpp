@@ -1440,7 +1440,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 #endif
 			"examine/e     - show memory address (<octal address> <p|v> [<n>])",
 			"reset/r       - reset cpu/bus/etc",
-			"single/s      - run 1 instruction (implicit 'disassemble' command)",
+			"single/s [x]  - run 1 (or x-) instruction (implicit 'disassemble' command)",
 			"sbp/cbp/lbp   - set/clear/list breakpoint(s)",
 			"                e.g.: action (pc=0123 and memwv[04000]=0200,0300 and (r4=07,05 or r5=0456) and instr[]=1)",
 			"                values seperated by ',', char after mem is w/b (word/byte), then",
