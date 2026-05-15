@@ -3,6 +3,7 @@
 
 #include <fstream>
 #include <optional>
+#include <unordered_map>
 #include "gen.h"
 #if IS_POSIX || defined(_WIN32)
 #include <dirent.h>
@@ -773,7 +774,7 @@ struct debugger_state {
 	bool     single_step        { false };
 	bool     pc_monitor_enabled { false };
 	unsigned pc_monitor_count   { 0 };
-	std::map<uint16_t, uint32_t> pc_monitor;
+	std::unordered_map<uint16_t, uint32_t> pc_monitor;
 };
 
 bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b, std::atomic_uint32_t *const stop_event, const std::string & cmd)
