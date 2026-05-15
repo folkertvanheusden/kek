@@ -46,15 +46,18 @@ void rp06::reset(const bool hard)
 	if (hard) {
 		memset(registers, 0x00, sizeof registers);
 		registers[reg_num(RP06_DS)] = default_DS;
+		int_cnt = 0;
 	}
 }
 
 void rp06::show_state(console *const cnsl) const
 {
 	cnsl->put_string_lf(format("mode: %s", is_rp07 ? "rp07": "rp06"));
-	for(int i=0; i<32; i++)
-		cnsl->put_string_lf(format("reg %d: %06o", i, registers[i]));
+	for(int i=0; i<32; i += 4)
+		cnsl->put_string_lf(format("reg %2d: %06o %06o %06o %06o", i,
+					registers[i + 0], registers[i + 1], registers[i + 2], registers[i + 3]));
 	cnsl->put_string_lf(format("offset: %u", compute_offset()));
+	cnsl->put_string_lf(format("total interrupts: %u, forwarded: %u", int_cnt_total, int_cnt));
 	show_disk_backends(cnsl);
 }
 
@@ -238,8 +241,11 @@ void rp06::write_word(const uint16_t addr, uint16_t v)
 			}
 
 			if (generate_interrupt) {
-				if (registers[reg_num(RP06_CS1)] & uint16_t(rp06::cs1_bits::IE))  // IE? (interrupt enable)
+				int_cnt_total++;
+				if (registers[reg_num(RP06_CS1)] & uint16_t(rp06::cs1_bits::IE)) {  // IE? (interrupt enable)
+					int_cnt++;
 					b->getCpu()->queue_interrupt(5, 0254);
+				}
 			}
 		}
 	}

@@ -9,11 +9,11 @@
 #include <atomic>
 #include <cassert>
 #include <condition_variable>
-#include <map>
 #include <mutex>
 #include <optional>
 #include <set>
 #include <stdint.h>
+#include <unordered_map>
 #include <vector>
 
 
@@ -59,6 +59,8 @@ private:
 	std::vector<std::pair<uint16_t, std::string> > stacktrace;
 	int      kw11l_counter      { 0     };
 	bool     wait_stuck         { false };
+	uint64_t trap_counter       { 0     };
+	std::unordered_map<uint16_t, uint32_t> trap_counts;
 
 	// vector, 8 levels
 	std::array<std::set<uint16_t>, 8> queued_interrupts;
@@ -71,8 +73,8 @@ private:
 	std::condition_variable qi_cv;
 #endif
 
-	std::map<int, breakpoint *> breakpoints;
-	int                         bp_nr       { 0 };
+	std::unordered_map<int, breakpoint *> breakpoints;
+	int                     bp_nr       { 0 };
 
 	bus *const b    { nullptr };
 	mmu *const mmu_ { nullptr };
@@ -125,10 +127,10 @@ public:
 	std::optional<std::pair<breakpoint &, const std::string> > check_breakpoint();
 	int                         set_breakpoint(breakpoint *const bp);
 	bool                        remove_breakpoint(const int bp_id);
-	std::map<int, breakpoint *> list_breakpoints();
+	std::unordered_map<int, breakpoint *> list_breakpoints();
 
 	void disassemble(void) const;
-	std::map<std::string, std::vector<std::string> > disassemble(const uint16_t addr) const;
+	std::unordered_map<std::string, std::vector<std::string> > disassemble(const uint16_t addr) const;
 
 	bus *getBus() { return b; }
 
@@ -140,6 +142,8 @@ public:
 	bool     step ();
 
 	uint32_t calc_instruction_duration(const uint16_t pc) const;  // nanoseconds
+	uint64_t get_trap_counter() const { return trap_counter; }
+	auto     get_trap_counts() const { return trap_counts; }
 
 	void     push_stack(const uint16_t v);
 	uint16_t pop_stack();

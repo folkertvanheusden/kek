@@ -74,7 +74,7 @@ bool cpu::remove_breakpoint(const int bp_id)
 	return breakpoints.erase(bp_id) == 1;
 }
 
-std::map<int, breakpoint *> cpu::list_breakpoints()
+std::unordered_map<int, breakpoint *> cpu::list_breakpoints()
 {
 	return breakpoints;
 }
@@ -350,7 +350,7 @@ void cpu::execute_any_pending_interrupt()
 			uint16_t v      = *vector;
 			queued_interrupts[i].erase(vector);
 #if defined(ESP32)
-			if (v = 0100) {  // 50 Hz interrupt
+			if (v == 0100) {  // 50 Hz interrupt
 				if (++kw11l_counter >= 25) {
 					kw11l_counter = 0;
 					digitalWrite(HEARTBEAT_PIN, !digitalRead(HEARTBEAT_PIN));
@@ -1692,6 +1692,13 @@ void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 {
 	TRACE("*** CPU::TRAP %o, new-ipl: %d, is-interrupt: %d, run mode: %d ***", vector, new_ipl, is_interrupt, getPSW_runmode());
 
+	auto it = trap_counts.find(vector);
+	if (it == trap_counts.end())
+		trap_counts.insert({ vector, 1 });
+	else
+		it->second++;
+	trap_counter++;
+
 	uint16_t before_psw = 0;
 	uint16_t before_pc  = 0;
 
@@ -1770,7 +1777,7 @@ cpu::operand_parameters cpu::addressing_to_string(const uint8_t mode_register, c
 	int         run_mode  = getPSW_runmode();
 	auto        temp      = b->peek_word(run_mode, pc);
 	if (temp.has_value() == false) {
-		operand_parameters out;
+		operand_parameters out { };
 		out.error = "cannot read from memory";
 		return out;
 	}
@@ -1835,63 +1842,62 @@ cpu::operand_parameters cpu::addressing_to_string(const uint8_t mode_register, c
 			return { format("@(%s)+", reg_name.c_str()), 2, -1, uint16_t(temp2.value() & mask), valid, error };
 
 		case 4: {
-			uint16_t calculated_address = get_register(reg) - (word_mode == wm_word || reg >= 6 ? 2 : 1);
-			temp2 = b->peek_word(run_mode, calculated_address);
-			if (temp2.has_value() == false)
-				temp2 = 0xffff, valid = false, error = format("cannot fetch memory from %o", calculated_address);
+				uint16_t calculated_address = get_register(reg) - (word_mode == wm_word || reg >= 6 ? 2 : 1);
+				temp2 = b->peek_word(run_mode, calculated_address);
+				if (temp2.has_value() == false)
+					temp2 = 0xffff, valid = false, error = format("cannot fetch memory from %o", calculated_address);
 
-			return { format("-(%s)", reg_name.c_str()), 2, -1, uint16_t(temp2.value() & mask), valid, error };
+				return { format("-(%s)", reg_name.c_str()), 2, -1, uint16_t(temp2.value() & mask), valid, error };
 			}
 
 		case 5: {
-			uint16_t calculated_address = get_register(reg) - 2;
-			temp2 = b->peek_word(run_mode, calculated_address);
-			if (temp2.has_value() == false)
-				temp2 = 0xffff, valid = false, error = format("cannot fetch memory from %o", calculated_address);
-			else {
-				temp2 = b->peek_word(run_mode, temp2.value());
+				uint16_t calculated_address = get_register(reg) - 2;
+				temp2 = b->peek_word(run_mode, calculated_address);
 				if (temp2.has_value() == false)
-					temp2 = 0xffff, valid = false, error = format("cannot fetch memory from %o", temp2.value());
-			}
+					temp2 = 0xffff, valid = false, error = format("cannot fetch memory from %o", calculated_address);
+				else {
+					temp2 = b->peek_word(run_mode, temp2.value());
+					if (temp2.has_value() == false)
+						temp2 = 0xffff, valid = false, error = format("cannot fetch memory from %o", temp2.value());
+				}
 
-			return { format("@-(%s)", reg_name.c_str()), 2, -1, uint16_t(temp2.value() & mask), valid, error };
+				return { format("@-(%s)", reg_name.c_str()), 2, -1, uint16_t(temp2.value() & mask), valid, error };
 			}
 
 		case 6:
 			{
-			uint16_t calculated_address = get_register(reg) + next_word;
-			temp2 = b->peek_word(run_mode, calculated_address);
-			if (temp2.has_value() == false)
-				temp2 = 0xffff, valid = false, error = format("cannot fetch memory from %o", calculated_address);
+				uint16_t calculated_address = get_register(reg) + next_word;
+				temp2 = b->peek_word(run_mode, calculated_address);
+				if (temp2.has_value() == false)
+					temp2 = 0xffff, valid = false, error = format("cannot fetch memory from %o", calculated_address);
 
-			if (reg == 7)
-				return { format("%06o", (pc + next_word + 2) & 65535), 4, int(next_word), uint16_t(temp2.value() & mask), valid, error };
+				if (reg == 7)
+					return { format("%06o", (pc + next_word + 2) & 65535), 4, int(next_word), uint16_t(temp2.value() & mask), valid, error };
 
-			return { format("%o(%s)", next_word, reg_name.c_str()), 4, int(next_word), uint16_t(temp2.value() & mask), valid, error };
+				return { format("%o(%s)", next_word, reg_name.c_str()), 4, int(next_word), uint16_t(temp2.value() & mask), valid, error };
 			}
 
 		case 7:
 			{
-			uint16_t calculated_address = get_register(reg) + next_word;
-			temp2 = b->peek_word(run_mode, calculated_address);
-			if (temp2.has_value() == false)
-				temp2 = 0xffff, valid = false, error = format("cannot fetch memory from %o", calculated_address);
-			else {
-				temp2 = b->peek_word(run_mode, temp2.value());
+				uint16_t calculated_address = get_register(reg) + next_word;
+				temp2 = b->peek_word(run_mode, calculated_address);
 				if (temp2.has_value() == false)
-					temp2 = 0xffff, valid = false, error = format("cannot fetch memory from %o", temp2.value());
-			}
+					temp2 = 0xffff, valid = false, error = format("cannot fetch memory from %o", calculated_address);
+				else {
+					temp2 = b->peek_word(run_mode, temp2.value());
+					if (temp2.has_value() == false)
+						temp2 = 0xffff, valid = false, error = format("cannot fetch memory from %o", temp2.value());
+				}
 
-			if (reg == 7)
-				return { format("@%06o", next_word), 4, int(next_word), uint16_t(temp2.value() & mask), valid, error };
+				if (reg == 7)
+					return { format("@%06o", next_word), 4, int(next_word), uint16_t(temp2.value() & mask), valid, error };
 
-			return { format("@%o(%s)", next_word, reg_name.c_str()), 4, int(next_word), uint16_t(temp2.value() & mask), valid, error };
+				return { format("@%o(%s)", next_word, reg_name.c_str()), 4, int(next_word), uint16_t(temp2.value() & mask), valid, error };
 			}
 	}
 
-	operand_parameters out;
+	operand_parameters out { };
 	out.error  = format("unknown register mode %d", mode);
-
 	return out;
 }
 
@@ -2190,7 +2196,7 @@ uint32_t cpu::calc_instruction_duration(const uint16_t pc) const
 					break;
 
 				case 7:  // SOB
-					ef_time  = lowlevel_register_get(run_mode, src_reg) >= 1 ? 600 : 750;  // branch is faster
+					ef_time  = lowlevel_register_get(get_register_set(), src_reg) >= 1 ? 600 : 750;  // branch is faster
 					break;
 			}
 			break;
@@ -2256,7 +2262,7 @@ uint32_t cpu::calc_instruction_duration(const uint16_t pc) const
 	return result;
 }
 
-std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t addr) const
+std::unordered_map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t addr) const
 {
 	auto        temp          = b->peek_word(getPSW_runmode(), addr);
 	if (temp.has_value() == false)
@@ -2280,11 +2286,13 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 
 	std::vector<uint16_t> instruction_words { instruction };
 	std::vector<uint16_t> work_values;
+	bool                  might_be_io = false;  // is this instruction working on io
 
 	// TODO: 100000011
 
 	if (do_opcode == 0b000) {
 		auto addressing = addressing_to_string(dst_register, addr + 2, word_mode);
+		might_be_io = addressing.valid == false;
 		auto dst_text { addressing };
 
 		auto next_word = dst_text.instruction_part;
@@ -2384,6 +2392,7 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 		else {
 			std::string src_text = format("R%d", (instruction >> 6) & 7);
 			auto        addressing = addressing_to_string(dst_register, addr + 2, word_mode);
+			might_be_io = addressing.valid == false;
 			auto        dst_text { addressing };
 
 			auto next_word = dst_text.instruction_part;
@@ -2458,6 +2467,7 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 
 		// source
 		auto addressing_src = addressing_to_string(src_register, addr + 2, word_mode);
+		might_be_io = addressing_src.valid == false;
 		auto src_text { addressing_src };
 
 		auto next_word_src = src_text.instruction_part;
@@ -2468,6 +2478,7 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 
 		// destination
 		auto addressing_dst = addressing_to_string(dst_register, addr + src_text.length, word_mode);
+		might_be_io = addressing_dst.valid == false;
 		auto dst_text { addressing_dst };
 
 		auto next_word_dst = dst_text.instruction_part;
@@ -2625,6 +2636,7 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 
 		if ((instruction & ~0b111111) == 0b0000000001000000) {
 			auto addressing = addressing_to_string(dst_register, addr + 2, word_mode);
+			might_be_io = addressing.valid == false;
 			auto dst_text { addressing };
 
 			auto next_word = dst_text.instruction_part;
@@ -2644,6 +2656,7 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 
 		if ((instruction & 0b1111111000000000) == 0b0000100000000000) {
 			auto addressing = addressing_to_string(dst_register, addr + 2, word_mode);
+			might_be_io = addressing.valid == false;
 			auto dst_text { addressing };
 
 			auto next_word = dst_text.instruction_part;
@@ -2662,9 +2675,8 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 	if (text.empty())
 		text = "???";
 
-	std::map<std::string, std::vector<std::string> > out;
+	std::unordered_map<std::string, std::vector<std::string> > out;
 
-	// MOV x,y
 	out.insert({ "address", { format("%06o", addr) } });
 
 	// MOV x,y
@@ -2688,14 +2700,11 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 		else
 			registers.push_back(format("%06o", addr));
 	}
-
 	out.insert({ "registers", registers });
 
 	std::vector<std::string> registers_sp;
-
 	for(int i=0; i<4; i++)
 		registers_sp.push_back(format("%06o", sp[i]));
-
 	out.insert({ "sp", registers_sp });
 
 	// PSW
@@ -2716,6 +2725,8 @@ std::map<std::string, std::vector<std::string> > cpu::disassemble(const uint16_t
 	out.insert({ "MMR3", { format("%06o", mmu_->getMMR3()) } });
 
 	out.insert({ "duration", { format("%u", calc_instruction_duration(addr)) } });
+
+	out.insert({ "works-on-io", { format("%u", might_be_io) } });
 
 	return out;
 }
@@ -2748,7 +2759,7 @@ bool cpu::step()
 			return true;
 		}
 
-		DOLOG(warning, false, "UNHANDLED instruction %06o @ %06o", instr, instruction_start);
+		DOLOG(debug, false, "UNHANDLED instruction %06o @ %06o", instr, instruction_start);
 
 		trap(010);  // floating point nog niet geimplementeerd
 

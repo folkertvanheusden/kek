@@ -23,7 +23,7 @@ std::optional<std::string> breakpoint_memory::is_triggered() const
 	uint16_t v  = 0;
 
 	if (is_virtual) {
-		auto temp = b->peek_word(rm_cur, addr);  // FIXME rm_cur
+		auto temp = b->peek_word(b->getCpu()->getPSW_runmode(), addr);
 		if (temp.has_value() == false)
 			return { };
 

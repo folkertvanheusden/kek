@@ -26,6 +26,7 @@ set(APP_SOURCES
   blinkenlights.cpp
   breakpoint.cpp
   breakpoint_and.cpp
+  breakpoint_instruction.cpp
   breakpoint_memory.cpp
   breakpoint_or.cpp
   breakpoint_parser.cpp
