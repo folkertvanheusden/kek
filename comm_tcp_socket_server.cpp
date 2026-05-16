@@ -171,6 +171,7 @@ void comm_tcp_socket_server::operator()()
 
 	fd = socket(AF_INET, SOCK_STREAM, 0);
 
+#if !defined(_WIN32)
 	int reuse_addr = 1;
 	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char *>(&reuse_addr), sizeof(reuse_addr)) == -1) {
 		closesocket(fd);
@@ -179,7 +180,7 @@ void comm_tcp_socket_server::operator()()
 		DOLOG(warning, true, "Cannot set reuseaddress for port %d (comm_tcp_socket_server)", port);
 		return;
 	}
-
+#endif
 	set_nodelay(fd);
 
 	sockaddr_in listen_addr;
