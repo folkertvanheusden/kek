@@ -9,6 +9,9 @@
 #if IS_POSIX || defined(_WIN32)
 #include "disk_backend_file.h"
 #endif
+#if defined(ESP32)
+#include "disk_backend_esp32.h"
+#endif
 #if !defined(BUILD_FOR_PICO2W)
 #include "disk_backend_nbd.h"
 #endif
