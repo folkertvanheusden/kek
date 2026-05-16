@@ -83,12 +83,11 @@ void dz11::show_state(console *const cnsl) const
 
 bool dz11::begin()
 {
-#if defined(ESP32) || defined(BUILD_FOR_PICO2W)
-	xTaskCreate(&thread_wrapper_dz11, "dz11", 3072, this, 1, nullptr);
+#if defined(ESP32) || defined(FREERTOS)
+	xTaskCreate(&thread_wrapper_dz11, "dz11", 1024, this, 1, nullptr);
 #else
 	th = new std::thread(std::ref(*this));
 #endif
-
 	return true;
 }
 
