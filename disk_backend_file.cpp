@@ -50,8 +50,11 @@ bool disk_backend_file::begin(const bool snapshots)
 #if IS_POSIX
 	use_overlay = snapshots;
 #endif
-
+#if defined(_WIN32)
+	fd = open(filename.c_str(), O_RDWR | O_BINARY);
+#else
 	fd = open(filename.c_str(), O_RDWR);
+#endif
 	if (fd == -1) {
 		DOLOG(ll_error, true, "disk_backend_file: cannot open \"%s\": %s", filename.c_str(), strerror(errno));
 		return false;
@@ -81,8 +84,8 @@ bool disk_backend_file::read(const off_t offset_in, const size_t n, uint8_t *con
 		if (lseek(fd, offset, SEEK_SET) == -1)
 			return false;
 
-		 if (::read(fd, target, n) != ssize_t(n))
-			 return false;
+		 if (ssize_t rc = ::read(fd, target, n); rc != ssize_t(n))
+			return false;
 #else
 		ssize_t rc = pread(fd, target, n, offset);
 		if (rc != ssize_t(n)) {

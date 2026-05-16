@@ -16,8 +16,9 @@ int asprintf(char **strp, const char *format, ...);
 #  define NTDDI_VERSION _NTDDI_VERSION_FROM_WIN32_WINNT(_WIN32_WINNT)
 #endif
 
-#include <ws2tcpip.h>
+#include <conio.h>
 #include <winsock2.h>
+#include <ws2tcpip.h>
 
 /*
 typedef struct pollfd {

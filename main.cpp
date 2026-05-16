@@ -53,12 +53,14 @@ blinkenlights     bl;
 std::atomic_bool  sigw_event   { false };
 
 constexpr const uint16_t validation_psw_mask = 0174037;  // ignore unused bits & priority(!)
+constexpr const int      default_port_offset = 1100;
 
-constexpr const int default_port_offset = 1100;
-
-#if !defined(_WIN32)
 void sw_handler(int s)
 {
+#if defined(_WIN32)
+	fprintf(stderr, "Terminating...\n");
+	event = EVENT_TERMINATE;
+#else
 	if (s == SIGWINCH)
 		sigw_event = true;
 	else {
@@ -66,8 +68,10 @@ void sw_handler(int s)
 
 		event = EVENT_TERMINATE;
 	}
+#endif
 }
 
+#if !defined(_WIN32)
 std::vector<std::pair<uint32_t, uint8_t> > get_memory_settings(const JsonArrayConst & ja)
 {
 	std::vector<std::pair<uint32_t, uint8_t> > out;
@@ -657,7 +661,9 @@ int main(int argc, char *argv[])
 
 	DOLOG(info, true, "Start running at %06o", b->getCpu()->get_register(7));
 
-#if !defined(_WIN32)
+#if defined(_WIN32)
+	signal(SIGINT, sw_handler);
+#else
 	struct sigaction sa { };
 	sa.sa_handler = sw_handler;
 	sigemptyset(&sa.sa_mask);

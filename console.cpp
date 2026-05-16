@@ -290,6 +290,7 @@ void console::operator()()
 			refresh_virtual_terminal();
 		else
 			input_buffer.push(c);
+		printf("%c\n", c);
 	}
 
 	TRACE("Console thread terminating");
