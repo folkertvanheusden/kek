@@ -1133,7 +1133,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 
 		return true;
 	}
-#if defined(ESP32) || defined(BUILD_FOR_PICO2W)
+#if defined(ESP32) || defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 	else if (parts[0] == "cfgnet") {
 		network_configured = true;
 		if (parts.size() == 2)
