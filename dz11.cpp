@@ -88,7 +88,6 @@ bool dz11::begin()
 #else
 	th = new std::thread(std::ref(*this));
 #endif
-
 	return true;
 }
 
