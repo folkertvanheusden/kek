@@ -190,7 +190,7 @@ void dolog(const log_level_t ll, const char *fmt, ...)
 
 		tm tm { };
 #if defined(_WIN32)
-		tm = *localtime(&t_now);
+		_localtime64_s(&tm, &t_now);
 #else
 		if (!localtime_r(&t_now, &tm))
 			error_exit(true, "localtime_r failed");
