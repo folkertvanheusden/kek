@@ -1075,7 +1075,6 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 
 			if (parts[2] != "p" && parts[2] != "v") {
 				cnsl->put_string_lf("expected p (physical address) or v (virtual address)");
-
 				return true;
 			}
 

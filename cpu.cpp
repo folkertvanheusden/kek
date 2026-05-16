@@ -971,7 +971,6 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 				  }
 
 		case 0b000101011: { // DEC/DECB
-					  // TODO unify
 					  if (dst_mode == 0) {
 						  uint16_t v   = get_register(dst_reg);
 						  uint16_t add = word_mode == wm_byte ? v & 0xff00 : 0;
@@ -2288,8 +2287,6 @@ std::unordered_map<std::string, std::vector<std::string> > cpu::disassemble(cons
 	std::vector<uint16_t> work_values;
 	bool                  might_be_io = false;  // is this instruction working on io
 
-	// TODO: 100000011
-
 	if (do_opcode == 0b000) {
 		auto addressing = addressing_to_string(dst_register, addr + 2, word_mode);
 		might_be_io = addressing.valid == false;
@@ -2427,9 +2424,6 @@ std::unordered_map<std::string, std::vector<std::string> > cpu::disassemble(cons
 
 			if (text.empty() && name.empty() == false)
 				text = name + space + src_text + comma + dst_text.operand;  // TODO: swap for ASH, ASHC
-
-			if (dst_text.valid == false)
-				text += " (INV2)";
 
 			if (text.empty() == false && next_word != -1)
 				instruction_words.push_back(next_word);
