@@ -69,7 +69,9 @@ kek_event_t   stop_event         { EVENT_NONE };
 abool        *running            { nullptr    };
 bool          trace_output       { false      };
 comm         *cs                 { nullptr    };  // Console Serial
+#if !defined(TEENSY4_1)
 blinkenlights bl;
+#endif
 
 static void console_thread_wrapper_panel(void *const c)
 {
@@ -86,6 +88,9 @@ bool init_sd()
 #if defined(SEEED_XIAO_S3)
 	cnsl->put_string_lf(format("SS  : %d", 1));
 	if (SDinstance.begin(1, SD_SCK_MHZ(1)))
+		disk_started = true;
+#elif defined(TEENSY4_1)
+  if (SD.sdfs.begin(SdSpiConfig(BUILTIN_SDCARD, SHARED_SPI, SD_SCK_MHZ(24))))
 		disk_started = true;
 #else
 	cnsl->put_string_lf(format("SS  : %d", int(SS)));
@@ -331,9 +336,7 @@ void heap_caps_alloc_failed_hook(size_t requested_size, uint32_t caps, const cha
 
 #if defined(TEENSY4_1)
 // from https://forum.pjrc.com/index.php?threads/how-to-display-free-ram.33443/
-extern unsigned long _heap_start;
-extern unsigned long _heap_end;
-extern char *__brkval;
+extern char _heap_end[], *__brkval;
 int freeram()
 {
   return (char *)&_heap_end - __brkval;
@@ -341,7 +344,8 @@ int freeram()
 
 void debugger_task(void *)
 {
-	debugger(cnsl, b, &stop_event, { });
+  for(;;)
+    debugger(cnsl, b, &stop_event, { });
 }
 #endif
 
@@ -419,12 +423,12 @@ void setup() {
 	cs->println(format("Free RAM after init (decimal bytes): %d", freeram()));
 #endif
 
-	cs->println(format("Allocating %d (decimal) pages", n_pages));
-	b->set_memory_size(n_pages);
-
 	cs->println("* Init CPU");
 	c = new cpu(b, &stop_event);
 	b->add_cpu(c);
+
+	cs->println(format("Allocating %d (decimal) pages", n_pages));
+	b->set_memory_size(n_pages);
 
 #if defined(ESP32) || defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 	cnsl = new console_esp32(&stop_event, cs, 80, 25);
@@ -469,6 +473,9 @@ void setup() {
 	xTaskCreate(&console_thread_wrapper_panel, "panel", 3072, cnsl, 1, nullptr);
 #endif
 
+	cs->println("* Starting console");
+	cnsl->start_thread();
+
 #if defined(BUILD_FOR_PICO2W)
 	uint32_t free_heap = rp2040.getFreeHeap();
 #elif defined(ESP32)
@@ -478,11 +485,8 @@ void setup() {
 #endif
 	cs->println(format("Free RAM after init: %d decimal bytes", free_heap));
 
-	cs->println("* Starting console");
-	cnsl->start_thread();
-
-  bl.begin();
 #if !defined(TEENSY4_1)
+  bl.begin();
   auto bl_ip = get_configuration_string(BLINKENLIGHTS_CFG_FILE, "");
   if (bl_ip.empty() == false) {
     cnsl->put_string_lf(format("Using PiDP11 blinkenlights on IP address %s", bl_ip.c_str()));
@@ -491,7 +495,8 @@ void setup() {
 #endif
 
 #if defined(TEENSY4_1)
-	xTaskCreate(debugger_task, "debugger", 8192, nullptr, 1, nullptr);
+	cnsl->put_string_lf("* Starting debugger task");
+	xTaskCreate(debugger_task, "debugger", 6144, nullptr, 1, nullptr);
 
 	cnsl->put_string_lf("* Starting task scheduler");
   vTaskStartScheduler();

@@ -32,7 +32,6 @@ typedef enum { rm_prev, rm_cur } rm_selection_t;
 // see also https://github.com/espressif/esp-idf/issues/1934
 #define DEFAULT_N_PAGES 12  // was 10
 #else
-// more requires unibusmap support
 #define DEFAULT_N_PAGES 31
 #endif
 

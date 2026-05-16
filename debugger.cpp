@@ -52,7 +52,9 @@
 #include "utils.h"
 
 
+#if !defined(TEENSY4_1)
 extern blinkenlights bl;
+#endif
 
 #if defined(ESP32) || defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 bool network_configured = false;
@@ -1258,6 +1260,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 
 		return true;
 	}
+#if !defined(TEENSY4_1)
 	else if (parts[0] == "blights") {
 		if (network_configured == false)
 			cnsl->put_string_lf("Please configure network first (cfgnet)");
@@ -1273,6 +1276,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		}
 		return true;
 	}
+#endif
 	else if (parts[0] == "log") {
 		DOLOG(info, true, cmd.c_str());
 
