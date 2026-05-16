@@ -1,7 +1,9 @@
-// (C) 2018-2023 by Folkert van Heusden
+// (C) 2018-2026 by Folkert van Heusden
 // Released under MIT license
 
-#if !defined(_WIN32)
+#if defined(_WIN32)
+#include <windows.h>
+#else
 #include <termios.h>
 #endif
 
@@ -11,7 +13,10 @@
 class console_posix : public console
 {
 private:
-#if !defined(_WIN32)
+#if defined(_WIN32)
+	HANDLE h_in          { };
+	DWORD  original_mode { };
+#else
 	struct termios org_tty_opts { };
 #endif
 

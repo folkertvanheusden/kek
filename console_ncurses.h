@@ -1,6 +1,7 @@
-// (C) 2018-2023 by Folkert van Heusden
+// (C) 2018-2026 by Folkert van Heusden
 // Released under MIT license
 
+#if !defined(_WIN32)
 #include <mutex>
 #include <ncurses.h>
 
@@ -40,3 +41,4 @@ public:
 
 	void panel_update_thread() override;
 };
+#endif

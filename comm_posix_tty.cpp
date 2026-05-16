@@ -1,21 +1,16 @@
-// (C) 2024 by Folkert van Heusden
+// (C) 2024-2026 by Folkert van Heusden
 // Released under MIT license
 
 #include "gen.h"
-
+#if !defined(_WIN32)
 #include <cstring>
 #include <errno.h>
 #include <fcntl.h>
+#include <poll.h>
 #include <string>
 #include <termios.h>
 #include <thread>
 #include <unistd.h>
-#if defined(_WIN32)
-#include <ws2tcpip.h>
-#include <winsock2.h>
-#else
-#include <poll.h>
-#endif
 
 #include "comm_posix_tty.h"
 #include "log.h"
@@ -91,15 +86,8 @@ bool comm_posix_tty::has_data()
 	if (fd == -1)
 		return false;
 
-#if defined(_WIN32)
-	WSAPOLLFD fds[] { { fd, POLLIN, 0 } };
-	int rc = WSAPoll(fds, 1, 0);
-#else
-	pollfd    fds[] { { fd, POLLIN, 0 } };
-	int rc = poll(fds, 1, 0);
-#endif
-
-	return rc == 1;
+	pollfd fds[] { { fd, POLLIN, 0 } };
+	return poll(fds, 1, 0);
 }
 
 uint8_t comm_posix_tty::get_byte()
@@ -152,3 +140,4 @@ comm_posix_tty *comm_posix_tty::deserialize(const JsonVariantConst j)
 
 	return r;
 }
+#endif

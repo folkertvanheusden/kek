@@ -30,6 +30,8 @@ private:
         my_lock          cfd_lock;
 	std::thread     *th        { nullptr        };
 
+	void setup_telnet_session();
+
 public:
 	comm_tcp_socket_server(const int port, const bool setup_telnet);
 	virtual ~comm_tcp_socket_server();

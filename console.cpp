@@ -218,7 +218,6 @@ void console::put_char(const char c)
 	else if (c == 10) {
 		if (debug_buffer.empty() == false) {
 			DOLOG(debug, false, "TTY: %s", debug_buffer.c_str());
-
 			debug_buffer.clear();
 		}
 
@@ -248,7 +247,6 @@ void console::put_char(const char c)
 
 		if (tx == t_width) {
 			tx = 0;
-
 			ty++;
 		}
 
@@ -292,6 +290,7 @@ void console::operator()()
 			refresh_virtual_terminal();
 		else
 			input_buffer.push(c);
+		printf("%c\n", c);
 	}
 
 	TRACE("Console thread terminating");

@@ -3,6 +3,8 @@
 #include <unistd.h>
 #if defined(BUILD_FOR_PICO2W)
 #include <WiFiUdp.h>
+#elif defined(_WIN32)
+#include "win32.h"
 #elif defined(ESP32)
 #include <arpa/inet.h>
 #include <lwip/netdb.h>
@@ -86,9 +88,26 @@ void eth_transport_vxlan::transmit(const uint8_t *const data, const size_t n_byt
 	sockaddr_in serveraddr { };
 	serveraddr.sin_family = AF_INET;
 	serveraddr.sin_port   = htons(port);
-	if (inet_aton(peer.c_str(), &serveraddr.sin_addr) == 0)
+
+#if defined(_WIN32)
+#ifdef _WIN32_WINNT
+	serveraddr.sin_addr.s_addr = inet_addr(peer.c_str());
+#else
+	if (inet_pton(AF_INET, peer.c_str(), &serveraddr.sin_addr) == 0) {
+		delete [] wrapped;
+		DOLOG(debug, false, "inet_pton(%s) failed", peer.c_str());
+		return;
+	}
+#endif
+#else
+	if (inet_aton(peer.c_str(), &serveraddr.sin_addr) == 0) {
+		delete [] wrapped;
 		DOLOG(debug, false, "inet_aton(%s) failed", peer.c_str());
-	else if (sendto(fd, wrapped, wrapped_n, 0, reinterpret_cast<const sockaddr *>(&serveraddr), sizeof serveraddr) == -1)
+		return;
+	}
+#endif
+
+	if (sendto(fd, reinterpret_cast<const char *>(wrapped), wrapped_n, 0, reinterpret_cast<const sockaddr *>(&serveraddr), sizeof serveraddr) == -1)
 		DOLOG(debug, false, "sendto failed: %s", strerror(errno));
 #endif
 
@@ -118,13 +137,18 @@ std::pair<uint8_t *, size_t> eth_transport_vxlan::get(const int timeout)
 	if (!pkt)
 		return { nullptr, 0 };
 #else
-	pollfd fds[] { { fd, POLLIN, 0 } };
-	int    rc = poll(fds, 1, timeout);
+#if defined(_WIN32)
+	WSAPOLLFD fds[] { { fd, POLLIN, 0 } };
+	int rc = WSAPoll(fds, 1, timeout);
+#else
+	pollfd    fds[] { { fd, POLLIN, 0 } };
+	int rc = poll(fds, 1, timeout);
+#endif
 	if (rc <= 0)
 		return { nullptr, 0 };
 
 	pkt = new uint8_t[max_pkt_size]();
-	int      rc2 = recv(fd, pkt, max_pkt_size, 0);
+	int      rc2 = recv(fd, reinterpret_cast<char *>(pkt), max_pkt_size, 0);
 	if (rc2 == -1) {
 		delete [] pkt;
 		return { nullptr, 0 };

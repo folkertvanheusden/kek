@@ -9,7 +9,7 @@
 #if defined(BUILD_FOR_PICO2W)
 #define __LITTLE_ENDIAN 1
 #define __BYTE_ORDER __LITTLE_ENDIAN
-#else
+#elif !defined(_WIN32)
 #include <endian.h>
 #endif
 

@@ -6,10 +6,8 @@
 #include "disk_backend.h"
 #include "gen.h"
 #include "utils.h"
-#if IS_POSIX
+#if IS_POSIX || defined(_WIN32)
 #include "disk_backend_file.h"
-#else
-#include "disk_backend_esp32.h"
 #endif
 #if !defined(BUILD_FOR_PICO2W)
 #include "disk_backend_nbd.h"
@@ -108,7 +106,7 @@ disk_backend *disk_backend::deserialize(const JsonVariantConst j)
 	else if (type == "nbd")
 		d = disk_backend_nbd::deserialize(j);
 #endif
-#if IS_POSIX
+#if IS_POSIX || defined(_WIN32)
 	else if (type == "file")
 		d = disk_backend_file::deserialize(j);
 #else

@@ -16,7 +16,9 @@
 #include "comm.h"
 #include "comm_posix_tty.h"
 #include "comm_tcp_socket_server.h"
-#if !defined(_WIN32)
+#if defined(_WIN32)
+#include "win32.h"
+#else
 #include "console_ncurses.h"
 #endif
 #include "console_posix.h"
@@ -51,12 +53,14 @@ blinkenlights     bl;
 std::atomic_bool  sigw_event   { false };
 
 constexpr const uint16_t validation_psw_mask = 0174037;  // ignore unused bits & priority(!)
+constexpr const int      default_port_offset = 1100;
 
-constexpr const int default_port_offset = 1100;
-
-#if !defined(_WIN32)
 void sw_handler(int s)
 {
+#if defined(_WIN32)
+	fprintf(stderr, "Terminating...\n");
+	event = EVENT_TERMINATE;
+#else
 	if (s == SIGWINCH)
 		sigw_event = true;
 	else {
@@ -64,8 +68,10 @@ void sw_handler(int s)
 
 		event = EVENT_TERMINATE;
 	}
+#endif
 }
 
+#if !defined(_WIN32)
 std::vector<std::pair<uint32_t, uint8_t> > get_memory_settings(const JsonArrayConst & ja)
 {
 	std::vector<std::pair<uint32_t, uint8_t> > out;
@@ -250,6 +256,12 @@ void help()
 int main(int argc, char *argv[])
 {
 	//setlocale(LC_ALL, "");
+
+#if defined(_WIN32)
+	WSADATA wsa_data { };
+	if (WSAStartup(0x202, &wsa_data) != 0)
+		printf("ERROR: winsock initialization failure\n");
+#endif
 
 	std::vector<disk_backend *> disk_files;
 	std::string  disk_type = "rk05";
@@ -447,7 +459,6 @@ int main(int argc, char *argv[])
 	if (ll_set == false && withUI)
 		ll_screen = notice;
 	setlogfile(logfile, ll_file, ll_screen, timestamp);
-
 	DOLOG(info, true, "PDP11 emulator, by Folkert van Heusden");
 
 	DOLOG(info, true, "Built on: " __DATE__ " " __TIME__);
@@ -505,8 +516,12 @@ int main(int argc, char *argv[])
 			auto parts = split(deqna_type, ",");
 			eth_transport *et = nullptr;
 
-			if (parts[0] == "linux")
+			if (false) {
+			}
+#if defined(linux)
+			else if (parts[0] == "linux")
 				et = new eth_transport_linux("pdp");
+#endif
 			else if (parts[0] == "vxlan") {
 				if (parts.size() == 3)
 					et = new eth_transport_vxlan(parts[1], std::stoi(parts[2]));
@@ -578,11 +593,13 @@ int main(int argc, char *argv[])
 	comm_io *io_channels = new comm_io(dz11_n_lines);
 	constexpr const int bitrate = 38400;
 
+#if !defined(_WIN32)
 	if (dz11_device.has_value()) {
 		DOLOG(info, false, "Configuring DZ11 device for TTY on %s (%d bps)", dz11_device.value().c_str(), bitrate);
 		if (io_channels->set_device(0, new comm_posix_tty(dz11_device.value(), bitrate)) == false)
 			DOLOG(warning, false, "Failed to configure device");
 	}
+#endif
 
 	for(size_t i=0; i<dz11_n_lines; i++) {
 		if (io_channels->is_defined(i))
@@ -644,7 +661,9 @@ int main(int argc, char *argv[])
 
 	DOLOG(info, true, "Start running at %06o", b->getCpu()->get_register(7));
 
-#if !defined(_WIN32)
+#if defined(_WIN32)
+	signal(SIGINT, sw_handler);
+#else
 	struct sigaction sa { };
 	sa.sa_handler = sw_handler;
 	sigemptyset(&sa.sa_mask);

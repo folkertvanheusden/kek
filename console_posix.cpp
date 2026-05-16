@@ -1,10 +1,8 @@
-// (C) 2018-2023 by Folkert van Heusden
+// (C) 2018-2026 by Folkert van Heusden
 // Released under MIT license
 
 #if defined(_WIN32)
-#include <conio.h>
-
-#include <winsock2.h>
+#include "win32.h"
 #else
 #include <poll.h>
 #endif
@@ -20,7 +18,38 @@
 
 console_posix::console_posix(std::atomic_uint32_t *const stop_event): console(stop_event)
 {
-#if !defined(_WIN32)
+#if defined(_WIN32)
+	printf("Setting Win32 console to raw mode\n");
+
+        h_in = GetStdHandle(STD_INPUT_HANDLE);
+        if (h_in == INVALID_HANDLE_VALUE)
+            throw std::runtime_error("Failed to get stdin handle");
+
+        if (!GetConsoleMode(h_in, &original_mode))
+            throw std::runtime_error("Failed to get console mode");
+
+        DWORD raw_mode = original_mode;
+
+        // Disable normal cooked input behavior
+        raw_mode &= ~(ENABLE_ECHO_INPUT | ENABLE_LINE_INPUT | ENABLE_PROCESSED_INPUT);
+
+        // Disable Quick Edit (prevents console freeze on selection)
+        raw_mode &= ~ENABLE_QUICK_EDIT_MODE;
+        raw_mode |= ENABLE_EXTENDED_FLAGS;
+
+        // Enable VT input sequences
+        raw_mode |= ENABLE_VIRTUAL_TERMINAL_INPUT;
+
+        if (!SetConsoleMode(h_in, raw_mode))
+            throw std::runtime_error("Failed to set raw mode");
+
+	// enable ANSI processing
+	HANDLE h_out = GetStdHandle(STD_OUTPUT_HANDLE);
+	DWORD  mode { };
+	GetConsoleMode(h_out, &mode);
+	mode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+	SetConsoleMode(h_out, mode);
+#else
 	if (isatty(STDIN_FILENO)) {
 		if (tcgetattr(STDIN_FILENO, &org_tty_opts) == -1)
 			error_exit(true, "console_posix: tcgetattr failed");
@@ -43,7 +72,10 @@ console_posix::~console_posix()
 		delete th_panel;
 	}
 
-#if !defined(_WIN32)
+#if defined(_WIN32)
+        if (h_in != INVALID_HANDLE_VALUE)
+            SetConsoleMode(h_in, original_mode);
+#else
 	if (isatty(STDIN_FILENO) && tcsetattr(STDIN_FILENO, TCSANOW, &org_tty_opts) == -1)
 		error_exit(true, "~console_posix: tcsetattr failed");
 #endif
@@ -54,7 +86,6 @@ void console_posix::begin()
 	th_panel = new std::thread(&console_posix::panel_update_thread, this);
 }
 
-
 int console_posix::wait_for_char_ll(const short timeout)
 {
 #if defined(_WIN32)
@@ -64,8 +95,13 @@ int console_posix::wait_for_char_ll(const short timeout)
 
 	timeval to { timeout / 1000000, timeout % 1000000 };
 
-	if (select(STDIN_FILENO + 1, &rfds, nullptr, nullptr, &to) == 1 && FD_ISSET(STDIN_FILENO, &rfds))
-		return _getch();
+	if (select(STDIN_FILENO + 1, &rfds, nullptr, nullptr, &to) == 1 && FD_ISSET(STDIN_FILENO, &rfds)) {
+		INPUT_RECORD record      { };
+		DWORD        events_read { };
+		ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &record, 1, &events_read);
+		if (record.EventType == KEY_EVENT && record.Event.KeyEvent.bKeyDown)
+			return record.Event.KeyEvent.uChar.AsciiChar;
+	}
 #else
 	struct pollfd fds[] = { { STDIN_FILENO, POLLIN, 0 } };
 
@@ -81,7 +117,7 @@ int console_posix::wait_for_char_ll(const short timeout)
 
 void console_posix::put_char_ll(const char c)
 {
-	printf("%c", c);
+	putchar(c);
 	fflush(nullptr);
 }
 

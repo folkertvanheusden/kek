@@ -102,7 +102,7 @@ std::optional<disk_backend *> select_nbd_server(console *const cnsl)
 
 void start_disk(console *const cnsl)
 {
-#if IS_POSIX
+#if IS_POSIX || defined(_WIN32)
 	return;
 #else
 	static bool disk_started = false;
@@ -1067,7 +1067,6 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 
 			if (parts[2] != "p" && parts[2] != "v") {
 				cnsl->put_string_lf("expected p (physical address) or v (virtual address)");
-
 				return true;
 			}
 
@@ -1437,12 +1436,12 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 #endif
 			"examine/e     - show memory address (<octal address> <p|v> [<n>])",
 			"reset/r       - reset cpu/bus/etc",
-			"single/s      - run 1 instruction (implicit 'disassemble' command)",
+			"single/s [x]  - run 1 (or x-) instruction (implicit 'disassemble' command)",
 			"sbp/cbp/lbp   - set/clear/list breakpoint(s)",
-			"                e.g.: action (pc=0123 and memwv[04000]=0200,0300 and (r4=07,05 or r5=0456))",
+			"                e.g.: action (pc=0123 and memwv[04000]=0200,0300 and (r4=07,05 or r5=0456) and instr[]=1)",
 			"                values seperated by ',', char after mem is w/b (word/byte), then",
 			"                follows v/p (virtual/physical), all octal values, mmr0-3 and psw are",
-			"                registers. \"action\" can be stop, trace or log.",
+			"                registers. \"action\" can be stop, trace or log. instr can have a mask between the [] and on the right an instruction-opcode to compare against.",
 			"trace/t       - toggle tracing",
 			"setll x,y     - set loglevel: terminal,file",
 			"setsl hst ll  - set syslog target: requires a hostname and a loglevel",

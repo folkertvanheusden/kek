@@ -1,6 +1,7 @@
-// (C) 2018-2023 by Folkert van Heusden
+// (C) 2018-2026 by Folkert van Heusden
 // Released under MIT license
 
+#if !defined(_WIN32)
 #include <algorithm>
 #include <assert.h>
 #include <ncursesw/curses.h>
@@ -301,3 +302,4 @@ bool right_mouse_button_clicked(void)
 
 	return getmouse(&event) == OK && (event.bstate & BUTTON3_CLICKED);
 }
+#endif

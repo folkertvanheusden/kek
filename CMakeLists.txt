@@ -152,38 +152,38 @@ if (WIN32)
 add_executable(
   kek-win32
   ${APP_SOURCES}
+  main.cpp
   win32.cpp
 )
 endif (WIN32)
 
 include(CheckIPOSupported)
 check_ipo_supported(RESULT supported)
-set(CMAKE_BUILD_TYPE RelWithDebInfo)
+#set(CMAKE_BUILD_TYPE RelWithDebInfo)
 cmake_policy(SET CMP0069 NEW)
 set(CMAKE_POLICY_DEFAULT_CMP0069 NEW)
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
-#set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_BUILD_TYPE Debug)
 
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 set(THREADS_PREFER_PTHREAD_FLAG TRUE)
 find_package(Threads)
-if (NOT WIN32)
+if (WIN32)
+target_link_libraries(kek-win32 Threads::Threads)
+target_link_libraries(kek-win32 ws2_32)
+else ()
 target_link_libraries(kek Threads::Threads)
 target_link_libraries(kek-codecoverage Threads::Threads)
-else ()
-target_link_libraries(kek-win32 Threads::Threads)
-
-target_link_libraries(kek-win32 ws2_32)
 endif ()
 
 add_subdirectory(arduinojson)
+if (WIN32)
+target_link_libraries(kek-win32 ArduinoJson)
+else()
 target_link_libraries(kek ArduinoJson)
 target_link_libraries(kek-codecoverage ArduinoJson)
 target_link_libraries(kek-native ArduinoJson)
 target_link_libraries(dz11-test ArduinoJson)
-
-if (WIN32)
-target_link_libraries(kek-win32 ArduinoJson)
 endif ()
 
 add_custom_target(coverage

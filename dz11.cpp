@@ -145,7 +145,7 @@ void dz11::operator()()
 	DOLOG(info, true, "DZ11 thread started");
 
 	while(!stop_flag) {
-		myusleep(10000);  // TODO replace polling
+		myusleep(10000);
 
 		for(int line_nr=0; line_nr<dz11_n_lines; line_nr++) {
 			my_unique_lock lck(&input_lock);
