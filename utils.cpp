@@ -279,6 +279,8 @@ std::optional<JsonDocument> deserialize_file(const std::string & filename)
 
 	deserializeJson(j, data_file);
 	data_file.close();
+#elif defined(TEENSY4_1)
+	return { };
 #else
 	FILE *fh = fopen(filename.c_str(), "r");
 	if (!fh)
@@ -328,6 +330,7 @@ std::string get_configuration_string(const std::string & file, const std::string
 	data_file.close();
 
 	return rc.c_str();
+#elif defined(TEENSY4_1)
 #else
 	FILE *fh = fopen(file_in_user_home(file).c_str(), "r");
 	if (!fh)
@@ -356,6 +359,7 @@ uint32_t get_configuration_uint32(const std::string & file, const uint32_t defau
 
 	data_file.read(buffer, 4);
 	data_file.close();
+#elif defined(TEENSY4_1)
 #else
 	FILE *fh = fopen(file_in_user_home(file).c_str(), "rb");
 	if (!fh)
@@ -376,6 +380,7 @@ bool put_configuration_uint32(const std::string & file, const uint32_t value)
 		return false;
 	data_file.write(buffer, 4);
 	data_file.close();
+#elif defined(TEENSY4_1)
 #else
 	FILE *fh = fopen(file_in_user_home(file).c_str(), "wb");
 	if (!fh)
@@ -394,6 +399,7 @@ bool put_configuration_string(const std::string & file, const std::string & valu
 		return false;
 	data_file.print(value.c_str());
 	data_file.close();
+#elif defined(TEENSY4_1)
 #else
 	FILE *fh = fopen(file_in_user_home(file).c_str(), "w");
 	if (!fh)

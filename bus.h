@@ -17,7 +17,9 @@
 #include "rk05.h"
 #include "rl02.h"
 #include "rp06.h"
+#if !defined(TEENSY4_1)
 #include "tm-11.h"
+#endif
 
 #define ADDR_MMR0 0177572
 #define ADDR_MMR1 0177574
@@ -50,7 +52,9 @@ class cpu;
 class deqna;
 class kw11_l;
 class memory;
+#if !defined(TEENSY4_1)
 class tm_11;
+#endif
 class tty;
 
 typedef struct {
@@ -61,7 +65,9 @@ class bus: public device
 {
 private:
 	cpu     *c       { nullptr };
+#if !defined(TEENSY4_1)
 	tm_11   *tm11    { nullptr };
+#endif
 	rk05    *rk05_   { nullptr };
 	rl02    *rl02_   { nullptr };
 	tty     *tty_    { nullptr };
@@ -102,7 +108,9 @@ public:
 	void add_ram   (memory *const m      );
 	void add_cpu   (cpu    *const c      );
 	void add_mmu   (mmu    *const mmu_   );
+#if !defined(TEENSY4_1)
 	void add_tm11  (tm_11  *const tm11   );
+#endif
 	void add_rk05  (rk05   *const rk05_  );
 	void add_rl02  (rl02   *const rl02_  );
 	void add_tty   (tty    *const tty_   );
@@ -123,7 +131,9 @@ public:
 	rl02   *getRL02()   { return rl02_;   }
 	dc11   *getDC11()   { return dc11_;   }
 	dz11   *getDZ11()   { return dz11_;   }
+#if !defined(TEENSY4_1)
 	tm_11  *getTM11()   { return tm11;    }
+#endif
 	rp06   *getRP06()   { return rp06_;   }
 	deqna  *getDEQNA()  { return deqna_;  }
 

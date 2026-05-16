@@ -48,7 +48,9 @@
 #include "kw11-l.h"
 #include "loaders.h"
 #include "memory.h"
+#if !defined(TEENSY4_1)
 #include "tm-11.h"
+#endif
 #include "tty.h"
 #include "utils.h"
 #include "version.h"
@@ -426,8 +428,10 @@ void setup() {
 	tty_ = new tty(cnsl, b);
 	b->add_tty(tty_);
 
+#if !defined(TEENSY4_1)
 	cs->println("* Adding TM-11");
 	b->add_tm11(new tm_11(b));
+#endif
 
 	cs->println("* Starting KW11-L");
 	b->getKW11_L()->begin(cnsl);

@@ -649,6 +649,7 @@ void serialize_state(console *const cnsl, const bus *const b, const std::string 
 
 	bool ok = false;
 
+#if !defined(TEENSY4_1)
 	FILE *fh = fopen(filename.c_str(), "w");
 	if (fh) {
 		state_writer ws { fh };
@@ -657,12 +658,14 @@ void serialize_state(console *const cnsl, const bus *const b, const std::string 
 
 		ok = true;
 	}
+#endif
 
 	cnsl->put_string_lf(format("Serialize to %s: %s", filename.c_str(), ok ? "OK" : "failed"));
 }
 
 void tm11_load_tape(console *const cnsl, bus *const b, const std::optional<std::string> & file)
 {
+#if !defined(TEENSY4_1)
 	if (file.has_value())
 		b->getTM11()->load(file.value());
 	else {
@@ -671,11 +674,14 @@ void tm11_load_tape(console *const cnsl, bus *const b, const std::optional<std::
 		if (sel_file.has_value())
 			b->getTM11()->load(sel_file.value());
 	}
+#endif
 }
 
 void tm11_unload_tape(bus *const b)
 {
+#if !defined(TEENSY4_1)
 	b->getTM11()->unload();
+#endif
 }
 
 void serdz11(console *const cnsl, bus *const b)
@@ -750,8 +756,10 @@ device *name_to_dev(bus *const b, const std::string & name)
 		return b->getDC11();
 	if (name == "dz11")
 		return b->getDZ11();
+#if !defined(TEENSY4_1)
 	if (name == "tm11")
 		return b->getTM11();
+#endif
 	if (name == "kw11l")
 		return b->getKW11_L();
 	if (name == "rp06" || name == "rp07")

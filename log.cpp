@@ -163,7 +163,7 @@ void closelog()
 
 void dolog(const log_level_t ll, const char *fmt, ...)
 {
-#if !defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
+#if !defined(BUILD_FOR_PICO2W) && !defined(TEENSY4_1)
 	if (!log_fh && logfile != nullptr) {
 #if !defined(ESP32)
 		log_fh = fopen(logfile, "a+");

@@ -15,7 +15,9 @@
 #include "log.h"
 #include "memory.h"
 #include "mmu.h"
+#if !defined(TEENSY4_1)
 #include "tm-11.h"
+#endif
 #include "tty.h"
 #include "utils.h"
 
@@ -36,7 +38,9 @@ bus::~bus()
 {
 	delete kw11_l_;
 	delete c;
+#if !defined(TEENSY4_1)
 	delete tm11;
+#endif
 	delete rk05_;
 	delete rl02_;
 	delete tty_;
@@ -160,8 +164,10 @@ void bus::reset(const bool hard)
 {
 	if (mmu_)
 		mmu_->reset(hard);
+#if !defined(TEENSY4_1)
 	if (tm11)
 		tm11->reset(hard);
+#endif
 	if (rk05_)
 		rk05_->reset(hard);
 	if (rl02_)
@@ -226,11 +232,13 @@ void bus::add_cpu(cpu *const c)
 		mmu_->begin(m, c);
 }
 
+#if !defined(TEENSY4_1)
 void bus::add_tm11(tm_11 *const tm11)
 {
 	delete this->tm11;
 	this->tm11= tm11;
 } 
+#endif
 
 void bus::add_rk05(rk05 *const rk05_)
 {
@@ -499,8 +507,10 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 			}
 		}
 
+#if !defined(TEENSY4_1)
 		if (tm11 && a >= TM_11_BASE && a < TM_11_END)
 			return word_mode == wm_byte ? tm11->read_byte(a) : tm11->read_word(a);
+#endif
 
 		if (rk05_ && a >= RK05_BASE && a < RK05_END)
 			return word_mode == wm_byte ? rk05_->read_byte(a) : rk05_->read_word(a);
@@ -731,11 +741,13 @@ bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 			return false;
 		}
 
+#if !defined(TEENSY4_1)
 		if (tm11 && a >= TM_11_BASE && a < TM_11_END) {
 			TRACE("WRITE-I/O TM11 register %d: %06o", (a - TM_11_BASE) / 2, value);
 			word_mode == wm_byte ? tm11->write_byte(a, value) : tm11->write_word(a, value);
 			return false;
 		}
+#endif
 
 		if (rk05_ && a >= RK05_BASE && a < RK05_END) {
 			TRACE("WRITE-I/O RK05 register %d: %06o", (a - RK05_BASE) / 2, value);

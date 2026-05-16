@@ -20,12 +20,12 @@
 
 void loadbin(bus *const b, uint16_t base, const char *const file)
 {
+#if !defined(TEENSY4_1)
 	FILE *fh = fopen(file, "rb");
-
 	while(!feof(fh))
 		b->write_byte(base++, fgetc(fh));
-
 	fclose(fh);
+#endif
 }
 
 std::optional<uint16_t> set_boot_loader(bus *const b, const bootloader_t which)
@@ -121,6 +121,8 @@ std::optional<uint16_t> load_tape(bus *const b, const std::string & file)
 		DOLOG(ll_error, true, "Cannot open %s", file.c_str());
 		return { };
 	}
+#elif defined(TEENSY4_1)
+	return { };
 #else
 	FILE *fh = fopen(file.c_str(), "rb");
 	if (!fh) {
@@ -129,6 +131,7 @@ std::optional<uint16_t> load_tape(bus *const b, const std::string & file)
 	}
 #endif
 
+#if !defined(TEENSY4_1)
 	std::optional<uint16_t> start;
 	uint8_t                 buffer[6];
 
@@ -199,10 +202,14 @@ std::optional<uint16_t> load_tape(bus *const b, const std::string & file)
 #endif
 
 	return start;
+#else
+	return { };
+#endif
 }
 
 void load_p11_x11(bus *const b, const std::string & file)
 {
+#if !defined(TEENSY4_1)
 	FILE *fh = fopen(file.c_str(), "rb");
 	if (!fh)
 		error_exit(true, "Cannot open %s", file.c_str());
@@ -237,4 +244,5 @@ void load_p11_x11(bus *const b, const std::string & file)
 
 	cpu *const c      = b->getCpu();
 	c->set_register(7, 0);
+#endif
 }
