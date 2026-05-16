@@ -1,8 +1,8 @@
-// (C) 2024 by Folkert van Heusden
+// (C) 2024-2026 by Folkert van Heusden
 // Released under MIT license
 
 #include "gen.h"
-
+#if !defined(_WIN32)
 #include <cstring>
 #include <errno.h>
 #include <fcntl.h>
@@ -10,12 +10,8 @@
 #include <termios.h>
 #include <thread>
 #include <unistd.h>
-#if defined(_WIN32)
 #include <ws2tcpip.h>
 #include <winsock2.h>
-#else
-#include <poll.h>
-#endif
 
 #include "comm_posix_tty.h"
 #include "log.h"
@@ -152,3 +148,4 @@ comm_posix_tty *comm_posix_tty::deserialize(const JsonVariantConst j)
 
 	return r;
 }
+#endif

@@ -34,7 +34,6 @@
 #include <sys/time.h>
 
 #if defined(_WIN32)
-#include <sys/socket.h>
 #include "win32.h"
 #endif
 
@@ -306,7 +305,7 @@ std::optional<JsonDocument> deserialize_file(const std::string & filename)
 
 std::string file_in_user_home(const std::string & file)
 {
-#if defined(BUILD_FOR_RP2040) || defined(ESP32)
+#if defined(BUILD_FOR_RP2040) || defined(ESP32) || defined(_WIN32)
 	return "/" + file;
 #else
 	passwd *pw = getpwuid(getuid());

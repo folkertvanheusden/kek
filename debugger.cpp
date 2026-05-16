@@ -106,7 +106,7 @@ std::optional<disk_backend *> select_nbd_server(console *const cnsl)
 
 void start_disk(console *const cnsl)
 {
-#if IS_POSIX
+#if IS_POSIX || defined(_WIN32)
 	return;
 #else
 	static bool disk_started = false;

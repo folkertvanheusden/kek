@@ -505,8 +505,12 @@ int main(int argc, char *argv[])
 			auto parts = split(deqna_type, ",");
 			eth_transport *et = nullptr;
 
-			if (parts[0] == "linux")
+			if (false) {
+			}
+#if defined(linux)
+			else if (parts[0] == "linux")
 				et = new eth_transport_linux("pdp");
+#endif
 			else if (parts[0] == "vxlan") {
 				if (parts.size() == 3)
 					et = new eth_transport_vxlan(parts[1], std::stoi(parts[2]));
@@ -578,11 +582,13 @@ int main(int argc, char *argv[])
 	comm_io *io_channels = new comm_io(dz11_n_lines);
 	constexpr const int bitrate = 38400;
 
+#if !defined(_WIN32)
 	if (dz11_device.has_value()) {
 		DOLOG(info, false, "Configuring DZ11 device for TTY on %s (%d bps)", dz11_device.value().c_str(), bitrate);
 		if (io_channels->set_device(0, new comm_posix_tty(dz11_device.value(), bitrate)) == false)
 			DOLOG(warning, false, "Failed to configure device");
 	}
+#endif
 
 	for(size_t i=0; i<dz11_n_lines; i++) {
 		if (io_channels->is_defined(i))

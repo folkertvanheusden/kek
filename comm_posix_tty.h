@@ -1,7 +1,8 @@
-// (C) 2024 by Folkert van Heusden
+// (C) 2024-2026 by Folkert van Heusden
 // Released under MIT license
 
 #include "gen.h"
+#if !defined(_WIN32)
 #include "comm.h"
 
 
@@ -30,3 +31,4 @@ public:
 
 	void    send_data(const uint8_t *const in, const size_t n) override;
 };
+#endif

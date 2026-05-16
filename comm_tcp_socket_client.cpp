@@ -13,19 +13,9 @@
 #include <sys/socket.h>
 #include <driver/uart.h>
 #elif defined(_WIN32)
-// from https://stackoverflow.com/questions/12765743/implicit-declaration-of-function-getaddrinfo-on-mingw
-#define _NTDDI_VERSION_FROM_WIN32_WINNT2(ver)    ver##0000
-#define _NTDDI_VERSION_FROM_WIN32_WINNT(ver)     _NTDDI_VERSION_FROM_WIN32_WINNT2(ver)
-
-#ifndef _WIN32_WINNT
-#  define _WIN32_WINNT 0x501
-#endif
-#ifndef NTDDI_VERSION
-#  define NTDDI_VERSION _NTDDI_VERSION_FROM_WIN32_WINNT(_WIN32_WINNT)
-#endif
-#include <ws2tcpip.h>
-#include <winsock2.h>
+#include "win32.h"
 #else
+#define closesocket close
 #include <poll.h>
 #include <netdb.h>
 #include <arpa/inet.h>
@@ -98,12 +88,21 @@ uint8_t comm_tcp_socket_client::get_byte()
 	}
 
 	uint8_t c = 0;
-	if (read(use_fd, &c, 1) <= 0) {
+#if defined(_WIN32)
+	if (recv(use_fd, reinterpret_cast<char *>(&c), 1, 0) <= 0) {
+		DOLOG(warning, false, "comm_tcp_socket_client::get_byte: failed");
+		my_unique_lock lck(&cfd_lock);
+		closesocket(cfd);
+		cfd = INVALID_SOCKET;
+	}
+#else
+	if (read(use_fd, reinterpret_cast<char *>(&c), 1) <= 0) {
 		DOLOG(warning, false, "comm_tcp_socket_client::get_byte: failed");
 		my_unique_lock lck(&cfd_lock);
 		close(cfd);
-		cfd = INVALID_SOCKET;
+		cfd = -1;
 	}
+#endif
 
 	return c;
 }
@@ -115,13 +114,23 @@ void comm_tcp_socket_client::send_data(const uint8_t *const in, const size_t n)
 
 	while(len > 0) {
 		my_unique_lock lck(&cfd_lock);
+#if defined(_WIN32)
+		int rc = send(cfd, reinterpret_cast<const char *>(p), len, 0);
+		if (rc <= 0) {
+			DOLOG(warning, false, "comm_tcp_socket_client::send_data: failed");
+			closesocket(cfd);
+			cfd = INVALID_SOCKET;
+			break;
+		}
+#else
 		int rc = write(cfd, p, len);
-		if (rc <= 0) {  // TODO error checking
+		if (rc <= 0) {
 			DOLOG(warning, false, "comm_tcp_socket_client::send_data: failed");
 			close(cfd);
 			cfd = INVALID_SOCKET;
 			break;
 		}
+#endif
 
 		p   += rc;
 		len -= rc;
@@ -165,7 +174,7 @@ void comm_tcp_socket_client::operator()()
 				continue;
 
 			if (::connect(cfd, p->ai_addr, p->ai_addrlen) == -1) {
-				close(cfd);
+				closesocket(cfd);
 				cfd = INVALID_SOCKET;
 				DOLOG(ll_error, true, "comm_tcp_socket_client: cannot connect");
 				continue;
@@ -182,7 +191,7 @@ void comm_tcp_socket_client::operator()()
 
 	DOLOG(info, true, "comm_tcp_socket_client thread terminating");
 
-	close(cfd);
+	closesocket(cfd);
 }
 
 JsonDocument comm_tcp_socket_client::serialize() const

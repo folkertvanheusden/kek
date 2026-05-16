@@ -152,6 +152,7 @@ if (WIN32)
 add_executable(
   kek-win32
   ${APP_SOURCES}
+  main.cpp
   win32.cpp
 )
 endif (WIN32)
@@ -177,13 +178,13 @@ target_link_libraries(kek-win32 ws2_32)
 endif ()
 
 add_subdirectory(arduinojson)
+if (WIN32)
+target_link_libraries(kek-win32 ArduinoJson)
+else()
 target_link_libraries(kek ArduinoJson)
 target_link_libraries(kek-codecoverage ArduinoJson)
 target_link_libraries(kek-native ArduinoJson)
 target_link_libraries(dz11-test ArduinoJson)
-
-if (WIN32)
-target_link_libraries(kek-win32 ArduinoJson)
 endif ()
 
 add_custom_target(coverage

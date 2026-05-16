@@ -5,7 +5,7 @@
 #include <cstring>
 #include <map>
 #include <optional>
-#if !defined(ESP32) && !defined(BUILD_FOR_RP2040)
+#if !defined(ESP32) && !defined(BUILD_FOR_RP2040) && !defined(_WIN32)
 #include <poll.h>
 #endif
 #include <string>
@@ -20,6 +20,8 @@
 #include <lwip/netdb.h>
 #include <lwip/sockets.h>
 #endif
+#elif defined(_WIN32)
+#include <winsock2.h>
 #else
 #include <arpa/inet.h>
 #include <sys/socket.h>
@@ -211,18 +213,31 @@ static const std::pair<const rpc_msg_reply *, int> exchange_message(const std::s
 	sockaddr_in serveraddr { };
 	serveraddr.sin_family = AF_INET;
 	serveraddr.sin_port   = htons(port);
+#if defined(_WIN32)
+#ifdef _WIN32_WINNT
+	serveraddr.sin_addr.s_addr = inet_addr(server.c_str());
+#else
+	if (inet_pton(AF_INET, server.c_str(), &serveraddr.sin_addr) == 0) {
+		DOLOG(debug, false, "inet_pton(%s) failed", server.c_str());
+		close(fd);
+		return { nullptr, 0 };
+	}
+#endif
+#else
 	if (inet_aton(server.c_str(), &serveraddr.sin_addr) == 0) {
 		DOLOG(debug, false, "inet_aton(%s) failed", server.c_str());
 		close(fd);
 		return { nullptr, 0 };
 	}
+#endif
 
-	if (sendto(fd, msg.data(), msg.size(), 0, reinterpret_cast<const sockaddr *>(&serveraddr), sizeof serveraddr) == -1) {
+	if (sendto(fd, reinterpret_cast<const char *>(msg.data()), msg.size(), 0, reinterpret_cast<const sockaddr *>(&serveraddr), sizeof serveraddr) == -1) {
 		close(fd);
 		DOLOG(debug, false, "sendto failed: %s", strerror(errno));
 		return { nullptr, 0 };
 	}
 
+#if IS_POSIX
         pollfd fds[] { { fd, POLLIN, 0 } };
         int poll_rc = poll(fds, 1, 100);
 	if (poll_rc <= 0) {
@@ -233,6 +248,20 @@ static const std::pair<const rpc_msg_reply *, int> exchange_message(const std::s
 			DOLOG(debug, false, "blinkenpanel (%s:%d) did not respond to request", server.c_str(), port);
 		return { nullptr, 0 };
 	}
+#else
+	timeval tv   { 0, 100000 };
+	fd_set  rfds {           };
+	FD_ZERO(&rfds);
+	FD_SET(fd, &rfds);
+	if (int sel_rc = select(fd + 1, &rfds, nullptr, nullptr, &tv); sel_rc <= 0) {
+		close(fd);
+		if (sel_rc == -1)
+			DOLOG(debug, false, "select failed: %s", strerror(errno));
+		else
+			DOLOG(debug, false, "blinkenpanel (%s:%d) did not respond to request", server.c_str(), port);
+		return { nullptr, 0 };
+	}
+#endif
 
 	reply = new uint8_t[max_reply_size];
 	if (!reply) {
@@ -240,7 +269,7 @@ static const std::pair<const rpc_msg_reply *, int> exchange_message(const std::s
 		close(fd);
 		return { nullptr, 0 };
 	}
-	packet_size = recv(fd, reply, max_reply_size, 0);
+	packet_size = recv(fd, reinterpret_cast<char *>(reply), max_reply_size, 0);
 	close(fd);
 #endif
 	if (packet_size <= 0) {

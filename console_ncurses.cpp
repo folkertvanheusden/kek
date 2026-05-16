@@ -1,6 +1,7 @@
 // (C) 2018-2026 by Folkert van Heusden
 // Released under MIT license
 
+#if !defined(_WIN32)
 #include <poll.h>
 #include <stdio.h>
 #include <ncurses.h>
@@ -239,3 +240,4 @@ void console_ncurses::refresh_virtual_terminal()
 
 	mydoupdate();
 }
+#endif
