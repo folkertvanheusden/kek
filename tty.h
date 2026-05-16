@@ -15,7 +15,6 @@
 
 #include "bus.h"
 #include "console.h"
-#include "my_lock.h"
 
 
 #define PDP11TTY_TKS		0177560	// reader status
@@ -33,15 +32,7 @@ private:
 	console *const c      { nullptr };
 	bus     *const b      { nullptr };
 
-	my_lock  chars_lock;
-	std::vector<char> chars;
-
 	uint16_t registers[4] { 0 };
-
-#if !defined(BUILD_FOR_PICO2W)
-	std::thread     *th        { nullptr };
-#endif
-	std::atomic_bool stop_flag { false };
 
 	void notify_rx();
 

@@ -20,36 +20,15 @@ const char * const regnames[] = {
 	"puncher buffer"
 	};
 
-#if defined(BUILD_FOR_PICO2W)
-void thread_wrapper_tty(void *p)
-{
-	tty *const t = reinterpret_cast<tty *>(p);
-
-	t->operator()();
-}
-#endif
-
 tty::tty(console *const c, bus *const b) :
 	c(c),
 	b(b)
 {
 	reset(true);
-
-#if defined(BUILD_FOR_PICO2W)
-	xTaskCreate(&thread_wrapper_tty, "tty", 2048, this, 1, nullptr);
-#else
-	th = new std::thread(std::ref(*this));
-#endif
 }
 
 tty::~tty()
 {
-	stop_flag = true;
-
-#if !defined(BUILD_FOR_PICO2W)
-	th->join();
-	delete th;
-#endif
 }
 
 void tty::reset(const bool hard)
@@ -80,24 +59,19 @@ uint16_t tty::read_word(const uint16_t addr)
 	uint16_t  vtemp  = registers[reg];
 	bool      notify = false;
 
-	my_unique_lock lck(&chars_lock);
-
 	if (addr == PDP11TTY_TKS) {
-		bool have_char = chars.empty() == false;
+		bool have_char = c->poll_char();
 
 		vtemp &= ~128;
 		vtemp |= have_char ? 128 : 0;
 	}
 	else if (addr == PDP11TTY_TKB) {
-		if (chars.empty())
+		auto ch = c->wait_char(1);
+		if (ch.has_value() == false)
 			vtemp = 0;
 		else {
-			uint8_t ch = chars.front();
-			chars.erase(chars.begin());
-
-			vtemp = ch | (parity(ch) << 7);
-
-			if (chars.empty() == false)
+			vtemp = ch.value() | (parity(ch.value()) << 7);
+			if (c->poll_char())
 				notify = true;
 		}
 	}
@@ -113,21 +87,6 @@ uint16_t tty::read_word(const uint16_t addr)
 		notify_rx();
 
 	return vtemp;
-}
-
-void tty::operator()()
-{
-	set_thread_name("kek:tty");
-
-	while(!stop_flag) {
-		auto new_char = c->wait_char(100);
-		if (new_char.has_value() == false)
-			continue;
-
-		my_unique_lock lck(&chars_lock);
-		chars.push_back(new_char.value());
-		notify_rx();
-	}
 }
 
 void tty::write_byte(const uint16_t addr, const uint8_t v)
@@ -177,12 +136,6 @@ JsonDocument tty::serialize()
                 ja_reg_work.add(registers[i]);
 	j["registers"] = ja_reg;
 
-	JsonDocument ja_buf;
-	JsonArray    ja_buf_work = ja_buf.to<JsonArray>();
-	for(auto c: chars)
-                ja_buf_work.add(static_cast<signed char>(c));
-        j["input-buffer"] = ja_buf;
-
 	return j;
 }
 
@@ -194,10 +147,6 @@ tty *tty::deserialize(const JsonVariantConst j, bus *const b, console *const cns
 	int       i_reg  = 0;
 	for(auto v: ja_reg)
 		out->registers[i_reg++] = v;
-
-	JsonArrayConst ja_buf = j["input-buffer"];
-	for(auto v: ja_buf)
-		out->chars.push_back(v.as<signed char>());
 
 	return out;
 }
