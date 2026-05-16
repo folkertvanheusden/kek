@@ -11,7 +11,7 @@
 #define RETRY_COUNT 4
 bool init_sd();
 
-static SdFat sd;
+extern SdFs SDinstance;
 
 disk_backend_esp32::disk_backend_esp32(const std::string & filename) :
 	filename(filename),
@@ -52,7 +52,7 @@ disk_backend_esp32 *disk_backend_esp32::deserialize(const JsonVariantConst j)
 
 void disk_backend_esp32::emit_error()
 {
-	DOLOG(ll_error, true, "SdFat error: %d/%d", sd.sdErrorCode(), sd.sdErrorData());
+	DOLOG(ll_error, true, "SdFat error: %d/%d", SDinstance.sdErrorCode(), SDinstance.sdErrorData());
 }
 
 bool disk_backend_esp32::begin(const bool dummy)
