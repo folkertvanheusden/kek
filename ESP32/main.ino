@@ -387,6 +387,15 @@ void setup() {
 	cs->println("PDP11 emulator, by Folkert van Heusden");
 	cs->println(format("GIT hash: %s", version_str));
 	cs->println("Build on: " __DATE__ " " __TIME__);
+#if defined(ESP32)
+	cs->println("Running on an ESP32");
+#elif defined(BUILD_FOR_PICO2W)
+	cs->println("Running on a Raspberry Pi Pico W");
+#elif defined(TEENSY4_1)
+	cs->println("Running on a Teensy 4.1");
+#else
+	cs->println("Unknown platform?!");
+#endif
 
 #if defined(ESP32)
   search_SC16IS752(cs);
