@@ -355,7 +355,7 @@ void stack_poller(void *)
 {
   for(;;) {
     UBaseType_t   uxArraySize       = uxTaskGetNumberOfTasks();
-    TaskStatus_t *pxTaskStatusArray = pvPortMalloc(uxArraySize * sizeof(TaskStatus_t));
+    TaskStatus_t *pxTaskStatusArray = reinterpret_cast<TaskStatus_t *>(pvPortMalloc(uxArraySize * sizeof(TaskStatus_t)));
     if (pxTaskStatusArray != nullptr) {
       UBaseType_t ulTotalRunTime = 0;
       uxArraySize = uxTaskGetSystemState(pxTaskStatusArray, uxArraySize, &ulTotalRunTime);
