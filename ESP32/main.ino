@@ -496,7 +496,7 @@ void setup() {
 
 #if defined(TEENSY4_1)
 	cnsl->put_string_lf("* Starting debugger task");
-	xTaskCreate(debugger_task, "debugger", 6144, nullptr, 1, nullptr);
+	xTaskCreate(debugger_task, "debugger", 8192, nullptr, 1, nullptr);
 
 	cnsl->put_string_lf("* Starting task scheduler");
   vTaskStartScheduler();
