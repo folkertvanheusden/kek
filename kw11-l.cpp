@@ -12,7 +12,7 @@
 #include "utils.h"
 
 
-#if defined(ESP32) || defined(BUILD_FOR_PICO2W)
+#if defined(ESP32) || defined(FREERTOS)
 static void thread_wrapper_kw11(void *p)
 {
 	kw11_l *const kw11l = reinterpret_cast<kw11_l *>(p);
@@ -29,7 +29,7 @@ kw11_l::~kw11_l()
 {
 	stop_flag = true;
 
-#if !defined(ESP32) && !defined(BUILD_FOR_PICO2W)
+#if !defined(ESP32) && !defined(FREERTOS)
 	if (th) {
 		th->join();
 
@@ -48,7 +48,7 @@ void kw11_l::begin(console *const cnsl)
 {
 	this->cnsl = cnsl;
 
-#if defined(ESP32) || defined(BUILD_FOR_PICO2W)
+#if defined(ESP32) || defined(FREERTOS)
 	xTaskCreate(&thread_wrapper_kw11, "kw11-l", 3072, this, 2, nullptr);
 #else
 	th = new std::thread(std::ref(*this));

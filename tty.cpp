@@ -1,4 +1,4 @@
-// (C) 2018-2024 by Folkert van Heusden
+// (C) 2018-2026 by Folkert van Heusden
 // Released under MIT license
 
 #include <errno.h>
@@ -20,7 +20,7 @@ const char * const regnames[] = {
 	"puncher buffer"
 	};
 
-#if defined(BUILD_FOR_PICO2W)
+#if defined(FREERTOS)
 void thread_wrapper_tty(void *p)
 {
 	tty *const t = reinterpret_cast<tty *>(p);
@@ -35,7 +35,7 @@ tty::tty(console *const c, bus *const b) :
 {
 	reset(true);
 
-#if defined(BUILD_FOR_PICO2W)
+#if defined(FREERTOS)
 	xTaskCreate(&thread_wrapper_tty, "tty", 2048, this, 1, nullptr);
 #else
 	th = new std::thread(std::ref(*this));
@@ -46,7 +46,7 @@ tty::~tty()
 {
 	stop_flag = true;
 
-#if !defined(BUILD_FOR_PICO2W)
+#if !defined(FREERTOS)
 	th->join();
 	delete th;
 #endif

@@ -19,7 +19,7 @@ private:
 	console           *cnsl       { nullptr };
 
 	my_lock            lc_csr_lock;
-#if !defined(BUILD_FOR_PICO2W)
+#if !defined(FREERTOS)
 	std::thread       *th         { nullptr };
 #endif
 	int                int_frequency { 50   };

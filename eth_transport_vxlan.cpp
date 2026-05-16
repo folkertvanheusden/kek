@@ -1,7 +1,7 @@
 #include "gen.h"
 #include <fcntl.h>
 #include <unistd.h>
-#if defined(BUILD_FOR_PICO2W)
+#if defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 #include <WiFiUdp.h>
 #elif defined(_WIN32)
 #include "win32.h"
@@ -34,7 +34,7 @@ eth_transport_vxlan::eth_transport_vxlan(const std::string & peer, const int por
 
 eth_transport_vxlan::~eth_transport_vxlan()
 {
-#if !defined(BUILD_FOR_PICO2W)
+#if !defined(BUILD_FOR_PICO2W) && !defined(TEENSY4_1)
 	if (fd != -1)
 		close(fd);
 #endif
@@ -42,7 +42,7 @@ eth_transport_vxlan::~eth_transport_vxlan()
 
 bool eth_transport_vxlan::begin()
 {
-#if !defined(BUILD_FOR_PICO2W)
+#if !defined(BUILD_FOR_PICO2W) && !defined(TEENSY4_1)
 	fd = socket(AF_INET, SOCK_DGRAM, 0);
 	if (fd == -1) {
 		DOLOG(debug, false, "Cannot create socket: %s", strerror(errno));
@@ -79,7 +79,7 @@ void eth_transport_vxlan::transmit(const uint8_t *const data, const size_t n_byt
 	wrapped[6] = id;
 	memcpy(&wrapped[8], data, n_bytes);
 
-#if defined(BUILD_FOR_PICO2W)
+#if defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 	udp.begin(port);
 	udp.beginPacket(peer.c_str(), port);
 	udp.write(data, n_bytes);
@@ -118,7 +118,7 @@ std::pair<uint8_t *, size_t> eth_transport_vxlan::get(const int timeout)
 {
 	uint8_t *pkt         = nullptr;
 	size_t   packet_size = 0;
-#if defined(BUILD_FOR_PICO2W)
+#if defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 	auto start = millis();
 	while(millis() - start < timeout) {
 		int rc = udp.parsePacket();

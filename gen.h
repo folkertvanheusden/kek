@@ -1,4 +1,4 @@
-// (C) 2018-2024 by Folkert van Heusden
+// (C) 2018-2026 by Folkert van Heusden
 // Released under MIT license
 
 #pragma once
@@ -15,13 +15,19 @@ typedef enum { wm_word = 0, wm_byte = 1 } word_mode_t;
 
 typedef enum { rm_prev, rm_cur } rm_selection_t;
 
+#if defined(FREERTOS)
+#include <FreeRTOS.h>
+#include <semphr.h>
+#include <task.h>
+#endif
+
 #if (defined(linux) || defined (__unix__) || (defined (__APPLE__) && defined (__MACH__)))
 #define IS_POSIX 1
 #else
 #define IS_POSIX 0
 #endif
 
-#if defined(ESP32) || defined(BUILD_FOR_PICO2W)
+#if defined(ESP32) || defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 // ESP32 goes in a crash-loop when allocating 128kB
 // see also https://github.com/espressif/esp-idf/issues/1934
 #define DEFAULT_N_PAGES 12  // was 10
@@ -30,7 +36,7 @@ typedef enum { rm_prev, rm_cur } rm_selection_t;
 #define DEFAULT_N_PAGES 31
 #endif
 
-#if defined(ESP32) || defined(BUILD_FOR_PICO2W)
+#if defined(ESP32) || defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 #define SERIAL_CFG_FILE        "serial.json"
 #define BLINKENLIGHTS_CFG_FILE "blinkenlights.dat"
 #else
@@ -44,4 +50,8 @@ typedef enum { rm_prev, rm_cur } rm_selection_t;
 
 #if defined(BUILD_FOR_PICO2W)
 #include "pico2w.h"
+#endif
+
+#if defined(TEENSY4_1)
+#include "teensy4_1.h"
 #endif

@@ -9,12 +9,10 @@
 #if IS_POSIX || defined(_WIN32)
 #include "disk_backend_file.h"
 #endif
-#if defined(ESP32) || defined(BUILD_FOR_PICO2W)
+#if defined(ESP32) || defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 #include "disk_backend_esp32.h"
 #endif
-#if !defined(BUILD_FOR_PICO2W)
 #include "disk_backend_nbd.h"
-#endif
 
 
 disk_backend::disk_backend()
@@ -103,12 +101,8 @@ disk_backend *disk_backend::deserialize(const JsonVariantConst j)
 
 	disk_backend *d    = nullptr;
 
-	if (false) {
-	}
-#if !defined(BUILD_FOR_PICO2W)
-	else if (type == "nbd")
+	if (type == "nbd")
 		d = disk_backend_nbd::deserialize(j);
-#endif
 #if IS_POSIX || defined(_WIN32)
 	else if (type == "file")
 		d = disk_backend_file::deserialize(j);

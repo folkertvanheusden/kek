@@ -1,11 +1,12 @@
 // written by Folkert van Heusden <folkert@komputilo.nl>
 // license under MIT license
+#include "gen.h"
 #include <algorithm>
 #include <cstdio>
 #include <cstring>
 #include <map>
 #include <optional>
-#if !defined(ESP32) && !defined(BUILD_FOR_PICO2W) && !defined(_WIN32)
+#if !defined(ESP32) && !defined(BUILD_FOR_PICO2W) && !defined(_WIN32) && !defined(TEENSY4_1)
 #include <poll.h>
 #endif
 #include <string>
@@ -13,9 +14,13 @@
 #include <vector>
 #if defined(BUILD_FOR_PICO2W)
 #include <WiFi.h>
+#elif defined(TEENSY4_1)
+#include <QNEthernet.h>
 #endif
 #if defined(ESP32) || defined(BUILD_FOR_PICO2W)
 #include <WiFiUdp.h>
+#elif defined(TEENSY4_1)
+#include <QNEthernet.h>
 #if defined(ESP32)
 #include <lwip/netdb.h>
 #include <lwip/sockets.h>
@@ -34,6 +39,9 @@
 #if defined(BUILD_FOR_PICO2W)
 constexpr const int local_port = 2000;
 WiFiUDP udp;
+#elif defined(TEENSY4_1)
+constexpr const int local_port = 2000;
+qn::EthernetUDP udp;
 #endif
 
 // this code does not check all the data returned by the server
@@ -179,7 +187,7 @@ static const std::pair<const rpc_msg_reply *, int> exchange_message(const std::s
 	uint8_t            *reply          = nullptr;
 	int                 packet_size    = 0;
 
-#if defined(BUILD_FOR_PICO2W)
+#if defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 	udp.begin(local_port);
 	udp.beginPacket(server.c_str(), port);
 	udp.write(msg.data(), msg.size());

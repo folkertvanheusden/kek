@@ -1,4 +1,4 @@
-// (C) 2024-2025 by Folkert van Heusden
+// (C) 2026-2025 by Folkert van Heusden
 // Released under MIT license
 
 #include "gen.h"
@@ -16,7 +16,7 @@
 #if IS_POSIX
 #include "comm_posix_tty.h"
 #endif
-#if !defined(BUILD_FOR_PICO2W)
+#if !defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 #include "comm_tcp_socket_client.h"
 #include "comm_tcp_socket_server.h"
 #endif
@@ -64,7 +64,7 @@ comm *comm::deserialize(const JsonVariantConst j, bus *const b)
 
 	if (false) {
 	}
-#if !defined(BUILD_FOR_PICO2W)
+#if !defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 	else if (type == "tcp-server")
                 d = comm_tcp_socket_server::deserialize(j);
 	else if (type == "tcp-client")

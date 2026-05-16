@@ -30,7 +30,7 @@ private:
 	memory   *const m                  { nullptr };
 	bus      *const b                  { nullptr };
 	uint16_t        registers[6]       { 0       };
-#if defined(BUILD_FOR_PICO2W)
+#if defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 	uint8_t         xfer_buffer[1024];
 #else
 	uint8_t         xfer_buffer[10240];

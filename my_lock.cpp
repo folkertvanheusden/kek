@@ -3,21 +3,21 @@
 
 my_lock::my_lock()
 {
-#if defined(BUILD_FOR_PICO2W)
+#if defined(FREERTOS)
         xSemaphoreGive(l);  // initialize
 #endif
 }
 
 my_lock::~my_lock()
 {
-#if defined(BUILD_FOR_PICO2W)
+#if defined(FREERTOS)
 	vSemaphoreDelete(l);
 #endif
 }
 
 void my_lock::lock()
 {
-#if defined(BUILD_FOR_PICO2W)
+#if defined(FREERTOS)
         xSemaphoreTake(l, portMAX_DELAY);
 #else
 	l.lock();
@@ -26,7 +26,7 @@ void my_lock::lock()
 
 void my_lock::unlock()
 {
-#if defined(BUILD_FOR_PICO2W)
+#if defined(FREERTOS)
         xSemaphoreGive(l);
 #else
 	l.unlock();

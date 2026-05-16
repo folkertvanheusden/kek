@@ -14,7 +14,7 @@
 #if defined(ESP32)
 #include <lwip/netdb.h>
 #include <lwip/sockets.h>
-#elif defined(BUILD_FOR_PICO2W)
+#elif defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 //
 #elif defined(_WIN32)
 // from https://stackoverflow.com/questions/12765743/implicit-declaration-of-function-getaddrinfo-on-mingw
@@ -47,7 +47,7 @@ disk_backend_nbd::disk_backend_nbd(const std::string & host, const unsigned port
 
 disk_backend_nbd::~disk_backend_nbd()
 {
-#if defined(BUILD_FOR_PICO2W)
+#if defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 	handle.stop();
 #else
 	close(fd);
@@ -101,6 +101,14 @@ int blocking_read(WiFiClient & handle, uint8_t *const to, const size_t n)
 
 	return handle.read(to, n);
 }
+#elif defined(TEENSY4_1)
+int blocking_read(qn::EthernetClient & handle, uint8_t *const to, const size_t n)
+{
+	while(handle.available() < n && handle.connected()) {
+	}
+
+	return handle.read(to, n);
+}
 #endif
 
 bool disk_backend_nbd::connect(const bool retry)
@@ -115,7 +123,7 @@ bool disk_backend_nbd::connect(const bool retry)
 		uint8_t  padding[124];
 	} nbd_hello { };
 
-#if defined(BUILD_FOR_PICO2W)
+#if defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 	do {
 		handle.connect(host.c_str(), port);
 
@@ -239,7 +247,7 @@ bool disk_backend_nbd::read(const off_t offset_in, const size_t n, uint8_t *cons
 		}
 #endif
 
-#if defined(BUILD_FOR_PICO2W)
+#if defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 		if (handle.connected() == false && !connect(true)) {
 			myusleep(101000);
 			continue;
@@ -265,7 +273,7 @@ bool disk_backend_nbd::read(const off_t offset_in, const size_t n, uint8_t *cons
 		nbd_request.length = htonl(sector_size);
 
 		TRACE("NBD: send READ request");
-#if defined(BUILD_FOR_PICO2W)
+#if defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 		if (size_t rc = handle.write(reinterpret_cast<const uint8_t *>(&nbd_request), sizeof nbd_request); rc != sizeof nbd_request) {
 			printf("send read req error: %zu\n", rc);
 			DOLOG(warning, true, "disk_backend_nbd::read: problem sending request");
@@ -290,7 +298,7 @@ bool disk_backend_nbd::read(const off_t offset_in, const size_t n, uint8_t *cons
 		} nbd_reply;
 
 		TRACE("NBD: receiving READ reply header");
-#if defined(BUILD_FOR_PICO2W)
+#if defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 		if (int rc = blocking_read(handle, reinterpret_cast<uint8_t *>(&nbd_reply), sizeof nbd_reply); rc != sizeof nbd_reply) {
 			printf("recv read req error: %d %d\n", rc, handle.connected());
 			DOLOG(warning, true, "disk_backend_nbd::read: problem receiving reply header");
@@ -311,7 +319,7 @@ bool disk_backend_nbd::read(const off_t offset_in, const size_t n, uint8_t *cons
 		if (ntohl(nbd_reply.magic) != 0x67446698) {
 			printf("magic invalid\n");
 			DOLOG(warning, true, "disk_backend_nbd::read: bad reply header %08x", nbd_reply.magic);
-#if defined(BUILD_FOR_PICO2W)
+#if defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 			handle.stop();
 #else
 			close(fd);
@@ -328,7 +336,7 @@ bool disk_backend_nbd::read(const off_t offset_in, const size_t n, uint8_t *cons
 		}
 
 		TRACE("NBD: receiving READ reply payload");
-#if defined(BUILD_FOR_PICO2W)
+#if defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 		if (int rc = blocking_read(handle, reinterpret_cast<uint8_t *>(target), sector_size); rc != ssize_t(sector_size)) {
 			printf("recv payload error %d\r\n", rc);
 			DOLOG(warning, true, "disk_backend_nbd::read: problem receiving payload");
@@ -365,7 +373,7 @@ bool disk_backend_nbd::write(const off_t offset, const size_t n, const uint8_t *
 #endif
 
 	for(;;) {
-#if defined(BUILD_FOR_PICO2W)
+#if defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 		if (handle.connected() == false && !connect(true)) {
 			DOLOG(warning, true, "disk_backend_nbd::write: (re-)connect");
 			myusleep(101000);
@@ -392,7 +400,7 @@ bool disk_backend_nbd::write(const off_t offset, const size_t n, const uint8_t *
 		nbd_request.offset = HTONLL(uint64_t(offset));
 		nbd_request.length = htonl(n);
 
-#if defined(BUILD_FOR_PICO2W)
+#if defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 		if (handle.write(reinterpret_cast<const uint8_t *>(&nbd_request), sizeof nbd_request) != sizeof nbd_request) {
 			DOLOG(warning, true, "disk_backend_nbd::write: problem sending request");
 			handle.stop();
@@ -430,7 +438,7 @@ bool disk_backend_nbd::write(const off_t offset, const size_t n, const uint8_t *
 			uint64_t handle;
 		} nbd_reply;
 
-#if defined(BUILD_FOR_PICO2W)
+#if defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 		if (blocking_read(handle, reinterpret_cast<uint8_t *>(&nbd_reply), sizeof nbd_reply) != sizeof nbd_reply) {
 			DOLOG(warning, true, "disk_backend_nbd::read: problem receiving reply header");
 			handle.stop();
@@ -449,7 +457,7 @@ bool disk_backend_nbd::write(const off_t offset, const size_t n, const uint8_t *
 
 		if (ntohl(nbd_reply.magic) != 0x67446698) {
 			DOLOG(warning, true, "disk_backend_nbd::write: bad reply header %08x", nbd_reply.magic);
-#if defined(BUILD_FOR_PICO2W)
+#if defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 			handle.stop();
 #else
 			close(fd);

@@ -1,4 +1,4 @@
-// (C) 2024 by Folkert van Heusden
+// (C) 2026 by Folkert van Heusden
 // Released under MIT license
 
 #pragma once

@@ -30,7 +30,7 @@ cpu::cpu(bus *const b, std::atomic_uint32_t *const event) : b(b), mmu_(b->getMMU
 {
 	reset();
 
-#if defined(BUILD_FOR_PICO2W)
+#if defined(FREERTOS)
 	xSemaphoreGive(qi_lock);  // initialize
 #endif
 }
@@ -325,7 +325,7 @@ bool cpu::check_pending_interrupts() const
 
 void cpu::execute_any_pending_interrupt()
 {
-#if defined(BUILD_FOR_PICO2W)
+#if defined(FREERTOS)
 	xSemaphoreTake(qi_lock, portMAX_DELAY);
 #else
 	std::unique_lock<std::mutex> lck(qi_lock);
@@ -364,7 +364,7 @@ void cpu::execute_any_pending_interrupt()
 			TRACE("Invoking interrupt vector %o (IPL %d, current: %d)", v, i, current_level);
 			trap(v, i, true);
 
-#if defined(BUILD_FOR_PICO2W)
+#if defined(FREERTOS)
 			xSemaphoreGive(qi_lock);
 #endif
 
@@ -372,14 +372,14 @@ void cpu::execute_any_pending_interrupt()
 		}
 	}
 
-#if defined(BUILD_FOR_PICO2W)
+#if defined(FREERTOS)
 	xSemaphoreGive(qi_lock);
 #endif
 }
 
 void cpu::queue_interrupt(const uint8_t level, const uint16_t vector)
 {
-#if defined(BUILD_FOR_PICO2W)
+#if defined(FREERTOS)
 	xSemaphoreTake(qi_lock, portMAX_DELAY);
 #else
 	std::unique_lock<std::mutex> lck(qi_lock);
@@ -388,7 +388,7 @@ void cpu::queue_interrupt(const uint8_t level, const uint16_t vector)
 	queued_interrupts[level].insert(vector);
 	TRACE("Queueing interrupt vector %o (IPL %d, current: %d), n: %zu", vector, level, getPSW_spl(), queued_interrupts[level].size());
 
-#if defined(BUILD_FOR_PICO2W)
+#if defined(FREERTOS)
 	xSemaphoreGive(qi_lock);
 
 	if (uxQueueMessagesWaiting(qi_q) == 0) {
@@ -404,7 +404,7 @@ void cpu::queue_interrupt(const uint8_t level, const uint16_t vector)
 
 void cpu::unqueue_interrupt(const uint8_t level, const uint16_t vector)
 {
-#if defined(BUILD_FOR_PICO2W)
+#if defined(FREERTOS)
 	xSemaphoreTake(qi_lock, portMAX_DELAY);
 #else
 	std::unique_lock<std::mutex> lck(qi_lock);
@@ -412,7 +412,7 @@ void cpu::unqueue_interrupt(const uint8_t level, const uint16_t vector)
 
 	queued_interrupts[level].erase(vector);
 
-#if defined(BUILD_FOR_PICO2W)
+#if defined(FREERTOS)
 	xSemaphoreGive(qi_lock);
 #endif
 }
@@ -1553,7 +1553,7 @@ bool cpu::misc_operations(const uint16_t instr)
 				do
 				{
 					// wait intervals of 100 ms. if no interrupt for 1,5 seconds, then maybe things are stuck.
-#if defined(BUILD_FOR_PICO2W)
+#if defined(FREERTOS)
 					uint8_t rc = 0;
 					xQueueReceive(qi_q, &rc, check_pending_interrupts() ? 0 : 100 / portTICK_PERIOD_MS);
 #else

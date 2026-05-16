@@ -12,8 +12,8 @@
 #include <unistd.h>
 #if defined(BUILD_FOR_PICO2W)
 #include <WiFi.h>
+#elif defined(TEENSY4_1)
 #else
-#include <WiFi.h>
 #include <Wire.h>
 #include <sys/poll.h>
 #include <sys/socket.h>
@@ -31,7 +31,7 @@
 #if defined(ESP32)
 #include "comm_esp32_hardwareserial.h"
 #endif
-#if !defined(BUILD_FOR_PICO2W)
+#if !defined(BUILD_FOR_PICO2W) && !defined(TEENSY4_1)
 #include "comm_esp32_SC16IS752.h"
 #include "comm_tcp_socket_client.h"
 #include "comm_tcp_socket_server.h"
@@ -41,9 +41,7 @@
 #include "debugger.h"
 #include "disk_backend.h"
 #include "disk_backend_esp32.h"
-#if !defined(BUILD_FOR_PICO2W)
 #include "disk_backend_nbd.h"
-#endif
 #include "error.h"
 #include "kw11-l.h"
 #include "loaders.h"
@@ -109,7 +107,7 @@ const char *mac_to_string(uint8_t mac[6]) {
 }
 
 const char *enc_to_string(uint8_t enc) {
-#if defined(BUILD_FOR_PICO2W)
+#if defined(BUILD_FOR_PICO2W) && !defined(TEENSY4_1)
   switch (enc) {
     case ENC_TYPE_NONE: return "NONE";
     case ENC_TYPE_TKIP: return "WPA";
@@ -155,7 +153,7 @@ void finish_start_network(console *const c)
       comm_io *io_channels = new comm_io(dz11_n_lines);
 
       cs->println("* Adding DZ11");
-#if !defined(BUILD_FOR_PICO2W) && defined(TTY_SERIAL_RX)
+#if !defined(BUILD_FOR_PICO2W) && defined(TTY_SERIAL_RX) && !defined(TEENSY4_1)
       uint32_t bitrate = get_configuration_uint32(SERIAL_CFG_FILE, 115200);
 
       cs->println(format("* Init TTY (on DZ11), baudrate: %d bps, RX: %d, TX: %d", bitrate, TTY_SERIAL_RX, TTY_SERIAL_TX));
@@ -163,7 +161,7 @@ void finish_start_network(console *const c)
         DOLOG(warning, false, "Failed to configure device");
 #endif
 
-#if !defined(BUILD_FOR_PICO2W)
+#if !defined(BUILD_FOR_PICO2W) && !defined(TEENSY4_1)
       DOLOG(info, false, "Configuring TCP sockets for the remaining DZ11 slots");
       for(size_t i=0; i<dz11_n_lines; i++) {
         if (io_channels->is_defined(i))
@@ -257,7 +255,7 @@ void set_hostname()
 
   WiFi.setHostname(name);
 }
-#elif defined(BUILD_FOR_PICO2W)
+#elif defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 void set_hostname()
 {
   // TODO (serial number)
@@ -327,7 +325,7 @@ void setup() {
 
 	set_hostname();
 
-#if defined(BUILD_FOR_PICO2W)
+#if defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 	LittleFSConfig cfg;
 	cfg.setAutoFormat(false);
 
@@ -345,7 +343,7 @@ void setup() {
 
 #if defined(BUILD_FOR_PICO2W)
 	cs->println(format("Free RAM after init (decimal bytes): %d", rp2040.getFreeHeap()));
-#else
+#elif defined(ESP32)
 	cs->println(format("Free RAM after init (decimal bytes): %d", ESP.getFreeHeap()));
 
 	if (psramInit()) {
@@ -372,7 +370,7 @@ void setup() {
 	c = new cpu(b, &stop_event);
 	b->add_cpu(c);
 
-#if defined(ESP32) || defined(BUILD_FOR_PICO2W)
+#if defined(ESP32) || defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 	cnsl = new console_esp32(&stop_event, cs, 80, 25);
 #endif
 	cnsl->set_bus(b);
@@ -409,14 +407,14 @@ void setup() {
 	pinMode(HEARTBEAT_PIN, OUTPUT);
 #endif
 
-#if !defined(BUILD_FOR_PICO2W) && (defined(NEOPIXELS_PIN) || defined(HEARTBEAT_PIN))
+#if !defined(BUILD_FOR_PICO2W) && (defined(NEOPIXELS_PIN) || defined(HEARTBEAT_PIN)) && !defined(TEENSY4_1)
 	cs->println("Starting panel");
 	xTaskCreate(&console_thread_wrapper_panel, "panel", 3072, cnsl, 1, nullptr);
 #endif
 
 #if defined(BUILD_FOR_PICO2W)
 	uint32_t free_heap = rp2040.getFreeHeap();
-#else
+#elif defined(ESP32)
 	uint32_t free_heap = ESP.getFreeHeap();
 #endif
 	cs->println(format("Free RAM after init: %d decimal bytes", free_heap));

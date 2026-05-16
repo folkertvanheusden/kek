@@ -16,12 +16,14 @@
 class disk_backend_nbd : public disk_backend
 {
 private:
-	const std::string host;
-	const unsigned    port {  0 };
+	const std::string  host;
+	const unsigned     port {  0 };
 #if defined(BUILD_FOR_PICO2W)
-	WiFiClient        handle;
+	WiFiClient         handle;
+#elif defined(TEENSY4_1)
+	qn::EthernetClient handle;
 #else
-	int               fd   { -1 };
+	int                fd   { -1 };
 #endif
 
 	bool connect(const bool retry);

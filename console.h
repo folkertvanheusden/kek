@@ -6,7 +6,7 @@
 #include <atomic>
 #include <optional>
 #include <string>
-#if !defined(BUILD_FOR_PICO2W)
+#if !defined(BUILD_FOR_PICO2W) && !defined(TEENSY4_1)
 #include <thread>
 #endif
 #include <vector>
@@ -33,7 +33,7 @@ protected:
 	blinkenlights          *p_blinkenlights  { nullptr };
 
 	bus                    *b                { nullptr };
-#if !defined(BUILD_FOR_PICO2W)
+#if !defined(BUILD_FOR_PICO2W) && !defined(TEENSY4_1)
 	std::thread            *th               { nullptr };
 	std::thread            *th_panel         { nullptr };
 #endif

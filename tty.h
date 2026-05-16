@@ -38,7 +38,7 @@ private:
 
 	uint16_t registers[4] { 0 };
 
-#if !defined(BUILD_FOR_PICO2W)
+#if !defined(FREERTOS)
 	std::thread     *th        { nullptr };
 #endif
 	std::atomic_bool stop_flag { false };

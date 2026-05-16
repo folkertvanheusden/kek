@@ -1,4 +1,4 @@
-// (C) 2018-2024 by Folkert van Heusden
+// (C) 2018-2026 by Folkert van Heusden
 // Released under MIT license
 
 #include "gen.h"
@@ -39,6 +39,9 @@
 static const char *logfile           = strdup("/tmp/kek.log");
 #if defined(BUILD_FOR_PICO2W)
 static WiFiUDP     udp;
+static std::string syslog_host;
+#elif defined(TEENSY4_1)
+static qn::EthernetUDP udp;
 static std::string syslog_host;
 #else
 static sockaddr_in syslog_ip_addr    = { };
@@ -108,7 +111,7 @@ bool setloghost(const char *const host, const log_level_t ll)
 	log_level_file = ll;
 	l_timestamp    = false;
 
-#if defined(BUILD_FOR_PICO2W)
+#if defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 	syslog_host    = host;
 	return true;
 #else
@@ -135,7 +138,7 @@ void send_syslog(const int ll, const std::string & what)
 {
 	std::string msg = format("<%d>PDP11 %s", 16 * 8 + ll, what.c_str());
 
-#if defined(BUILD_FOR_PICO2W)
+#if defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
         udp.beginPacket(syslog_host.c_str(), 514);
         udp.write(msg.c_str(), msg.size());
         udp.endPacket();
@@ -159,7 +162,7 @@ void closelog()
 
 void dolog(const log_level_t ll, const char *fmt, ...)
 {
-#if !defined(BUILD_FOR_PICO2W)
+#if !defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 	if (!log_fh && logfile != nullptr) {
 #if !defined(ESP32)
 		log_fh = fopen(logfile, "a+");
