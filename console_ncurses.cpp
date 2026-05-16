@@ -117,7 +117,7 @@ void console_ncurses::resize_terminal()
 
 	create_win_border(0, 0, 80, 25, "terminal", &w_main_b, &w_main, false);
 
-	create_win_border(0, 27, 100, 5, "panel", &w_panel_b, &w_panel, false);
+	create_win_border(0, 27, 80, 5, "panel", &w_panel_b, &w_panel, false);
 
 	scrollok(w_main -> win, TRUE);
 
@@ -161,32 +161,29 @@ void console_ncurses::panel_update_thread()
 			wattron(w_panel->win, COLOR_PAIR(1));
 
 			for(uint8_t b=0; b<16; b++)
-				mvwprintw(w_panel->win, 1, 1 + 16 - b,      "%c", current_PSW   & (1 << b) ? '1' : '0');
+				mvwprintw(w_panel->win, 0, 1 + (2 + 22/* physinstr*/) + 16 - b, "%c", current_PSW   & (1 << b) ? '1' : '0');
 
 			if (current_instr.has_value()) {
 				for(uint8_t b=0; b<16; b++)
-					mvwprintw(w_panel->win, 1, 1 + 16 - b + 17, "%c", current_instr.value() & (1 << b) ? '1' : '0');
+					mvwprintw(w_panel->win, 0, 1 + 16 - b + (17/*psw*/) + (2 + 22 /* physinstr */), "%c",
+							current_instr.value() & (1 << b) ? '1' : '0');
 			}
 			else {
 				for(uint8_t b=0; b<16; b++)
-					mvwprintw(w_panel->win, 1, 1 + 16 - b + 17, "-");
+					mvwprintw(w_panel->win, 0, 1 + 16 - b + 17 + (2 + 22), "-");
 			}
 
-			mvwprintw(w_panel->win, 4, 1, "LEDs:");
-
-			uint16_t leds = b->get_console_leds();
-
-			for(uint8_t b=0; b<16; b++)
-				mvwprintw(w_panel->win, 4, 1 + 22 - b,      "%c", leds          & (1 << b) ? '1' : '0');
-
 			wattron(w_panel->win, COLOR_PAIR(5));
-
-			mvwprintw(w_panel->win, 1, 1 + 35, "%c%c%c",
+			mvwprintw(w_panel->win, 0, 1 + 16 + 17 + (2 + 22) + 8, "%c%c%c",
 				running_flag             ? '+' : '-',
 				disk_read_activity_flag  ? '*' : 'o',
 				disk_write_activity_flag ? '*' : 'o');
-
 			wattron(w_panel->win, COLOR_PAIR(0));
+
+			mvwprintw(w_panel->win, 4, 1, "LEDs:");
+			uint16_t leds = b->get_console_leds();
+			for(uint8_t b=0; b<16; b++)
+				mvwprintw(w_panel->win, 4, 1 + 22 - b, "%c", leds & (1 << b) ? '1' : '0');
 
 			// disassembler
 			auto registers = data["registers"];
@@ -202,15 +199,14 @@ void console_ncurses::panel_update_thread()
 
 			std::string instruction = data["instruction-text"].at(0);
 
-			mvwprintw(w_panel->win, 2, 1, "R0: %s, R1: %s, R2: %s, R3: %s, R4: %s, R5: %s, SP: %s, PC: %s",
-					registers[0].c_str(), registers[1].c_str(), registers[2].c_str(), registers[3].c_str(), registers[4].c_str(), registers[5].c_str(),
-					registers[6].c_str(), registers[7].c_str()); 
-			mvwprintw(w_panel->win, 3, 1, "PSW: %s, instr: %s",
-					psw.c_str(),
-					instruction_values.c_str());
-			mvwprintw(w_panel->win, 3, 46, "%s - %s",
-					instruction.c_str(),
-					work_values.c_str());
+			mvwprintw(w_panel->win, 1, 1, "R0: %s, R1: %s, R2: %s, R3: %s, R4: %s, R5: %s",
+					registers[0].c_str(), registers[1].c_str(), registers[2].c_str(),
+					registers[3].c_str(), registers[4].c_str(), registers[5].c_str());
+			mvwprintw(w_panel->win, 2, 1, "SP: %s, PC: %s, PSW: %s",
+					registers[6].c_str(), registers[7].c_str(), psw.c_str()); 
+			mvwprintw(w_panel->win, 3, 1, "instr: %s", instruction_values.c_str());
+			mvwprintw(w_panel->win, 3, 40, "%s - %s",
+					instruction.c_str(), work_values.c_str());
 		}
 		catch(int trap) {
 			std::unique_lock<std::mutex> lck(ncurses_mutex);
