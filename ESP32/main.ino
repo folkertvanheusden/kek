@@ -300,10 +300,12 @@ void check_network(console *const c)
 void start_network(console *const c)
 {
 #if defined(TEENSY4_1)
+  c->put_string_lf("Start Ethernet");
   if (!qn::Ethernet.begin()) {
     c->put_string_lf("Failed to start Ethernet");
     return;
   }
+  c->put_string_lf("Wait for DHCP");
   if (!qn::Ethernet.waitForLocalIP(10000)) {
     c->put_string_lf("Failed to get IP address from DHCP");
     return;
@@ -348,6 +350,23 @@ void debugger_task(void *)
     debugger(cnsl, b, &stop_event, { });
 }
 #endif
+
+void stack_poller(void *)
+{
+  for(;;) {
+    UBaseType_t   uxArraySize       = uxTaskGetNumberOfTasks();
+    TaskStatus_t *pxTaskStatusArray = pvPortMalloc(uxArraySize * sizeof(TaskStatus_t));
+    if (pxTaskStatusArray != nullptr) {
+      UBaseType_t ulTotalRunTime = 0;
+      uxArraySize = uxTaskGetSystemState(pxTaskStatusArray, uxArraySize, &ulTotalRunTime);
+      for(auto i = 0; i < uxArraySize; i++)
+        printf("%d] %s %u\r\n", int(i), pxTaskStatusArray[i].pcTaskName, unsigned(pxTaskStatusArray[i].usStackHighWaterMark));
+      vPortFree(pxTaskStatusArray);
+    }
+
+    vTaskDelay(1000);
+  }
+}
 
 void setup() {
 	Serial.begin(115200);
@@ -496,7 +515,9 @@ void setup() {
 
 #if defined(TEENSY4_1)
 	cnsl->put_string_lf("* Starting debugger task");
-	xTaskCreate(debugger_task, "debugger", 8192, nullptr, 1, nullptr);
+	xTaskCreate(debugger_task, "debugger", 2048, nullptr, 1, nullptr);
+
+//  xTaskCreate(stack_poller, "stackpoller", 512, nullptr, 2, nullptr);
 
 	cnsl->put_string_lf("* Starting task scheduler");
   vTaskStartScheduler();
