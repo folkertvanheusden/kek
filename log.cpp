@@ -19,6 +19,7 @@
 #if defined(BUILD_FOR_PICO2W)
 #include <Arduino.h>
 #include <WiFiUdp.h>
+#elif defined(TEENSY4_1)
 #else
 #include <arpa/inet.h>
 #include <netinet/in.h>

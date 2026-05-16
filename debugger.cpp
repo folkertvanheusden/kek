@@ -9,6 +9,7 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#elif defined(TEENSY4_1)
 #else
 #include <Arduino.h>
 #include <LittleFS.h>
@@ -21,7 +22,7 @@
 #if IS_POSIX
 #include "comm_posix_tty.h"
 #endif
-#if !defined(BUILD_FOR_PICO2W)
+#if !defined(BUILD_FOR_PICO2W) && !defined(TEENSY4_1)
 #include "comm_tcp_socket_client.h"
 #include "comm_tcp_socket_server.h"
 #endif
@@ -53,7 +54,7 @@
 
 extern blinkenlights bl;
 
-#if defined(ESP32) || defined(BUILD_FOR_PICO2W)
+#if defined(ESP32) || defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 bool network_configured = false;
 #if defined(ESP32)
 #include "esp32.h"
@@ -114,7 +115,6 @@ void start_disk(console *const cnsl)
 	cnsl->put_string_lf(format("MOSI: %d", int(MOSI)));
 	cnsl->put_string_lf(format("SCK : %d", int(SCK )));
 #endif
-
 	init_sd();
 #endif
 }
@@ -283,7 +283,7 @@ void configure_comm(console *const cnsl, comm_io *const device_list)
 
 		if (false) {
 		}
-#if !defined(BUILD_FOR_PICO2W)
+#if !defined(BUILD_FOR_PICO2W) && !defined(TEENSY4_1)
 		else if (ch_opt == '1') {
 			std::string temp_host = cnsl->read_line("host: ");
 			std::string temp_port = temp_host.empty() ? "" : cnsl->read_line("port: ");
@@ -610,6 +610,8 @@ void show_run_statistics(console *const cnsl, cpu *const c)
 #elif defined(BUILD_FOR_PICO2W)
 	cnsl->put_string_lf(format("Free RAM (decimal bytes): %d", rp2040.getFreeHeap()));
 	cnsl->put_string_lf(format("Clock frequency: %d", rp2040.f_cpu()));
+#elif defined(TEENSY4_1)
+	// TODO
 #endif
 }
 

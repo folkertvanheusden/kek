@@ -1,7 +1,7 @@
 #include "gen.h"
 #include <fcntl.h>
 #include <unistd.h>
-#if defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
+#if defined(BUILD_FOR_PICO2W)
 #include <WiFiUdp.h>
 #elif defined(_WIN32)
 #include "win32.h"
@@ -10,6 +10,7 @@
 #include <lwip/netdb.h>
 #include <lwip/sockets.h>
 #include <sys/socket.h>
+#elif defined(TEENSY4_1)
 #else
 #include <poll.h>
 #include <arpa/inet.h>

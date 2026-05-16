@@ -6,7 +6,9 @@
 #include <ArduinoJson.h>
 #include <atomic>
 #include <cstdint>
+#if !defined(TEENSY4_1)
 #include <LittleFS.h>
+#endif
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -76,7 +78,6 @@ static void console_thread_wrapper_panel(void *const c)
 	vTaskSuspend(nullptr);
 }
 
-#if !IS_POSIX
 bool init_sd()
 {
   bool disk_started = false;
@@ -98,7 +99,6 @@ bool init_sd()
 	}
   return disk_started;
 }
-#endif
 
 const char *mac_to_string(uint8_t mac[6]) {
   static char s[20];
@@ -120,15 +120,13 @@ const char *enc_to_string(uint8_t enc) {
 
 bool wait_network(console *const c)
 {
+#if !defined(TEENSY4_1)
 	constexpr const int timeout = 10 * 3;
-
-	int i = 0;
+	                int i       = 0;
 
 	while (WiFi.status() != WL_CONNECTED && i < timeout) {
 		c->put_string(".");
-
 		delay(1000 / 3);
-
 		i++;
 	}
 
@@ -136,6 +134,7 @@ bool wait_network(console *const c)
 		c->put_string_lf("Time out connecting");
     return false;
   }
+#endif
 
   return true;
 }
@@ -144,7 +143,12 @@ void finish_start_network(console *const c)
 {
   if (wait_network(c)) {
     c->put_string_lf("");
+#if defined(TEENSY4_1)
+    auto ip = qn::Ethernet.localIP();
+    c->put_string_lf(format("Local IP address: %d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]));
+#else
     c->put_string_lf(format("Local IP address: %s", WiFi.localIP().toString().c_str()));
+#endif
 
     static bool dz11_loaded = false;
     if (!dz11_loaded) {
@@ -187,6 +191,7 @@ void finish_start_network(console *const c)
 
 void configure_network(console *const c, const std::optional<std::string> & pars)
 {
+#if !defined(TEENSY4_1)
 	WiFi.disconnect();
 
 	WiFi.persistent(true);
@@ -240,7 +245,7 @@ void configure_network(console *const c, const std::optional<std::string> & pars
 		WiFi.begin(parts.at(0).c_str());
 	else
 		WiFi.begin(parts.at(0).c_str(), parts.at(1).c_str());
-
+#endif
   finish_start_network(c);
 }
 
@@ -255,11 +260,20 @@ void set_hostname()
 
   WiFi.setHostname(name);
 }
-#elif defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
+#elif defined(BUILD_FOR_PICO2W)
 void set_hostname()
 {
   // TODO (serial number)
   WiFi.setHostname("PDP11");
+}
+#elif defined(TEENSY4_1)
+void set_hostname()
+{
+  uint8_t mac[6] { };
+  qn::Ethernet.macAddress(mac);
+
+  std::string hostname = format("PDP11-%02x%02x%02x", mac[3], mac[4], mac[5]);
+  qn::Ethernet.setHostname(hostname.c_str());
 }
 #endif
 
@@ -268,15 +282,31 @@ void check_network(console *const c)
 	wait_network(c);
 
 	c->put_string_lf("");
+#if defined(TEENSY4_1)
+  auto ip = qn::Ethernet.localIP();
+  c->put_string_lf(format("Local IP address: %d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]));
+#else
 	c->put_string_lf(format("Local IP address: %s", WiFi.localIP().toString().c_str()));
+#endif
 }
 
 void start_network(console *const c)
 {
+#if defined(TEENSY4_1)
+  if (!qn::Ethernet.begin()) {
+    c->put_string_lf("Failed to start Ethernet");
+    return;
+  }
+  if (!qn::Ethernet.waitForLocalIP(10000)) {
+    c->put_string_lf("Failed to get IP address from DHCP");
+    return;
+  }
+#else
 	WiFi.mode(WIFI_STA);
 #if defined(ESP32)
 	WiFi.useStaticBuffers(true);
 	WiFi.begin();
+#endif
 #endif
 
   finish_start_network(c);
@@ -325,11 +355,12 @@ void setup() {
 
 	set_hostname();
 
-#if defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
+#if defined(BUILD_FOR_PICO2W)
 	LittleFSConfig cfg;
 	cfg.setAutoFormat(false);
 
 	LittleFS.setConfig(cfg);
+#elif defined(TEENSY4_1)
 #else
 	if (!LittleFS.begin(true))
 		cs->println("LittleFS.begin() failed");
@@ -401,7 +432,6 @@ void setup() {
 	cs->println("* Starting KW11-L");
 	b->getKW11_L()->begin(cnsl);
 
-	cs->println(format("LED_BUILTIN %d", LED_BUILTIN));
 #if defined(HEARTBEAT_PIN)
 	cs->println(format("Enable heartbeat pin on GPIO %d", HEARTBEAT_PIN));
 	pinMode(HEARTBEAT_PIN, OUTPUT);
@@ -417,7 +447,9 @@ void setup() {
 #elif defined(ESP32)
 	uint32_t free_heap = ESP.getFreeHeap();
 #endif
+#if !defined(TEENSY4_1)
 	cs->println(format("Free RAM after init: %d decimal bytes", free_heap));
+#endif
 
 	cs->println("* Starting console");
 	cnsl->start_thread();

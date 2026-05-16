@@ -3,12 +3,13 @@
 
 #include "gen.h"
 
-#if defined(ESP32) || defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
+#if defined(ESP32) || defined(BUILD_FOR_PICO2W)
 #include <Arduino.h>
 #include <LittleFS.h>
 #elif defined(_WIN32)
 #include <ws2tcpip.h>
 #include <winsock2.h>
+#elif defined(TEENSY4_1)
 #else
 #include <pwd.h>
 #include <arpa/inet.h>

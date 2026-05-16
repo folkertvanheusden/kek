@@ -1,7 +1,7 @@
 #include "gen.h"
 #include <cstdint>
 #include <string>
-#if defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
+#if defined(BUILD_FOR_PICO2W)
 #include <WiFiUdp.h>
 #endif
 
@@ -14,10 +14,12 @@ private:
 	const std::string peer;
 	const int         port { 4789 };
 	const uint32_t    id   { 0    };
-#if defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
-	WiFiUDP   udp;
+#if defined(BUILD_FOR_PICO2W)
+	WiFiUDP           udp;
+#elif defined(TEENSY4_1)
+	qn::EthernetUDP   udp;
 #else
-	int       fd           { -1   };
+	int               fd   { -1   };
 #endif
 
 public:
