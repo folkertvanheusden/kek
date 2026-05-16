@@ -16,7 +16,9 @@
 #include "comm.h"
 #include "comm_posix_tty.h"
 #include "comm_tcp_socket_server.h"
-#if !defined(_WIN32)
+#if defined(_WIN32)
+#include "win32.h"
+#else
 #include "console_ncurses.h"
 #endif
 #include "console_posix.h"
@@ -251,6 +253,12 @@ int main(int argc, char *argv[])
 {
 	//setlocale(LC_ALL, "");
 
+#if defined(_WIN32)
+	WSADATA wsa_data { };
+	if (WSAStartup(0x202, &wsa_data) != 0)
+		printf("ERROR: winsock initialization failure\n");
+#endif
+
 	std::vector<disk_backend *> disk_files;
 	std::string  disk_type = "rk05";
 
@@ -447,7 +455,6 @@ int main(int argc, char *argv[])
 	if (ll_set == false && withUI)
 		ll_screen = notice;
 	setlogfile(logfile, ll_file, ll_screen, timestamp);
-
 	DOLOG(info, true, "PDP11 emulator, by Folkert van Heusden");
 
 	DOLOG(info, true, "Built on: " __DATE__ " " __TIME__);
