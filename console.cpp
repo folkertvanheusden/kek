@@ -51,8 +51,8 @@ void console::start_thread()
 
 	stop_thread_flag = false;
 
-#if defined(BUILD_FOR_PICO2W)
-	xTaskCreate(&thread_wrapper_console, "console", 2048, this, 1, nullptr);
+#if defined(BUILD_FOR_PICO2W) || defined(FREERTOS)
+	xTaskCreate(&thread_wrapper_console, "console", 1024, this, 1, nullptr);
 #else
 	th = new std::thread(std::ref(*this));
 #endif
@@ -89,7 +89,7 @@ std::optional<int> console::wait_char(const int timeout_ms)
 {
 	auto c = input_buffer.pop(timeout_ms);
 	if (c.has_value() == false)
-		return -1;
+		return { };
 	return c.value();
 }
 
