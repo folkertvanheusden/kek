@@ -10,6 +10,10 @@
 #include "log.h"
 #include "memory.h"
 
+#if defined(TEENSY4_1)
+extern "C" uint8_t external_psram_size;
+#endif
+
 memory::memory(const uint32_t size): size(size)
 {
 #if defined(ESP32)
@@ -23,6 +27,14 @@ memory::memory(const uint32_t size): size(size)
 	else {
 		m = reinterpret_cast<uint8_t *>(calloc(1, size));
 	}
+#elif defined(TEENSY4_1)
+	if (external_psram_size >= size / 1024 / 1024) {
+		m = reinterpret_cast<uint8_t *>(extmem_malloc(size));
+		reset(true);
+	}
+	else {
+		m = reinterpret_cast<uint8_t *>(calloc(1, size));
+	}
 #else
 	m = reinterpret_cast<uint8_t *>(calloc(1, size));
 #endif
@@ -30,7 +42,14 @@ memory::memory(const uint32_t size): size(size)
 
 memory::~memory()
 {
+#if defined(TEENSY4_1)
+	if (external_psram_size >= size / 1024 / 1024)
+		extmem_free(m);
+	else
+		free(m);
+#else
 	free(m);
+#endif
 }
 
 void memory::reset(const bool hard)

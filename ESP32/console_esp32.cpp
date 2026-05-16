@@ -59,7 +59,6 @@ void console_esp32::put_char_ll(const char c)
 void console_esp32::put_string_lf(const std::string & what)
 {
 	put_string(what);
-
 	put_string("\r\n");
 }
 

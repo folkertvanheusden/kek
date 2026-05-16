@@ -329,13 +329,34 @@ void heap_caps_alloc_failed_hook(size_t requested_size, uint32_t caps, const cha
 }
 #endif
 
+#if defined(TEENSY4_1)
+// from https://forum.pjrc.com/index.php?threads/how-to-display-free-ram.33443/
+extern unsigned long _heap_start;
+extern unsigned long _heap_end;
+extern char *__brkval;
+int freeram()
+{
+  return (char *)&_heap_end - __brkval;
+}
+
+void debugger_task(void *)
+{
+	debugger(cnsl, b, &stop_event, { });
+}
+#endif
+
 void setup() {
 	Serial.begin(115200);
 	while(!Serial)
 		delay(100);
+#if defined(TEENSY4_1)
+  if (CrashReport) {
+    Serial.print(CrashReport);
+    CrashReport.clear();
+  }
+#endif
 #if defined(ESP32)
   esp_log_level_set("*", ESP_LOG_INFO);
-
   heap_caps_check_integrity_all(true);
 #endif
 
@@ -394,6 +415,8 @@ void setup() {
     if (auto rc = esp_pthread_set_cfg(&config); rc != ESP_OK)
       cs->println(format("esp_pthread_set_cfg(SPI_RAM) failed: %d", rc));
 	}
+#elif defined(ESP32)
+	cs->println(format("Free RAM after init (decimal bytes): %d", freeram()));
 #endif
 
 	cs->println(format("Allocating %d (decimal) pages", n_pages));
@@ -450,27 +473,36 @@ void setup() {
 	uint32_t free_heap = rp2040.getFreeHeap();
 #elif defined(ESP32)
 	uint32_t free_heap = ESP.getFreeHeap();
+#elif defined(TEENSY4_1)
+	int free_heap = freeram();
 #endif
-#if !defined(TEENSY4_1)
 	cs->println(format("Free RAM after init: %d decimal bytes", free_heap));
-#endif
 
 	cs->println("* Starting console");
 	cnsl->start_thread();
 
   bl.begin();
+#if !defined(TEENSY4_1)
   auto bl_ip = get_configuration_string(BLINKENLIGHTS_CFG_FILE, "");
   if (bl_ip.empty() == false) {
     cnsl->put_string_lf(format("Using PiDP11 blinkenlights on IP address %s", bl_ip.c_str()));
     bl.set_target(bl_ip);
   }
+#endif
 
-	cnsl->put_string_lf("PDP-11/70 emulator, (C) Folkert van Heusden");
+#if defined(TEENSY4_1)
+	xTaskCreate(debugger_task, "debugger", 8192, nullptr, 1, nullptr);
+
+	cnsl->put_string_lf("* Starting task scheduler");
+  vTaskStartScheduler();
+#else
+  cnsl->put_string_lf("PDP-11/70 emulator, (C) Folkert van Heusden");
+#endif
 }
 
-void loop()
-{
+void loop() {
+#if !defined(TEENSY4_1)
 	debugger(cnsl, b, &stop_event, { });
-
 	c->reset();
+#endif
 }
