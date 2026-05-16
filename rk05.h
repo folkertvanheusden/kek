@@ -5,7 +5,6 @@
 
 #include "gen.h"
 #include <ArduinoJson.h>
-#include <atomic>
 #include <stdint.h>
 #include <stdio.h>
 #include <string>
@@ -34,14 +33,14 @@ private:
 	uint16_t        registers  [7]   { 0       };
 	uint8_t         xfer_buffer[512] { 0       };
 
-	std::atomic_bool *const disk_read_acitivity  { nullptr };
-	std::atomic_bool *const disk_write_acitivity { nullptr };
+	abool *const disk_read_acitivity  { nullptr };
+	abool *const disk_write_acitivity { nullptr };
 
 	uint32_t get_bus_address() const;
 	void     update_bus_address(const uint16_t v);
 
 public:
-	rk05(bus *const b, std::atomic_bool *const disk_read_acitivity, std::atomic_bool *const disk_write_acitivity);
+	rk05(bus *const b, abool *const disk_read_acitivity, abool *const disk_write_acitivity);
 	virtual ~rk05();
 
 	void begin() override;

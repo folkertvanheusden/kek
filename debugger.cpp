@@ -773,7 +773,7 @@ struct debugger_state {
 	std::unordered_map<uint16_t, std::pair<uint32_t, int> > pc_monitor;
 };
 
-bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b, std::atomic_uint32_t *const stop_event, const std::string & cmd)
+bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b, kek_event_t *const stop_event, const std::string & cmd)
 {
 	cpu  *const c   = b->getCpu();
 	auto parts      = split(cmd,   " ");
@@ -1626,7 +1626,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 	return true;
 }
 
-void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const stop_event, const std::optional<std::string> & init)
+void debugger(console *const cnsl, bus *const b, kek_event_t *const stop_event, const std::optional<std::string> & init)
 {
 	debugger_state state;
 
@@ -1652,7 +1652,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 			if (state.marker)
 				cnsl->put_string_lf("---");
 
-			std::string cmd = cnsl->read_line(format("%d", stop_event->load()));
+			std::string cmd = cnsl->read_line(format("%d", int(*stop_event)));
 
 			if (debugger_do(&state, cnsl, b, stop_event, cmd) == false)
 				break;
@@ -1669,7 +1669,7 @@ void debugger(console *const cnsl, bus *const b, std::atomic_uint32_t *const sto
 	}
 }
 
-void simple_run(console *const cnsl, bus *const b, std::atomic_uint32_t *const stop_event)
+void simple_run(console *const cnsl, bus *const b, kek_event_t *const stop_event)
 {
 	cpu *const c = b->getCpu();
 

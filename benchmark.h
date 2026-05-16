@@ -1,6 +1,5 @@
-#include <atomic>
-
+#include "gen.h"
 #include "bus.h"
 
 
-void benchmark(console *const cnsl, bus *const b, std::atomic_uint32_t *const event, const bool measure);
+void benchmark(console *const cnsl, bus *const b, kek_event_t *const event, const bool measure);

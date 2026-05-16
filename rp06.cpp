@@ -21,7 +21,7 @@ constexpr const uint16_t default_DS  = uint16_t(rp06::ds_bits::DPR) /* drive pre
 
 constexpr const char *regnames[] { "Control", "Status", "Error register 1", "Maintenance", "Attention summary", "Desired sector/track address", "Error register 1", "Look ahead", "Drive type", "Serial no", "Offset", "Desired cylinder address", "Current cylinder address", "Error register 2", "Error register 3", "ECC position", "ECC pattern" };
 
-rp06::rp06(bus *const b, std::atomic_bool *const disk_read_activity, std::atomic_bool *const disk_write_activity, const bool is_rp07) :
+rp06::rp06(bus *const b, abool *const disk_read_activity, abool *const disk_write_activity, const bool is_rp07) :
 	b(b),
 	disk_read_activity (disk_read_activity ),
 	disk_write_activity(disk_write_activity)

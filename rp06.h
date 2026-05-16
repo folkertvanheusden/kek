@@ -6,7 +6,6 @@
 
 #include "gen.h"
 #include <ArduinoJson.h>
-#include <atomic>
 #include <stdint.h>
 #include <stdio.h>
 #include <string>
@@ -44,15 +43,15 @@ private:
 	unsigned int_cnt       { 0       };
 	unsigned int_cnt_total { 0       };
 
-	std::atomic_bool *const disk_read_activity  { nullptr };
-	std::atomic_bool *const disk_write_activity { nullptr };
+	abool *const disk_read_activity  { nullptr };
+	abool *const disk_write_activity { nullptr };
 
 	int      reg_num(uint16_t addr) const;
 	uint32_t getphysaddr() const;
 	uint32_t compute_offset() const;
 
 public:
-	rp06(bus *const b, std::atomic_bool *const disk_read_activity, std::atomic_bool *const disk_write_activity, const bool is_rp07);
+	rp06(bus *const b, abool *const disk_read_activity, abool *const disk_write_activity, const bool is_rp07);
 	virtual ~rp06();
 
 	void begin() override;

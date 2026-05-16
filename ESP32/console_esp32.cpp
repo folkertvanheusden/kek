@@ -23,7 +23,7 @@
 #include "utils.h"
 
 
-console_esp32::console_esp32(std::atomic_uint32_t *const stop_event, comm *const io_port, const int t_width, const int t_height) :
+console_esp32::console_esp32(kek_event_t *const stop_event, comm *const io_port, const int t_width, const int t_height) :
 	console(stop_event, t_width, t_height),
 	io_port(io_port)
 {

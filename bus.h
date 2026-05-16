@@ -83,7 +83,7 @@ public:
 	~bus();
 
 	JsonDocument serialize() const;
-	static bus *deserialize(const JsonDocument j, console *const cnsl, std::atomic_uint32_t *const event);
+	static bus *deserialize(const JsonDocument j, console *const cnsl, kek_event_t *const event);
 
 	void reset(const bool hard) override;
 	void init ();

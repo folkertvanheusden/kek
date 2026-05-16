@@ -5,7 +5,6 @@
 
 #include "gen.h"
 #include <ArduinoJson.h>
-#include <atomic>
 #include <mutex>
 #include <stdint.h>
 #include <stdio.h>
@@ -41,7 +40,7 @@ private:
 #if !defined(FREERTOS)
 	std::thread     *th        { nullptr };
 #endif
-	std::atomic_bool stop_flag { false };
+	abool stop_flag { false };
 
 	void notify_rx();
 

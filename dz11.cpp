@@ -434,7 +434,7 @@ TEST(dz11, dz11tests) {
 	setlogfile("dz11-test.log", debug, debug, true);
 
 	bus  b;
-	std::atomic_uint32_t event { 0 };
+	kek_event_t event { 0 };
 	cpu *c = new cpu(&b, &event);
 	b.add_cpu(c);
 	c->setPSW_spl(7);  // allow IRQs from DZ11 (level 5)

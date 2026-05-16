@@ -31,7 +31,7 @@ static const char * const commands[] = {
 	"read data w/o header check"
 	};
 
-rl02::rl02(bus *const b, std::atomic_bool *const disk_read_activity, std::atomic_bool *const disk_write_activity) :
+rl02::rl02(bus *const b, abool *const disk_read_activity, abool *const disk_write_activity) :
 	b(b),
 	disk_read_activity (disk_read_activity ),
 	disk_write_activity(disk_write_activity)

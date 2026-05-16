@@ -5,7 +5,6 @@
 
 #include "gen.h"
 #include <ArduinoJson.h>
-#include <atomic>
 #include <stdint.h>
 #include <stdio.h>
 #include <string>
@@ -39,8 +38,8 @@ private:
 	uint8_t         sector { 0 };
 	uint16_t        mpr[3];
 
-	std::atomic_bool *const disk_read_activity  { nullptr };
-	std::atomic_bool *const disk_write_activity { nullptr };
+	abool *const disk_read_activity  { nullptr };
+	abool *const disk_write_activity { nullptr };
 
 	uint32_t get_bus_address() const;
 	void     update_bus_address(const uint32_t a);
@@ -48,7 +47,7 @@ private:
 	uint32_t calc_offset() const;
 
 public:
-	rl02(bus *const b, std::atomic_bool *const disk_read_activity, std::atomic_bool *const disk_write_activity);
+	rl02(bus *const b, abool *const disk_read_activity, abool *const disk_write_activity);
 	virtual ~rl02();
 
 	void begin() override;

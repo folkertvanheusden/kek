@@ -2,7 +2,6 @@
 // Released under MIT license
 
 #pragma once
-#include <atomic>
 #include <condition_variable>
 #include <cstdint>
 #include <thread>
@@ -29,7 +28,7 @@ class dc11: public device
 private:
 	bus              *const b          { nullptr };
 	uint16_t          registers[4 * dc11_n_lines] { 0 };
-	std::atomic_bool  stop_flag        { false   };
+	abool             stop_flag        { false   };
 	std::thread      *th               { nullptr };
 
 	comm_io          *const io_channels { nullptr };

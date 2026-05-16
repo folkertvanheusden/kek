@@ -55,3 +55,14 @@ typedef enum { rm_prev, rm_cur } rm_selection_t;
 #if defined(TEENSY4_1)
 #include "teensy4_1.h"
 #endif
+
+#if defined(TEENSY4_1)
+#define kek_event_t  volatile uint32_t
+#define abool        volatile bool
+#define big_acounter volatile uint64_t
+#else
+#include <atomic>
+#define kek_event_t  std::atomic_uint32_t
+#define abool        std::atomic_bool
+#define big_acounter std::atomic_uint64_t
+#endif

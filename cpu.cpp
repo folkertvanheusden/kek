@@ -26,7 +26,7 @@ constexpr const double pdp11_estimated_mips = pdp11_MHz / pdp11_avg_cycles_per_i
 
 constexpr const uint16_t word_mode_mask[2] { 0xffff, 0xff };
 
-cpu::cpu(bus *const b, std::atomic_uint32_t *const event) : b(b), mmu_(b->getMMU()), event(event)
+cpu::cpu(bus *const b, kek_event_t *const event) : b(b), mmu_(b->getMMU()), event(event)
 {
 	reset();
 
@@ -2729,8 +2729,13 @@ bool cpu::step()
 {
 	it_is_a_trap = false;
 
+#if defined(TEENSY4_1)
+	if (any_queued_interrupts)
+		execute_any_pending_interrupt();
+#else
 	if (any_queued_interrupts.load(std::memory_order_relaxed))
 		execute_any_pending_interrupt();
+#endif
 
 	try {
 		instruction_start = getPC();
@@ -2807,7 +2812,7 @@ JsonDocument cpu::serialize()
 	return j;
 }
 
-cpu *cpu::deserialize(const JsonVariantConst j, bus *const b, std::atomic_uint32_t *const event)
+cpu *cpu::deserialize(const JsonVariantConst j, bus *const b, kek_event_t *const event)
 {
 	cpu *c = new cpu(b, event);
 

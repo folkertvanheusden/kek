@@ -2,7 +2,6 @@
 // Released under MIT license
 
 #pragma once
-#include <atomic>
 #include <condition_variable>
 #include <cstdint>
 #include <thread>
@@ -42,7 +41,7 @@ class dz11: public device
 private:
 	bus              *const b      { nullptr };
 	uint16_t          registers[n_dz11_registers] { 0 };
-	std::atomic_bool  stop_flag    { false   };
+	abool  stop_flag    { false   };
 	std::thread      *th           { nullptr };
 	bool              flipflop_txd { false   };
 	size_t            scanner_line_nr { 0    };

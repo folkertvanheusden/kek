@@ -33,15 +33,15 @@ private:
 	std::atomic_uint16_t registers[8] { 0     };  // accessed from multiple threads
 	uint8_t          mac_address[6] { 0       };
 	int              dev_fd         { -1      };
-	std::atomic_bool stop_flag      { false   };
+	abool stop_flag      { false   };
 	std::thread     *th_rx_low      { nullptr };
 	std::thread     *th_rx_high     { nullptr };
 	mutable my_lock  lock;
 	my_threadsafe_queue<std::pair<uint8_t *, size_t> > received;
-	std::atomic_uint64_t total_n_rx_pkts { 0 };
-	std::atomic_uint64_t total_n_rx_drop { 0 };
-	std::atomic_uint64_t total_n_tx_pkts { 0 };
-	std::atomic_uint64_t total_n_tx_drop { 0 };
+	big_acounter total_n_rx_pkts { 0 };
+	big_acounter total_n_rx_drop { 0 };
+	big_acounter total_n_tx_pkts { 0 };
+	big_acounter total_n_tx_drop { 0 };
 
 	void queue_rx_packet(const uint8_t *const in, const size_t n);
 	void transmitter    ();

@@ -21,7 +21,7 @@ protected:
 	void put_char_ll    (const char c) override;
 
 public:
-	console_esp32(std::atomic_uint32_t *const stop_event, comm *const io_port, const int t_width, const int t_height);
+	console_esp32(kek_event_t *const stop_event, comm *const io_port, const int t_width, const int t_height);
 	virtual ~console_esp32();
 
 	void set_panel_mode(const panel_mode_t pm);

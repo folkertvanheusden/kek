@@ -84,7 +84,7 @@ JsonDocument bus::serialize() const
 	return j_out;
 }
 
-bus *bus::deserialize(const JsonDocument j, console *const cnsl, std::atomic_uint32_t *const event)
+bus *bus::deserialize(const JsonDocument j, console *const cnsl, kek_event_t *const event)
 {
 	bus *b = new bus();
 

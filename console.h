@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include <atomic>
+#include "gen.h"
 #include <optional>
 #include <string>
 #if !defined(BUILD_FOR_PICO2W) && !defined(TEENSY4_1)
@@ -28,8 +28,8 @@ private:
 	my_threadsafe_queue<char> input_buffer;
 
 protected:
-	std::atomic_uint32_t   *const stop_event { nullptr };
-	std::atomic_bool        stop_panel       { false   };
+	kek_event_t            *const stop_event { nullptr };
+	abool                   stop_panel       { false   };
 	blinkenlights          *p_blinkenlights  { nullptr };
 
 	bus                    *b                { nullptr };
@@ -38,9 +38,9 @@ protected:
 	std::thread            *th_panel         { nullptr };
 #endif
 	int                     refreshrate      { 15      };
-	std::atomic_bool        disk_read_activity_flag  { false };
-	std::atomic_bool        disk_write_activity_flag { false };
-	std::atomic_bool        running_flag     { false };
+	abool        disk_read_activity_flag  { false };
+	abool        disk_write_activity_flag { false };
+	abool        running_flag     { false };
 
 	bool                    stop_thread_flag { false };
 
@@ -49,7 +49,7 @@ protected:
 	char                   *screen_buffer    { nullptr };
 	uint8_t                 tx               { 0 };
 	uint8_t                 ty               { 0 };
-	std::atomic_bool        timestamps       { false };
+	abool        timestamps       { false };
 	const uint64_t          start_ts         { get_us() };
 
 	const size_t            n_edit_lines_hist { 8 };  // maximum number of previous edit-lines
@@ -62,7 +62,7 @@ protected:
 	virtual void put_char_ll(const char c) = 0;
 
 public:
-	console(std::atomic_uint32_t *const stop_event, const int t_width = 80, const int t_height = 25);
+	console(kek_event_t *const stop_event, const int t_width = 80, const int t_height = 25);
 	virtual ~console();
 
 	virtual void begin();
@@ -92,9 +92,9 @@ public:
 
 	void         operator()();
 
-	std::atomic_bool * get_running_flag()             { return &running_flag; }
-	std::atomic_bool * get_disk_read_activity_flag()  { return &disk_read_activity_flag; }
-	std::atomic_bool * get_disk_write_activity_flag() { return &disk_write_activity_flag; }
+	abool * get_running_flag()             { return &running_flag; }
+	abool * get_disk_read_activity_flag()  { return &disk_read_activity_flag; }
+	abool * get_disk_write_activity_flag() { return &disk_write_activity_flag; }
 
 	void         set_blinkenlights_panel(blinkenlights *const p_blinkenlights);
 	void         stop_panel_thread() { stop_panel = true; }

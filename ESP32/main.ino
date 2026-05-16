@@ -63,11 +63,11 @@ uint16_t exec_addr = 0;
 
 SdFs     SDinstance;
 
-std::atomic_uint32_t  stop_event         { EVENT_NONE };
-std::atomic_bool     *running            { nullptr    };
-bool                  trace_output       { false      };
-comm                 *cs                 { nullptr    };  // Console Serial
-blinkenlights        bl;
+kek_event_t   stop_event         { EVENT_NONE };
+abool        *running            { nullptr    };
+bool          trace_output       { false      };
+comm         *cs                 { nullptr    };  // Console Serial
+blinkenlights bl;
 
 static void console_thread_wrapper_panel(void *const c)
 {

@@ -3,7 +3,6 @@
 
 #include "gen.h"
 #include <ArduinoJson.h>
-#include <atomic>
 #include <thread>
 
 #include "bus.h"
@@ -30,7 +29,7 @@ private:
 	uint64_t           enabled_ticks { 0       };
 	uint64_t           int_triggered { 0       };
 
-	std::atomic_bool   stop_flag  { false   };
+	abool              stop_flag  { false   };
 
 	uint8_t  get_lf_crs();
 	void     set_lf_crs_b7();

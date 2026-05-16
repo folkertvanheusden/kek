@@ -24,7 +24,7 @@ void thread_wrapper_console(void *p)
 }
 #endif
 
-console::console(std::atomic_uint32_t *const stop_event, const int t_width, const int t_height) :
+console::console(kek_event_t *const stop_event, const int t_width, const int t_height) :
 	stop_event(stop_event),
 	t_width(t_width),
 	t_height(t_height)

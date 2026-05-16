@@ -6,7 +6,6 @@
 #include "gen.h"
 #include <ArduinoJson.h>
 #include <array>
-#include <atomic>
 #include <cassert>
 #include <condition_variable>
 #include <mutex>
@@ -64,7 +63,7 @@ private:
 
 	// vector, 8 levels
 	std::array<std::set<uint16_t>, 8> queued_interrupts;
-	std::atomic_bool        any_queued_interrupts { false };
+	abool        any_queued_interrupts { false };
 #if defined(FREERTOS)
 	SemaphoreHandle_t       qi_lock { xSemaphoreCreateBinary() };
 	QueueHandle_t           qi_q    { xQueueCreate(16, 1)      };
@@ -79,7 +78,7 @@ private:
 	bus *const b    { nullptr };
 	mmu *const mmu_ { nullptr };
 
-	std::atomic_uint32_t *const event { nullptr };
+	kek_event_t *const event { nullptr };
 
 	bool     check_pending_interrupts() const;  // needs the 'qi_lock'-lock
 	void     execute_any_pending_interrupt();
@@ -118,11 +117,11 @@ private:
 	void pop_from_stack_trace();
 
 public:
-	explicit cpu(bus *const b, std::atomic_uint32_t *const event);
+	explicit cpu(bus *const b, kek_event_t *const event);
 	~cpu();
 
 	JsonDocument serialize();
-	static cpu *deserialize(const JsonVariantConst j, bus *const b, std::atomic_uint32_t *const event);
+	static cpu *deserialize(const JsonVariantConst j, bus *const b, kek_event_t *const event);
 
 	std::optional<std::pair<breakpoint &, const std::string> > check_breakpoint();
 	int                         set_breakpoint(breakpoint *const bp);

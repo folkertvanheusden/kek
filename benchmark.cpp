@@ -1,4 +1,3 @@
-#include <atomic>
 #include <cinttypes>
 #include <cstdint>
 
@@ -86,7 +85,7 @@ void reset_benchmark(bus *const b)
         c->set_register(7, base);
 }
 
-void benchmark(console *const cnsl, bus *const b, std::atomic_uint32_t *const stop_event, const bool measure)
+void benchmark(console *const cnsl, bus *const b, kek_event_t *const stop_event, const bool measure)
 {
         reset_benchmark(b);
 
