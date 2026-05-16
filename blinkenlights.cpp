@@ -17,7 +17,7 @@
 #elif defined(TEENSY4_1)
 #include <QNEthernet.h>
 #endif
-#if defined(ESP32) || defined(BUILD_FOR_PICO2W)
+#if defined(BUILD_FOR_PICO2W)
 #include <WiFiUdp.h>
 #elif defined(TEENSY4_1)
 #include <QNEthernet.h>

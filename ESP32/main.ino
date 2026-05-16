@@ -22,6 +22,7 @@
 #include <sys/types.h>
 #endif
 #if defined(ESP32)
+#include <WiFi.h>
 #include "esp_clk_tree.h"
 #include "esp_heap_caps.h"
 #include "esp_pthread.h"
@@ -357,7 +358,7 @@ void stack_poller(void *)
     UBaseType_t   uxArraySize       = uxTaskGetNumberOfTasks();
     TaskStatus_t *pxTaskStatusArray = reinterpret_cast<TaskStatus_t *>(pvPortMalloc(uxArraySize * sizeof(TaskStatus_t)));
     if (pxTaskStatusArray != nullptr) {
-      UBaseType_t ulTotalRunTime = 0;
+      uint32_t ulTotalRunTime = 0;
       uxArraySize = uxTaskGetSystemState(pxTaskStatusArray, uxArraySize, &ulTotalRunTime);
       for(auto i = 0; i < uxArraySize; i++)
         printf("%d] %s %u\r\n", int(i), pxTaskStatusArray[i].pcTaskName, unsigned(pxTaskStatusArray[i].usStackHighWaterMark));
