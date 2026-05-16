@@ -120,14 +120,13 @@ void tty::operator()()
 	set_thread_name("kek:tty");
 
 	while(!stop_flag) {
-		if (c->poll_char()) {
-			my_unique_lock lck(&chars_lock);
-			chars.push_back(c->get_char());
-			notify_rx();
-		}
-		else {
-			myusleep(100000);
-		}
+		auto new_char = c->wait_char(100);
+		if (new_char.has_value() == false)
+			continue;
+
+		my_unique_lock lck(&chars_lock);
+		chars.push_back(new_char.value());
+		notify_rx();
 	}
 }
 
