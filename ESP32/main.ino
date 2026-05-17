@@ -313,10 +313,6 @@ void start_network(console *const c)
   }
 #else
 	WiFi.mode(WIFI_STA);
-#if defined(ESP32)
-	WiFi.useStaticBuffers(true);
-	WiFi.begin();
-#endif
 #endif
 
   finish_start_network(c);
@@ -396,6 +392,11 @@ void setup() {
 	cs->println("Running on a Teensy 4.1");
 #else
 	cs->println("Unknown platform?!");
+#endif
+
+#if defined(ESP32)
+	WiFi.useStaticBuffers(true);
+	WiFi.begin();
 #endif
 
 #if defined(ESP32)
