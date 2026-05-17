@@ -234,11 +234,19 @@ void configure_network(console *const c, const std::optional<std::string> & pars
     auto cnt = WiFi.scanNetworks();
     if (cnt) {
       c->put_string_lf(format("Found %d WiFi networks", cnt));
+#if defined(ESP32)
       c->put_string_lf(format("%29s %-11s %-17s %-2s %-4s", "SSID", "ENC", "BSSID        ", "CH", "RSSI"));
+#else
+      c->put_string_lf(format("%32s %-5s %-17s %-2s %-4s", "SSID", "ENC", "BSSID        ", "CH", "RSSI"));
+#endif
       for(auto i = 0; i < cnt; i++) {
         uint8_t bssid[6];
         WiFi.BSSID(i, bssid);
+#if defined(ESP32)
         c->put_string_lf(format("%29s %11s %17s %2d %4ld", WiFi.SSID(i).c_str(), enc_to_string(WiFi.encryptionType(i)), mac_to_string(bssid), WiFi.channel(i), WiFi.RSSI(i)));
+#else
+        c->put_string_lf(format("%32s %5s %17s %2d %4ld", WiFi.SSID(i), enc_to_string(WiFi.encryptionType(i)), mac_to_string(bssid), WiFi.channel(i), WiFi.RSSI(i)));
+#endif
       }
     }
     else if (cnt < 0) {
