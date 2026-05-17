@@ -42,6 +42,8 @@
 #include "disk_backend_nbd.h"
 #if defined(linux)
 #include "eth_transport_linux.h"
+#elif defined(ESP32)
+#include "eth_transport_esp32.h"
 #endif
 #include "eth_transport_vxlan.h"
 #include "kw11-l.h"
@@ -1351,11 +1353,15 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		if (false) {
 		}
 #if defined(linux)
-		if (pars[0] == "linux") {
+		else if (pars[0] == "linux") {
 			if (pars.size() != 2)
 				cnsl->put_string_lf("Invalid parameter count");
 			else
 				dev = new eth_transport_linux(pars[1]);
+		}
+#elif defined(ESP32)
+		else if (pars[0] == "esp32") {
+			dev = new eth_transport_esp32();
 		}
 #endif
 		else if (pars[0] == "vxlan") {
@@ -1505,7 +1511,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			"blights x     - enable blinkenlights on IP address x", 
 			"testdz11      - test DZ11",
 			"cfgdisk       - configure disk",
-			"deqna x[,y,z] - set deqna emulation to use (x): \"linux\" (tap) or \"vxlan\" (with host (y) & port (z))",
+			"deqna x[,y,z] - set deqna emulation to use (x): \"linux\" (tap), \"esp32\" or \"vxlan\" (with host (y) & port (z))",
 			"log ...       - log a message to the logfile",
 			nullptr
 		};
