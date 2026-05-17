@@ -86,12 +86,14 @@ bool comm_tcp_socket_server::begin()
 bool comm_tcp_socket_server::is_connected()
 {
 	my_unique_lock lck(&cfd_lock);
-
 	return cfd != INVALID_SOCKET;
 }
 
 bool comm_tcp_socket_server::has_data()
 {
+	if (cfd == -1)
+		return false;
+
 	my_unique_lock lck(&cfd_lock);
 #if defined(_WIN32)
 	WSAPOLLFD fds[] { { cfd, POLLIN, 0 } };
@@ -100,64 +102,87 @@ bool comm_tcp_socket_server::has_data()
 	pollfd    fds[] { { cfd, POLLIN, 0 } };
 	int rc = poll(fds, 1, 0);
 #endif
-
 	return rc == 1;
 }
 
 uint8_t comm_tcp_socket_server::get_byte()
 {
-	int use_fd = -1;
-
-	{
-		my_unique_lock lck(&cfd_lock);
-		use_fd = cfd;
-	}
-
 	uint8_t c = 0;
+
+	while(!stop_flag) {
+		int use_fd = -1;
+		{
+			my_unique_lock lck(&cfd_lock);
+			use_fd = cfd;
+		}
+
 #if defined(_WIN32)
-	if (recv(use_fd, reinterpret_cast<char *>(&c), 1, 0) <= 0) {
-		DOLOG(warning, false, "comm_tcp_socket_server::get_byte: failed");
-		my_unique_lock lck(&cfd_lock);
-		closesocket(cfd);
-		cfd = INVALID_SOCKET;
-	}
+		WSAPOLLFD fds[] { { use_fd, POLLIN, 0 } };
 #else
-	if (read(use_fd, reinterpret_cast<char *>(&c), 1) <= 0) {
-		DOLOG(warning, false, "comm_tcp_socket_server::get_byte: failed");
-		my_unique_lock lck(&cfd_lock);
-		close(cfd);
-		cfd = -1;
-	}
+		pollfd    fds[] { { use_fd, POLLIN, 0 } };
 #endif
+#if defined(_WIN32)
+		int rc = WSAPoll(fds, 1, 100);
+#else
+		int rc = poll(fds, 1, 100);
+#endif
+		if (rc <= 0)
+			continue;
+
+#if defined(_WIN32)
+		if (recv(use_fd, reinterpret_cast<char *>(&c), 1, 0) <= 0) {
+			DOLOG(warning, false, "comm_tcp_socket_server::get_byte: failed");
+			my_unique_lock lck(&cfd_lock);
+			closesocket(cfd);
+			cfd = INVALID_SOCKET;
+		}
+#else
+		if (read(use_fd, reinterpret_cast<char *>(&c), 1) <= 0) {
+			DOLOG(warning, false, "comm_tcp_socket_server::get_byte: failed");
+			my_unique_lock lck(&cfd_lock);
+			close(cfd);
+			cfd = -1;
+		}
+#endif
+		break;
+	}
 
 	return c;
 }
 
 void comm_tcp_socket_server::send_data(const uint8_t *const in, const size_t n)
 {
+	if (cfd == -1)  // not connected
+		return;
+
 	const uint8_t *p   = in;
 	size_t         len = n;
 
 	while(len > 0) {
-		my_unique_lock lck(&cfd_lock);
+		int use_fd = -1;
+		{
+			my_unique_lock lck(&cfd_lock);
+			use_fd = cfd;
+		}
 #if defined(_WIN32)
-		int rc = send(cfd, reinterpret_cast<const char *>(p), len, 0);
+		int rc = send(use_fd, reinterpret_cast<const char *>(p), len, 0);
 		if (rc <= 0) {
 			DOLOG(warning, false, "comm_tcp_socket_client::send_data: failed");
+			my_unique_lock lck(&cfd_lock);
 			closesocket(cfd);
 			cfd = INVALID_SOCKET;
 			break;
 		}
 #else
-		int rc = write(cfd, p, len);
+		int rc = write(use_fd, p, len);
 		if (rc <= 0) {
 			DOLOG(warning, false, "comm_tcp_socket_client::send_data: failed");
+			my_unique_lock lck(&cfd_lock);
 			close(cfd);
 			cfd = INVALID_SOCKET;
 			break;
 		}
 #endif
-
 		p   += rc;
 		len -= rc;
 	}
@@ -220,21 +245,24 @@ void comm_tcp_socket_server::operator()()
 		if (rc == 0)
 			continue;
 
-		my_unique_lock lck(&cfd_lock);
-
-		// disconnect any existing client session
-		// yes, one can 'DOS' with this
-		if (cfd != INVALID_SOCKET) {
-			closesocket(cfd);
-			DOLOG(info, false, "Restarting session for port %d", port);
+		{
+			my_unique_lock lck(&cfd_lock);
+			// disconnect any existing client session
+			// yes, one can 'DOS' with this
+			if (cfd != INVALID_SOCKET) {
+				closesocket(cfd);
+				DOLOG(info, false, "Restarting session for port %d", port);
+			}
 		}
 
-		cfd = accept(fd, nullptr, nullptr);
-
-		if (cfd != INVALID_SOCKET) {
-			set_nodelay(cfd);
-
-			DOLOG(info, false, "Connected with %s", get_endpoint_name(cfd).c_str());
+		int temp = accept(fd, nullptr, nullptr);
+		if (temp != INVALID_SOCKET) {
+			set_nodelay(temp);
+			DOLOG(info, false, "Connected with %s", get_endpoint_name(temp).c_str());
+		}
+		{
+			my_unique_lock lck(&cfd_lock);
+			cfd = temp;
 		}
 
 		if (setup_telnet)

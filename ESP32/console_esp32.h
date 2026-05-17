@@ -1,21 +1,14 @@
-// (C) 2018-2024 by Folkert van Heusden
+// (C) 2018-2026 by Folkert van Heusden
 // Released under MIT license
 
 #include <vector>
 
 #include "comm.h"
-#include "console.h"
+#include "console_comm.h"
 
 
-class console_esp32 : public console
+class console_esp32 : public console_comm
 {
-public:
-	enum panel_mode_t { PM_BITS, PM_POINTER };
-
-private:
-	comm         *const io_port;
-	panel_mode_t        panel_mode { PM_BITS };  // TODO: atomic_int
-
 protected:
 	int wait_for_char_ll(const short timeout) override;
 	void put_char_ll    (const char c) override;

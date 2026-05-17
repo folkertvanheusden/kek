@@ -44,10 +44,11 @@ To run a tape image:
     ./kek -T filename.bin -b 2> /dev/null
 
 
-When you run UNIX 7, you can (if your system has enough RAM - use an ESP32 with 2 MB PSRAM or more) run multi-user via the DZ-11 emulation.
+When you run UNIX 7, you can (if your system has enough RAM - use a micrcontroller with 2 MB PSRAM or more) run multi-user via the DZ-11 emulation.
 Note that UNIX 7 starts in single user mode first; press ctrl+d to switch to multi user (recognizable by the login-prompt).
 Also make sure to configure networking ('startnet') to be able to connect (using telnet) to the DC-11 ports (TCP port 1101 upto and including 1104).
 
+If using windows, run Kek with -c x where x is some portnumber. You can then telnet to that port to control the emulator/emulated system.
 
 ESP32
 -----
@@ -77,7 +78,7 @@ Note that you need to use different pins for the MAX232 connection when you want
 
 
 Raspberry PI PICO2W
---------------------------
+-------------------
 Wiring of SDCARD:
 * MISO: 16
 * MOSI: 19

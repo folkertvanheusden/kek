@@ -37,6 +37,7 @@ set(APP_SOURCES
   comm_tcp_socket_client.cpp
   comm_tcp_socket_server.cpp
   console.cpp
+  console_comm.cpp
   console_ncurses.cpp
   console_posix.cpp
   cpu.cpp

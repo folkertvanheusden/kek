@@ -21,6 +21,7 @@
 #else
 #include "console_ncurses.h"
 #endif
+#include "console_comm.h"
 #include "console_posix.h"
 #include "cpu.h"
 #include "debugger.h"
@@ -284,6 +285,7 @@ int main(int argc, char *argv[])
 
 	uint16_t     console_switches = 0;
 	std::string  blinkenlights_ip;
+	std::optional<int> console_port;
 
 	bool         disk_snapshots = false;
 
@@ -302,7 +304,7 @@ int main(int argc, char *argv[])
 	std::string  deqna_type;
 
 	int  opt = -1;
-	while((opt = getopt(argc, argv, "hD:T:B:r:R:p:ndf:tL:b:l:s:Q:N:J:XS:P1:m:Q:28:I:")) != -1)
+	while((opt = getopt(argc, argv, "hD:T:B:r:R:p:ndf:tL:b:l:s:Q:N:J:XS:P1:m:Q:28:I:c:")) != -1)
 	{
 		switch(opt) {
 			case 'h':
@@ -448,6 +450,10 @@ int main(int argc, char *argv[])
 				deqna_type = optarg;
 				break;
 
+			case 'c':
+				console_port = std::stoi(optarg);
+				break;
+
 			default:
 			        fprintf(stderr, "-%c is not understood\n", opt);
 				return 1;
@@ -460,22 +466,29 @@ int main(int argc, char *argv[])
 		ll_screen = notice;
 	setlogfile(logfile, ll_file, ll_screen, timestamp);
 	DOLOG(info, true, "PDP11 emulator, by Folkert van Heusden");
-
 	DOLOG(info, true, "Built on: " __DATE__ " " __TIME__);
 
 	start_disk_devices(disk_files, disk_snapshots);
 
-#if defined(_WIN32)
-	cnsl = new console_posix(&event);
-#else
-	if (withUI) {
-		cnsl = new console_ncurses(&event);
-		set_terminal(cnsl);
+	if (console_port.has_value()) {
+		auto io = new comm_tcp_socket_server(console_port.value(), true);
+		cnsl = new console_comm(&event, io, 80, 24);
+		if (io->begin() == false)
+			error_exit(false, "Failed setting up TCP listener on port %d", console_port.value());
 	}
 	else {
+#if defined(_WIN32)
 		cnsl = new console_posix(&event);
-	}
+#else
+		if (withUI) {
+			cnsl = new console_ncurses(&event);
+			set_terminal(cnsl);
+		}
+		else {
+			cnsl = new console_posix(&event);
+		}
 #endif
+	}
 
 #if !defined(_WIN32)
 	if (validate_json.empty() == false) {
