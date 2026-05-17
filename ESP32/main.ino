@@ -122,6 +122,22 @@ const char *enc_to_string(uint8_t enc) {
     case ENC_TYPE_CCMP: return "WPA2";
     case ENC_TYPE_AUTO: return "AUTO";
   }
+#elif defined(ESP32)
+  switch (enc) {
+    case WIFI_CIPHER_TYPE_NONE:        return "NONE";
+    case WIFI_CIPHER_TYPE_WEP40:       return "WEP40";
+    case WIFI_CIPHER_TYPE_WEP104:      return "WEP104";
+    case WIFI_CIPHER_TYPE_TKIP:        return "TKIP";
+    case WIFI_CIPHER_TYPE_CCMP:        return "CCMP";
+    case WIFI_CIPHER_TYPE_TKIP_CCMP:   return "TKIP_CCMP";
+    case WIFI_CIPHER_TYPE_AES_CMAC128: return "AES_CMAC128";
+    case WIFI_CIPHER_TYPE_SMS4:        return "SMS4";
+    case WIFI_CIPHER_TYPE_GCMP:        return "GCMP";
+    case WIFI_CIPHER_TYPE_GCMP256:     return "GCMP256";
+    case WIFI_CIPHER_TYPE_AES_GMAC128: return "AES_GMAC128";
+    case WIFI_CIPHER_TYPE_AES_GMAC256: return "AES_GMAC256";
+    case WIFI_CIPHER_TYPE_UNKNOWN:     return "UNKN";
+  }
 #endif
   return "UNKN";
 }
@@ -217,11 +233,11 @@ void configure_network(console *const c, const std::optional<std::string> & pars
     auto cnt = WiFi.scanNetworks();
     if (cnt) {
       c->put_string_lf(format("Found %d WiFi networks", cnt));
-      c->put_string_lf(format("%32s %5s %17s %2s %4s", "SSID", "ENC", "BSSID        ", "CH", "RSSI"));
+      c->put_string_lf(format("%29s %-11s %-17s %-2s %-4s", "SSID", "ENC", "BSSID        ", "CH", "RSSI"));
       for(auto i = 0; i < cnt; i++) {
         uint8_t bssid[6];
         WiFi.BSSID(i, bssid);
-        c->put_string_lf(format("%32s %5s %17s %2d %4ld", WiFi.SSID(i).c_str(), enc_to_string(WiFi.encryptionType(i)), mac_to_string(bssid), WiFi.channel(i), WiFi.RSSI(i)));
+        c->put_string_lf(format("%29s %11s %17s %2d %4ld", WiFi.SSID(i).c_str(), enc_to_string(WiFi.encryptionType(i)), mac_to_string(bssid), WiFi.channel(i), WiFi.RSSI(i)));
       }
     }
     else if (cnt < 0) {
