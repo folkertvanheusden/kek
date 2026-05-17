@@ -64,6 +64,9 @@ void console_comm::resize_terminal()
 
 void console_comm::refresh_virtual_terminal()
 {
+	put_char_ll(12);  // form feed
+	for(int row=0; row<t_height; row++)
+		put_string_lf(std::string(screen_buffer[row], t_width).c_str());
 }
 
 void console_comm::panel_update_thread()
