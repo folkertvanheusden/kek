@@ -13,7 +13,9 @@
 
 #include "console.h"
 #include "log.h"
+#include "tty.h"
 #include "utils.h"
+
 
 #if defined(BUILD_FOR_PICO2W) || defined(FREERTOS)
 void thread_wrapper_console(void *p)
@@ -288,8 +290,11 @@ void console::operator()()
 			*stop_event = EVENT_INTERRUPT;
 		else if (running_flag == false && c == 12)  // ^l
 			refresh_virtual_terminal();
-		else
+		else {
 			input_buffer.push(c);
+			if (have_data_cb_notifier)
+				have_data_cb_notifier->notify_rx();
+		}
 	}
 
 	TRACE("Console thread terminating");

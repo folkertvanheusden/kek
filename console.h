@@ -4,6 +4,7 @@
 #pragma once
 
 #include "gen.h"
+#include <functional>
 #include <optional>
 #include <string>
 #if !defined(BUILD_FOR_PICO2W) && !defined(TEENSY4_1)
@@ -21,6 +22,7 @@
 
 class blinkenlights;
 class bus;
+class tty;
 
 class console
 {
@@ -38,9 +40,9 @@ protected:
 	std::thread            *th_panel         { nullptr };
 #endif
 	int                     refreshrate      { 15      };
-	abool        disk_read_activity_flag  { false };
-	abool        disk_write_activity_flag { false };
-	abool        running_flag     { false };
+	abool                   disk_read_activity_flag  { false };
+	abool                   disk_write_activity_flag { false };
+	abool                   running_flag     { false };
 
 	bool                    stop_thread_flag { false };
 
@@ -49,13 +51,15 @@ protected:
 	char                   *screen_buffer    { nullptr };
 	uint8_t                 tx               { 0 };
 	uint8_t                 ty               { 0 };
-	abool        timestamps       { false };
+	abool                   timestamps       { false };
 	const uint64_t          start_ts         { get_us() };
 
 	const size_t            n_edit_lines_hist { 8 };  // maximum number of previous edit-lines
 	std::vector<std::string> edit_lines_hist;
 
 	std::string             debug_buffer;
+
+	tty                    *have_data_cb_notifier { nullptr };
 
 	virtual int  wait_for_char_ll(const short timeout) = 0;
 
@@ -78,6 +82,7 @@ public:
 	std::optional<int> wait_char(const int timeout_ms);
 	std::string  read_line(const std::string & prompt);
 	void         flush_input();
+	void         set_data_cb_notifier(auto notifier) { have_data_cb_notifier = notifier; }
 
 	void         enable_timestamp(const bool state) { timestamps = state; }
 

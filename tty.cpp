@@ -25,6 +25,7 @@ tty::tty(console *const c, bus *const b) :
 	b(b)
 {
 	reset(true);
+	c->set_data_cb_notifier(this);
 }
 
 tty::~tty()

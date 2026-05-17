@@ -33,11 +33,11 @@ private:
 
 	uint16_t registers[4] { 0 };
 
-	void notify_rx();
-
 public:
 	tty(console *const c, bus *const b);
 	virtual ~tty();
+
+	void notify_rx();
 
 	JsonDocument serialize();
 	static tty *deserialize(const JsonVariantConst j, bus *const b, console *const cnsl);
