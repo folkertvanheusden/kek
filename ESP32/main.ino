@@ -221,7 +221,7 @@ void configure_network(console *const c, const std::optional<std::string> & pars
       for(auto i = 0; i < cnt; i++) {
         uint8_t bssid[6];
         WiFi.BSSID(i, bssid);
-        c->put_string_lf(format("%32s %5s %17s %2d %4ld", WiFi.SSID(i), enc_to_string(WiFi.encryptionType(i)), mac_to_string(bssid), WiFi.channel(i), WiFi.RSSI(i)));
+        c->put_string_lf(format("%32s %5s %17s %2d %4ld", WiFi.SSID(i).c_str(), enc_to_string(WiFi.encryptionType(i)), mac_to_string(bssid), WiFi.channel(i), WiFi.RSSI(i)));
       }
     }
     else if (cnt < 0) {
