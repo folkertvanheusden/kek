@@ -84,7 +84,7 @@ void dz11::show_state(console *const cnsl) const
 bool dz11::begin()
 {
 #if defined(ESP32) || defined(FREERTOS)
-	xTaskCreate(&thread_wrapper_dz11, "dz11", 1024, this, 1, nullptr);
+	xTaskCreate(&thread_wrapper_dz11, "dz11", 2048, this, 1, nullptr);
 #else
 	th = new std::thread(std::ref(*this));
 #endif
