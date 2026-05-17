@@ -49,7 +49,7 @@ void kw11_l::begin(console *const cnsl)
 	this->cnsl = cnsl;
 
 #if defined(ESP32) || defined(FREERTOS)
-	xTaskCreate(&thread_wrapper_kw11, "kw11-l", 1024, this, 2, nullptr);
+	xTaskCreate(&thread_wrapper_kw11, "kw11-l", 1536, this, 2, nullptr);
 #else
 	th = new std::thread(std::ref(*this));
 #endif
