@@ -24,6 +24,7 @@
 #if defined(ESP32)
 #include <WiFi.h>
 #include "esp_clk_tree.h"
+#include "esp_debug_helpers.h"
 #include "esp_heap_caps.h"
 #include "esp_pthread.h"
 #endif
@@ -555,7 +556,15 @@ void setup() {
 
 void loop() {
 #if !defined(TEENSY4_1)
-	debugger(cnsl, b, &stop_event, { });
-	c->reset();
+  try {
+    debugger(cnsl, b, &stop_event, { });
+    c->reset();
+  }
+  catch(...) {
+    cnsl->put_string_lf("Caught exception!");
+#if defined(ESP32)
+    esp_backtrace_print(16);
+#endif
+  }
 #endif
 }

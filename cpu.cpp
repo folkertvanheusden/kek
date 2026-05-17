@@ -330,7 +330,6 @@ void cpu::execute_any_pending_interrupt()
 #else
 	std::unique_lock<std::mutex> lck(qi_lock);
 #endif
-
 	any_queued_interrupts = false;
 
 	uint8_t current_level = getPSW_spl();
@@ -367,7 +366,6 @@ void cpu::execute_any_pending_interrupt()
 #if defined(FREERTOS)
 			xSemaphoreGive(qi_lock);
 #endif
-
 			return;
 		}
 	}
