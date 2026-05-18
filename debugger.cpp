@@ -1554,6 +1554,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 
 				auto rc = disassemble(c, state->single_step ? cnsl : nullptr, c->getPC(), false);
 				took += std::get<1>(rc);
+				DOLOG(debug, false, "%s", std::get<3>(rc).c_str());
 			}
 
 			auto bp_result = c->check_breakpoint();
