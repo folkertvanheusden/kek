@@ -59,9 +59,11 @@ typedef enum { rm_prev, rm_cur } rm_selection_t;
 #define kek_event_t  volatile uint32_t
 #define abool        volatile bool
 #define big_acounter volatile uint64_t
+#define aint         volatile int
 #else
 #include <atomic>
 #define kek_event_t  std::atomic_uint32_t
 #define abool        std::atomic_bool
 #define big_acounter std::atomic_uint64_t
+#define aint         std::atomic_int
 #endif

@@ -76,7 +76,6 @@ void kw11_l::do_interrupt()
 
 int kw11_l::get_interrupt_frequency()
 {
-	my_unique_lock lck(&lc_csr_lock);
 	return int_frequency;
 }
 
@@ -89,11 +88,7 @@ void kw11_l::operator()()
 	while(!stop_flag) {
 		total_ticks++;
 
-		int f = 0;
-		{
-			my_unique_lock lck(&lc_csr_lock);
-			f = int_frequency;
-		}
+		int f = int_frequency;
 		myusleep(1000000 / f);  // usually 50 or 60 Hz
 
 		if (*cnsl->get_running_flag())
@@ -125,7 +120,6 @@ uint16_t kw11_l::read_word(const uint16_t a)
 
 void kw11_l::set_interrupt_frequency(const int Hz)
 {
-	my_unique_lock lck(&lc_csr_lock);
 	int_frequency = Hz;
 }
 

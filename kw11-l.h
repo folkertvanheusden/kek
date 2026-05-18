@@ -21,7 +21,7 @@ private:
 #if !defined(FREERTOS)
 	std::thread       *th         { nullptr };
 #endif
-	int                int_frequency { 50   };
+	aint               int_frequency { 50   };
 	uint16_t           lf_csr     { 0       };
 	bool               wall_clock { true    };
 
