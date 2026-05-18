@@ -284,10 +284,10 @@ void monitor_access(const uint32_t a, const uint16_t virt, const uint16_t pc, co
 	}
 }
 
-uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm_selection_t mode_selection, const d_i_space_t space)
+uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm_selection_t mode_selection, const d_i_space_t space_in)
 {
 	int      run_mode = mode_selection == rm_cur ? c->getPSW_runmode() : c->getPSW_prev_runmode();
-
+	auto     space    = mmu_->get_use_data_space(run_mode) ? space_in : i_space;
 	uint32_t m_offset = mmu_->calculate_physical_address(run_mode, addr_in, false, space);
 
 	uint32_t io_base  = mmu_->get_io_base();
@@ -585,10 +585,11 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 	return temp;
 }
 
-bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t value, const rm_selection_t mode_selection, const d_i_space_t space)
+bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t value, const rm_selection_t mode_selection, const d_i_space_t space_in)
 {
 	int           run_mode   = mode_selection == rm_cur ? c->getPSW_runmode() : c->getPSW_prev_runmode();
 	const uint8_t apf        = addr_in >> 13; // active page field
+	auto          space      = mmu_->get_use_data_space(run_mode) ? space_in : i_space;
 	int           page_index = mmu_->calc_par_pdr_index(run_mode, space, apf);
 	uint32_t      m_offset   = mmu_->calculate_physical_address(run_mode, addr_in, true, space);
 
