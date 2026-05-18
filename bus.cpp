@@ -588,14 +588,9 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t value, const rm_selection_t mode_selection, const d_i_space_t space)
 {
 	int           run_mode   = mode_selection == rm_cur ? c->getPSW_runmode() : c->getPSW_prev_runmode();
-
 	const uint8_t apf        = addr_in >> 13; // active page field
-
-	bool          is_data    = space == d_space;
-	bool          d          = is_data && mmu_->get_use_data_space(run_mode);
-	int           page_index = mmu_->calc_par_pdr_index(run_mode, d, apf);
-
-	uint32_t m_offset = mmu_->calculate_physical_address(run_mode, addr_in, true, space);
+	int           page_index = mmu_->calc_par_pdr_index(run_mode, space, apf);
+	uint32_t      m_offset   = mmu_->calculate_physical_address(run_mode, addr_in, true, space);
 
 	if (mmu_->is_enabled())
 		mmu_->set_page_written_to(page_index);

@@ -36,7 +36,7 @@ void mmu::reset(const bool hard)
 	update_io_base();
 }
 
-void mmu::dump_par_pdr(console *const cnsl, const int run_mode, const bool d, const std::string & name, const int state, const std::optional<int> & selection) const
+void mmu::dump_par_pdr(console *const cnsl, const int run_mode, const d_i_space_t d, const std::string & name, const int state, const std::optional<int> & selection) const
 {
 	if (state == 0 || state == 2)
 		cnsl->put_string_lf(name);
@@ -67,29 +67,29 @@ void mmu::show_state(console *const cnsl) const
 	cnsl->put_string_lf(format("MMR2: %06o", MMR2));
 	cnsl->put_string_lf(format("MMR3: %06o", MMR3));
 
-	dump_par_pdr(cnsl, 1, false, "supervisor i-space", 0,                  { });
-	dump_par_pdr(cnsl, 1, true,  "supervisor d-space", 1 + (!!(MMR3 & 2)), { });
+	dump_par_pdr(cnsl, 1, i_space, "supervisor i-space", 0,                  { });
+	dump_par_pdr(cnsl, 1, d_space, "supervisor d-space", 1 + (!!(MMR3 & 2)), { });
 
-	dump_par_pdr(cnsl, 0, false, "kernel i-space",     0,                  { });
-	dump_par_pdr(cnsl, 0, true,  "kernel d-space",     1 + (!!(MMR3 & 2)), { });
+	dump_par_pdr(cnsl, 0, i_space, "kernel i-space",     0,                  { });
+	dump_par_pdr(cnsl, 0, d_space, "kernel d-space",     1 + (!!(MMR3 & 2)), { });
 
-	dump_par_pdr(cnsl, 3, false, "user i-space",       0,                  { });
-	dump_par_pdr(cnsl, 3, true,  "user d-space",       1 + (!!(MMR3 & 2)), { });
+	dump_par_pdr(cnsl, 3, i_space, "user i-space",       0,                  { });
+	dump_par_pdr(cnsl, 3, d_space, "user d-space",       1 + (!!(MMR3 & 2)), { });
 }
 
 uint16_t mmu::read_pdr(const uint32_t a, const int run_mode)
 {
-	int      page       = (a >> 1) & 7;
-	bool     is_d       = a & 16;
-	int      page_index = calc_par_pdr_index(run_mode, is_d, page);
+	int         page       = (a >> 1) & 7;
+	d_i_space_t d          = a & 16 ? d_space : i_space;
+	int         page_index = calc_par_pdr_index(run_mode, d, page);
 	return pages[page_index].pdr;
 }
 
 uint16_t mmu::read_par(const uint32_t a, const int run_mode)
 {
-	int      page       = (a >> 1) & 7;
-	bool     is_d       = a & 16;
-	int      page_index = calc_par_pdr_index(run_mode, is_d, page);
+	int         page       = (a >> 1) & 7;
+	d_i_space_t d          = a & 16 ? d_space : i_space;
+	int         page_index = calc_par_pdr_index(run_mode, d, page);
 	return pages[page_index].par_preshifted >> 6;
 }
 
@@ -175,9 +175,9 @@ void mmu::add_to_MMR1(const int8_t delta, const uint8_t reg)
 
 void mmu::write_pdr(const uint32_t a, const int run_mode, const uint16_t value, const word_mode_t word_mode)
 {
-	bool is_d       = a & 16;
-	int  page       = (a >> 1) & 7;
-	int  page_index = calc_par_pdr_index(run_mode, is_d, page);
+	d_i_space_t d          = a & 16 ? d_space : i_space;
+	int         page       = (a >> 1) & 7;
+	int         page_index = calc_par_pdr_index(run_mode, d, page);
 
 	if (word_mode == wm_byte) {
 		assert(a != 0 || value < 256);
@@ -190,14 +190,14 @@ void mmu::write_pdr(const uint32_t a, const int run_mode, const uint16_t value, 
 
 	pages[page_index].pdr &= ~(32768 + 128 /*A*/ + 64 /*W*/ + 32 + 16);  // set bit 4, 5 & 15 to 0 as they are unused and A/W are set to 0 by writes
 
-	TRACE("mmu WRITE-I/O PDR run-mode %d: %c for %d: %o [%d]", run_mode, is_d ? 'D' : 'I', page, value, word_mode);
+	TRACE("mmu WRITE-I/O PDR run-mode %d: %c for %d: %o [%d]", run_mode, d == d_space ? 'D' : 'I', page, value, word_mode);
 }
 
 void mmu::write_par(const uint32_t a, const int run_mode, const uint16_t value, const word_mode_t word_mode)
 {
-	bool is_d       = a & 16;
-	int  page       = (a >> 1) & 7;
-	int  page_index = calc_par_pdr_index(run_mode, is_d, page);
+	d_i_space_t d          = a & 16 ? d_space : i_space;
+	int         page       = (a >> 1) & 7;
+	int         page_index = calc_par_pdr_index(run_mode, d, page);
 
 	if (word_mode == wm_byte) {
 		uint16_t par = pages[page_index].par_preshifted >> 6;
@@ -210,7 +210,7 @@ void mmu::write_par(const uint32_t a, const int run_mode, const uint16_t value, 
 
 	pages[page_index].pdr &= ~(128 /*A*/ + 64 /*W*/);  // reset PDR A/W when PAR is written to
 
-	TRACE("mmu WRITE-I/O PAR run-mode %d: %c for %d: %o (%07o)", run_mode, is_d ? 'D' : 'I', page, word_mode == wm_byte ? value & 0xff : value, pages[page_index].par_preshifted);
+	TRACE("mmu WRITE-I/O PAR run-mode %d: %c for %d: %o (%07o)", run_mode, d == d_space ? 'D' : 'I', page, word_mode == wm_byte ? value & 0xff : value, pages[page_index].par_preshifted);
 }
 
 uint16_t mmu::read_word(const uint16_t a)
@@ -298,7 +298,7 @@ memory_addresses_t mmu::calculate_physical_address(const int run_mode, const uin
 		return { a, apf, a, is_psw, a, is_psw };
 	}
 
-	int      page_index           = calc_par_pdr_index(run_mode, 0, apf);
+	int      page_index           = calc_par_pdr_index(run_mode, d_space, apf);
 	uint32_t physical_instruction = get_physical_memory_offset(page_index + 0);
 	uint32_t physical_data        = get_physical_memory_offset(page_index + 8);
 
@@ -456,11 +456,9 @@ uint32_t mmu::calculate_physical_address(const int run_mode, const uint16_t a, c
 	uint32_t m_offset = a;
 
 	if (is_enabled() || (is_write && (getMMR0() & (1 << 8 /* maintenance check */)))) {
-		bool     d          = space == d_space && get_use_data_space(run_mode);
-
 		uint16_t p_offset   = a & 8191;  // page offset
 		uint8_t  apf        = a >> 13;  // active page field
-		int      page_index = calc_par_pdr_index(run_mode, d, apf);
+		int      page_index = calc_par_pdr_index(run_mode, space, apf);
 
 		m_offset  = get_physical_memory_offset(page_index);
 		m_offset += p_offset;
@@ -481,14 +479,14 @@ uint32_t mmu::calculate_physical_address(const int run_mode, const uint16_t a, c
 	return m_offset;
 }
 
-JsonDocument mmu::add_par_pdr(const int run_mode, const bool is_d) const
+JsonDocument mmu::add_par_pdr(const int run_mode, const d_i_space_t d) const
 {
 	JsonDocument j;
 
 	JsonDocument ja_par;
 	JsonArray ja_par_work = ja_par.to<JsonArray>();
 	for(int i=0; i<8; i++) {
-		int page_index = calc_par_pdr_index(run_mode, is_d, i);
+		int page_index = calc_par_pdr_index(run_mode, d, i);
 		ja_par_work.add(pages[page_index].par_preshifted);
 	}
 	j["par"] = ja_par;
@@ -496,7 +494,7 @@ JsonDocument mmu::add_par_pdr(const int run_mode, const bool is_d) const
 	JsonDocument ja_pdr;
 	JsonArray ja_pdr_work = ja_pdr.to<JsonArray>();
 	for(int i=0; i<8; i++) {
-		int page_index = calc_par_pdr_index(run_mode, is_d, i);
+		int page_index = calc_par_pdr_index(run_mode, d, i);
 		ja_pdr_work.add(pages[page_index].pdr);
 	}
 	j["pdr"] = ja_pdr;
@@ -512,8 +510,8 @@ JsonDocument mmu::serialize() const
 		if (run_mode == 2)
 			continue;
 
-		for(int is_d=0; is_d<2; is_d++)
-			j[format("runmode_%d_d_%d", run_mode, is_d)] = add_par_pdr(run_mode, is_d);
+		j[format("runmode_%d_d_%d", run_mode, d_space)] = add_par_pdr(run_mode, d_space);
+		j[format("runmode_%d_d_%d", run_mode, i_space)] = add_par_pdr(run_mode, i_space);
 	}
 
         j["MMR0"]   = MMR0;
@@ -527,19 +525,19 @@ JsonDocument mmu::serialize() const
 	return j;
 }
 
-void mmu::set_par_pdr(const JsonVariantConst j_in, const int run_mode, const bool is_d)
+void mmu::set_par_pdr(const JsonVariantConst j_in, const int run_mode, const d_i_space_t d)
 {
 	JsonArrayConst j_par = j_in["par"];
 	int       i_par = 0;
 	for(auto v: j_par) {
-		int page_index = calc_par_pdr_index(run_mode, is_d, i_par++);
+		int page_index = calc_par_pdr_index(run_mode, d, i_par++);
 		pages[page_index].par_preshifted = v;
 	}
 
 	JsonArrayConst j_pdr = j_in["pdr"];
 	int       i_pdr = 0;
 	for(auto v: j_pdr) {
-		int page_index = calc_par_pdr_index(run_mode, is_d, i_pdr++);
+		int page_index = calc_par_pdr_index(run_mode, d, i_pdr++);
 		pages[page_index].pdr = v;
 	}
 }
@@ -553,8 +551,8 @@ mmu *mmu::deserialize(const JsonVariantConst j, memory *const mem, cpu *const c)
 		if (run_mode == 2)
 			continue;
 
-		for(int is_d=0; is_d<2; is_d++)
-			m->set_par_pdr(j[format("runmode_%d_d_%d", run_mode, is_d)].as<JsonVariantConst>(), run_mode, is_d);
+		m->set_par_pdr(j[format("runmode_%d_d_%d", run_mode, d_space)].as<JsonVariantConst>(), run_mode, d_space);
+		m->set_par_pdr(j[format("runmode_%d_d_%d", run_mode, i_space)].as<JsonVariantConst>(), run_mode, i_space);
 	}
 
         m->MMR0   = j["MMR0"];

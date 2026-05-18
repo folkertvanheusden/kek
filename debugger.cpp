@@ -550,21 +550,21 @@ void mmu_resolve(console *const cnsl, bus *const b, const uint16_t va)
 	uint16_t mmr3 = b->getMMU()->getMMR3();
 
 	if (run_mode == 0) {
-		b->getMMU()->dump_par_pdr(cnsl, 1, false, "supervisor i-space", 0,                  data.apf);
-		b->getMMU()->dump_par_pdr(cnsl, 1, true,  "supervisor d-space", 1 + (!!(mmr3 & 4)), data.apf);
+		b->getMMU()->dump_par_pdr(cnsl, 1, i_space, "supervisor i-space", 0,                  data.apf);
+		b->getMMU()->dump_par_pdr(cnsl, 1, d_space, "supervisor d-space", 1 + (!!(mmr3 & 4)), data.apf);
 	}
 	else if (run_mode == 1) {
-		b->getMMU()->dump_par_pdr(cnsl, 0, false, "kernel i-space",     0,                  data.apf);
-		b->getMMU()->dump_par_pdr(cnsl, 0, true,  "kernel d-space",     1 + (!!(mmr3 & 4)), data.apf);
+		b->getMMU()->dump_par_pdr(cnsl, 0, i_space, "kernel i-space",     0,                  data.apf);
+		b->getMMU()->dump_par_pdr(cnsl, 0, d_space, "kernel d-space",     1 + (!!(mmr3 & 4)), data.apf);
 	}
 	else if (run_mode == 3) {
-		b->getMMU()->dump_par_pdr(cnsl, 3, false, "user i-space",       0,                  data.apf);
-		b->getMMU()->dump_par_pdr(cnsl, 3, true,  "user d-space",       1 + (!!(mmr3 & 4)), data.apf);
+		b->getMMU()->dump_par_pdr(cnsl, 3, i_space, "user i-space",       0,                  data.apf);
+		b->getMMU()->dump_par_pdr(cnsl, 3, d_space, "user d-space",       1 + (!!(mmr3 & 4)), data.apf);
 	}
 
 	for(int i=0; i<2; i++) {
 		auto mmu        = b->getMMU();
-		int  page_index = mmu->calc_par_pdr_index(run_mode, 0, data.apf);
+		int  page_index = mmu->calc_par_pdr_index(run_mode, d_space, data.apf);
 		auto ta_i       = mmu->get_trap_action(page_index + 0, i);
 		auto ta_d       = mmu->get_trap_action(page_index + 8, i);
 

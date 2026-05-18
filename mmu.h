@@ -59,8 +59,8 @@ private:
 	memory  *m      { nullptr };
 	cpu     *c      { nullptr };
 
-	JsonDocument add_par_pdr(const int run_mode, const bool is_d) const;
-	void set_par_pdr(const JsonVariantConst j_in, const int run_mode, const bool is_d);
+	JsonDocument add_par_pdr(const int run_mode, const d_i_space_t d) const;
+	void set_par_pdr(const JsonVariantConst j_in, const int run_mode, const d_i_space_t d);
 
 	void update_io_base() { io_base = is_enabled() ? (getMMR3() & 16 ? 017760000 : 0760000) : 0160000; }
 
@@ -81,13 +81,13 @@ public:
 
 	void     reset(const bool hard) override;
 
-	void     dump_par_pdr(console *const cnsl, const int run_mode, const bool d, const std::string & name, const int state, const std::optional<int> & selection) const;
+	void     dump_par_pdr(console *const cnsl, const int run_mode, const d_i_space_t d, const std::string & name, const int state, const std::optional<int> & selection) const;
 	void     show_state(console *const cnsl) const override;
 
 	bool     is_enabled() const { return MMR0 & 1; }
 	bool     is_locked()  const { return MMR0 & 0160000; }
 
-	int      calc_par_pdr_index(const int run_mode, const bool d, const int apf) const { return apf + (d << 3) + (run_mode << 4); }
+	int      calc_par_pdr_index(const int run_mode, const d_i_space_t d, const int apf) const { return apf + ((d == d_space) << 3) + (run_mode << 4); }
 	std::tuple<int, bool, int> explode_page_index(const int page) { return { page >> 4, (page >> 3) & 1, page & 7 }; }
 	void     set_page_accessed  (const int page_index) { pages[page_index].pdr |= 1 << 7; }
 	void     set_page_written_to(const int page_index) { pages[page_index].pdr |= 1 << 6; }
