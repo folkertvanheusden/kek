@@ -1693,13 +1693,16 @@ void debugger(console *const cnsl, bus *const b, kek_event_t *const stop_event, 
 
 void simple_run(console *const cnsl, bus *const b, kek_event_t *const stop_event)
 {
-	cpu *const c = b->getCpu();
+	cpu  *const c = b->getCpu();
+	bool        t = gettrace();
 
 	*cnsl->get_running_flag() = true;
 
 	while(*stop_event == EVENT_NONE) {
-		if (gettrace())
-			disassemble(c, nullptr, c->getPC(), false);
+		if (t) {
+			auto rc = disassemble(c, nullptr, c->getPC(), false);
+			DOLOG(debug, false, "%s", std::get<3>(rc).c_str());
+		}
 
 		c->step();
 	}
