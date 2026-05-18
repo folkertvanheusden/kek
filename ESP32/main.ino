@@ -65,7 +65,7 @@ console *cnsl = nullptr;
 
 uint16_t exec_addr = 0;
 
-#if !defined(TEENSY4_1)
+#if !defined(TEENSY4_1) && !defined(BUILD_FOR_PICO2W)
 SdFs SDinstance;
 #endif
 
@@ -93,7 +93,19 @@ bool init_sd()
   if (SD.begin(BUILTIN_SDCARD))
 		disk_started = true;
   else
-			DOLOG(ll_error, true, "Failed to initialize SD card");
+   DOLOG(ll_error, true, "Failed to initialize SD card");
+#elif defined(BUILD_FOR_PICO2W)
+  SPI.setRX(0); // or setMISO()
+  constexpr const int cs = 1;
+  SPI.setCS(cs);
+  SPI.setSCK(2);
+  SPI.setTX(3); // or setMOSI()
+  SPI.begin(true);
+	cnsl->put_string_lf(format("SS  : %d", cs));
+	if (SD.begin(cs))
+		disk_started = true;
+  else
+	  DOLOG(ll_error, true, "Failed to initialize SD card");
 #else
 #if defined(SEEED_XIAO_S3)
 	cnsl->put_string_lf(format("SS  : %d", 1));

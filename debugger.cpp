@@ -150,11 +150,7 @@ void ls_l(console *const cnsl)
 
 	closedir(dir);
 #elif defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
-#if defined(TEENSY4_1)
 	auto root = SD.open("/");
-#else
-	auto root = SDinstance.open("/");
-#endif
 
 	for(;;) {
 		auto entry = root.openNextFile();
@@ -162,7 +158,7 @@ void ls_l(console *const cnsl)
 			break;
 
 		if (!entry.isDirectory()) {
-#if defined(TEENSY4_1)
+#if defined(TEENSY4_1) || defined(BUILD_FOR_PICO2W)
 			cnsl->put_string_lf(format("%s\t\t%ld", entry.name(), entry.size()));
 #else
 			char buffer[32] { };

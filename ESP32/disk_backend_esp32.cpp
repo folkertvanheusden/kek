@@ -12,7 +12,7 @@
 #define RETRY_COUNT 4
 bool init_sd();
 
-#if !defined(TEENSY4_1)
+#if !defined(TEENSY4_1) && !defined(BUILD_FOR_PICO2W)
 extern SdFs SDinstance;
 #endif
 
@@ -55,7 +55,7 @@ disk_backend_esp32 *disk_backend_esp32::deserialize(const JsonVariantConst j)
 
 void disk_backend_esp32::emit_error()
 {
-#if !defined(TEENSY4_1)
+#if !defined(TEENSY4_1) && !defined(BUILD_FOR_PICO2W)
 	DOLOG(ll_error, true, "SdFat error: %d/%d", SDinstance.sdErrorCode(), SDinstance.sdErrorData());
 #endif
 }
