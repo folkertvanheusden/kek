@@ -489,8 +489,8 @@ std::tuple<int, uint32_t, bool, std::string> disassemble(cpu *const c, console *
 				instruction.c_str());
 	else
 		result = format("R0: %s, R1: %s, R2: %s, R3: %s, R4: %s, R5: %s, SP: %s, PC: %06o, PSW: %s (%s), instr: %s: %s (%.3f us)",
-				registers[0].c_str(), registers[1].c_str(), registers[2].c_str(), registers[3].c_str(), registers[4].c_str(), registers[5].c_str(),
-				registers[6].c_str(), pc, 
+				registers[0].c_str(), registers[1].c_str(), registers[2].c_str(), registers[3].c_str(), registers[4].c_str(),
+				registers[5].c_str(), registers[6].c_str(), pc,
 				psw.c_str(), data["psw-value"][0].c_str(),
 				instruction_values.c_str(),
 				instruction.c_str(), duration_f);
