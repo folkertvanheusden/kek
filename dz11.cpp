@@ -62,7 +62,7 @@ void dz11::show_state(console *const cnsl) const
 {
 	for(size_t i=0; i<dz11_n_lines; i++) {
 		my_unique_lock lck(&input_lock);
-		std::string out = format(" line %zu: %zu characters in buffer, ", i + 1, recv_buffers[i].size());
+		std::string out = format(" line %" PRIzu ": %" PRIzu " characters in buffer, ", i + 1, recv_buffers[i].size());
 		if (connected[i] == NOT_CONNECTED)
 			out += "not connected";
 		else if (connected[i] == PENDING)
@@ -93,7 +93,7 @@ bool dz11::begin()
 
 void dz11::test_port(const size_t nr) const
 {
-	auto str = format("DZ11 test line %zu", nr);
+	auto str = format("DZ11 test line %" PRIzu "", nr);
 	DOLOG(info, false, str.c_str());
 
 	io_channels->send_data(nr, reinterpret_cast<const uint8_t *>(str.c_str()), str.size());
@@ -317,7 +317,7 @@ void dz11::tx_scanner_do(const int line, const bool force)
 	registers[0] |= 0x8000;  // TRDY
 
 	if (is_tx_interrupt_enabled() || force) {
-		TRACE("DZ11 TX INTERRUPT for line %zu", line);
+		TRACE("DZ11 TX INTERRUPT for line %" PRIzu "", line);
 		trigger_interrupt(true);
 	}
 }
@@ -326,7 +326,7 @@ void dz11::tx_scanner(const std::optional<int> line, const bool force)
 {
 	if (line.has_value()) {
 		int use_line_nr = line.value();
-		TRACE("DZ11 specific line interrupt: %zu", use_line_nr);
+		TRACE("DZ11 specific line interrupt: %" PRIzu "", use_line_nr);
 		tx_scanner_do(use_line_nr, force);
 	}
 }

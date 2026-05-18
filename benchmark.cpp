@@ -121,11 +121,17 @@ void benchmark(console *const cnsl, bus *const b, kek_event_t *const stop_event,
 		double   timing_comp2 = 10000000. / (end_ts2 - start_ts2);
 		uint64_t count_faster = get_count(b) * timing_comp2;
 
-		cnsl->put_string_lf(format("benchmark count slow: %" PRIu64 " (%.3f timer jitter compensation), count fast: %" PRIu64 " (%.3f)", count_slower, timing_comp1, count_faster, timing_comp2));
 		double   mul          = count_faster / double(count_slower);
 
-		cnsl->put_string_lf(format("benchmark (raw): %zu instructions, emulated duration: %.3f seconds (or %" PRIu64 " ns)", cycle_count, duration / 1000000000., duration));
-		cnsl->put_string_lf(format("benchmark (compensated): %zu instructions, emulated duration: %.3f seconds (or %" PRIu64 " ns)", size_t(cycle_count * mul), duration * mul / 1000000000., uint64_t(duration * mul)));
+#if defined(TEENSY4_1)
+		cnsl->put_string_lf(format("benchmark count slow: %" PRIzu " (%.3f timer jitter compensation), count fast: %" PRIzu " (%.3f)", size_t(count_slower), timing_comp1, size_t(count_faster), timing_comp2));
+		cnsl->put_string_lf(format("benchmark (raw): %" PRIzu " instructions, emulated duration: %.3f seconds", cycle_count, duration / 1000000000.));
+		cnsl->put_string_lf(format("benchmark (compensated): %" PRIzu " instructions, emulated duration: %.3f seconds", size_t(cycle_count * mul), duration * mul / 1000000000.));
+#else
+		cnsl->put_string_lf(format("benchmark count slow: %" PRIu64 " (%.3f timer jitter compensation), count fast: %" PRIu64 " (%.3f)", count_slower, timing_comp1, count_faster, timing_comp2));
+		cnsl->put_string_lf(format("benchmark (raw): %" PRIzu " instructions, emulated duration: %.3f seconds (or %" PRIu64 " ns)", cycle_count, duration / 1000000000., duration));
+		cnsl->put_string_lf(format("benchmark (compensated): %" PRIzu " instructions, emulated duration: %.3f seconds (or %" PRIu64 " ns)", size_t(cycle_count * mul), duration * mul / 1000000000., uint64_t(duration * mul)));
+#endif
 	}
 	else {
 		cnsl->put_string_lf("benchmark: please wait ~10 seconds");

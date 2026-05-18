@@ -229,7 +229,7 @@ bool disk_backend_nbd::connect(const bool retry)
 
 bool disk_backend_nbd::read(const off_t offset_in, const size_t n, uint8_t *const target, const size_t sector_size)
 {
-	TRACE("disk_backend_nbd::read: read %zu bytes from offset %zu", n, offset_in);
+	TRACE("disk_backend_nbd::read: read %" PRIzu " bytes from offset %" PRIzu "", n, offset_in);
 	if (n == 0)
 		return true;
 
@@ -275,7 +275,7 @@ bool disk_backend_nbd::read(const off_t offset_in, const size_t n, uint8_t *cons
 		TRACE("NBD: send READ request");
 #if defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 		if (size_t rc = handle.write(reinterpret_cast<const uint8_t *>(&nbd_request), sizeof nbd_request); rc != sizeof nbd_request) {
-			printf("send read req error: %zu\n", rc);
+			printf("send read req error: %" PRIzu "\n", rc);
 			DOLOG(warning, true, "disk_backend_nbd::read: problem sending request");
 			handle.stop();
 			myusleep(101000);
@@ -362,7 +362,7 @@ bool disk_backend_nbd::read(const off_t offset_in, const size_t n, uint8_t *cons
 
 bool disk_backend_nbd::write(const off_t offset, const size_t n, const uint8_t *const from, const size_t sector_size)
 {
-	TRACE("disk_backend_nbd::write: write %zu bytes to offset %zu", n, offset);
+	TRACE("disk_backend_nbd::write: write %" PRIzu " bytes to offset %" PRIzu "", n, offset);
 
 	if (n == 0)
 		return true;

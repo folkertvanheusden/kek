@@ -384,7 +384,7 @@ void cpu::queue_interrupt(const uint8_t level, const uint16_t vector)
 #endif
 
 	queued_interrupts[level].insert(vector);
-	TRACE("Queueing interrupt vector %o (IPL %d, current: %d), n: %zu", vector, level, getPSW_spl(), queued_interrupts[level].size());
+	TRACE("Queueing interrupt vector %o (IPL %d, current: %d), n: %" PRIzu "", vector, level, getPSW_spl(), queued_interrupts[level].size());
 
 #if defined(FREERTOS)
 	xSemaphoreGive(qi_lock);

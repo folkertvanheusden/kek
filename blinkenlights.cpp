@@ -337,7 +337,7 @@ static std::vector<uint8_t> encapsulate_rpc_msg(const rpc_msg *const msg, const 
 		size_t cur_size = output.size();
 		output.resize(cur_size + n_payload_bytes);
 		memcpy(&output.data()[cur_size], payload, n_payload_bytes);
-//		printf("%d %zu %zu", n_payload_bytes, cur_size, output.size());
+//		printf("%d %" PRIzu " %" PRIzu "", n_payload_bytes, cur_size, output.size());
 	}
 
 	return output;

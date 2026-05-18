@@ -149,8 +149,12 @@ void ls_l(console *const cnsl)
 	}
 
 	closedir(dir);
-#elif defined(BUILD_FOR_PICO2W)
+#elif defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
+#if defined(TEENSY4_1)
+	auto root = SD.open("/");
+#else
 	auto root = SDinstance.open("/");
+#endif
 
 	for(;;) {
 		auto entry = root.openNextFile();
@@ -158,10 +162,13 @@ void ls_l(console *const cnsl)
 			break;
 
 		if (!entry.isDirectory()) {
+#if defined(TEENSY4_1)
+			cnsl->put_string_lf(format("%s\t\t%ld", entry.name(), entry.size()));
+#else
 			char buffer[32] { };
 			entry.getName(buffer, sizeof buffer);
-			// cnsl->put_string(entry.name());
 			cnsl->put_string_lf(format("%s\t\t%ld", buffer, entry.size()));
+#endif
 		}
 
 		entry.close();
@@ -1615,11 +1622,11 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 							std::get<2>(rc) ? 'I': ' ',
 							std::get<3>(rc).c_str()));
 			}
-			cnsl->put_string_lf(format("%zu counters in %u instructions", ordered.size(), state->pc_monitor_count));
+			cnsl->put_string_lf(format("%" PRIzu " counters in %u instructions", ordered.size(), state->pc_monitor_count));
 		}
 
 		if (gettrace() || go_verbose || state->pc_monitor_enabled) {
-			cnsl->put_string_lf(format("Took %.3f emulated ms, %.3f s wall clock time, avg. wait duration: %.3f us, traps: %zu",
+			cnsl->put_string_lf(format("Took %.3f emulated ms, %.3f s wall clock time, avg. wait duration: %.3f us, traps: %" PRIzu "",
 						took / 1000000.,  // took is nanoseconds
 						(get_us() - since) / 1000000.,
 						wait_count > 0 ? total_wait_duration / double(wait_count) : 0,

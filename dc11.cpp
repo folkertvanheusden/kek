@@ -55,12 +55,12 @@ dc11::~dc11()
 void dc11::show_state(console *const cnsl) const
 {
 	for(size_t i=0; i<dc11_n_lines; i++) {
-		cnsl->put_string_lf(format("* LINE %zu", i + 1));
+		cnsl->put_string_lf(format("* LINE %" PRIzu "", i + 1));
 
 		cnsl->put_string_lf(" identifier: " + io_channels->get_identifier(i));
 
 		my_unique_lock lck(&input_lock[i]);
-		cnsl->put_string_lf(format(" Characters in buffer: %zu", recv_buffers[i].size()));
+		cnsl->put_string_lf(format(" Characters in buffer: %" PRIzu "", recv_buffers[i].size()));
 
 		cnsl->put_string_lf(format(" RX interrupt enabled: %s", is_rx_interrupt_enabled(i) ? "true": "false" ));
 		cnsl->put_string_lf(format(" TX interrupt enabled: %s", is_tx_interrupt_enabled(i) ? "true": "false" ));
@@ -80,7 +80,7 @@ bool dc11::begin()
 
 void dc11::test_port(const size_t nr, const std::string & txt) const
 {
-	DOLOG(info, false, "DC11 test line %zu", nr);
+	DOLOG(info, false, "DC11 test line %" PRIzu "", nr);
 
 	io_channels->send_data(nr, reinterpret_cast<const uint8_t *>(txt.c_str()), txt.size());
 }
@@ -199,7 +199,7 @@ uint16_t dc11::read_word(const uint16_t addr)
 		registers[line_nr * 4 + 0] &= ~0160000;
 	}
 	else if (sub_reg == 1) {  // read data register
-		TRACE("DC11: %zu characters in buffer for line %d", recv_buffers[line_nr].size(), line_nr);
+		TRACE("DC11: %" PRIzu " characters in buffer for line %d", recv_buffers[line_nr].size(), line_nr);
 
 		// get oldest byte in buffer
 		if (recv_buffers[line_nr].empty() == false) {

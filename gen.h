@@ -60,10 +60,16 @@ typedef enum { rm_prev, rm_cur } rm_selection_t;
 #define abool        volatile bool
 #define big_acounter volatile uint64_t
 #define aint         volatile int
+#define PRIzd        "d"
+#define PRIzu        "u"
+#define PRIlu        "u"
 #else
 #include <atomic>
 #define kek_event_t  std::atomic_uint32_t
 #define abool        std::atomic_bool
 #define big_acounter std::atomic_uint64_t
 #define aint         std::atomic_int
+#define PRIzd        "zd"
+#define PRIzu        "zu"
+#define PRIlu        "lu"
 #endif

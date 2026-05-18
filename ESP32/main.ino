@@ -65,7 +65,9 @@ console *cnsl = nullptr;
 
 uint16_t exec_addr = 0;
 
-SdFs     SDinstance;
+#if !defined(TEENSY4_1)
+SdFs SDinstance;
+#endif
 
 kek_event_t   stop_event         { EVENT_NONE };
 abool        *running            { nullptr    };
@@ -87,12 +89,15 @@ static void console_thread_wrapper_panel(void *const c)
 bool init_sd()
 {
   bool disk_started = false;
+#if defined(TEENSY4_1)
+  if (SD.begin(BUILTIN_SDCARD))
+		disk_started = true;
+  else
+			DOLOG(ll_error, true, "Failed to initialize SD card");
+#else
 #if defined(SEEED_XIAO_S3)
 	cnsl->put_string_lf(format("SS  : %d", 1));
 	if (SDinstance.begin(1, SD_SCK_MHZ(1)))
-		disk_started = true;
-#elif defined(TEENSY4_1)
-  if (SD.sdfs.begin(SdSpiConfig(BUILTIN_SDCARD, SHARED_SPI, SD_SCK_MHZ(24))))
 		disk_started = true;
 #else
 	cnsl->put_string_lf(format("SS  : %d", int(SS)));
@@ -106,6 +111,7 @@ bool init_sd()
 		else
 			DOLOG(ll_error, true, "Failed to initialize SD card");
 	}
+#endif
   return disk_started;
 }
 

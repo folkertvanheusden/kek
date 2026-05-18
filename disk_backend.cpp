@@ -73,7 +73,7 @@ JsonDocument disk_backend::serialize_overlay() const
 		for(size_t i=0; i<id.second.size(); i++)
 			j_data_work.add(id.second.at(i));
 
-		out[format("%lu", id.first)] = j_data;
+		out[format("%" PRIlu "", id.first)] = j_data;
 	}
 
 	return out;

@@ -1,6 +1,7 @@
 // (C) 2018-2026 by Folkert van Heusden
 // Released under MIT license
 
+#include "gen.h"
 #include <fcntl.h>
 #include <unistd.h>
 
@@ -11,7 +12,9 @@
 #define RETRY_COUNT 4
 bool init_sd();
 
+#if !defined(TEENSY4_1)
 extern SdFs SDinstance;
+#endif
 
 disk_backend_esp32::disk_backend_esp32(const std::string & filename) :
 	filename(filename),
@@ -52,7 +55,9 @@ disk_backend_esp32 *disk_backend_esp32::deserialize(const JsonVariantConst j)
 
 void disk_backend_esp32::emit_error()
 {
+#if !defined(TEENSY4_1)
 	DOLOG(ll_error, true, "SdFat error: %d/%d", SDinstance.sdErrorCode(), SDinstance.sdErrorData());
+#endif
 }
 
 bool disk_backend_esp32::begin(const bool dummy)
@@ -69,7 +74,7 @@ bool disk_backend_esp32::begin(const bool dummy)
 
 bool disk_backend_esp32::read(const off_t offset, const size_t n, uint8_t *const target, const size_t sector_size)
 {
-	DOLOG(debug, false, "disk_backend_esp32::read: read %zu bytes from offset %zu", n, offset);
+	DOLOG(debug, false, "disk_backend_esp32::read: read %" PRIzu " bytes from offset %" PRIzu "", n, offset);
 
 	if (!fh->seek(offset)) {
 		DOLOG(ll_error, true, "seek error %02x", fh->getError());
@@ -83,7 +88,7 @@ bool disk_backend_esp32::read(const off_t offset, const size_t n, uint8_t *const
 		ssize_t rc = fh->read(target, n);
 		if (size_t(rc) == n)
 			break;
-		DOLOG(ll_error, true, "%d] fread error: %02x (%zd/%zu)", i, fh->getError(), rc, n);
+		DOLOG(ll_error, true, "%d] fread error: %02x (%" PRIzd "/%" PRIzu ")", i, fh->getError(), rc, n);
 		emit_error();
 		if (!init_sd())
 			DOLOG(ll_error, true, "(re-)init SD failed");
@@ -95,7 +100,7 @@ bool disk_backend_esp32::read(const off_t offset, const size_t n, uint8_t *const
 
 bool disk_backend_esp32::write(const off_t offset, const size_t n, const uint8_t *const from, const size_t sector_size)
 {
-	DOLOG(debug, false, "disk_backend_esp32::write: write %zu bytes to offset %zu", n, offset);
+	DOLOG(debug, false, "disk_backend_esp32::write: write %" PRIzu " bytes to offset %" PRIzu "", n, offset);
 
 	if (!fh->seek(offset)) {
 		DOLOG(ll_error, true, "seek error %02x", fh->getError());
@@ -109,7 +114,7 @@ bool disk_backend_esp32::write(const off_t offset, const size_t n, const uint8_t
 		ssize_t rc = fh->write(from, n);
 		if (size_t(rc) == n)
 			break;
-		DOLOG(ll_error, true, "%d] fwrite error %02x (%zd/%zu)", i, fh->getError(), rc, n);
+		DOLOG(ll_error, true, "%d] fwrite error %02x (%" PRIzd "/%" PRIzu ")", i, fh->getError(), rc, n);
 		emit_error();
 		if (!init_sd())
 			DOLOG(ll_error, true, "(re-)init SD failed");
