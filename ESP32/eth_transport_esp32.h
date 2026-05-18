@@ -7,6 +7,10 @@
 
 class eth_transport_esp32: public eth_transport
 {
+private:
+	int     fd          { -1 };
+	uint8_t mac_addr[6] {    };
+
 public:
 	eth_transport_esp32();
 	virtual ~eth_transport_esp32();
