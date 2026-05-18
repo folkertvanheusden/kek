@@ -1702,6 +1702,7 @@ void simple_run(console *const cnsl, bus *const b, kek_event_t *const stop_event
 		if (t) {
 			auto rc = disassemble(c, nullptr, c->getPC(), false);
 			DOLOG(debug, false, "%s", std::get<3>(rc).c_str());
+			DOLOG(debug, false, "---");
 		}
 
 		c->step();
