@@ -92,20 +92,26 @@ bool init_sd()
 #if defined(TEENSY4_1)
   if (SD.begin(BUILTIN_SDCARD))
 		disk_started = true;
-  else
-   DOLOG(ll_error, true, "Failed to initialize SD card");
+#elif defined(OLIMEX_XXL)
+  constexpr const int cs = 9;
+  SPI1.setCS(cs);
+  SPI1.setSCK(10);
+  SPI1.setTX(11); // or setMOSI()
+  SPI1.setRX(24); // or setMISO()
+	cnsl->put_string_lf(format("SS  : %d", cs));
+  SPI.begin(true);
+	if (SD.begin(cs, SPI1))
+		disk_started = true;
 #elif defined(BUILD_FOR_PICO2W)
-  SPI.setRX(0); // or setMISO()
   constexpr const int cs = 1;
   SPI.setCS(cs);
   SPI.setSCK(2);
   SPI.setTX(3); // or setMOSI()
-  SPI.begin(true);
+  SPI.setRX(0); // or setMISO()
 	cnsl->put_string_lf(format("SS  : %d", cs));
+  SPI.begin(true);
 	if (SD.begin(cs))
 		disk_started = true;
-  else
-	  DOLOG(ll_error, true, "Failed to initialize SD card");
 #else
 #if defined(SEEED_XIAO_S3)
 	cnsl->put_string_lf(format("SS  : %d", 1));
@@ -116,13 +122,8 @@ bool init_sd()
 	if (SDinstance.begin(SS, SD_SCK_MHZ(15)))
 		disk_started = true;
 #endif
-	if (!disk_started) {
-		auto err = SDinstance.sdErrorCode();
-		if (err)
-			DOLOG(ll_error, true, "SDerror: 0x%x, data: 0x%x", err, SDinstance.sdErrorData());
-		else
+	if (!disk_started)
 			DOLOG(ll_error, true, "Failed to initialize SD card");
-	}
 #endif
   return disk_started;
 }
