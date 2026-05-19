@@ -35,6 +35,16 @@ memory::memory(const uint32_t size): size(size)
 	else {
 		m = reinterpret_cast<uint8_t *>(calloc(1, size));
 	}
+#elif defined(BUILD_FOR_PICO2W)
+	uint32_t psram_pages = rp2040.getFreePSRAMHeap() / 8192;
+	uint32_t main_ram    = rp2040.getFreeHeap() / 8192;
+	if (main_ram < psram_pages) {
+		m = reinterpret_cast<uint8_t *>(pmalloc(size));
+		reset(true);
+	}
+	else {
+		m = reinterpret_cast<uint8_t *>(calloc(1, size));
+	}
 #else
 	m = reinterpret_cast<uint8_t *>(calloc(1, size));
 #endif

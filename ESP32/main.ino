@@ -475,6 +475,8 @@ void setup() {
 
 #if defined(BUILD_FOR_PICO2W)
 	cs->println(format("Free RAM after init (decimal bytes): %d", rp2040.getFreeHeap()));
+  uint32_t free_psram = rp2040.getPSRAMSize();
+	cs->println(format("Free PSRAM: %d decimal bytes (or %d pages (see 'ramsize' in the debugger))", free_psram, free_psram / 8192));
 #elif defined(ESP32)
 	cs->println(format("Free RAM after init (decimal bytes): %d", ESP.getFreeHeap()));
 
