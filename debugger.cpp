@@ -44,6 +44,8 @@
 #include "eth_transport_linux.h"
 #elif defined(ESP32)
 #include "eth_transport_esp32.h"
+#elif defined(TEENSY4_1)
+#include "eth_transport_teensy4_1.h"
 #endif
 #include "eth_transport_vxlan.h"
 #include "kw11-l.h"
@@ -1366,6 +1368,10 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		else if (pars[0] == "esp32") {
 			dev = new eth_transport_esp32();
 		}
+#elif defined(TEENSY4_1)
+		else if (pars[0] == "teensy4.1") {
+			dev = new eth_transport_teensy4_1(mac);
+		}
 #endif
 		else if (pars[0] == "vxlan") {
 			if (pars.size() == 3)
@@ -1514,7 +1520,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			"blights x     - enable blinkenlights on IP address x", 
 			"testdz11      - test DZ11",
 			"cfgdisk       - configure disk",
-			"deqna x[,y,z] - set deqna emulation to use (x): \"linux\" (tap), \"esp32\" or \"vxlan\" (with host (y) & port (z))",
+			"deqna x[,y,z] - set deqna emulation to use (x): \"linux\" (tap), \"teensy4.1\", \"esp32\" or \"vxlan\" (with host (y) & port (z))",
 			"log ...       - log a message to the logfile",
 			nullptr
 		};
