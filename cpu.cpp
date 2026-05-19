@@ -2026,7 +2026,7 @@ uint32_t cpu::calc_instruction_duration(const uint16_t pc) const
 	switch(instruction >> 12) {
 		case 0:
 			switch((instruction >> 6) & 077) {
-				case 0:
+				case 000:
 					switch(instruction) {
 						case 0:  // HALT
 							ef_time = 1050;
@@ -2041,12 +2041,21 @@ uint32_t cpu::calc_instruction_duration(const uint16_t pc) const
 						case 5:  // RESET
 							ef_time = 10000000;  // 10 ms
 							break;
+						case 4:  // IOT
+							ef_time = 3300;
+							break;
+						case 7:  // MFP
+							ef_time = 1500;
+							break;
+						default:
+							DOLOG(warning, false, "DEFAULT group 1 0/%o -> %06o", (instruction >> 6) & 077, instruction);
+							break;
 					}
 					break;
-				case 1:  // JMP
+				case 001:  // JMP
 					ef_time = jmp_dst[dst];
 					break;
-				case 2:  // RTS
+				case 002:  // RTS
 					ef_time = 1050;
 					break;
 				case 040:
@@ -2062,7 +2071,7 @@ uint32_t cpu::calc_instruction_duration(const uint16_t pc) const
 				case 054:  // NEG
 					ef_time = dst == 0 ? 750 : 1500;
 					break;
-				case 3:  // SWAB
+				case 003:  // SWAB
 				case 050:  // CLR
 				case 051:  // COM
 				case 052:  // INC
@@ -2095,13 +2104,15 @@ uint32_t cpu::calc_instruction_duration(const uint16_t pc) const
 				case 066:  // MTPI
 					ef_time = mtp_dst[dst];
 					break;
-			}
-			{  // branch
-				auto rc = conditional_branch_instructions_evaluate(instruction);
-				if (rc.has_value()) {
-					ef_time = rc.value() ? 600 : 300;
-					break;
-				}
+				default: {
+						 auto rc = conditional_branch_instructions_evaluate(instruction);
+						 if (rc.has_value()) {
+							 ef_time = rc.value() ? 600 : 300;
+							 break;
+						 }
+					 }
+					 DOLOG(warning, false, "DEFAULT group 2 %o -> %06o", (instruction >> 6) & 077, instruction);
+					 break;
 			}
 			break;
 
@@ -2135,6 +2146,9 @@ uint32_t cpu::calc_instruction_duration(const uint16_t pc) const
 							break;
 						case 7:
 							ef_time = src == 0 ? 1950 : 2100;
+							break;
+						default:
+							DOLOG(warning, false, "DEFAULT group 3");
 							break;
 					}
 				}
@@ -2193,6 +2207,9 @@ uint32_t cpu::calc_instruction_duration(const uint16_t pc) const
 				case 7:  // SOB
 					ef_time  = lowlevel_register_get(get_register_set(), src_reg) >= 1 ? 600 : 750;  // branch is faster
 					break;
+				default:
+					DOLOG(warning, false, "DEFAULT group 4");
+					break;
 			}
 			break;
 		case 010:
@@ -2242,12 +2259,16 @@ uint32_t cpu::calc_instruction_duration(const uint16_t pc) const
 					work_val = peek_dst(dst, dst_reg, pc + 2, word_mode);
 					ef_time += work_val & 1 ? 150 : 0;
 					break;
+				default:
+					DOLOG(warning, false, "DEFAULT group 5");
+					break;
 			}
 			break;
 		case 017:
 			// FPP
 			break;
 		default:
+			DOLOG(warning, false, "DEFAULT group 6");
 			break;
 	}
 
