@@ -51,28 +51,22 @@ void setBit(uint16_t & v, const int bit, const bool vb)
 
 std::string format(const char *const fmt, ...)
 {
-#if defined(BUILD_FOR_PICO2W) || defined(ESP32) || defined(TEENSY4_1)
-	char buffer[384];
-        va_list ap;
+	char buf[64];
 
-        va_start(ap, fmt);
-	vsnprintf(buffer, sizeof buffer, fmt, ap);
+	va_list ap;
+	va_start(ap, fmt);
+	int n = vsnprintf(buf, sizeof buf, fmt, ap);
 	va_end(ap);
 
-	return buffer;
-#else
-	char *buffer = nullptr;
-        va_list ap;
+	if (n < (int)sizeof buf)
+		return std::string(buf, n);
 
-        va_start(ap, fmt);
-        (void)vasprintf(&buffer, fmt, ap);
-        va_end(ap);
-
-	std::string result = buffer;
-	free(buffer);
+	std::string result(n, '\0');
+	va_start(ap, fmt);
+	vsnprintf(result.data(), n + 1, fmt, ap);
+	va_end(ap);
 
 	return result;
-#endif
 }
 
 unsigned long get_ms()
