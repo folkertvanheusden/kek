@@ -1447,6 +1447,9 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			ESP.restart();
 #elif defined(BUILD_FOR_PICO2W)
 			rp2040.reboot();
+#elif defined(TEENSY4_1)
+			SRC_GPR5 = 0x0BAD00F1;
+			SCB_AIRCR = 0x05FA0004;
 #endif
 			return false;
 		}
