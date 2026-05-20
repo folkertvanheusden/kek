@@ -18,12 +18,6 @@
 
 #define IS_0(x, wm) ((wm) == wm_byte ? ((x) & 0xff) == 0 : (x) == 0)
 
-// see https://retrocomputing.stackexchange.com/questions/6960/what-was-the-clock-speed-and-ips-for-the-original-pdp-11
-constexpr const double pdp11_clock_cycle = 150;  // ns, for the 11/70
-constexpr const double pdp11_MHz = 1000.0 / pdp11_clock_cycle;
-constexpr const double pdp11_avg_cycles_per_instruction = (1 + 5) / 2.0;
-constexpr const double pdp11_estimated_mips = pdp11_MHz / pdp11_avg_cycles_per_instruction;
-
 constexpr const uint16_t word_mode_mask[2] { 0xffff, 0xff };
 
 cpu::cpu(bus *const b, kek_event_t *const event) : b(b), mmu_(b->getMMU()), event(event)
