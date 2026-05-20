@@ -20,9 +20,9 @@
 #if defined(BUILD_FOR_PICO2W) || defined(FREERTOS)
 void thread_wrapper_console(void *p)
 {
-	console *const consolel = reinterpret_cast<console *>(p);
+	console *const c = reinterpret_cast<console *>(p);
 
-	consolel->operator()();
+	c->operator()();
 }
 #endif
 

@@ -71,20 +71,19 @@ void console_esp32::refresh_virtual_terminal()
 
 void console_esp32::panel_update_thread()
 {
-#if defined(NEOPIXELS_PIN)
 	DOLOG(info, false, "panel task started");
-
+#if defined(NEOPIXELS_PIN)
 	cpu *const c = b->getCpu();
 
-#if defined(NEOPIXELS_PIN)
 	constexpr const uint8_t n_leds = 64;
-#if defined(RGBW_PIXELS)
+#if defined(GRBW_PIXELS)
+	Adafruit_NeoPixel pixels(n_leds, NEOPIXELS_PIN, NEO_GRBW);
+#elif defined(RGBW_PIXELS)
 	Adafruit_NeoPixel pixels(n_leds, NEOPIXELS_PIN, NEO_RGBW);
 #else
 	Adafruit_NeoPixel pixels(n_leds, NEOPIXELS_PIN, NEO_RGB);
 #endif
 	pixels.begin();
-
 	pixels.clear();
 	pixels.show();
 
@@ -176,10 +175,10 @@ void console_esp32::panel_update_thread()
 
 			pixels.show();
 		}
-		catch(std::exception & e) {
+		catch(const std::exception & e) {
 			put_string_lf(format("Exception in panel thread: %s", e.what()));
 		}
-		catch(int e) {
+		catch(const int e) {
 			put_string_lf(format("Exception in panel thread: %d", e));
 		}
 		catch(...) {
@@ -207,5 +206,4 @@ void console_esp32::panel_update_thread()
 #endif
 
 	DOLOG(info, false, "panel task terminating");
-#endif
 }

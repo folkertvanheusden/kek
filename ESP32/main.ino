@@ -544,9 +544,9 @@ void setup() {
 	pinMode(HEARTBEAT_PIN, OUTPUT);
 #endif
 
-#if !defined(BUILD_FOR_PICO2W) && (defined(NEOPIXELS_PIN) || defined(HEARTBEAT_PIN)) && !defined(TEENSY4_1)
+#if !defined(BUILD_FOR_PICO2W) && (defined(NEOPIXELS_PIN) || defined(HEARTBEAT_PIN))
 	cs->println("Starting panel");
-	xTaskCreate(&console_thread_wrapper_panel, "panel", 3072, cnsl, 1, nullptr);
+	xTaskCreate(&console_thread_wrapper_panel, "panel", 1024, cnsl, 1, nullptr);
 #endif
 
 	cs->println("* Starting console");

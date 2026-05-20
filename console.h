@@ -95,7 +95,7 @@ public:
 
 	virtual void refresh_virtual_terminal() = 0;
 
-	void         operator()();
+	virtual void operator()();
 
 	abool * get_running_flag()             { return &running_flag; }
 	abool * get_disk_read_activity_flag()  { return &disk_read_activity_flag; }
