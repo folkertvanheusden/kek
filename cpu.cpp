@@ -1797,7 +1797,7 @@ cpu::operand_parameters cpu::addressing_to_string(const uint8_t mode_register, c
 			if (temp2.has_value() == false)
 				temp2 = 0xffff, valid = false, error = format("cannot fetch memory from %o", get_register(reg));
 
-			return { format("(%s)", reg_name.c_str()), 2, -1, uint16_t(temp2.value() & mask), valid, error };
+			return { "(" + reg_name + ")", 2, -1, uint16_t(temp2.value() & mask), valid, error };
 
 		case 2:
 			if (reg == 7)
@@ -1807,7 +1807,7 @@ cpu::operand_parameters cpu::addressing_to_string(const uint8_t mode_register, c
 			if (temp2.has_value() == false)
 				temp2 = 0xffff, valid = false, error = format("cannot fetch memory from %o", get_register(reg));
 
-			return { format("(%s)+", reg_name.c_str()), 2, -1, uint16_t(temp2.value() & mask), valid, error };
+			return { "(" + reg_name + ")+", 2, -1, uint16_t(temp2.value() & mask), valid, error };
 
 		case 3:
 			if (reg == 7) {
@@ -1828,7 +1828,7 @@ cpu::operand_parameters cpu::addressing_to_string(const uint8_t mode_register, c
 					temp2 = 0xffff, valid = false, error = format("cannot fetch memory from %o", keep);
 			}
 
-			return { format("@(%s)+", reg_name.c_str()), 2, -1, uint16_t(temp2.value() & mask), valid, error };
+			return { "@(" + reg_name + ")+", 2, -1, uint16_t(temp2.value() & mask), valid, error };
 
 		case 4: {
 				uint16_t calculated_address = get_register(reg) - (word_mode == wm_word || reg >= 6 ? 2 : 1);
@@ -1836,7 +1836,7 @@ cpu::operand_parameters cpu::addressing_to_string(const uint8_t mode_register, c
 				if (temp2.has_value() == false)
 					temp2 = 0xffff, valid = false, error = format("cannot fetch memory from %o", calculated_address);
 
-				return { format("-(%s)", reg_name.c_str()), 2, -1, uint16_t(temp2.value() & mask), valid, error };
+				return { "-(" + reg_name + ")", 2, -1, uint16_t(temp2.value() & mask), valid, error };
 			}
 
 		case 5: {
@@ -1850,7 +1850,7 @@ cpu::operand_parameters cpu::addressing_to_string(const uint8_t mode_register, c
 						temp2 = 0xffff, valid = false, error = format("cannot fetch memory from %o", temp2.value());
 				}
 
-				return { format("@-(%s)", reg_name.c_str()), 2, -1, uint16_t(temp2.value() & mask), valid, error };
+				return { "@-(" + reg_name + ")", 2, -1, uint16_t(temp2.value() & mask), valid, error };
 			}
 
 		case 6:
