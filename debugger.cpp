@@ -1126,14 +1126,13 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 
 		return true;
 	}
-	else if (cmd == "reset" || cmd == "r") {
+	else if (parts[0] == "reset" || parts[0] == "r") {
 		bool hard = parts.size() == 2 && parts[1] == "hard";
 		*stop_event = EVENT_NONE;
 		b->reset(hard);
-		if (hard) {
-			b->getRAM()->reset(true);
+		b->getRAM()->reset(hard);
+		if (hard)
 			b->getCpu()->reset();
-		}
 		cnsl->put_string_lf("resetted");
 		return true;
 	}
