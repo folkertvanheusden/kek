@@ -1,6 +1,7 @@
 KEK
 ---
-Kek is a DEC PDP-11 (11/70) emulator capable of running UNIX-v7.
+
+Kek is a DEC PDP-11 (11/70) emulator capable of running e.g. UNIX-v7 and BSD 2.11.
 
 You need to retrieve the git repository with the --recursive switch for the git command:
 
