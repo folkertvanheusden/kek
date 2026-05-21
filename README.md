@@ -107,6 +107,11 @@ Thanks a lot to Neil Webber for his help and for his python PDP emulator (which 
 Neil's emulator can be found at https://github.com/outofmbufs/python-pdp11-emulator
 
 
+## Star History
+
+[![Star History Chart](https://api.star-history.com/chart?repos=folkertvanheusden/kek&type=date&legend=top-left)](https://www.star-history.com/?repos=folkertvanheusden%2Fkek&type=date&legend=top-left)
+
+
 Kek is released under MIT license.
 
 Folkert van Heusden
