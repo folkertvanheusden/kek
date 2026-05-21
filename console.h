@@ -106,4 +106,7 @@ public:
 	virtual void panel_update_thread() = 0;
 	int          get_refreshrate(              ) const { return refreshrate; }
 	void         set_refreshrate(const int rate)       { refreshrate = rate; }
+
+	virtual void set_LED_state   (const bool state);
+	virtual void toggle_LED_state();
 };

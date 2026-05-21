@@ -342,17 +342,18 @@ void cpu::execute_any_pending_interrupt()
 			auto     vector = queued_interrupts[i].begin();
 			uint16_t v      = *vector;
 			queued_interrupts[i].erase(vector);
-#if defined(ESP32)
-			if (v == 0100) {  // 50 Hz interrupt
-				if (++kw11l_counter >= 25) {
-					kw11l_counter = 0;
-					digitalWrite(HEARTBEAT_PIN, !digitalRead(HEARTBEAT_PIN));
+
+			if (cnsl) {
+				if (v == 0100) {  // 50 Hz interrupt
+					if (++kw11l_counter >= 25) {
+						kw11l_counter = 0;
+						cnsl->toggle_LED_state();
+					}
+				}
+				else {
+					cnsl->toggle_LED_state();
 				}
 			}
-			else {
-				digitalWrite(HEARTBEAT_PIN, !digitalRead(HEARTBEAT_PIN));
-			}
-#endif
 
 			TRACE("Invoking interrupt vector %o (IPL %d, current: %d)", v, i, current_level);
 			trap(v, i, true);

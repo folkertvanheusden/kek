@@ -218,7 +218,7 @@ void console::put_char(const char c)
 	else if (c == 13)
 		tx = 0;
 	else if (c == 10) {
-		if (debug_buffer.empty() == false) {
+		if (debug_buffer.empty() == false && is_terminal_set() == false) {
 			DOLOG(debug, false, "TTY: %s", debug_buffer.c_str());
 			debug_buffer.clear();
 		}
@@ -303,4 +303,12 @@ void console::operator()()
 void console::set_blinkenlights_panel(blinkenlights *const p_blinkenlights)
 {
 	this->p_blinkenlights = p_blinkenlights;
+}
+
+void console::set_LED_state(const bool state)
+{
+}
+
+void console::toggle_LED_state()
+{
 }

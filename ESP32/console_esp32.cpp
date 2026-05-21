@@ -26,6 +26,10 @@
 console_esp32::console_esp32(kek_event_t *const stop_event, comm *const io_port, const int t_width, const int t_height) :
 	console_comm(stop_event, io_port, t_width, t_height)
 {
+#if defined(WAVESHARE_S3_ETH)
+	rgb_led.begin();
+	rgb_led.setBrightness(50);
+#endif
 }
 
 console_esp32::~console_esp32()
@@ -188,22 +192,24 @@ void console_esp32::panel_update_thread()
 
 	pixels.clear();
 	pixels.show();
-#elif defined(HEARTBEAT_PIN) && !defined(WAVESHARE_S3_ETH)
-	uint64_t prev_count = 0;
-	bool     led_state  = true;
-
-	while(!stop_panel) {
-		vTaskDelay(333 / portTICK_PERIOD_MS);
-
-		uint64_t current_count = c->get_trap_counter();
-		if (prev_count != current_count) {
-			prev_count = current_count;
-
-			digitalWrite(HEARTBEAT_PIN, led_state ? HIGH : LOW);
-			led_state = !led_state;
-		}
-	}
 #endif
 
 	DOLOG(info, false, "panel task terminating");
+}
+
+void console_esp32::set_LED_state(const bool state)
+{
+#if defined(WAVESHARE_S3_ETH)
+	uint8_t brightness = state ? 255 : 0;
+	rgb_led.setPixelColor(0, brightness, brightness, brightness);
+	rgb_led.show();
+#else
+	digitalWrite(HEARTBEAT_PIN, state);
+#endif
+	prev_led_state = state;
+}
+
+void console_esp32::toggle_LED_state()
+{
+	set_LED_state(!prev_led_state);
 }

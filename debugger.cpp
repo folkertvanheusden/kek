@@ -1383,13 +1383,17 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			if (false) {
 			}
 #if !defined(WAVESHARE_S3_ETH)
-			if (!network_configured)
+			else if (!network_configured)
 				cnsl->put_string_lf("Please configure network first (cfgnet)");
 #endif
-			else if (dev->begin())
+			else if (dev->begin()) {
 				b->add_DEQNA(new deqna(b, mac, dev));
-			else
+				cnsl->put_string_lf("DEQNA emulation initialized");
+			}
+			else {
 				delete dev;
+				cnsl->put_string_lf("DEQNA emulation initialization failed");
+			}
 		}
 
 		return true;
@@ -1681,7 +1685,7 @@ void debugger(console *const cnsl, bus *const b, kek_event_t *const stop_event, 
 			if (state.marker)
 				cnsl->put_string_lf("---");
 
-			std::string cmd = cnsl->read_line(format("%d", int(*stop_event)));
+			std::string cmd = cnsl->read_line(std::to_string(int(*stop_event)));
 
 			if (debugger_do(&state, cnsl, b, stop_event, cmd) == false)
 				break;

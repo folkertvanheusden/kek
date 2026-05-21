@@ -26,6 +26,7 @@ bool gettrace();
 void set_clock_reference(const char *const ntp_server);
 #endif
 void set_terminal(console *const cnsl);
+bool is_terminal_set();
 
 #ifdef TURBO
 #define DOLOG(ll, always, fmt, ...) do { } while(0)

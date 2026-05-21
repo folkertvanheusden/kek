@@ -79,6 +79,7 @@ private:
 	mmu *const mmu_ { nullptr };
 
 	kek_event_t *const event { nullptr };
+	console     *cnsl        { nullptr };
 
 	bool     check_pending_interrupts() const;  // needs the 'qi_lock'-lock
 	void     execute_any_pending_interrupt();
@@ -119,6 +120,8 @@ private:
 public:
 	explicit cpu(bus *const b, kek_event_t *const event);
 	~cpu();
+
+	void set_console(console *const cnsl) { this->cnsl = cnsl; }
 
 	JsonDocument serialize();
 	static cpu *deserialize(const JsonVariantConst j, bus *const b, kek_event_t *const event);

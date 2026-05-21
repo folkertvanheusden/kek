@@ -517,6 +517,10 @@ void setup() {
 #endif
 	cnsl->set_bus(b);
 	cnsl->begin();
+  c->set_console(cnsl);
+
+  set_terminal(cnsl);
+  DOLOG(info, true, "Logging enabled");
 
 	running = cnsl->get_running_flag();
 

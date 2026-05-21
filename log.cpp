@@ -77,6 +77,11 @@ void set_terminal(console *const cnsl)
 	log_cnsl = cnsl;
 }
 
+bool is_terminal_set()
+{
+	return log_cnsl;
+}
+
 void settrace(const bool on)
 {
 	log_trace_enabled = on;
