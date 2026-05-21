@@ -27,22 +27,13 @@ To build for e.g. windows:
 
 To run an RK05 disk image:
 
-    ./kek -r filename.rk -R rk05 -b 2> /dev/null
+    ./kek -r filename.rk -R rk05 -b rk05
 
-
-To run an RL02 disk image:
-
-    ./kek -r filename.rk -R rl02 -b 2> /dev/null
-
-
-To run an RP06 disk image:
-
-    ./kek -r filename.rk -R rp06 -b 2> /dev/null
-
+Replace rk05 by rl02 or rp06 for variations.
 
 To run a tape image:
 
-    ./kek -T filename.bin -b 2> /dev/null
+    ./kek -T filename.bin -b tm11
 
 
 When you run UNIX 7, you can (if your system has enough RAM - use a micrcontroller with 2 MB PSRAM or more) run multi-user via the DZ-11 emulation.
@@ -50,6 +41,7 @@ Note that UNIX 7 starts in single user mode first; press ctrl+d to switch to mul
 Also make sure to configure networking ('startnet') to be able to connect (using telnet) to the DC-11 ports (TCP port 1101 upto and including 1104).
 
 If using windows, run Kek with -c x where x is some portnumber. You can then telnet to that port to control the emulator/emulated system.
+
 
 ESP32
 -----
