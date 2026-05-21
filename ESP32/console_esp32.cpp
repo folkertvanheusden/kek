@@ -72,8 +72,8 @@ void console_esp32::refresh_virtual_terminal()
 void console_esp32::panel_update_thread()
 {
 	DOLOG(info, false, "panel task started");
-#if defined(NEOPIXELS_PIN)
 	cpu *const c = b->getCpu();
+#if defined(NEOPIXELS_PIN)
 
 	constexpr const uint8_t n_leds = 64;
 #if defined(GRBW_PIXELS)
@@ -188,14 +188,14 @@ void console_esp32::panel_update_thread()
 
 	pixels.clear();
 	pixels.show();
-#elif defined(HEARTBEAT_PIN)
+#elif defined(HEARTBEAT_PIN) && !defined(WAVESHARE_S3_ETH)
 	uint64_t prev_count = 0;
 	bool     led_state  = true;
 
 	while(!stop_panel) {
 		vTaskDelay(333 / portTICK_PERIOD_MS);
 
-		uint64_t current_count = c->get_instructions_executed_count();
+		uint64_t current_count = c->get_trap_counter();
 		if (prev_count != current_count) {
 			prev_count = current_count;
 

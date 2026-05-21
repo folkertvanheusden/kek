@@ -116,11 +116,6 @@ void start_disk(console *const cnsl)
 	if (disk_started)
 		return;
 
-#if defined(ESP32)
-	cnsl->put_string_lf(format("MISO: %d", int(MISO)));
-	cnsl->put_string_lf(format("MOSI: %d", int(MOSI)));
-	cnsl->put_string_lf(format("SCK : %d", int(SCK )));
-#endif
 	init_sd();
 #endif
 }

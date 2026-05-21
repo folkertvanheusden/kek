@@ -92,6 +92,12 @@ bool init_sd()
 #if defined(TEENSY4_1)
   if (SD.begin(BUILTIN_SDCARD))
 		disk_started = true;
+#elif defined(WAVESHARE_S3_ETH)
+  constexpr const int cs = 4;
+	cnsl->put_string_lf(format("SS  : %d", cs));
+  SPI.begin(7, 5, 6, cs);  // SCK, MISO, MOSI, SS
+	if (SDinstance.begin(cs))
+		disk_started = true;
 #elif defined(OLIMEX_XXL)
   constexpr const int cs = 9;
   SPI1.setCS(cs);
