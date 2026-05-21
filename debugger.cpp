@@ -1380,8 +1380,12 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		}
 
 		if (dev) {
+			if (false) {
+			}
+#if !defined(WAVESHARE_S3_ETH)
 			if (!network_configured)
 				cnsl->put_string_lf("Please configure network first (cfgnet)");
+#endif
 			else if (dev->begin())
 				b->add_DEQNA(new deqna(b, mac, dev));
 			else
