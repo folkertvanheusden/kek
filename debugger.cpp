@@ -43,7 +43,6 @@
 #if defined(linux)
 #include "eth_transport_linux.h"
 #elif defined(ESP32)
-#include "eth_transport_esp32.h"
 #elif defined(TEENSY4_1)
 #include "eth_transport_teensy4_1.h"
 #endif
@@ -1357,10 +1356,6 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 				cnsl->put_string_lf("Invalid parameter count");
 			else
 				dev = new eth_transport_linux(pars[1]);
-		}
-#elif defined(ESP32)
-		else if (pars[0] == "esp32") {
-			dev = new eth_transport_esp32();
 		}
 #elif defined(TEENSY4_1)
 		else if (pars[0] == "teensy4.1") {
