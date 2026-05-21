@@ -9,7 +9,7 @@
 class comm_esp32_hardwareserial: public comm
 {
 private:
-	const uart_port_t uart_nr { UART_NUM_1 };
+	const uart_port_t uart_nr { ESP32_UART };
 	const int rx_pin          { -1         };
 	const int tx_pin          { -1         };
 	const int bitrate         { 38400      };

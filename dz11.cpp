@@ -20,8 +20,6 @@
 #include "utils.h"
 
 
-#define ESP32_UART UART_NUM_1
-
 const char *const dz11_register_names[] { "R0_CSR", "R2_RBUF_LPR", "R4_TCR", "R6_MSR_TDR" };
 
 #if defined(ESP32) || defined(FREERTOS)
