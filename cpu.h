@@ -36,7 +36,7 @@ typedef struct {
 		int            reg;
 	};
 
-	std::optional<uint16_t> value;
+	uint16_t       value;
 } gam_rc_t;
 
 class cpu
