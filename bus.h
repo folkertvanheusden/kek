@@ -84,6 +84,9 @@ private:
 	uint16_t console_switches { 0 };
 	uint16_t console_leds     { 0 };
 
+	uint16_t read_IO (const uint16_t a, const word_mode_t word_mode, const int run_mode, const d_i_space_t space, const int page);
+	bool     write_IO(const uint16_t a, const word_mode_t word_mode, const int run_mode, const d_i_space_t space, const int page, uint16_t value);
+
 public:
 	bus();
 	~bus();
