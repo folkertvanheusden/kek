@@ -425,18 +425,22 @@ void cpu::add_to_MMR1(const int reg, const int delta)
 gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t word_mode, const bool read_value)
 {
 	d_i_space_t isR7_space = reg == 7 ? i_space : d_space;
-	d_i_space_t read_space = d_space;
 	gam_rc_t    g { word_mode, isR7_space, !!mode, 0, { } };
+
+	if (mode == 0) {
+		g.reg   = reg;
+		g.value = get_register(reg) & word_mode_mask[word_mode];
+		return g;
+	}
+
+	d_i_space_t read_space = d_space;
+	int         run_mode   = getPSW_runmode();
 
         uint16_t temp      = 0;
 	uint16_t next_word = 0;
 	int      delta     = 0;
 
 	switch(mode) {
-		case 0:  // Rn
-			g.reg   = reg;
-			g.value = get_register(reg) & word_mode_mask[word_mode];
-			return g;
 		case 1:  // (Rn)
 			g.addr     = get_register(reg);
 			read_space = isR7_space;
@@ -449,7 +453,7 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t wo
 			read_space = isR7_space;
 			break;
 		case 3:  // @(Rn)+  /  @#a
-			g.addr  = b->read(get_register(reg), wm_word, getPSW_runmode(), isR7_space);
+			g.addr  = b->read(get_register(reg), wm_word, run_mode, isR7_space);
 			add_to_MMR1(reg, 2);
 			g.space = d_space;
 			// might be wrong: the adds should happen when the read is really performed(?), because of traps
@@ -466,25 +470,25 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t wo
 		case 5:  // @-(Rn)
 			temp    = add_register(reg, -2);
 			add_to_MMR1(reg, -2);
-			g.addr  = b->read(temp, wm_word, getPSW_runmode(), isR7_space);
+			g.addr  = b->read(temp, wm_word, run_mode, isR7_space);
 			g.space = d_space;
 			break;
 		case 6:  // x(Rn)  /  a
-			next_word = b->read(getPC(), wm_word, getPSW_runmode(), i_space);
+			next_word = b->read(getPC(), wm_word, run_mode, i_space);
 			add_register(7, + 2);
 			g.addr  = get_register(reg) + next_word;
 			g.space = d_space;
 			break;
 		case 7:  // @x(Rn)  /  @a
-			next_word = b->read(getPC(), wm_word, getPSW_runmode(), i_space);
+			next_word = b->read(getPC(), wm_word, run_mode, i_space);
 			add_register(7, + 2);
-			g.addr  = b->read(get_register(reg) + next_word, wm_word, getPSW_runmode(), d_space);
+			g.addr  = b->read(get_register(reg) + next_word, wm_word, run_mode, d_space);
 			g.space = d_space;
 			break;
 	}
 
 	if (read_value)
-		g.value = b->read(g.addr, word_mode, getPSW_runmode(), read_space);
+		g.value = b->read(g.addr, word_mode, run_mode, read_space);
 
 	assert(g.value < 256 || word_mode == wm_word);
 
