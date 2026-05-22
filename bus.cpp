@@ -276,14 +276,6 @@ void bus::del_DZ11()
 	dz11_ = nullptr;
 }
 
-void monitor_access(const uint32_t a, const uint16_t virt, const uint16_t pc, const bool is_write, const uint16_t v)
-{
-	if ((a >= 01613600 && a < 01613653) || (a >= 01503274 && a < 01503274 + 12)) {
-//		settrace(true);
-		DOLOG(debug, false, "Access (%s) to monitored address %08o (%06o) from %06o, value %06o", is_write ? "write" : "read", a, virt, pc, v);
-	}
-}
-
 uint16_t bus::read_IO(const uint16_t a, const word_mode_t word_mode, const int run_mode, const d_i_space_t space, const int page)
 {
 	//// REGISTERS ////
@@ -583,8 +575,6 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const in
 	else
 		temp = m->read_word(m_offset);
 
-	monitor_access(m_offset, addr_in, c->getPC(), false, temp);
-
 	TRACE("READ from %06o/%07o %c %c: %06o (%d)", addr_in, m_offset, space == d_space ? 'D' : 'I', word_mode == wm_byte ? 'B' : 'W', temp, run_mode);
 
 	return temp;
@@ -863,8 +853,6 @@ bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 	}
 
 	mmu_->set_page_accessed(page_index);
-
-	monitor_access(m_offset, addr_in, c->getPC(), true, value);
 
 	if (word_mode == wm_byte)
 		m->write_byte(m_offset, value);
