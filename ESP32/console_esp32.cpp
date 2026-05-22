@@ -203,7 +203,7 @@ void console_esp32::set_LED_state(const bool state)
 	uint8_t brightness = state ? 255 : 0;
 	rgb_led.setPixelColor(0, brightness, brightness, brightness);
 	rgb_led.show();
-#elif !defined(TEENSY4_1)
+#elif !defined(TEENSY4_1) && !defined(BUILD_FOR_PICO2W)
 	digitalWrite(HEARTBEAT_PIN, state);
 #endif
 	prev_led_state = state;
