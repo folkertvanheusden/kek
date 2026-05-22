@@ -426,7 +426,7 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t wo
 {
 	d_i_space_t isR7_space = reg == 7 ? i_space : (mmu_->get_use_data_space(getPSW_runmode()) ? d_space : i_space);
 	//                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ always d_space here? TODO
-	gam_rc_t    g { word_mode, isR7_space, mode, true, 0, { } };
+	gam_rc_t    g { word_mode, isR7_space, !!mode, 0, { } };
 
         uint16_t temp      = 0;
 	uint16_t next_word = 0;
@@ -434,9 +434,8 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t wo
 
 	switch(mode) {
 		case 0:  // Rn
-			g.reg     = reg;
-			g.is_addr = false;
-			g.value   = get_register(reg) & word_mode_mask[word_mode];
+			g.reg   = reg;
+			g.value = get_register(reg) & word_mode_mask[word_mode];
 			break;
 		case 1:  // (Rn)
 			g.addr  = get_register(reg);
