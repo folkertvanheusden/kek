@@ -365,7 +365,7 @@ void mmu::verify_page_access(const int page_index, const bool is_write)
 
 		if (is_write && access_control != 6)
 			temp |= 1 << 13;  // read-only
-					  //
+
 		if (access_control == 0 || access_control == 4)
 			temp |= 1l << 15;  // not resident
 		else if (access_control == 1 || access_control == 2)
@@ -373,10 +373,7 @@ void mmu::verify_page_access(const int page_index, const bool is_write)
 		else if (access_control == 3 || access_control == 7)
 			temp |= 1 << 15;
 
-		const auto [ run_mode, d, apf ] = explode_page_index(page_index);
-		temp |= run_mode << 5;  // TODO: kernel-mode or user-mode when a trap occurs in user-mode?
-		temp |= apf << 1; // add current page
-		temp |= d << 4;
+		temp |= page_index << 1;
 
 		setMMR0_as_is(temp);
 
