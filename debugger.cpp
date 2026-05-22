@@ -1437,9 +1437,9 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		return true;
 	}
 #endif
-	else if (cmd == "quit" || cmd == "q") {
-		int ch_opt = wait_for_key("y/n", cnsl, { 'y', 'n' });
-		if (ch_opt == 'y') {
+	else if (parts[0] == "quit" || parts[0] == "q") {
+		bool yes = (parts.size() == 2 && parts[1] == "-y") || wait_for_key("y/n", cnsl, { 'y', 'n' }) == 'y';
+		if (yes) {
 #if defined(ESP32)
 			ESP.restart();
 #elif defined(BUILD_FOR_PICO2W)
