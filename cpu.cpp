@@ -424,8 +424,7 @@ void cpu::add_to_MMR1(const int reg, const int delta)
 // GAM = general addressing modes
 gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t word_mode, const bool read_value)
 {
-	d_i_space_t isR7_space = reg == 7 ? i_space : (mmu_->get_use_data_space(getPSW_runmode()) ? d_space : i_space);
-	//                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ always d_space here? TODO
+	d_i_space_t isR7_space = reg == 7 ? i_space : d_space;
 	gam_rc_t    g { word_mode, isR7_space, !!mode, 0, { } };
 
         uint16_t temp      = 0;
