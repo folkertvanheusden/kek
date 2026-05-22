@@ -28,7 +28,6 @@ constexpr const uint64_t B64_MSWSET = 0xffffffff00000000ll;
 
 typedef struct {
 	word_mode_t    word_mode;
-	rm_selection_t mode_selection;
 	d_i_space_t    space;
 	int            access_mode;
 

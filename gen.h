@@ -13,8 +13,6 @@ typedef enum { d_space, i_space } d_i_space_t;
 
 typedef enum { wm_word = 0, wm_byte = 1 } word_mode_t;
 
-typedef enum { rm_prev, rm_cur } rm_selection_t;
-
 #if defined(FREERTOS)
 #include <FreeRTOS.h>
 #include <semphr.h>

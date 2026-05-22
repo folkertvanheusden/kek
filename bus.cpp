@@ -284,9 +284,8 @@ void monitor_access(const uint32_t a, const uint16_t virt, const uint16_t pc, co
 	}
 }
 
-uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm_selection_t mode_selection, const d_i_space_t space_in)
+uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const int run_mode, const d_i_space_t space_in)
 {
-	int      run_mode = mode_selection == rm_cur ? c->getPSW_runmode() : c->getPSW_prev_runmode();
 	auto     space    = mmu_->get_use_data_space(run_mode) ? space_in : i_space;
 	uint32_t m_offset = mmu_->calculate_physical_address(run_mode, addr_in, false, space);
 
@@ -580,14 +579,13 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const rm
 
 	monitor_access(m_offset, addr_in, c->getPC(), false, temp);
 
-	TRACE("READ from %06o/%07o %c %c: %06o (%s)", addr_in, m_offset, space == d_space ? 'D' : 'I', word_mode == wm_byte ? 'B' : 'W', temp, mode_selection == rm_prev ? "prev" : "cur");
+	TRACE("READ from %06o/%07o %c %c: %06o (%d)", addr_in, m_offset, space == d_space ? 'D' : 'I', word_mode == wm_byte ? 'B' : 'W', temp, run_mode);
 
 	return temp;
 }
 
-bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t value, const rm_selection_t mode_selection, const d_i_space_t space_in)
+bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t value, const int run_mode, const d_i_space_t space_in)
 {
-	int           run_mode   = mode_selection == rm_cur ? c->getPSW_runmode() : c->getPSW_prev_runmode();
 	const uint8_t apf        = addr_in >> 13; // active page field
 	auto          space      = mmu_->get_use_data_space(run_mode) ? space_in : i_space;
 	int           page_index = mmu_->calc_par_pdr_index(run_mode, space, apf);
@@ -915,7 +913,7 @@ uint16_t bus::read_physical_byte(const uint32_t a)
 
 uint16_t bus::read_word(const uint16_t a, const d_i_space_t s)
 {
-	return read(a, wm_word, rm_cur, s);
+	return read(a, wm_word, c->getPSW_runmode(), s);
 }
 
 std::optional<uint16_t> bus::peek_word(const int run_mode, const uint16_t a)
@@ -934,7 +932,7 @@ std::optional<uint16_t> bus::peek_word(const int run_mode, const uint16_t a)
 
 void bus::write_word(const uint16_t a, const uint16_t value, const d_i_space_t s)
 {
-	write(a, wm_word, value, rm_cur, s);
+	write(a, wm_word, value, c->getPSW_runmode(), s);
 }
 
 // TODO check for odd address
