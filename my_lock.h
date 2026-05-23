@@ -103,6 +103,7 @@ public:
 
 	std::optional<T> pop(const int timeout_ms) {
 #if defined(FREERTOS)
+		// TODO FIXME check first if any entries in queue
 		uint8_t rc = 0;
 		if (xQueueReceive(cv, &rc, timeout_ms / portTICK_PERIOD_MS) == pdFALSE || rc == 0)
 			return { };
@@ -122,7 +123,7 @@ public:
 		using namespace std::chrono_literals;
 
 		std::unique_lock<std::mutex> lck(l);
-		if (cv.wait_for(lck, timeout_ms * 1ms, [this] { return q.empty() == false; }) == true) {
+		if (q.empty() == false || cv.wait_for(lck, timeout_ms * 1ms, [this] { return q.empty() == false; }) == true) {
 			auto v = std::move(q.front());
 			q.pop_front();
 			return v;
