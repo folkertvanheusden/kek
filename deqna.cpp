@@ -15,15 +15,15 @@ constexpr const uint8_t bc_addr[] { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 static void thread_wrapper_receiver_low(void *p)
 {
        deqna *const deqna_ = reinterpret_cast<deqna *>(p);
-
        deqna_->receiver_low();
+       vTaskDelete(nullptr);
 }
 
 static void thread_wrapper_receiver_high(void *p)
 {
        deqna *const deqna_ = reinterpret_cast<deqna *>(p);
-
        deqna_->receiver_high();
+       vTaskDelete(nullptr);
 }
 #endif
 
@@ -50,6 +50,10 @@ bool deqna::begin()
 deqna::~deqna()
 {
 	stop_flag = true;
+#if defined(FREERTOS)
+	while(rx_low_stopped == false || rx_high_stopped == false)
+		vTaskDelay(1 / portTICK_PERIOD_MS);
+#else
 	if (th_rx_low) {
 		th_rx_low->join();
 		delete th_rx_low;
@@ -58,6 +62,7 @@ deqna::~deqna()
 		th_rx_high->join();
 		delete th_rx_high;
 	}
+#endif
 	purge_buffers();
 	delete eth_dev;
 }
@@ -98,6 +103,7 @@ void deqna::receiver_low()
 		total_n_rx_pkts++;
 
 		if (pkt.second < 14) {
+			DOLOG(debug, false, "deqna packet too short (%zu)", pkt.second);
 			total_n_rx_drop++;
 			delete [] pkt.first;
 			continue;
@@ -115,6 +121,10 @@ void deqna::receiver_low()
 		}
 		delete [] pkt.first;
 	}
+
+#if defined(FREERTOS)
+	rx_low_stopped = true;
+#endif
 
 	DOLOG(info, false, "deqna LOW RECEIVER THREAD TERMINATING");
 }
@@ -198,6 +208,10 @@ void deqna::receiver_high()
 			DOLOG(debug, false, "deqna(rx): packet NOT queued");
 		}
 	}
+
+#if defined(FREERTOS)
+	rx_high_stopped = true;
+#endif
 
 	DOLOG(info, false, "deqna HIGH RECEIVER THREAD TERMINATING");
 }

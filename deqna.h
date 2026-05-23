@@ -33,9 +33,14 @@ private:
 	std::atomic_uint16_t registers[8] { 0     };  // accessed from multiple threads
 	uint8_t          mac_address[6] { 0       };
 	int              dev_fd         { -1      };
-	abool stop_flag      { false   };
+	abool stop_flag                 { false   };
+#if defined(FREERTOS)
+	abool rx_low_stopped            { false   };
+	abool rx_high_stopped           { false   };
+#else
 	std::thread     *th_rx_low      { nullptr };
 	std::thread     *th_rx_high     { nullptr };
+#endif
 	mutable my_lock  lock;
 	my_threadsafe_queue<std::pair<uint8_t *, size_t> > received;
 	big_acounter total_n_rx_pkts { 0 };
