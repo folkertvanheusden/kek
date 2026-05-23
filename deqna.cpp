@@ -94,6 +94,7 @@ void deqna::queue_rx_packet(const uint8_t *const in, const size_t n)
 void deqna::receiver_low()
 {
 	set_thread_name("deqna:rx_low");
+	DOLOG(info, false, "deqna LOW RECEIVER THREAD starting");
 
 	while(!stop_flag) {
 		auto pkt = eth_dev->get(100);
@@ -132,6 +133,7 @@ void deqna::receiver_low()
 void deqna::receiver_high()
 {
 	set_thread_name("deqna:rx_high");
+	DOLOG(info, false, "deqna HIGH RECEIVER THREAD starting");
 
 	while(!stop_flag) {
 		// receive list invalid?
