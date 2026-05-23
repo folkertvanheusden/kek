@@ -48,6 +48,7 @@ std::pair<uint8_t *, size_t> eth_transport_esp32::get(const int timeout)
 	uint8_t *pkt         = nullptr;
 	size_t   packet_size = 0;
 	auto     start       = millis();
+	int      sleep_n_ms  = 1;
 	while(millis() - start < timeout) {
 		int rc = w5500_instance->readFrame(buffer, sizeof buffer);
 		if (rc > 0) {
@@ -60,6 +61,9 @@ std::pair<uint8_t *, size_t> eth_transport_esp32::get(const int timeout)
 			packet_size = rc;
 			break;
 		}
+		vTaskDelay(sleep_n_ms / portTICK_PERIOD_MS);
+		if (sleep_n_ms < 64)
+			sleep_n_ms <<= 1;
 	}
 	return { pkt, packet_size };
 }
