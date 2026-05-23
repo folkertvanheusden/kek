@@ -58,6 +58,7 @@ std::pair<uint8_t *, size_t> eth_transport_esp32::get(const int timeout)
 				DOLOG(ll_critical, true, "malloc issue");
 				return { nullptr, 0 };
 			}
+			memcpy(pkt, buffer, rc);
 			packet_size = rc;
 			break;
 		}
