@@ -1341,14 +1341,17 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 
 		return true;
 	}
-	else if (parts[0] == "deqna" && parts.size() == 2) {
+	else if (parts[0] == "deqna" && parts.size() >= 2) {
 		b->add_DEQNA(nullptr);  // disable & remove any existing
 
 		uint8_t mac[6] { };
 		get_deqna_mac(mac);
 
+		bool test       = parts[1] == "-t";
+		int  pars_index = test ? 2 : 1;
+
 		eth_transport *dev  = nullptr;
-		auto           pars = split(parts[1], ",");
+		auto           pars = split(parts[pars_index], ",");
 		if (false) {
 		}
 #if defined(linux)
@@ -1393,6 +1396,17 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			else {
 				delete dev;
 				cnsl->put_string_lf("DEQNA emulation initialization failed");
+			}
+
+			if (test) {
+				auto pkt = dev->get(1000);
+				if (pkt.first) {
+					delete [] pkt.first;
+					cnsl->put_string_lf("Detected packet(s) on interface");
+				}
+				else {
+					cnsl->put_string_lf("No packets seen!");
+				}
 			}
 		}
 
@@ -1525,7 +1539,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			"blights x     - enable blinkenlights on IP address x", 
 			"testdz11      - test DZ11",
 			"cfgdisk       - configure disk",
-			"deqna x[,y,z] - set deqna emulation to use (x): \"linux\" (tap), \"teensy4.1\", \"esp32\" or \"vxlan\" (with host (y) & port (z))",
+			"deqna [-t] x[,y,z] - set deqna emulation to use (x): \"linux\" (tap), \"teensy4.1\", \"esp32\" or \"vxlan\" (with host (y) & port (z)), when -t is specified it will test the connection",
 			"log ...       - log a message to the logfile",
 			nullptr
 		};

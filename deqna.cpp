@@ -328,7 +328,6 @@ void deqna::reset(const bool hard)
 
 void deqna::show_state(console *const cnsl) const
 {
-	cnsl->put_string_lf("Transport: " + eth_dev->identifier());
 	cnsl->put_string_lf(format("MAC: %02x:%02x:%02x:%02x:%02x:%02x", mac_address[0], mac_address[1], mac_address[2], mac_address[3], mac_address[4], mac_address[5]));
 	cnsl->put_string_lf(format("%" PRIzu " packets queued", received.aprox_size()));
 	for(int i=0; i<8; i++)
@@ -337,6 +336,8 @@ void deqna::show_state(console *const cnsl) const
 	cnsl->put_string_lf(format("rx dropped: %6" PRIu64, uint64_t(total_n_rx_drop)));
 	cnsl->put_string_lf(format("tx total  : %6" PRIu64, uint64_t(total_n_tx_pkts)));
 	cnsl->put_string_lf(format("tx dropped: %6" PRIu64, uint64_t(total_n_tx_drop)));
+	cnsl->put_string_lf("Transport: ");
+	eth_dev->show_state(cnsl);
 }
 
 uint8_t deqna::read_byte(const uint16_t addr)

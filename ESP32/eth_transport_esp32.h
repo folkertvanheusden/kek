@@ -9,7 +9,7 @@
 class eth_transport_esp32: public eth_transport
 {
 private:
-	uint8_t     mac_addr[6]    { };
+	uint8_t     mac_addr[6]    {   };
 	Wiznet5500 *w5500_instance { new Wiznet5500(13, 12, 11, 14) };
 
 public:
@@ -19,6 +19,7 @@ public:
 	bool begin() override;
 
 	std::string identifier() const override;
+	void show_state(console *const cnsl) const override;
 
 	void transmit(const uint8_t *const data, const size_t n_bytes) override;
 	std::pair<uint8_t *, size_t> get(const int timeout) override;

@@ -113,6 +113,7 @@ void eth_transport_vxlan::transmit(const uint8_t *const data, const size_t n_byt
 #endif
 
 	delete [] wrapped;
+	pkt_cnt_tx++;
 }
 
 std::pair<uint8_t *, size_t> eth_transport_vxlan::get(const int timeout)
@@ -156,6 +157,7 @@ std::pair<uint8_t *, size_t> eth_transport_vxlan::get(const int timeout)
 	}
 	packet_size = rc2;
 #endif
+	pkt_cnt_rx++;
 	if (packet_size < 14 + 8) {
 		delete [] pkt;
 		return { nullptr, 0 };

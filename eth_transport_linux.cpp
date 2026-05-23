@@ -114,6 +114,7 @@ std::string eth_transport_linux::identifier() const
 void eth_transport_linux::transmit(const uint8_t *const data, const size_t n_bytes)
 {
 	WRITE(fd, reinterpret_cast<const char *>(data), n_bytes);
+	pkt_cnt_tx++;
 }
 
 std::pair<uint8_t *, size_t> eth_transport_linux::get(const int timeout)
@@ -123,6 +124,7 @@ std::pair<uint8_t *, size_t> eth_transport_linux::get(const int timeout)
 	if (rc <= 0)
 		return { nullptr, 0 };
 
+	pkt_cnt_rx++;
 	constexpr const int max_pkt_size = 1512;
 	uint8_t *pkt = new uint8_t[max_pkt_size]();
 	int      rc2 = read(fd, pkt, max_pkt_size);

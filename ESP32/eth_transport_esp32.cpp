@@ -1,5 +1,6 @@
 #include "gen.h"
 
+#include "console.h"
 #include "eth_transport_esp32.h"
 #include "log.h"
 #include "utils.h"
@@ -28,9 +29,17 @@ std::string eth_transport_esp32::identifier() const
 	return "esp32+w5500";
 }
 
+void eth_transport_esp32::show_state(console *const cnsl) const
+{
+	eth_transport::show_state(cnsl);
+	auto link_state = w5500_instance->wizphy_getphylink();
+	cnsl->put_string_lf(format("Link state: %d", link_state));
+}
+
 void eth_transport_esp32::transmit(const uint8_t *const data, const size_t n_bytes)
 {
 	w5500_instance->sendFrame(data, n_bytes);
+	pkt_cnt_tx++;
 }
 
 std::pair<uint8_t *, size_t> eth_transport_esp32::get(const int timeout)
@@ -41,6 +50,7 @@ std::pair<uint8_t *, size_t> eth_transport_esp32::get(const int timeout)
 	while(millis() - start < timeout) {
 		int rc = w5500_instance->readFrame(buffer, sizeof buffer);
 		if (rc > 0) {
+			pkt_cnt_rx++;
 			pkt = new uint8_t[rc];
 			if (!pkt) {
 				DOLOG(ll_critical, true, "malloc issue");
