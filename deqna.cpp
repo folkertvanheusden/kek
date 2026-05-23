@@ -432,6 +432,7 @@ bool deqna::test(console *const cnsl)
 		payload[2] = 8;  // IP4
 		payload[4] = hw_size;
 		payload[5] = p_size;
+		payload[7] = 1;  // request
 		uint16_t sha_offset = 8;
 		uint16_t spa_offset = 8 + hw_size;
 		uint16_t tha_offset = spa_offset + p_size;
