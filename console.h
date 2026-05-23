@@ -28,6 +28,7 @@ class console
 {
 private:
 	my_threadsafe_queue<char> input_buffer;
+	my_lock                 put_string_lock;
 
 protected:
 	kek_event_t            *const stop_event { nullptr };

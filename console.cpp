@@ -267,6 +267,7 @@ void console::put_char(const char c)
 
 void console::put_string(const std::string & what)
 {
+	my_unique_lock lck(&put_string_lock);
 	for(size_t x=0; x<what.size(); x++)
 		put_char(what.at(x));
 }
