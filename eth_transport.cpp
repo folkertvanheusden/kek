@@ -1,3 +1,5 @@
+#include <cinttypes>
+
 #include "console.h"
 #include "eth_transport.h"
 
