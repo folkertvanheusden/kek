@@ -115,7 +115,7 @@ target_link_libraries(
 target_compile_options(dz11-test PRIVATE -O1 -fno-inline -DUNIT_TEST)
 ###
 
-target_compile_options(kek-native PRIVATE -march=native -mtune=native -O3)
+target_compile_options(kek-native PRIVATE -march=native -Ofast -fomit-frame-pointer)
 
 target_compile_options(kek-codecoverage PRIVATE -fprofile-arcs -ftest-coverage)
 target_link_options(kek-codecoverage PRIVATE -fprofile-arcs -ftest-coverage)
