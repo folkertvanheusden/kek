@@ -101,11 +101,8 @@ void deqna::receiver_low()
 		if (pkt.first == nullptr)
 			continue;
 
-		total_n_rx_pkts++;
-
 		if (pkt.second < 14) {
 			DOLOG(debug, false, "deqna packet too short (%zu)", pkt.second);
-			total_n_rx_drop++;
 			delete [] pkt.first;
 			continue;
 		}
@@ -113,11 +110,13 @@ void deqna::receiver_low()
 		// only for us or broadcast
 		if (memcmp(pkt.first, mac_address, 6) == 0 || memcmp(pkt.first, bc_addr, 6) == 0) {
 			if (registers[7] & 1) {  // receiver enabled?
+				total_n_rx_pkts++;
 				DOLOG(debug, false, "deqna packet received from real Ethernet");
 				queue_rx_packet(pkt.first, pkt.second);
 			}
 			else {
 				DOLOG(debug, false, "deqna dropped packet: receiver not enabled");
+				total_n_rx_drop++;
 			}
 		}
 		delete [] pkt.first;
