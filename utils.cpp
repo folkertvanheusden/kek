@@ -101,16 +101,20 @@ int parity(int v)
 void myusleep(uint64_t us)
 {
 #if defined(ESP32) || defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
+	uint64_t end = get_us() + us;
 	for(;;) {
-		uint64_t n_ms = us / 1000;
-
-		if (n_ms >= portTICK_PERIOD_MS) {
-			vTaskDelay(n_ms / portTICK_PERIOD_MS);
-			us -= n_ms * 1000;
-		}
-		else {
-			delayMicroseconds(us);
+		uint64_t now = get_us();
+		if (now >= end)
 			break;
+		uint64_t n_ms = (end - now) / 1000;
+		if (n_ms >= portTICK_PERIOD_MS)
+			vTaskDelay(n_ms / portTICK_PERIOD_MS);
+		else {
+#if defined(FREERTOS)
+			taskYIELD();
+#else
+			yield();
+#endif
 		}
 	}
 #else
