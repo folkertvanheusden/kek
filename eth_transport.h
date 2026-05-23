@@ -23,6 +23,6 @@ public:
 	virtual std::string identifier() const = 0;
 	virtual void show_state(console *const cnsl) const;
 
-	virtual void transmit(const uint8_t *const data, const size_t n_bytes) = 0;
+	virtual bool transmit(const uint8_t *const data, const size_t n_bytes) = 0;
 	virtual std::pair<uint8_t *, size_t> get(const int timeout) = 0;
 };

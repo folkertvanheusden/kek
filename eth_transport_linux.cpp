@@ -111,10 +111,11 @@ std::string eth_transport_linux::identifier() const
 	return "linux:" + dev_name;
 }
 
-void eth_transport_linux::transmit(const uint8_t *const data, const size_t n_bytes)
+bool eth_transport_linux::transmit(const uint8_t *const data, const size_t n_bytes)
 {
-	WRITE(fd, reinterpret_cast<const char *>(data), n_bytes);
+	auto rc = WRITE(fd, reinterpret_cast<const char *>(data), n_bytes);
 	pkt_cnt_tx++;
+	return rc == n_bytes;
 }
 
 std::pair<uint8_t *, size_t> eth_transport_linux::get(const int timeout)

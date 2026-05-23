@@ -30,6 +30,6 @@ public:
 
 	std::string identifier() const override;
 
-	void transmit(const uint8_t *const data, const size_t n_bytes) override;
+	bool transmit(const uint8_t *const data, const size_t n_bytes) override;
 	std::pair<uint8_t *, size_t> get(const int timeout) override;
 };

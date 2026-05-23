@@ -70,8 +70,9 @@ std::string eth_transport_vxlan::identifier() const
 	return format("vxlan:%s:%d/%d", peer.c_str(), port, id);
 }
 
-void eth_transport_vxlan::transmit(const uint8_t *const data, const size_t n_bytes)
+bool eth_transport_vxlan::transmit(const uint8_t *const data, const size_t n_bytes)
 {
+	bool     rc        = true;
 	size_t   wrapped_n = n_bytes + 8;
 	uint8_t *wrapped   = new uint8_t[wrapped_n]();
 	wrapped[0] = 0x08;
@@ -84,7 +85,8 @@ void eth_transport_vxlan::transmit(const uint8_t *const data, const size_t n_byt
 	udp.begin(port);
 	udp.beginPacket(peer.c_str(), port);
 	udp.write(data, n_bytes);
-	udp.endPacket();
+	if (udp.endPacket() == 0)
+		rc = false;
 #else
 	sockaddr_in serveraddr { };
 	serveraddr.sin_family = AF_INET;
@@ -97,23 +99,27 @@ void eth_transport_vxlan::transmit(const uint8_t *const data, const size_t n_byt
 	if (inet_pton(AF_INET, peer.c_str(), &serveraddr.sin_addr) == 0) {
 		delete [] wrapped;
 		DOLOG(debug, false, "inet_pton(%s) failed", peer.c_str());
-		return;
+		return false;
 	}
 #endif
 #else
 	if (inet_aton(peer.c_str(), &serveraddr.sin_addr) == 0) {
 		delete [] wrapped;
 		DOLOG(debug, false, "inet_aton(%s) failed", peer.c_str());
-		return;
+		return false;
 	}
 #endif
 
-	if (sendto(fd, reinterpret_cast<const char *>(wrapped), wrapped_n, 0, reinterpret_cast<const sockaddr *>(&serveraddr), sizeof serveraddr) == -1)
+	if (sendto(fd, reinterpret_cast<const char *>(wrapped), wrapped_n, 0, reinterpret_cast<const sockaddr *>(&serveraddr), sizeof serveraddr) == -1) {
 		DOLOG(debug, false, "sendto failed: %s", strerror(errno));
+		rc = false;
+	}
 #endif
 
 	delete [] wrapped;
 	pkt_cnt_tx++;
+
+	return rc;
 }
 
 std::pair<uint8_t *, size_t> eth_transport_vxlan::get(const int timeout)

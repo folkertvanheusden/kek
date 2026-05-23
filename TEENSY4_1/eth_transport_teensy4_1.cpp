@@ -27,9 +27,9 @@ std::string eth_transport_teensy4_1::identifier() const
 	return "teensy4.1";
 }
 
-void eth_transport_teensy4_1::transmit(const uint8_t *const data, const size_t n_bytes)
+bool eth_transport_teensy4_1::transmit(const uint8_t *const data, const size_t n_bytes)
 {
-	qn::EthernetFrame.send(data, n_bytes);
+	return qn::EthernetFrame.send(data, n_bytes);
 }
 
 std::pair<uint8_t *, size_t> eth_transport_teensy4_1::get(const int timeout)

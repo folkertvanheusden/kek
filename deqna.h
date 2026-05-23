@@ -42,6 +42,7 @@ private:
 	big_acounter total_n_rx_drop { 0 };
 	big_acounter total_n_tx_pkts { 0 };
 	big_acounter total_n_tx_drop { 0 };
+	big_acounter total_n_tx_fail { 0 };
 
 	void queue_rx_packet(const uint8_t *const in, const size_t n);
 	void transmitter    ();
@@ -60,6 +61,7 @@ public:
 	void reset(const bool hard) override;
 
 	void show_state(console *const cnsl) const override;
+	bool test(console *const cnsl);
 
 	uint8_t  read_byte(const uint16_t addr) override;
 	uint16_t read_word(const uint16_t addr) override;

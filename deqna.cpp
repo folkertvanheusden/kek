@@ -273,7 +273,10 @@ void deqna::transmitter()
 					queue_rx_packet(buffer, buffer_offset);
 				}
 				else {  // push on the wire
-					eth_dev->transmit(buffer, buffer_offset);
+					if (eth_dev->transmit(buffer, buffer_offset) == false) {
+						total_n_tx_fail++;
+						DOLOG(debug, false, "deqna(tx): cannot transmit frame");
+					}
 				}
 
 				buffer_offset = 0;
@@ -336,6 +339,7 @@ void deqna::show_state(console *const cnsl) const
 	cnsl->put_string_lf(format("rx dropped: %6" PRIu64, uint64_t(total_n_rx_drop)));
 	cnsl->put_string_lf(format("tx total  : %6" PRIu64, uint64_t(total_n_tx_pkts)));
 	cnsl->put_string_lf(format("tx dropped: %6" PRIu64, uint64_t(total_n_tx_drop)));
+	cnsl->put_string_lf(format("tx failed : %6" PRIu64, uint64_t(total_n_tx_fail)));
 	cnsl->put_string_lf("Transport: ");
 	eth_dev->show_state(cnsl);
 }
@@ -411,6 +415,53 @@ void deqna::write_word(const uint16_t addr, const uint16_t v)
 	else if (addr == DEQNA_VECTOR) {
 		registers[reg_nr] &= 0x7fd;  // mask off unused bits but keep QE_VEC_ID enabled
 	}
+}
+
+bool deqna::test(console *const cnsl)
+{
+	if (eth_dev) {
+		uint8_t buffer[14 + 44] { };
+		memset(&buffer[0], 0xff, 6);
+		memcpy(&buffer[6], mac_address, 6);
+		buffer[12] = 0x08;  // ARP packet
+		buffer[13] = 0x06;
+		uint8_t *payload = &buffer[14];
+		int hw_size = 6;  // MAC address is 6 bytes
+		int p_size  = 4;  // IP4 address is 4 bytes
+		payload[1] = 1;  // Ethernet
+		payload[2] = 8;  // IP4
+		payload[4] = hw_size;
+		payload[5] = p_size;
+		uint16_t sha_offset = 8;
+		uint16_t spa_offset = 8 + hw_size;
+		uint16_t tha_offset = spa_offset + p_size;
+		uint16_t tpa_offset = tha_offset + hw_size;
+		memcpy(&payload[sha_offset], mac_address, 6);  // who has 255.255.255.255 tell 255.255.255.255 @ our mac
+		for(int i=0; i<4; i++) {
+			payload[i + spa_offset] = 255;
+			payload[i + tpa_offset] = 255;
+		}
+		// MAYBE this triggers a reply, probably not
+
+		if (!eth_dev->transmit(buffer, sizeof buffer)) {
+			cnsl->put_string_lf("Transmit failed");
+			return false;
+		}
+
+		// any data? usually there are at least ARP msgs broadcasted
+		auto data = eth_dev->get(1000);
+		if (data.first)
+			delete [] data.first;
+		else {
+			cnsl->put_string_lf("No data?");
+			return false;
+		}
+
+		return true;
+	}
+
+	cnsl->put_string_lf("No transport medium configured");
+	return false;
 }
 
 void get_deqna_mac(uint8_t *const to)
