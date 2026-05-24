@@ -69,6 +69,8 @@ Wiring of the MAX232 connection:
 * RX  : 16
 Note that you need to use different pins for the MAX232 connection when you want to use the PSRAM of the ESP32.
 
+If possible, use a waveshare-esp32-s3-eth: that device can do Ethernet for the emulated system over its Ethernet port.
+
 
 Raspberry PI PICO2W
 -------------------
