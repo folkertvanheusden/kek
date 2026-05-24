@@ -38,6 +38,7 @@ void eth_transport_esp32::show_state(console *const cnsl) const
 
 bool eth_transport_esp32::transmit(const uint8_t *const data, const size_t n_bytes)
 {
+	my_unique_lock lck(&w5500_lock);
 	auto rc = w5500_instance->sendFrame(data, n_bytes);
 	pkt_cnt_tx++;
 	return rc == n_bytes;
@@ -50,7 +51,11 @@ std::pair<uint8_t *, size_t> eth_transport_esp32::get(const int timeout)
 	auto     start       = millis();
 	int      sleep_n_ms  = 1;
 	while(millis() - start < timeout) {
-		int rc = w5500_instance->readFrame(buffer, sizeof buffer);
+		int rc = 0;
+		{
+			my_unique_lock lck(&w5500_lock);
+			rc = w5500_instance->readFrame(buffer, sizeof buffer);
+		}
 		if (rc > 0) {
 			pkt_cnt_rx++;
 			pkt = new uint8_t[rc];
