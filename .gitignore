@@ -9,3 +9,5 @@ tests/*.bin
 work/
 tests-work/
 build/
+version.cpp
+build-win32/
