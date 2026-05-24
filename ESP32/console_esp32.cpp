@@ -77,8 +77,8 @@ void console_esp32::panel_update_thread()
 {
 	DOLOG(info, false, "panel task started");
 	cpu *const c = b->getCpu();
-#if defined(NEOPIXELS_PIN)
 
+#if defined(NEOPIXELS_PIN)
 	constexpr const uint8_t n_leds = 64;
 #if defined(GRBW_PIXELS)
 	Adafruit_NeoPixel pixels(n_leds, NEOPIXELS_PIN, NEO_GRBW);
@@ -104,13 +104,10 @@ void console_esp32::panel_update_thread()
 	// initial animation
 	for(uint8_t i=0; i<n_leds; i++) {
 		pixels.setPixelColor(i, brightness, brightness, brightness);
-
 		int p = i - 10;
 		if (p < 0)
 			p += n_leds;
-
 		pixels.setPixelColor(p, 0, 0, 0);
-
 		pixels.show();
 
 		delay(10);
@@ -169,7 +166,7 @@ void console_esp32::panel_update_thread()
 				pixels.setPixelColor(pixel_offset++, disk_read_activity_flag  ? blue  : 0);
 				pixels.setPixelColor(pixel_offset++, disk_write_activity_flag ? blue  : 0);
 
-				// 1
+				pixels.setPixelColor(pixel_offset++, network_activity_flag    ? green : 0);
 			}
 			else {
 				pixels.clear();

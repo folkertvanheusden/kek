@@ -27,7 +27,7 @@ static void thread_wrapper_receiver_high(void *p)
 }
 #endif
 
-deqna::deqna(bus *const b, const uint8_t mac_address[6], eth_transport *const eth_dev):
+deqna::deqna(bus *const b, const uint8_t mac_address[6], eth_transport *const eth_dev, abool *const activity_flag):
 	b(b),
 	eth_dev(eth_dev)
 {
@@ -186,6 +186,8 @@ void deqna::receiver_high()
 		if (item.has_value() == false)
 			continue;
 
+		*activity_flag = true;
+
 		const uint8_t *const buffer   = item.value().first;
 		const size_t         byte_cnt = item.value().second;
 
@@ -244,6 +246,8 @@ void deqna::receiver_high()
 			total_n_rx_drop++;
 			DOLOG(debug, false, "deqna(rxh): packet NOT queued");
 		}
+
+		*activity_flag = false;
 	}
 
 #if defined(FREERTOS)
@@ -256,6 +260,8 @@ void deqna::receiver_high()
 void deqna::transmitter()
 {
 	total_n_tx_pkts++;
+
+	*activity_flag = true;
 
 	// sender list invalid?
 	if (registers[7] & 16) {
@@ -360,6 +366,8 @@ void deqna::transmitter()
 		total_n_tx_drop++;
 		DOLOG(debug, false, "deqna(tx): packet NOT queued");
 	}
+
+	*activity_flag = false;
 }
 
 void deqna::reset(const bool hard)

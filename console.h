@@ -43,6 +43,7 @@ protected:
 	int                     refreshrate      { 15      };
 	abool                   disk_read_activity_flag  { false };
 	abool                   disk_write_activity_flag { false };
+	abool                   network_activity_flag    { false };
 	abool                   running_flag     { false };
 
 	bool                    stop_thread_flag { false };
@@ -98,9 +99,10 @@ public:
 
 	virtual void operator()();
 
-	abool * get_running_flag()             { return &running_flag; }
-	abool * get_disk_read_activity_flag()  { return &disk_read_activity_flag; }
+	abool * get_running_flag()             { return &running_flag;             }
+	abool * get_disk_read_activity_flag()  { return &disk_read_activity_flag;  }
 	abool * get_disk_write_activity_flag() { return &disk_write_activity_flag; }
+	abool * get_network_activity_flag()    { return &network_activity_flag;    }
 
 	void         set_blinkenlights_panel(blinkenlights *const p_blinkenlights);
 	void         stop_panel_thread() { stop_panel = true; }

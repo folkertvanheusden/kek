@@ -39,6 +39,7 @@ private:
 	abool            stop_flag      { false   };
 	monitor_mode_t   monitor_mode   { nothing };
 	console         *cnsl           { nullptr };
+	abool           *activity_flag  { nullptr };
 #if defined(FREERTOS)
 	abool rx_low_stopped            { false   };
 	abool rx_high_stopped           { false   };
@@ -59,7 +60,7 @@ private:
 	void purge_buffers  ();
 
 public:
-	deqna(bus *const b, const uint8_t mac_address[6], eth_transport *const eth_dev);
+	deqna(bus *const b, const uint8_t mac_address[6], eth_transport *const eth_dev, abool *const activity_flag);
 	virtual ~deqna();
 
 	bool begin();
