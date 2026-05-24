@@ -552,7 +552,7 @@ int main(int argc, char *argv[])
 
 			uint8_t mac_address[8] { };
 			get_deqna_mac(mac_address);
-			auto deqna_dev = new deqna(b, mac_address, et);
+			auto deqna_dev = new deqna(b, mac_address, et, cnsl->get_network_activity_flag());
 			if (deqna_dev->begin())
 				b->add_DEQNA(deqna_dev);
 			else
