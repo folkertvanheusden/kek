@@ -62,6 +62,9 @@ std::pair<uint8_t *, size_t> eth_transport_esp32::get(const int timeout)
 			packet_size = rc;
 			break;
 		}
+		else if (rc == -1) {
+			DOLOG(debug, false, "receive error");
+		}
 		vTaskDelay(sleep_n_ms / portTICK_PERIOD_MS);
 		if (sleep_n_ms < 64)
 			sleep_n_ms <<= 1;
