@@ -454,6 +454,9 @@ void deqna::write_word(const uint16_t addr, const uint16_t v)
 
 		new_csr &= ~0x0800;  // reserved bit
 
+		if (received.is_empty() == false)
+			new_csr |= 0x8000;
+
 		registers[reg_nr] = new_csr;
 	}
 	else if (addr == DEQNA_RX_BDLH) {
