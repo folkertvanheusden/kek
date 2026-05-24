@@ -89,6 +89,33 @@ void deqna::queue_rx_packet(const uint8_t *const in, const size_t n)
 	}
 }
 
+std::string to_hex(const uint8_t *const data, const size_t n_bytes)
+{
+	std::string out;
+	for(auto i=0; i<n_bytes; i++) {
+		if (i)
+			out += " ";
+		out += format("%02x", data[i]);
+	}
+	return out;
+}
+
+void dump_packet(console *const cnsl, const uint8_t *const data, const size_t n_bytes, const bool full)
+{
+	std::string out;
+
+	if (n_bytes < 14)
+		out = to_hex(data, n_bytes);
+	else {
+		out = to_hex(&data[0], 6) + " < " + to_hex(&data[6], 6) + "|" + to_hex(&data[12], 2);
+
+		if (full)
+			out += ": " + to_hex(&data[14], n_bytes - 14);
+	}
+
+	cnsl->put_string_lf(out);
+}
+
 // receiver pushes packets on a queue and signals another thread
 // to process it. this allows loopback
 void deqna::receiver_low()
@@ -101,6 +128,9 @@ void deqna::receiver_low()
 		if (pkt.first == nullptr)
 			continue;
 
+		if (monitor_mode == everything)
+			dump_packet(cnsl, pkt.first, pkt.second, true);
+
 		if (pkt.second < 14) {
 			DOLOG(debug, false, "deqna(rxl) packet too short (%zu)", pkt.second);
 			delete [] pkt.first;
@@ -110,6 +140,8 @@ void deqna::receiver_low()
 		// only for us or broadcast
 		if (memcmp(pkt.first, mac_address, 6) == 0 || memcmp(pkt.first, bc_addr, 6) == 0) {
 			if (registers[7] & 1) {  // receiver enabled?
+				if (monitor_mode == filtered)
+					dump_packet(cnsl, pkt.first, pkt.second, false);
 				total_n_rx_pkts++;
 				DOLOG(debug, false, "deqna(rxl) packet received from real Ethernet");
 				queue_rx_packet(pkt.first, pkt.second);

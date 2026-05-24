@@ -1323,7 +1323,6 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 	}
 	else if (cmd == "ult") {
 		tm11_unload_tape(b);
-
 		return true;
 	}
 	else if (parts[0] == "testdz11") {
@@ -1333,12 +1332,31 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		else {
 			cnsl->put_string_lf("DZ11 not started yet, first invoke \"startnet\"");
 		}
-
 		return true;
 	}
 	else if (cmd == "dp") {
 		cnsl->stop_panel_thread();
+		return true;
+	}
+	else if (parts[0] == "mdeqna" && parts.size() == 2) {
+		auto deqna = b->getDEQNA();
+		if (deqna) {
+			deqna::monitor_mode_t mode = deqna::nothing;
 
+			if (parts[1] == "filtered")
+				mode = deqna::filtered;
+			else if (parts[1] == "everything")
+				mode = deqna::everything;
+			else if (parts[1] == "none") {
+			}
+			else
+				cnsl->put_string_lf("?");
+
+			deqna->set_monitor_mode(mode, cnsl);
+		}
+		else {
+			cnsl->put_string_lf("DEQNA emulation is not configured yet");
+		}
 		return true;
 	}
 	else if (parts[0] == "test" && parts.size() == 2) {
@@ -1553,6 +1571,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			"cfgdisk       - configure disk",
 			"deqna x[,y,z] - set deqna emulation to use (x): \"linux\" (tap), \"teensy4.1\", \"esp32\" or \"vxlan\" (with host (y) & port (z))",
 			"test deqna    - test the DEQNA emulation",
+			"mdeqna x      - set DEQNA monitor mode: none, filtered, everything",
 			"log ...       - log a message to the logfile",
 			nullptr
 		};

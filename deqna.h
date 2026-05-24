@@ -27,13 +27,18 @@
 
 class deqna : public device
 {
+public:
+	enum monitor_mode_t { nothing, filtered, everything };
+
 private:
 	bus             *const b        { nullptr };
 	eth_transport   *const eth_dev  { nullptr };
 	std::atomic_uint16_t registers[8] { 0     };  // accessed from multiple threads
 	uint8_t          mac_address[6] { 0       };
 	int              dev_fd         { -1      };
-	abool stop_flag                 { false   };
+	abool            stop_flag      { false   };
+	monitor_mode_t   monitor_mode   { nothing };
+	console         *cnsl           { nullptr };
 #if defined(FREERTOS)
 	abool rx_low_stopped            { false   };
 	abool rx_high_stopped           { false   };
@@ -67,6 +72,7 @@ public:
 
 	void show_state(console *const cnsl) const override;
 	bool test(console *const cnsl);
+	void set_monitor_mode(const monitor_mode_t mode, console *const cnsl) { monitor_mode = mode; this->cnsl = cnsl; }
 
 	uint8_t  read_byte(const uint16_t addr) override;
 	uint16_t read_word(const uint16_t addr) override;
