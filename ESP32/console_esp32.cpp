@@ -81,11 +81,11 @@ void console_esp32::panel_update_thread()
 #if defined(NEOPIXELS_PIN)
 	constexpr const uint8_t n_leds = 64;
 #if defined(GRBW_PIXELS)
-	Adafruit_NeoPixel pixels(n_leds, NEOPIXELS_PIN, NEO_GRBW);
+	Adafruit_NeoPixel pixels(n_leds, NEOPIXELS_PIN, NEO_GRBW + NEO_KHZ800);
 #elif defined(RGBW_PIXELS)
-	Adafruit_NeoPixel pixels(n_leds, NEOPIXELS_PIN, NEO_RGBW);
+	Adafruit_NeoPixel pixels(n_leds, NEOPIXELS_PIN, NEO_RGBW + NEO_KHZ800);
 #else
-	Adafruit_NeoPixel pixels(n_leds, NEOPIXELS_PIN, NEO_RGB);
+	Adafruit_NeoPixel pixels(n_leds, NEOPIXELS_PIN, NEO_RGB  + NEO_KHZ800);
 #endif
 	pixels.begin();
 	pixels.clear();
