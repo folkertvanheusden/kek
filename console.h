@@ -37,7 +37,7 @@ protected:
 
 	bus                    *b                { nullptr };
 #if !defined(BUILD_FOR_PICO2W) && !defined(TEENSY4_1)
-	std::thread            *th               { nullptr };
+	std::thread            *th_kb            { nullptr };
 	std::thread            *th_panel         { nullptr };
 #endif
 	int                     refreshrate      { 15      };

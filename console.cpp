@@ -56,20 +56,20 @@ void console::start_thread()
 #if defined(BUILD_FOR_PICO2W) || defined(FREERTOS)
 	xTaskCreate(&thread_wrapper_console, "console", 1024, this, 1, nullptr);
 #else
-	th = new std::thread(std::ref(*this));
+	th_kb = new std::thread(std::ref(*this));
 #endif
 }
 
 void console::stop_thread()
 {
 #if !defined(ESP32) && !defined(BUILD_FOR_PICO2W) && !defined(FREERTOS)
-	if (th) {
+	if (th_kb) {
 		stop_thread_flag = true;
 
-		th->join();
-		delete th;
+		th_kb->join();
+		delete th_kb;
 
-		th = nullptr;
+		th_kb = nullptr;
 	}
 #endif
 }
