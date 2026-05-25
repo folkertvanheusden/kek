@@ -47,7 +47,7 @@ static std::string  syslog_host;
 #else
 static sockaddr_in  syslog_ip_addr    = { };
 #endif
-static bool         is_file           = true;
+static bool         is_syslog         = false;
 static FILE        *log_fh            = nullptr;
 static int          lf_uid            = -1;
 static int          lf_gid            = -1;
@@ -185,7 +185,6 @@ void setlogfile(const char *const lf, const bool timestamp)
 
 	free((void *)logfile);
 
-	is_file     = true;
 	logfile     = lf ? strdup(lf) : nullptr;
 	l_timestamp = timestamp;
 
@@ -194,7 +193,7 @@ void setlogfile(const char *const lf, const bool timestamp)
 
 bool setloghost(const char *const host)
 {
-	is_file     = false;
+	is_syslog   = true;
 	l_timestamp = false;
 
 #if defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
@@ -235,16 +234,14 @@ void closelog()
 {
 	if (log_fh) {
 		fclose(log_fh);
-
 		log_fh = nullptr;
 	}
 }
 
 void dolog(const log_ss ls, const char *fmt, ...)
 {
-#if !defined(BUILD_FOR_PICO2W) && !defined(TEENSY4_1)
+#if !defined(BUILD_FOR_PICO2W) && !defined(TEENSY4_1) && !defined(ESP32)
 	if (!log_fh && logfile != nullptr) {
-#if !defined(ESP32)
 		log_fh = fopen(logfile, "a+");
 		if (!log_fh)
 			error_exit(true, "Cannot access log-file %s", logfile);
@@ -255,8 +252,8 @@ void dolog(const log_ss ls, const char *fmt, ...)
 		if (fcntl(fileno(log_fh), F_SETFD, FD_CLOEXEC) == -1)
 			error_exit(true, "fcntl(FD_CLOEXEC) failed");
 #endif
-#endif
 	}
+#endif
 
 	bool log_file    = log_mask_f & log_ss_type(ls);
 	bool log_console = log_mask_c & log_ss_type(ls);
@@ -282,12 +279,11 @@ void dolog(const log_ss ls, const char *fmt, ...)
 			error_exit(true, "localtime_r failed");
 #endif
 		char ts_str[64] { };
-
 		snprintf(ts_str, sizeof ts_str, "%04d-%02d-%02d %02d:%02d:%02d.%06d %-7s|%s] ",
 				tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, int(now % 1000000),
 				ls_names[std::countr_zero(log_ss_type(ls))], get_thread_name().c_str());
 
-		if (is_file == false)
+		if (is_syslog)
 			send_syslog(log_buffer.data());
 #if !defined(ESP32)
 		if (log_fh != nullptr && log_file)
@@ -305,7 +301,7 @@ void dolog(const log_ss ls, const char *fmt, ...)
 		}
 	}
 	else {
-		if (is_file == false)
+		if (is_syslog)
 			send_syslog(log_buffer.data());
 #if !defined(ESP32)
 		if (log_fh != nullptr && log_file)
@@ -319,5 +315,4 @@ void dolog(const log_ss ls, const char *fmt, ...)
 				printf("%s\r\n", log_buffer.data());
 		}
 	}
-#endif
 }

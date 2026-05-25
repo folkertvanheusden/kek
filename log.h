@@ -47,9 +47,9 @@ std::string get_all_available_log_ss_masks();
 #ifdef TURBO
 #define DOLOG(ls, fmt, ...) do { } while(0)
 #else
-#define DOLOG(ls, fmt, ...) do {		      \
-	extern log_ss_type log_mask_match;	      \
-	if (log_mask_match & log_ss_type(ls))         \
-		dolog(ls, fmt, ##__VA_ARGS__);	      \
+#define DOLOG(ls, fmt, ...) do {		       \
+		extern log_ss_type log_mask_match;     \
+		if (log_mask_match & log_ss_type(ls))  \
+			dolog(ls, fmt, ##__VA_ARGS__); \
 	} while(0) 
 #endif
