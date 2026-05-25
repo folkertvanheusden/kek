@@ -92,11 +92,6 @@ void benchmark(console *const cnsl, bus *const b, kek_event_t *const stop_event,
 {
         reset_benchmark(b);
 
-#if defined(ESP32)
-	cnsl->put_string_lf("Disabling watchdog...");
-	esp_task_wdt_deinit();
-#endif
-
         cpu *const c = b->getCpu();
 
 	*stop_event = EVENT_NONE;
