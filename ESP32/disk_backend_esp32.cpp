@@ -56,14 +56,14 @@ disk_backend_esp32 *disk_backend_esp32::deserialize(const JsonVariantConst j)
 void disk_backend_esp32::emit_error()
 {
 #if !defined(TEENSY4_1) && !defined(BUILD_FOR_PICO2W)
-	DOLOG(ll_error, true, "SdFat error: %d/%d", SDinstance.sdErrorCode(), SDinstance.sdErrorData());
+	DOLOG(log_ss::LS_DISK, "SdFat error: %d/%d", SDinstance.sdErrorCode(), SDinstance.sdErrorData());
 #endif
 }
 
 bool disk_backend_esp32::begin(const bool dummy)
 {
 	if (!fh->open(filename.c_str(), O_RDWR)) {
-		DOLOG(ll_error, true, "rk05: cannot open \"%s\"", filename.c_str());
+		DOLOG(log_ss::LS_DISK, "rk05: cannot open \"%s\"", filename.c_str());
 		emit_error();
 
 		return false;
@@ -74,10 +74,10 @@ bool disk_backend_esp32::begin(const bool dummy)
 
 bool disk_backend_esp32::read(const off_t offset, const size_t n, uint8_t *const target, const size_t sector_size)
 {
-	DOLOG(debug, false, "disk_backend_esp32::read: read %" PRIzu " bytes from offset %" PRIzu "", n, offset);
+	DOLOG(log_ss::LS_DISK, "disk_backend_esp32::read: read %" PRIzu " bytes from offset %" PRIzu "", n, offset);
 
 	if (!fh->seek(offset)) {
-		DOLOG(ll_error, true, "seek error %02x", fh->getError());
+		DOLOG(log_ss::LS_DISK, "seek error %02x", fh->getError());
 		emit_error();
 		return false;
 	}
@@ -88,10 +88,10 @@ bool disk_backend_esp32::read(const off_t offset, const size_t n, uint8_t *const
 		ssize_t rc = fh->read(target, n);
 		if (size_t(rc) == n)
 			break;
-		DOLOG(ll_error, true, "%d] fread error: %02x (%" PRIzd "/%" PRIzu ")", i, fh->getError(), rc, n);
+		DOLOG(log_ss::LS_DISK, "%d] fread error: %02x (%" PRIzd "/%" PRIzu ")", i, fh->getError(), rc, n);
 		emit_error();
 		if (!init_sd())
-			DOLOG(ll_error, true, "(re-)init SD failed");
+			DOLOG(log_ss::LS_DISK, "(re-)init SD failed");
 		yield();
 	}
 
@@ -100,10 +100,10 @@ bool disk_backend_esp32::read(const off_t offset, const size_t n, uint8_t *const
 
 bool disk_backend_esp32::write(const off_t offset, const size_t n, const uint8_t *const from, const size_t sector_size)
 {
-	DOLOG(debug, false, "disk_backend_esp32::write: write %" PRIzu " bytes to offset %" PRIzu "", n, offset);
+	DOLOG(log_ss::LS_DISK, "disk_backend_esp32::write: write %" PRIzu " bytes to offset %" PRIzu "", n, offset);
 
 	if (!fh->seek(offset)) {
-		DOLOG(ll_error, true, "seek error %02x", fh->getError());
+		DOLOG(log_ss::LS_DISK, "seek error %02x", fh->getError());
 		emit_error();
 		return false;
 	}
@@ -114,10 +114,10 @@ bool disk_backend_esp32::write(const off_t offset, const size_t n, const uint8_t
 		ssize_t rc = fh->write(from, n);
 		if (size_t(rc) == n)
 			break;
-		DOLOG(ll_error, true, "%d] fwrite error %02x (%" PRIzd "/%" PRIzu ")", i, fh->getError(), rc, n);
+		DOLOG(log_ss::LS_DISK, "%d] fwrite error %02x (%" PRIzd "/%" PRIzu ")", i, fh->getError(), rc, n);
 		emit_error();
 		if (!init_sd())
-			DOLOG(ll_error, true, "(re-)init SD failed");
+			DOLOG(log_ss::LS_DISK, "(re-)init SD failed");
 		yield();
 	}
 

@@ -75,7 +75,7 @@ void console_esp32::refresh_virtual_terminal()
 
 void console_esp32::panel_update_thread()
 {
-	DOLOG(info, false, "panel task started");
+	DOLOG(log_ss::LS_COMM, "panel task started");
 	cpu *const c = b->getCpu();
 
 #if defined(NEOPIXELS_PIN)
@@ -191,7 +191,7 @@ void console_esp32::panel_update_thread()
 	pixels.show();
 #endif
 
-	DOLOG(info, false, "panel task terminating");
+	DOLOG(log_ss::LS_COMM, "panel task terminating");
 }
 
 void console_esp32::set_LED_state(const bool state)

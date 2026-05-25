@@ -129,7 +129,7 @@ bool init_sd()
 		disk_started = true;
 #endif
 	if (!disk_started)
-			DOLOG(ll_error, true, "Failed to initialize SD card");
+			DOLOG(log_ss::LS_GENERIC, "Failed to initialize SD card");
 #endif
   return disk_started;
 }
@@ -212,18 +212,18 @@ void finish_start_network(console *const c)
 
       cs->println(format("* Init TTY (on DZ11), baudrate: %d bps, RX: %d, TX: %d", bitrate, TTY_SERIAL_RX, TTY_SERIAL_TX));
       if (io_channels->set_device(0, new comm_esp32_hardwareserial(uart_port_t(1), TTY_SERIAL_RX, TTY_SERIAL_TX, bitrate)) == false)
-        DOLOG(warning, false, "Failed to configure device");
+        DOLOG(log_ss::LS_GENERIC, "Failed to configure device");
 #endif
 
 #if !defined(BUILD_FOR_PICO2W) && !defined(TEENSY4_1)
-      DOLOG(info, false, "Configuring TCP sockets for the remaining DZ11 slots");
+      DOLOG(log_ss::LS_GENERIC, "Configuring TCP sockets for the remaining DZ11 slots");
       for(size_t i=0; i<dz11_n_lines; i++) {
         if (io_channels->is_defined(i))
           continue;
         int port = 1100 + i;
-        DOLOG(info, false, "Configuring TCP socket on port %d for DZ11", port);
+        DOLOG(log_ss::LS_GENERIC, "Configuring TCP socket on port %d for DZ11", port);
         if (io_channels->set_device(i, new comm_tcp_socket_server(port, true)) == false)
-          DOLOG(warning, false, "Failed to configure device");
+          DOLOG(log_ss::LS_GENERIC, "Failed to configure device");
       }
 #endif
 
@@ -520,7 +520,7 @@ void setup() {
   c->set_console(cnsl);
 
   set_terminal(cnsl);
-  DOLOG(info, true, "Logging enabled");
+  DOLOG(log_ss::LS_GENERIC, "Logging enabled");
 
 	running = cnsl->get_running_flag();
 

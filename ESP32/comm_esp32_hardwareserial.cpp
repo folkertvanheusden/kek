@@ -36,12 +36,12 @@ bool comm_esp32_hardwareserial::begin()
 	};
 
 	if (uart_param_config(uart_nr, &uart_config) != ESP_OK) {
-		DOLOG(warning, false, "uart_param_config(%d, %d) failed", uart_nr, bitrate);
+		DOLOG(log_ss::LS_COMM, "uart_param_config(%d, %d) failed", uart_nr, bitrate);
 		return false;
 	}
 
 	if (uart_set_pin(uart_nr, tx_pin, rx_pin, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE) != ESP_OK) {
-		DOLOG(warning, false, "uart_set_pin(%d, %d, %d) failed", uart_nr, rx_pin, tx_pin);
+		DOLOG(log_ss::LS_COMM, "uart_set_pin(%d, %d, %d) failed", uart_nr, rx_pin, tx_pin);
 		return false;
 	}
 
@@ -53,7 +53,7 @@ bool comm_esp32_hardwareserial::begin()
 	static QueueHandle_t uart_queue;
 	// Install UART driver using an event queue here
 	if (uart_driver_install(uart_nr, uart_buffer_size, uart_buffer_size, 10, &uart_queue, 0) != ESP_OK) {
-		DOLOG(warning, false, "uart_driver_install(%d) failed", uart_nr);
+		DOLOG(log_ss::LS_COMM, "uart_driver_install(%d) failed", uart_nr);
 		return false;
 	}
 

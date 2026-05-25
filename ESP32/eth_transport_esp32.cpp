@@ -60,7 +60,7 @@ std::pair<uint8_t *, size_t> eth_transport_esp32::get(const int timeout)
 			pkt_cnt_rx++;
 			pkt = new uint8_t[rc];
 			if (!pkt) {
-				DOLOGS(log_ss::LS_ETH, ll_critical, true, "malloc issue");
+				DOLOG(log_ss::LS_ETH, "malloc issue");
 				return { nullptr, 0 };
 			}
 			memcpy(pkt, buffer, rc);
@@ -68,7 +68,7 @@ std::pair<uint8_t *, size_t> eth_transport_esp32::get(const int timeout)
 			break;
 		}
 		else if (rc == -1) {
-			DOLOGS(log_ss::LS_ETH, debug, false, "receive error");
+			DOLOG(log_ss::LS_ETH, "receive error");
 		}
 		vTaskDelay(sleep_n_ms / portTICK_PERIOD_MS);
 		if (sleep_n_ms < 64)
