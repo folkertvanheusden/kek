@@ -244,7 +244,7 @@ void help()
 	printf("-s x,y   set console switche state: set bit x (0...15) to y (0/1)\n");
 	printf("-t       enable tracing (disassemble to stderr, requires -d as well)\n");
 	printf("-l x     log to file x\n");
-	printf("%s\n", ("-L x[,]  select what subsystems to log (" + get_all_masks() + ")").c_str());
+	printf("%s\n", ("-L x[,]  select what subsystems to log (" + get_all_available_log_ss_masks() + ")").c_str());
 	printf("-X       do not include timestamp in logging\n");
 	printf("-J x     run validation suite x against the CPU emulation\n");
 	printf("-1 x     use x as device for DZ-11 (instead of 8 tcp-sockets starting at port %d)\n", default_port_offset);
@@ -369,7 +369,8 @@ int main(int argc, char *argv[])
 				break;
 
 			case 't':
-				set_ss_log(log_ss::LS_TRACE);
+				set_ss_log(true,  log_ss::LS_TRACE);
+				set_ss_log(false, log_ss::LS_TRACE);
 				break;
 
 			case 'n':
@@ -455,11 +456,12 @@ int main(int argc, char *argv[])
 	setlogfile(logfile, timestamp);
 
 	if (log_subsystems.empty() == false) {
-		disable_all_lss();
+		disable_all_log_ss(true );
+		disable_all_log_ss(false);
 
 		auto parts = split(log_subsystems, ",");
 		for(auto & ss: parts) {
-			if (toggle_ss_log(ss) == false)
+			if (toggle_ss_log(true, ss) == false || toggle_ss_log(false, ss) == false)
 				error_exit(false, "\"%s\" is now known", ss.c_str());
 		}
 	}

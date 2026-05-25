@@ -54,26 +54,30 @@ static int          lf_gid            = -1;
 static bool         l_timestamp       = true;
 char                dummy_buffer[2] { 0 };
 static console     *log_cnsl          = nullptr;
-uint64_t            log_mask          = ~0 & (~(uint64_t(log_ss::LS_TRACE) | uint64_t(log_ss::LS_COMM)));
+uint64_t            log_mask_c        = ~0 & (~(uint64_t(log_ss::LS_TRACE) | uint64_t(log_ss::LS_COMM)));
+uint64_t            log_mask_f        = ~0;
 constexpr const char *const ls_names[] { "GENERIC", "CPU", "DEQNA", "ETH", "TRACE", "BLINKEN", "BUS", "COMM", "DISK", "MMU", "TAPE" };
 
 
-void disable_all_lss()
+void disable_all_log_ss(const bool console)
 {
-	log_mask = 0;
+	if (console)
+		log_mask_c = 0;
+	else
+		log_mask_f = 0;
 }
 
-void set_ss_log(const log_ss ls)
+void set_ss_log(const bool console, const log_ss ls)
 {
-	log_mask |= uint64_t(ls);
+	(console ? log_mask_c : log_mask_f) |= uint64_t(ls);
 }
 
-uint64_t get_masks()
+uint64_t get_log_ss_masks(const bool console)
 {
-	return log_mask;
+	return console ? log_mask_c : log_mask_f;
 }
 
-bool toggle_ss_log(const std::string & name)
+bool toggle_ss_log(const bool console, const std::string & name)
 {
 	uint64_t mask = 0;
 
@@ -102,6 +106,7 @@ bool toggle_ss_log(const std::string & name)
 	else
 		return false;
 
+	auto & log_mask = console ? log_mask_c : log_mask_f;
 	if (log_mask & mask)
 		log_mask &= ~mask;
 	else
@@ -110,8 +115,10 @@ bool toggle_ss_log(const std::string & name)
 	return true;
 }
 
-std::string get_log_mask()
+std::string get_ss_mask(const bool console)
 {
+	auto log_mask = console ? log_mask_c : log_mask_f;
+
 	std::string out;
 	if (log_mask & uint64_t(log_ss::LS_GENERIC))
 		out += "generic,";
@@ -138,7 +145,7 @@ std::string get_log_mask()
 	return out;
 }
 
-std::string get_all_masks()
+std::string get_all_available_log_ss_masks()
 {
 	return "generic,cpu,deqna,eth,trace,blinken,bus,comm,disk,mmu,tape";
 }
@@ -231,9 +238,6 @@ void closelog()
 
 void dolog(const log_ss ls, const char *fmt, ...)
 {
-	if ((log_mask & uint64_t(ls)) == 0)
-		return;
-
 #if !defined(BUILD_FOR_PICO2W) && !defined(TEENSY4_1)
 	if (!log_fh && logfile != nullptr) {
 #if !defined(ESP32)

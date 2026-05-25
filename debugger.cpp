@@ -773,6 +773,11 @@ device *name_to_dev(bus *const b, const std::string & name)
 	return nullptr;
 }
 
+bool trace_enabled()
+{
+	return (get_log_ss_masks(true) | get_log_ss_masks(false)) & uint64_t(log_ss::LS_TRACE);
+}
+
 struct debugger_state {
 	int      n_single_step      {  1    };
 	bool     turbo              { false };
@@ -1013,11 +1018,12 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 
 		return true;
 	}
-	else if (parts[0] == "trace" || parts[0] == "t") {
-		if (parts.size() == 2)
-			set_ss_log(parts[1] == "on" || parts[1] == "ON" ? log_ss::LS_TRACE : log_ss(0));
+	else if ((parts[0] == "trace" || parts[0] == "t") && parts.size() >= 2) {
+		bool is_console = parts[1] == "console" || parts[1] == "con";
+		if (parts.size() == 3)
+			set_ss_log(is_console, parts[2] == "on" || parts[2] == "ON" ? log_ss::LS_TRACE : log_ss(0));
 
-		cnsl->put_string_lf(format("Tracing set to %s", get_masks() & uint64_t(log_ss::LS_TRACE) ? "ON" : "OFF"));
+		cnsl->put_string_lf(format("Tracing set to %s", get_log_ss_masks(is_console) & uint64_t(log_ss::LS_TRACE) ? "ON" : "OFF"));
 		return true;
 	}
 	else if (parts[0] == "state" || parts[0] == "show") {
@@ -1299,22 +1305,25 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		cnsl->stop_panel_thread();
 		return true;
 	}
-	else if (cmd == "clss") {
-		disable_all_lss();
+	else if (parts[0] == "clss" && parts.size() == 2) {
+		bool is_console = parts[1] == "console" || parts[1] == "con";
+		disable_all_log_ss(is_console);
 		cnsl->put_string_lf("OK");
 		return true;
 	}
-	else if (cmd == "getlss") {
-		cnsl->put_string_lf("Enabled subsystems logging: " + get_log_mask());
+	else if (parts[0] == "getlss" && parts.size() == 2) {
+		bool is_console = parts[1] == "console" || parts[1] == "con";
+		cnsl->put_string_lf("Enabled subsystems logging: " + get_ss_mask(is_console));
 		return true;
 	}
-	else if (cmd == "lss") {
-		cnsl->put_string_lf("Available subsystems: " + get_all_masks());
+	else if (cmd == "list_ss") {
+		cnsl->put_string_lf("Available subsystems: " + get_all_available_log_ss_masks());
 		return true;
 	}
-	else if (parts[0] == "tlss") {
-		for(size_t i=1; i<parts.size(); i++) {
-			if (toggle_ss_log(parts[i]))
+	else if (parts[0] == "toggle_ss") {
+		bool is_console = parts[1] == "console" || parts[1] == "con";
+		for(size_t i=2; i<parts.size(); i++) {
+			if (toggle_ss_log(is_console, parts[i]))
 				cnsl->put_string_lf(parts[i] + " toggled");
 			else
 				cnsl->put_string_lf(parts[i] + " not known");
@@ -1503,11 +1512,11 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			"                values seperated by ',', char after mem is w/b (word/byte), then",
 			"                follows v/p (virtual/physical), all octal values, mmr0-3 and psw are",
 			"                registers. \"action\" can be stop, trace or log. instr can have a mask between the [] and on the right an instruction-opcode to compare against.",
-			"trace/t       - toggle tracing",
-			"getlss        - show what subystems logging is enabled for",
+			"trace con/fil - toggle tracing for console/file logging",
+			"getlss con/fil- show what subystems logging is enabled for",
 			"clss          - stop logging for all subsystems (use tlss to re-enable)",
-			"tlss x [...]  - toggle logging for on or more subsystems",
-			"lss           - list subsystems",
+			"toggle_ss con/fil x,[...] - toggle logging for on or more subsystems",
+			"list_ss       - list subsystems",
 			"setsl hst     - set syslog target: requires a hostname",
 			"pts x         - enable (1) / disable (0) timestamps",
 			"turbo         - toggle turbo mode (cannot be interrupted)",
@@ -1590,7 +1599,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		uint64_t start_trap_count    = c->get_trap_counter();
 		std::unordered_map<uint16_t, uint32_t> trap_counts_before = c->get_trap_counts();
 		while(*stop_event == EVENT_NONE) {
-			if ((get_masks() & uint64_t(log_ss::LS_TRACE)) || state->single_step) {
+			if (trace_enabled() || state->single_step) {
 				if (!state->single_step)
 					DOLOG(log_ss::LS_TRACE, "---");
 
@@ -1608,7 +1617,8 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 						break;
 				}
 				else if (bp_result.value().first.get_action() == breakpoint::bp_action::start_tracing) {
-					set_ss_log(log_ss::LS_TRACE);
+					set_ss_log(false, log_ss::LS_TRACE);
+					set_ss_log(true,  log_ss::LS_TRACE);
 				}
 				else if (bp_result.value().first.get_action() == breakpoint::bp_action::only_log_entry) {
 					DOLOG(log_ss::LS_TRACE, "Breakpoint: %s", bp_result.value().second.c_str());
@@ -1664,7 +1674,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			cnsl->put_string_lf(format("%" PRIzu " counters in %u instructions", ordered.size(), state->pc_monitor_count));
 		}
 
-		if ((get_masks() & uint64_t(log_ss::LS_TRACE)) || go_verbose || state->pc_monitor_enabled) {
+		if (trace_enabled() || go_verbose || state->pc_monitor_enabled) {
 			cnsl->put_string_lf(format("Took %.3f emulated ms, %.3f s wall clock time, avg. wait duration: %.3f us, traps: %" PRIzu "",
 						took / 1000000.,  // took is nanoseconds
 						(get_us() - since) / 1000000.,
@@ -1736,7 +1746,7 @@ void debugger(console *const cnsl, bus *const b, kek_event_t *const stop_event, 
 void simple_run(console *const cnsl, bus *const b, kek_event_t *const stop_event)
 {
 	cpu  *const c = b->getCpu();
-	bool        t = get_masks() & uint64_t(log_ss::LS_TRACE);
+	bool        t = trace_enabled();
 
 	*cnsl->get_running_flag() = true;
 

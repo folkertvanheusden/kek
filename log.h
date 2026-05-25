@@ -36,19 +36,19 @@ void set_clock_reference(const char *const ntp_server);
 #endif
 void set_terminal(console *const cnsl);
 bool is_terminal_set();
-bool toggle_ss_log(const std::string & name);
-void set_ss_log(const log_ss ls);
-std::string get_log_mask();
-void disable_all_lss();
-std::string get_all_masks();
-uint64_t get_masks();
+bool toggle_ss_log(const bool is_console, const std::string & name);
+void set_ss_log(const bool is_console, const log_ss ls);
+std::string get_ss_mask(const bool is_console);
+void disable_all_log_ss(const bool is_console);
+uint64_t get_log_ss_masks(const bool is_console);
+std::string get_all_available_log_ss_masks();
 
 #ifdef TURBO
 #define DOLOG(ls, fmt, ...) do { } while(0)
 #else
-#define DOLOG(ls, fmt, ...) do {		\
-	extern uint64_t log_mask;		\
-	if (log_mask & uint64_t(ls))            \
-		dolog(ls, fmt, ##__VA_ARGS__);	\
+#define DOLOG(ls, fmt, ...) do {		      \
+	extern uint64_t log_mask_c, log_mask_f;	      \
+	if ((log_mask_c | log_mask_f) & uint64_t(ls)) \
+		dolog(ls, fmt, ##__VA_ARGS__);	      \
 	} while(0) 
 #endif
