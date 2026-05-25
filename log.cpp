@@ -54,8 +54,8 @@ static int          lf_gid            = -1;
 static bool         l_timestamp       = true;
 char                dummy_buffer[2] { 0 };
 static console     *log_cnsl          = nullptr;
-log_ss_type         log_mask_c        =  0;
-log_ss_type         log_mask_f        = ~0;
+log_ss_type         log_mask_c        = 0;
+log_ss_type         log_mask_f        = 0;
 log_ss_type         log_mask_match    = log_mask_c | log_mask_f;
 constexpr const char *const ls_names[] { "GENERIC", "CPU", "DEQNA", "ETH", "TRACE", "BLINKEN", "BUS", "COMM", "DISK", "MMU", "TAPE" };
 
