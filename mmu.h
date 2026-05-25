@@ -49,6 +49,7 @@ private:
 
 	uint16_t MMR0    { 0 };
 	uint16_t MMR1    { 0 };
+	uint16_t pMMR1   { 0 };
 	uint16_t MMR2    { 0 };
 	uint16_t MMR3    { 0 };
 	uint16_t CPUERR  { 0 };
@@ -102,10 +103,11 @@ public:
 	std::pair<trap_action_t, int> get_trap_action(const int page_index, const bool is_write);
 	uint32_t                      calculate_physical_address(const int run_mode, const uint16_t a, const bool is_write, const d_i_space_t space);
 
-	uint16_t getMMR0() const { return MMR0; }
-	uint16_t getMMR1() const { return MMR1; }
-	uint16_t getMMR2() const { return MMR2; }
-	uint16_t getMMR3() const { return MMR3; }
+	uint16_t getMMR0()  const { return  MMR0; }
+	uint16_t getMMR1()  const { return  MMR1; }
+	uint16_t getpMMR1() const { return pMMR1; }
+	uint16_t getMMR2()  const { return  MMR2; }
+	uint16_t getMMR3()  const { return  MMR3; }
 
 	void     setMMR0_as_is(uint16_t value);
 	void     setMMR0(const uint16_t value);

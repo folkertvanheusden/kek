@@ -156,7 +156,8 @@ bool mmu::get_use_data_space(const int run_mode) const
 
 void mmu::clearMMR1()
 {
-	DOLOG(log_ss::LS_MMU, "clear MMR1");
+	DOLOG(log_ss::LS_MMU, "clear MMR1, was: %06o", MMR1);
+	pMMR1 = MMR1;
 	MMR1 = 0;
 }
 
@@ -168,7 +169,6 @@ void mmu::add_to_MMR1(const int8_t delta, const uint8_t reg)
 	assert((getMMR0() & 0160000) == 0);  // MMR1 should not be locked
 
 	MMR1 <<= 8;
-
 	MMR1 |= (delta & 31) << 3;
 	MMR1 |= reg;
 }

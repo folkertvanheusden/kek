@@ -188,8 +188,8 @@ int run_cpu_validation(console *const cnsl, const std::string & filename)
 			for(int i=0; i<4; i++)
 				cur_n_errors += !compare_values(cnsl, c->get_stackpointer(i), get_register_value(after, format("stack-%d", i)), format("Stack pointer %d", i));
 
-			cur_n_errors += !compare_values(cnsl, b->getMMU()->getMMR1(), get_register_value(after, "mmr1"), "MMR1");
-			cur_n_errors += !compare_values(cnsl, b->getMMU()->getMMR2(), get_register_value(after, "mmr2"), "MMR2");
+			cur_n_errors += !compare_values(cnsl, b->getMMU()->getpMMR1(), get_register_value(after, "mmr1"), "MMR1");
+			cur_n_errors += !compare_values(cnsl, b->getMMU()->getMMR2(),  get_register_value(after, "mmr2"), "MMR2");
 
 			for(int set=0; set<2; set++) {
 				for(int i=0; i<6; i++)

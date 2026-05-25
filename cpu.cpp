@@ -1625,7 +1625,7 @@ bool cpu::misc_operations(const uint16_t instr)
 
 		// PUSH link
 		push_stack(get_register(link_reg));
-		if (!mmu_->isMMR1Locked())
+		if (mmu_->isMMR1Locked() == false)
 			mmu_->add_to_MMR1(-2, 6);
 
 		// MOVE PC,link
