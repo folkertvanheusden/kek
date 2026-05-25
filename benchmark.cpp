@@ -1,5 +1,8 @@
 #include <cinttypes>
 #include <cstdint>
+#if defined(ESP32)
+#include <esp_task_wdt.h>
+#endif
 
 #include "bus.h"
 
@@ -88,6 +91,11 @@ void reset_benchmark(bus *const b)
 void benchmark(console *const cnsl, bus *const b, kek_event_t *const stop_event, const bool measure)
 {
         reset_benchmark(b);
+
+#if defined(ESP32)
+	cnsl->put_string_lf("Disabling watchdog...");
+	esp_task_wdt_deinit();
+#endif
 
         cpu *const c = b->getCpu();
 
