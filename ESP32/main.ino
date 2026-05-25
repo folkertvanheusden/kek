@@ -200,6 +200,15 @@ void finish_start_network(console *const c)
     c->put_string_lf(format("Local IP address: %s", WiFi.localIP().toString().c_str()));
 #endif
 
+#if !defined(TEENSY4_1)
+    bl.begin();
+    auto bl_ip = get_configuration_string(BLINKENLIGHTS_CFG_FILE, "");
+    if (bl_ip.empty() == false) {
+      cnsl->put_string_lf(format("Using PiDP11 blinkenlights on IP address %s", bl_ip.c_str()));
+      bl.set_target(bl_ip);
+    }
+#endif
+
     static bool dz11_loaded = false;
     if (!dz11_loaded) {
       dz11_loaded = true;
@@ -634,7 +643,7 @@ void setup() {
 
 #if !defined(BUILD_FOR_PICO2W) && (defined(NEOPIXELS_PIN) || defined(HEARTBEAT_PIN))
 	cs->println("Starting panel");
-	xTaskCreate(&console_thread_wrapper_panel, "panel", 2048, cnsl, 1, nullptr);
+	xTaskCreate(&console_thread_wrapper_panel, "panel", 3072, cnsl, 1, nullptr);
 #endif
 
 	cs->println("* Starting console");
@@ -648,15 +657,6 @@ void setup() {
 	int free_heap = freeram();
 #endif
 	cs->println(format("Free RAM after init: %d decimal bytes", free_heap));
-
-#if !defined(TEENSY4_1)
-  bl.begin();
-  auto bl_ip = get_configuration_string(BLINKENLIGHTS_CFG_FILE, "");
-  if (bl_ip.empty() == false) {
-    cnsl->put_string_lf(format("Using PiDP11 blinkenlights on IP address %s", bl_ip.c_str()));
-    bl.set_target(bl_ip);
-  }
-#endif
 
 #if defined(TEENSY4_1)
 	cnsl->put_string_lf("* Starting debugger task");
