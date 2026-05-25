@@ -665,7 +665,7 @@ int main(int argc, char *argv[])
 			if (tape_start.has_value())
 				start_addr = tape_start;
 			else
-				tape_start = 0200;
+				start_addr = 0200;
 		}
 		else if (tape_mode == load_and_run || tape_mode == just_load) {
 			tm_11_->load(tape);
