@@ -124,8 +124,6 @@ int run_cpu_validation(console *const cnsl, const std::string & filename)
 	for(JsonObjectConst test : array) {
 		n_tests++;
 
-		// cnsl->put_string_lf(format("Test %d: %s", n_tests, test["id"].as<std::string>().c_str()));
-
 		// create environment
 		event = 0;
 		bus *b = new bus();
@@ -169,14 +167,16 @@ int run_cpu_validation(console *const cnsl, const std::string & filename)
 
 		// DO!
 		for(int k=0; k<run_n_instructions; k++) {
-			disassemble(c, nullptr, c->getPC(), false);
+			auto rc = disassemble(c, nullptr, c->getPC(), false);
+			DOLOG(log_ss::LS_TRACE, "%s", std::get<3>(rc).c_str());
 			if (c->step() == false) {
 				cnsl->put_string_lf("Treated as an invalid instruction");
 				cur_n_errors++;
 				break;
 			}
 		}
-		disassemble(c, nullptr, c->getPC(), false);
+		auto rc2 = disassemble(c, nullptr, c->getPC(), false);
+		DOLOG(log_ss::LS_TRACE, "%s (after)", std::get<3>(rc2).c_str());
 
 		// VERIFY
 		if (cur_n_errors == 0) {
@@ -244,7 +244,8 @@ void help()
 	printf("-s x,y   set console switche state: set bit x (0...15) to y (0/1)\n");
 	printf("-t       enable tracing (disassemble to stderr, requires -d as well)\n");
 	printf("-l x     log to file x\n");
-	printf("%s\n", ("-L x[,]  select what subsystems to log (" + get_all_available_log_ss_masks() + ")").c_str());
+	printf("%s\n", ("-L x[,...] select what subsystems to log to a file (" + get_all_available_log_ss_masks() + ")").c_str());
+	printf("-C x[,...] select what subsystems to log to the console\n");
 	printf("-X       do not include timestamp in logging\n");
 	printf("-J x     run validation suite x against the CPU emulation\n");
 	printf("-1 x     use x as device for DZ-11 (instead of 8 tcp-sockets starting at port %d)\n", default_port_offset);
@@ -274,7 +275,8 @@ int main(int argc, char *argv[])
 
 	const char  *logfile   = nullptr;
 	bool         timestamp = true;
-	std::optional<std::string> log_subsystems;
+	std::optional<std::string> log_subsystems_file;
+	std::optional<std::string> log_subsystems_console;
 
 	std::optional<uint16_t> start_addr;
 
@@ -302,7 +304,7 @@ int main(int argc, char *argv[])
 	std::string  deqna_type;
 
 	int  opt = -1;
-	while((opt = getopt(argc, argv, "hL:D:T:B:r:R:p:ndf:tb:l:s:Q:N:J:XS:P1:m:Q:28:I:c:")) != -1)
+	while((opt = getopt(argc, argv, "hC:L:D:T:B:r:R:p:ndf:tb:l:s:Q:N:J:XS:P1:m:Q:28:I:c:")) != -1)
 	{
 		switch(opt) {
 			case 'h':
@@ -422,7 +424,11 @@ int main(int argc, char *argv[])
 				break;
 
 			case 'L':
-				log_subsystems = optarg;
+				log_subsystems_file = optarg;
+				break;
+
+			case 'C':
+				log_subsystems_console = optarg;
 				break;
 
 			case 'S':
@@ -457,13 +463,20 @@ int main(int argc, char *argv[])
 	if (logfile == nullptr)
 		disable_all_log_ss(false);
 
-	if (log_subsystems.has_value()) {
-		disable_all_log_ss(true );
+	if (log_subsystems_file.has_value()) {
 		disable_all_log_ss(false);
-
-		auto parts = split(log_subsystems.value(), ",");
+		auto parts = split(log_subsystems_file.value(), ",");
 		for(auto & ss: parts) {
-			if (toggle_ss_log(true, ss) == false || toggle_ss_log(false, ss) == false)
+			if (toggle_ss_log(false, ss) == false)
+				error_exit(false, "\"%s\" is now known", ss.c_str());
+		}
+	}
+
+	if (log_subsystems_console.has_value()) {
+		disable_all_log_ss(true);
+		auto parts = split(log_subsystems_console.value(), ",");
+		for(auto & ss: parts) {
+			if (toggle_ss_log(true, ss) == false)
 				error_exit(false, "\"%s\" is now known", ss.c_str());
 		}
 	}
