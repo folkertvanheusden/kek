@@ -415,16 +415,94 @@ void stack_poller(void *)
   }
 }
 
-void setup() {
-	Serial.begin(115200);
-	while(!Serial)
-		delay(100);
+void emit_reset_reason() {
 #if defined(TEENSY4_1)
   if (CrashReport) {
     Serial.print(CrashReport);
     CrashReport.clear();
   }
 #endif
+#if defined(ESP32)
+  Serial.print("Reset reason: ");
+  switch(esp_reset_reason()) {
+    case ESP_RST_UNKNOWN:
+      Serial.println("Reset reason can not be determined.");
+      break;
+
+    case ESP_RST_POWERON:
+      Serial.println("Reset due to power-on event.");
+      break;
+
+    case ESP_RST_EXT:
+      Serial.println("Reset by external pin (not applicable for ESP32)");
+      break;
+
+    case ESP_RST_SW:
+      Serial.println("Software reset via esp_restart.");
+      break;
+
+    case ESP_RST_PANIC:
+      Serial.println("Software reset due to exception/panic.");
+      break;
+
+    case ESP_RST_INT_WDT:
+      Serial.println("Reset (software or hardware) due to interrupt watchdog.");
+      break;
+
+    case ESP_RST_TASK_WDT:
+      Serial.println("Reset due to task watchdog.");
+      break;
+
+    case ESP_RST_WDT:
+      Serial.println("Reset due to other watchdogs.");
+      break;
+
+    case ESP_RST_DEEPSLEEP:
+      Serial.println("Reset after exiting deep sleep mode.");
+      break;
+
+    case ESP_RST_BROWNOUT:
+      Serial.println("Brownout reset (software or hardware)");
+      break;
+
+    case ESP_RST_SDIO:
+      Serial.println("Reset over SDIO.");
+      break;
+
+    case ESP_RST_USB:
+      Serial.println("Reset by USB peripheral.");
+      break;
+
+    case ESP_RST_JTAG:
+      Serial.println("Reset by JTAG.");
+      break;
+
+    case ESP_RST_EFUSE:
+      Serial.println("Reset due to efuse error.");
+      break;
+
+    case ESP_RST_PWR_GLITCH:
+      Serial.println("Reset due to power glitch detected.");
+      break;
+
+    case ESP_RST_CPU_LOCKUP:
+      Serial.println("Reset due to CPU lock up (double exception)");
+      break;
+
+    default:
+      Serial.println("Unknown reason");
+      break;
+  }
+#endif
+}
+
+void setup() {
+	Serial.begin(115200);
+	while(!Serial)
+		delay(100);
+
+  emit_reset_reason();
+
 #if defined(ESP32)
   esp_log_level_set("*", ESP_LOG_INFO);
   heap_caps_check_integrity_all(true);
