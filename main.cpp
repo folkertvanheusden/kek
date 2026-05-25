@@ -105,7 +105,7 @@ bool compare_values(console *const cnsl, uint32_t v, uint32_t should_be, const s
 		different_bits_str = std::to_string(different_bits & 1) + different_bits_str;
 	} while(different_bits >>= 1);
 
-	cnsl->put_string_lf(format("%s: %o (is) != %o (should be), different bits: %s", name.c_str(), v, should_be, different_bits_str.c_str()));
+	DOLOG(log_ss::LS_TRACE, "%s: %o (is) != %o (should be), different bits: %s", name.c_str(), v, should_be, different_bits_str.c_str());
 
 	return false;
 }
@@ -205,7 +205,7 @@ int run_cpu_validation(console *const cnsl, const std::string & filename)
 		total_error_count      +=   cur_n_errors;
 		tests_with_error_count += !!cur_n_errors;
 
-		cnsl->put_string_lf(format("Test result for %d, %s: %s", n_tests, test["id"].as<std::string>().c_str(), cur_n_errors ? "FAILED":"OK"));
+		DOLOG(log_ss::LS_TRACE, "Test result for %d, %s: %s", n_tests, test["id"].as<std::string>().c_str(), cur_n_errors ? "FAILED":"OK");
 
 		// clean-up
 		delete b;
