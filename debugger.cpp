@@ -805,6 +805,9 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		go_verbose = parts.size() == 2 && parts[1] == "-v";
 	}
 	else if (parts[0] == "benchmark") {
+		cnsl->put_string_lf("Stopping panel first...");
+		cnsl->stop_panel_thread();
+
 		*cnsl->get_running_flag() = true;  // enable the KW11-L interrupt
 		benchmark(cnsl, b, stop_event, parts.size() == 2 && parts[1] == "-v");
 		*cnsl->get_running_flag() = false;
@@ -1303,12 +1306,23 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 	}
 	else if (cmd == "dp") {
 		cnsl->stop_panel_thread();
+		cnsl->put_string_lf("OK");
 		return true;
 	}
-	else if (parts[0] == "clss" && parts.size() == 2) {
-		bool is_console = parts[1] == "console" || parts[1] == "con";
-		disable_all_log_ss(is_console);
-		cnsl->put_string_lf("OK");
+	else if (parts[0] == "clss") {
+		if (parts.size() == 2) {
+			bool is_console = parts[1] == "console" || parts[1] == "con";
+			disable_all_log_ss(is_console);
+			cnsl->put_string_lf("OK");
+		}
+		else if (parts.size() == 1) {
+			disable_all_log_ss(true );
+			disable_all_log_ss(false);
+			cnsl->put_string_lf("OK");
+		}
+		else {
+			cnsl->put_string_lf("?");
+		}
 		return true;
 	}
 	else if (parts[0] == "getlss" && parts.size() == 2) {
