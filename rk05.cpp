@@ -91,7 +91,7 @@ uint16_t rk05::read_word(const uint16_t addr)
 	if (addr == RK05_CS)
 		setBit(registers[reg], 0, false); // clear go
 
-	TRACE("RK05 read %s/%o: %06o", reg[regnames], addr, vtemp);
+	DOLOG(log_ss::LS_DISK, "RK05 read %s/%o: %06o", reg[regnames], addr, vtemp);
 
 	return vtemp;
 }
@@ -149,13 +149,13 @@ void rk05::write_word(const uint16_t addr, const uint16_t v)
 			registers[(RK05_CS - RK05_BASE) / 2] &= ~(1 << 13); // reset search complete
 
 			if (func == 0) { // controller reset
-				TRACE("RK05 invoke %d (controller reset)", func);
+				DOLOG(log_ss::LS_DISK, "RK05 invoke %d (controller reset)", func);
 				registers[(RK05_ERROR - RK05_BASE) / 2] = 0;
 			}
 			else if (func == 1) { // write
 				*disk_write_acitivity = true;
 
-				TRACE("RK05 drive %d position sec %d surf %d cyl %d, reclen %zo, WRITE to %o, mem: %o", device, sector, surface, cylinder, reclen, diskoffb, memoff);
+				DOLOG(log_ss::LS_DISK, "RK05 drive %d position sec %d surf %d cyl %d, reclen %zo, WRITE to %o, mem: %o", device, sector, surface, cylinder, reclen, diskoffb, memoff);
 
 				if (device >= fhs.size()) {
 					registers[(RK05_ERROR - RK05_BASE) / 2] |= 128;  // non existing disk
@@ -176,7 +176,7 @@ void rk05::write_word(const uint16_t addr, const uint16_t v)
 							xfer_buffer[i] = b->read_unibus_byte(work_memoff++);
 
 						if (!fhs.at(device)->write(work_diskoffb, cur, xfer_buffer, 512)) {
-							DOLOG(ll_error, true, "RK05(%d) write error %s to %u len %u", device, strerror(errno), work_diskoffb, cur);
+							DOLOG(log_ss::LS_DISK, "RK05(%d) write error %s to %u len %u", device, strerror(errno), work_diskoffb, cur);
 							registers[(RK05_ERROR - RK05_BASE) / 2] |= 32;  // non existing sector
 							registers[(RK05_CS - RK05_BASE) / 2] |= 3 << 14;  // an error occured
 							break;
@@ -185,7 +185,7 @@ void rk05::write_word(const uint16_t addr, const uint16_t v)
 						work_diskoffb += cur;
 
 						if (v & 2048)
-							TRACE("RK05 inhibit BA increase");
+							DOLOG(log_ss::LS_DISK, "RK05 inhibit BA increase");
 						else
 							update_bus_address(cur);
 
@@ -206,7 +206,7 @@ void rk05::write_word(const uint16_t addr, const uint16_t v)
 			else if (func == 2) { // read
 				*disk_read_acitivity = true;
 
-				TRACE("RK05 drive %d position sec %d surf %d cyl %d, reclen %zo, READ from %o, mem: %o", device, sector, surface, cylinder, reclen, diskoffb, memoff);
+				DOLOG(log_ss::LS_DISK, "RK05 drive %d position sec %d surf %d cyl %d, reclen %zo, READ from %o, mem: %o", device, sector, surface, cylinder, reclen, diskoffb, memoff);
 
 				if (device >= fhs.size()) {
 					registers[(RK05_ERROR - RK05_BASE) / 2] |= 128;  // non existing disk
@@ -221,7 +221,7 @@ void rk05::write_word(const uint16_t addr, const uint16_t v)
 						uint32_t cur = std::min(uint32_t(sizeof xfer_buffer), temp_reclen);
 
 						if (!fhs.at(device)->read(temp_diskoffb, cur, xfer_buffer, 512)) {
-							DOLOG(ll_error, true, "RK05 read error %s from %u len %u", strerror(errno), temp_diskoffb, cur);
+							DOLOG(log_ss::LS_DISK, "RK05 read error %s from %u len %u", strerror(errno), temp_diskoffb, cur);
 							registers[(RK05_ERROR - RK05_BASE) / 2] |= 32;  // non existing sector
 							registers[(RK05_CS - RK05_BASE) / 2] |= 3 << 14;  // an error occured
 							break;
@@ -254,15 +254,15 @@ void rk05::write_word(const uint16_t addr, const uint16_t v)
 				*disk_read_acitivity = false;
 			}
 			else if (func == 4) {
-				TRACE("RK05 invoke %d (seek) to %o", func, diskoffb);
+				DOLOG(log_ss::LS_DISK, "RK05 invoke %d (seek) to %o", func, diskoffb);
 
 				registers[(RK05_CS - RK05_BASE) / 2] |= 1 << 13; // search complete
 			}
 			else if (func == 7) {
-				TRACE("RK05 invoke %d (write lock)", func);
+				DOLOG(log_ss::LS_DISK, "RK05 invoke %d (write lock)", func);
 			}
 			else {
-				TRACE("RK05 command %d UNHANDLED", func);
+				DOLOG(log_ss::LS_DISK, "RK05 command %d UNHANDLED", func);
 			}
 
 			registers[(RK05_WC - RK05_BASE) / 2] = 0;

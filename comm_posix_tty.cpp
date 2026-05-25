@@ -26,14 +26,14 @@ bool comm_posix_tty::begin()
 {
 	fd = open(device.c_str(), O_RDWR);
 	if (fd == -1) {
-		DOLOG(warning, false, "com_posix_tty failed to access %s: %s", device.c_str(), strerror(errno));
+		DOLOG(log_ss::LS_COMM, "com_posix_tty failed to access %s: %s", device.c_str(), strerror(errno));
 		return false;  // TODO error handling
 	}
 
 	// from https://stackoverflow.com/questions/6947413/how-to-open-read-and-write-from-serial-port-in-c
 	termios tty { };
         if (tcgetattr(fd, &tty) == -1) {
-		DOLOG(warning, false, "com_posix_tty tcgetattr failed: %s", strerror(errno));
+		DOLOG(log_ss::LS_COMM, "com_posix_tty tcgetattr failed: %s", strerror(errno));
 		close(fd);
 		fd = -1;
                 return false;
@@ -61,7 +61,7 @@ bool comm_posix_tty::begin()
         tty.c_cflag &= ~CRTSCTS;
 
         if (tcsetattr(fd, TCSANOW, &tty) == -1) {
-		DOLOG(warning, false, "com_posix_tty tcsetattr failed: %s", strerror(errno));
+		DOLOG(log_ss::LS_COMM, "com_posix_tty tcsetattr failed: %s", strerror(errno));
 		close(fd);
 		fd = -1;
 		return false;
@@ -94,7 +94,7 @@ uint8_t comm_posix_tty::get_byte()
 {
 	uint8_t c = 0;
 	if (read(fd, &c, 1) <= 0) {
-		DOLOG(warning, false, "com_posix_tty cannot read");
+		DOLOG(log_ss::LS_COMM, "com_posix_tty cannot read");
 		close(fd);
 		fd = -1;
 	}
@@ -110,7 +110,7 @@ void comm_posix_tty::send_data(const uint8_t *const in, const size_t n)
 	while(len > 0) {
 		int rc = write(fd, p, len);
 		if (rc <= 0) {  // TODO error checking
-			DOLOG(warning, false, "com_posix_tty cannot write");
+			DOLOG(log_ss::LS_COMM, "com_posix_tty cannot write");
 			close(fd);
 			fd = -1;
 			break;

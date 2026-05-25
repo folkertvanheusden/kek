@@ -37,26 +37,111 @@
 #endif
 
 
-static const char *logfile           = strdup("/tmp/kek.log");
+static const char  *logfile           = strdup("/tmp/kek.log");
 #if defined(BUILD_FOR_PICO2W)
-static WiFiUDP     udp;
-static std::string syslog_host;
+static WiFiUDP      udp;
+static std::string  syslog_host;
 #elif defined(TEENSY4_1)
 static qn::EthernetUDP udp;
-static std::string syslog_host;
+static std::string  syslog_host;
 #else
-static sockaddr_in syslog_ip_addr    = { };
+static sockaddr_in  syslog_ip_addr    = { };
 #endif
-static bool        is_file           = true;
-log_level_t        log_level_file    = warning;
-log_level_t        log_level_screen  = warning;
-static FILE       *log_fh            = nullptr;
-static int         lf_uid            = -1;
-static int         lf_gid            = -1;
-static bool        l_timestamp       = true;
-char               dummy_buffer[2] { 0 };
-bool               log_trace_enabled = false;
-static console    *log_cnsl          = nullptr;
+static bool         is_file           = true;
+static FILE        *log_fh            = nullptr;
+static int          lf_uid            = -1;
+static int          lf_gid            = -1;
+static bool         l_timestamp       = true;
+char                dummy_buffer[2] { 0 };
+static console     *log_cnsl          = nullptr;
+uint64_t            log_mask          = ~0 & (~(uint64_t(log_ss::LS_TRACE) | uint64_t(log_ss::LS_COMM)));
+constexpr const char *const ls_names[] { "GENERIC", "CPU", "DEQNA", "ETH", "TRACE", "BLINKEN", "BUS", "COMM", "DISK", "MMU", "TAPE" };
+
+
+void disable_all_lss()
+{
+	log_mask = 0;
+}
+
+void set_ss_log(const log_ss ls)
+{
+	log_mask |= uint64_t(ls);
+}
+
+uint64_t get_masks()
+{
+	return log_mask;
+}
+
+bool toggle_ss_log(const std::string & name)
+{
+	uint64_t mask = 0;
+
+	if (name == "generic")
+		mask = uint64_t(log_ss::LS_GENERIC);
+	else if (name == "cpu")
+		mask = uint64_t(log_ss::LS_CPU);
+	else if (name == "deqna")
+		mask = uint64_t(log_ss::LS_DEQNA);
+	else if (name == "eth")
+		mask = uint64_t(log_ss::LS_ETH);
+	else if (name == "trace")
+		mask = uint64_t(log_ss::LS_TRACE);
+	else if (name == "blinken" || name == "blinkenlights" || name == "bl")
+		mask = uint64_t(log_ss::LS_BLINKEN);
+	else if (name == "bus")
+		mask = uint64_t(log_ss::LS_BUS);
+	else if (name == "comm")
+		mask = uint64_t(log_ss::LS_COMM);
+	else if (name == "disk")
+		mask = uint64_t(log_ss::LS_DISK);
+	else if (name == "mmu")
+		mask = uint64_t(log_ss::LS_MMU);
+	else if (name == "tape")
+		mask = uint64_t(log_ss::LS_TAPE);
+	else
+		return false;
+
+	if (log_mask & mask)
+		log_mask &= ~mask;
+	else
+		log_mask |= mask;
+
+	return true;
+}
+
+std::string get_log_mask()
+{
+	std::string out;
+	if (log_mask & uint64_t(log_ss::LS_GENERIC))
+		out += "generic,";
+	if (log_mask & uint64_t(log_ss::LS_CPU))
+		out += "cpu,";
+	if (log_mask & uint64_t(log_ss::LS_DEQNA))
+		out += "deqna,";
+	if (log_mask & uint64_t(log_ss::LS_ETH))
+		out += "eth,";
+	if (log_mask & uint64_t(log_ss::LS_TRACE))
+		out += "trace,";
+	if (log_mask & uint64_t(log_ss::LS_BLINKEN))
+		out += "blinken,";
+	if (log_mask & uint64_t(log_ss::LS_BUS))
+		out += "bus,";
+	if (log_mask & uint64_t(log_ss::LS_COMM))
+		out += "comm,";
+	if (log_mask & uint64_t(log_ss::LS_DISK))
+		out += "disk,";
+	if (log_mask & uint64_t(log_ss::LS_MMU))
+		out += "mmu,";
+	if (log_mask & uint64_t(log_ss::LS_TAPE))
+		out += "tape,";
+	return out;
+}
+
+std::string get_all_masks()
+{
+	return "generic,cpu,deqna,eth,trace,blinken,bus,comm,disk,mmu,tape";
+}
 
 #if defined(ESP32)
 int gettid()
@@ -82,40 +167,24 @@ bool is_terminal_set()
 	return log_cnsl;
 }
 
-void settrace(const bool on)
-{
-	log_trace_enabled = on;
-}
-
-bool gettrace()
-{
-	return log_trace_enabled;
-}
-
-void setlogfile(const char *const lf, const log_level_t ll_file, const log_level_t ll_screen, const bool timestamp)
+void setlogfile(const char *const lf, const bool timestamp)
 {
 	if (log_fh)
 		fclose(log_fh);
 
 	free((void *)logfile);
 
-	is_file = true;
-
-	logfile = lf ? strdup(lf) : nullptr;
-
-	log_level_file   = ll_file;
-	log_level_screen = ll_screen;
-
-	l_timestamp      = timestamp;
+	is_file     = true;
+	logfile     = lf ? strdup(lf) : nullptr;
+	l_timestamp = timestamp;
 
 	atexit(closelog);
 }
 
-bool setloghost(const char *const host, const log_level_t ll)
+bool setloghost(const char *const host)
 {
-	is_file        = false;
-	log_level_file = ll;
-	l_timestamp    = false;
+	is_file     = false;
+	l_timestamp = false;
 
 #if defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 	syslog_host    = host;
@@ -128,21 +197,15 @@ bool setloghost(const char *const host, const log_level_t ll)
 #endif
 }
 
-void setll(const log_level_t ll_screen, const log_level_t ll_file)
-{
-	log_level_file   = ll_file;
-	log_level_screen = ll_screen;
-}
-
 void setloguid(const int uid, const int gid)
 {
 	lf_uid = uid;
 	lf_gid = gid;
 }
 
-void send_syslog(const int ll, const std::string & what)
+void send_syslog(const std::string & what)
 {
-	std::string msg = format("<%d>PDP11 %s", 16 * 8 + ll, what.c_str());
+	std::string msg = format("<%d>PDP11 %s", 16 * 8 + 6 /* info */, what.c_str());
 
 #if defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
         udp.beginPacket(syslog_host.c_str(), 514);
@@ -166,8 +229,11 @@ void closelog()
 	}
 }
 
-void dolog(const log_level_t ll, const char *fmt, ...)
+void dolog(const log_ss ls, const char *fmt, ...)
 {
+	if ((log_mask & uint64_t(ls)) == 0)
+		return;
+
 #if !defined(BUILD_FOR_PICO2W) && !defined(TEENSY4_1)
 	if (!log_fh && logfile != nullptr) {
 #if !defined(ESP32)
@@ -206,76 +272,37 @@ void dolog(const log_level_t ll, const char *fmt, ...)
 #endif
 		char ts_str[64] { };
 
-		const char *const ll_names[] = { "emerg  ", "alert  ", "crit   ", "error  ", "warning", "notice ", "info   ", "debug  ", "none   " };
-
-		snprintf(ts_str, sizeof ts_str, "%04d-%02d-%02d %02d:%02d:%02d.%06d %s|%s] ",
+		snprintf(ts_str, sizeof ts_str, "%04d-%02d-%02d %02d:%02d:%02d.%06d %-7s|%s] ",
 				tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, int(now % 1000000),
-				ll_names[ll], get_thread_name().c_str());
+				ls_names[std::countr_zero(uint64_t(ls))], get_thread_name().c_str());
 
-		if (ll <= log_level_file && is_file == false)
-			send_syslog(ll, log_buffer.data());
+		if (is_file == false)
+			send_syslog(log_buffer.data());
 #if !defined(ESP32)
-		if (ll <= log_level_file && log_fh != nullptr)
+		if (log_fh != nullptr)
 			fprintf(log_fh, "%s%s\n", ts_str, log_buffer.data());
 #endif
 
-		if (ll <= log_level_screen) {
-			if (log_cnsl) {
-				log_cnsl->put_string(ts_str);
-				log_cnsl->put_string_lf(log_buffer.data());
-			}
-			else {
-				printf("%s%s\r\n", ts_str, log_buffer.data());
-			}
+		if (log_cnsl) {
+			log_cnsl->put_string(ts_str);
+			log_cnsl->put_string_lf(log_buffer.data());
+		}
+		else {
+			printf("%s%s\r\n", ts_str, log_buffer.data());
 		}
 	}
 	else {
-		if (ll <= log_level_file && is_file == false)
-			send_syslog(ll, log_buffer.data());
+		if (is_file == false)
+			send_syslog(log_buffer.data());
 #if !defined(ESP32)
-		if (ll <= log_level_file && log_fh != nullptr)
+		if (log_fh != nullptr)
 			fprintf(log_fh, "%s\n", log_buffer.data());
 #endif
 
-		if (ll <= log_level_screen) {
-			if (log_cnsl)
-				log_cnsl->put_string_lf(log_buffer.data());
-			else
-				printf("%s\r\n", log_buffer.data());
-		}
+		if (log_cnsl)
+			log_cnsl->put_string_lf(log_buffer.data());
+		else
+			printf("%s\r\n", log_buffer.data());
 	}
 #endif
-}
-
-log_level_t parse_ll(const std::string & str)
-{
-	if (str == "debug")
-		return debug;
-
-	if (str == "info")
-		return info;
-
-	if (str == "warning")
-		return warning;
-
-	if (str == "error")
-		return ll_error;
-
-	if (str == "critical")
-		return ll_critical;
-
-	if (str == "alert")
-		return ll_alert;
-
-	if (str == "emergency")
-		return ll_emerg;
-
-	if (str == "none")
-		return none;
-
-#if !defined(ESP32)
-	error_exit(false, "Log level \"%s\" not understood", str.c_str());
-#endif
-
-	return debug;
 }

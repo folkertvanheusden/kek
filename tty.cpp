@@ -80,7 +80,7 @@ uint16_t tty::read_word(const uint16_t addr)
 		vtemp |= 128;
 	}
 
-	TRACE("PDP11TTY read addr %o (%s): %d, 7bit: %d", addr, regnames[reg], vtemp, vtemp & 127);
+	DOLOG(log_ss::LS_COMM, "PDP11TTY read addr %o (%s): %d, 7bit: %d", addr, regnames[reg], vtemp, vtemp & 127);
 
 	registers[reg] = vtemp;
 
@@ -110,11 +110,11 @@ void tty::write_word(const uint16_t addr, uint16_t v)
 {
 	const int reg = (addr - PDP11TTY_BASE) / 2;
 
-	TRACE("PDP11TTY write %o (%s): %o", addr, regnames[reg], v);
+	DOLOG(log_ss::LS_COMM, "PDP11TTY write %o (%s): %o", addr, regnames[reg], v);
 
 	if (addr == PDP11TTY_TPB) {
 		char ch = v & 127;
-		TRACE("PDP11TTY print '%c'", ch);
+		DOLOG(log_ss::LS_COMM, "PDP11TTY print '%c'", ch);
 		c->put_char(ch);
 
 		registers[(PDP11TTY_TPS - PDP11TTY_BASE) / 2] |= 128;
@@ -123,7 +123,7 @@ void tty::write_word(const uint16_t addr, uint16_t v)
 			b->getCpu()->queue_interrupt(4, 064);
 	}
 
-	TRACE("set register %o to %o", addr, v);
+	DOLOG(log_ss::LS_COMM, "set register %o to %o", addr, v);
 	registers[(addr - PDP11TTY_BASE) / 2] = v;
 }
 

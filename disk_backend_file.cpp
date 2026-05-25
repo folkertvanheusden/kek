@@ -56,7 +56,7 @@ bool disk_backend_file::begin(const bool snapshots)
 	fd = open(filename.c_str(), O_RDWR);
 #endif
 	if (fd == -1) {
-		DOLOG(ll_error, true, "disk_backend_file: cannot open \"%s\": %s", filename.c_str(), strerror(errno));
+		DOLOG(log_ss::LS_DISK, "disk_backend_file: cannot open \"%s\": %s", filename.c_str(), strerror(errno));
 		return false;
 	}
 
@@ -65,7 +65,7 @@ bool disk_backend_file::begin(const bool snapshots)
 
 bool disk_backend_file::read(const off_t offset_in, const size_t n, uint8_t *const target, const size_t sector_size)
 {
-	TRACE("disk_backend_file::read: read %zu bytes from offset %zu", n, offset_in);
+	DOLOG(log_ss::LS_DISK, "disk_backend_file::read: read %zu bytes from offset %zu", n, offset_in);
 
 	assert((offset_in % sector_size) == 0);
 	assert((n % sector_size) == 0);
@@ -89,7 +89,7 @@ bool disk_backend_file::read(const off_t offset_in, const size_t n, uint8_t *con
 #else
 		ssize_t rc = pread(fd, target, n, offset);
 		if (rc != ssize_t(n)) {
-			DOLOG(warning, false, "disk_backend_file::read: read failure. expected %zu bytes, got %zd", n, rc);
+			DOLOG(log_ss::LS_DISK, "disk_backend_file::read: read failure. expected %zu bytes, got %zd", n, rc);
 			return false;
 		}
 #endif
@@ -100,7 +100,7 @@ bool disk_backend_file::read(const off_t offset_in, const size_t n, uint8_t *con
 
 bool disk_backend_file::write(const off_t offset, const size_t n, const uint8_t *const from, const size_t sector_size)
 {
-	TRACE("disk_backend_file::write: write %zu bytes to offset %zu", n, offset);
+	DOLOG(log_ss::LS_DISK, "disk_backend_file::write: write %zu bytes to offset %zu", n, offset);
 
 #if IS_POSIX
 	if (store_mem_range_in_overlay(offset, n, from, sector_size))
@@ -115,7 +115,7 @@ bool disk_backend_file::write(const off_t offset, const size_t n, const uint8_t 
 #else
 	ssize_t rc = pwrite(fd, from, n, offset);
 	if (rc != ssize_t(n)) {
-		DOLOG(warning, false, "disk_backend_file::write: write failure. expected %zu bytes, got %zd", n, rc);
+		DOLOG(log_ss::LS_DISK, "disk_backend_file::write: write failure. expected %zu bytes, got %zd", n, rc);
 		return false;
 	}
 

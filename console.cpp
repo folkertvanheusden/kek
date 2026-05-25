@@ -219,7 +219,7 @@ void console::put_char(const char c)
 		tx = 0;
 	else if (c == 10) {
 		if (debug_buffer.empty() == false && is_terminal_set() == false) {
-			DOLOG(debug, false, "TTY: %s", debug_buffer.c_str());
+			DOLOG(log_ss::LS_COMM, "TTY: %s", debug_buffer.c_str());
 			debug_buffer.clear();
 		}
 
@@ -274,7 +274,7 @@ void console::put_string(const std::string & what)
 
 void console::operator()()
 {
-	TRACE("Console thread started");
+	DOLOG(log_ss::LS_GENERIC, "Console thread started");
 
 	set_thread_name("kek::console");
 
@@ -298,7 +298,7 @@ void console::operator()()
 		}
 	}
 
-	TRACE("Console thread terminating");
+	DOLOG(log_ss::LS_GENERIC, "Console thread terminating");
 }
 
 void console::set_blinkenlights_panel(blinkenlights *const p_blinkenlights)

@@ -46,7 +46,7 @@ bool eth_transport_vxlan::begin()
 #if !defined(BUILD_FOR_PICO2W) && !defined(TEENSY4_1)
 	fd = socket(AF_INET, SOCK_DGRAM, 0);
 	if (fd == -1) {
-		DOLOG(debug, false, "Cannot create socket: %s", strerror(errno));
+		DOLOG(log_ss::LS_ETH, "Cannot create socket: %s", strerror(errno));
 		return false;
 	}
 
@@ -56,7 +56,7 @@ bool eth_transport_vxlan::begin()
 	listen_addr.sin_port        = htons(port);
 
 	if (bind(fd, reinterpret_cast<struct sockaddr *>(&listen_addr), sizeof(listen_addr)) == -1) {
-		DOLOG(warning, true, "Cannot bind to port %d: %s", port, strerror(errno));
+		DOLOG(log_ss::LS_ETH, "Cannot bind to port %d: %s", port, strerror(errno));
 		close(fd);
 		fd = -1;
 		return false;
@@ -98,20 +98,20 @@ bool eth_transport_vxlan::transmit(const uint8_t *const data, const size_t n_byt
 #else
 	if (inet_pton(AF_INET, peer.c_str(), &serveraddr.sin_addr) == 0) {
 		delete [] wrapped;
-		DOLOG(debug, false, "inet_pton(%s) failed", peer.c_str());
+		DOLOG(log_ss::LS_ETH, "inet_pton(%s) failed", peer.c_str());
 		return false;
 	}
 #endif
 #else
 	if (inet_aton(peer.c_str(), &serveraddr.sin_addr) == 0) {
 		delete [] wrapped;
-		DOLOG(debug, false, "inet_aton(%s) failed", peer.c_str());
+		DOLOG(log_ss::LS_ETH, "inet_aton(%s) failed", peer.c_str());
 		return false;
 	}
 #endif
 
 	if (sendto(fd, reinterpret_cast<const char *>(wrapped), wrapped_n, 0, reinterpret_cast<const sockaddr *>(&serveraddr), sizeof serveraddr) == -1) {
-		DOLOG(debug, false, "sendto failed: %s", strerror(errno));
+		DOLOG(log_ss::LS_ETH, "sendto failed: %s", strerror(errno));
 		rc = false;
 	}
 #endif
@@ -133,7 +133,7 @@ std::pair<uint8_t *, size_t> eth_transport_vxlan::get(const int timeout)
 		if (rc > 0) {
 			pkt = new uint8_t[rc];
 			if (!pkt) {
-				DOLOG(ll_critical, true, "malloc issue");
+				DOLOG(log_ss::LS_ETH, ll_critical, true, "malloc issue");
 				return { nullptr, 0 };
 			}
 			udp.read(pkt, rc);
@@ -171,7 +171,7 @@ std::pair<uint8_t *, size_t> eth_transport_vxlan::get(const int timeout)
 
 	uint32_t their_id = (pkt[4] << 16) | (pkt[5] << 8) | pkt[6];
 	if (pkt[0] != 0x08 || their_id != id) {
-		DOLOG(debug, false, "vxlan id mismatch: %02x != %02x", their_id, id);
+		DOLOG(log_ss::LS_ETH, "vxlan id mismatch: %02x != %02x", their_id, id);
 		delete [] pkt;
 		return { nullptr, 0 };
 	}

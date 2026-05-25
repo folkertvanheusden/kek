@@ -244,7 +244,6 @@ void help()
 	printf("-s x,y   set console switche state: set bit x (0...15) to y (0/1)\n");
 	printf("-t       enable tracing (disassemble to stderr, requires -d as well)\n");
 	printf("-l x     log to file x\n");
-	printf("-L x,y   set log level for screen (x) and file (y)\n");
 	printf("-X       do not include timestamp in logging\n");
 	printf("-J x     run validation suite x against the CPU emulation\n");
 	printf("-1 x     use x as device for DZ-11 (instead of 8 tcp-sockets starting at port %d)\n", default_port_offset);
@@ -273,10 +272,7 @@ int main(int argc, char *argv[])
 	bootloader_t  bootloader    = BL_NONE;
 
 	const char  *logfile   = nullptr;
-	log_level_t  ll_screen = none;
-	log_level_t  ll_file   = none;
 	bool         timestamp = true;
-	bool         ll_set    = false;
 
 	std::optional<uint16_t> start_addr;
 
@@ -304,7 +300,7 @@ int main(int argc, char *argv[])
 	std::string  deqna_type;
 
 	int  opt = -1;
-	while((opt = getopt(argc, argv, "hD:T:B:r:R:p:ndf:tL:b:l:s:Q:N:J:XS:P1:m:Q:28:I:c:")) != -1)
+	while((opt = getopt(argc, argv, "hD:T:B:r:R:p:ndf:tb:l:s:Q:N:J:XS:P1:m:Q:28:I:c:")) != -1)
 	{
 		switch(opt) {
 			case 'h':
@@ -371,7 +367,7 @@ int main(int argc, char *argv[])
 				break;
 
 			case 't':
-				settrace(true);
+				set_ss_log(log_ss::LS_TRACE);
 				break;
 
 			case 'n':
@@ -418,18 +414,6 @@ int main(int argc, char *argv[])
 				start_addr = std::stoi(optarg, nullptr, 8);
 				break;
 
-			case 'L': {
-					auto parts = split(optarg, ",");
-
-					if (parts.size() != 2)
-						error_exit(false, "Argument missing for -L");
-
-					ll_screen  = parse_ll(parts[0]);
-					ll_file    = parse_ll(parts[1]);
-					ll_set     = true;
-				  }
-				break;
-
 			case 'l':
 				logfile = optarg;
 				break;
@@ -462,11 +446,9 @@ int main(int argc, char *argv[])
 
 	console *cnsl = nullptr;
 
-	if (ll_set == false && withUI)
-		ll_screen = notice;
-	setlogfile(logfile, ll_file, ll_screen, timestamp);
-	DOLOG(info, true, "PDP11 emulator, by Folkert van Heusden");
-	DOLOG(info, true, "Built on: " __DATE__ " " __TIME__);
+	setlogfile(logfile, timestamp);
+	DOLOG(log_ss::LS_GENERIC, "PDP11 emulator, by Folkert van Heusden");
+	DOLOG(log_ss::LS_GENERIC, "Built on: " __DATE__ " " __TIME__);
 
 	start_disk_devices(disk_files, disk_snapshots);
 
@@ -599,7 +581,7 @@ int main(int argc, char *argv[])
 			bl.set_target(blinkenlights_ip);
 	}
 	else {
-		DOLOG(warning, false, "Cannot initialize blinkenlights");
+		DOLOG(log_ss::LS_GENERIC, "Cannot initialize blinkenlights");
 	}
 
 	//// DZ11
@@ -608,9 +590,9 @@ int main(int argc, char *argv[])
 
 #if !defined(_WIN32)
 	if (dz11_device.has_value()) {
-		DOLOG(info, false, "Configuring DZ11 device for TTY on %s (%d bps)", dz11_device.value().c_str(), bitrate);
+		DOLOG(log_ss::LS_GENERIC, "Configuring DZ11 device for TTY on %s (%d bps)", dz11_device.value().c_str(), bitrate);
 		if (io_channels->set_device(0, new comm_posix_tty(dz11_device.value(), bitrate)) == false)
-			DOLOG(warning, false, "Failed to configure device");
+			DOLOG(log_ss::LS_GENERIC, "Failed to configure device");
 	}
 #endif
 
@@ -618,9 +600,9 @@ int main(int argc, char *argv[])
 		if (io_channels->is_defined(i))
 			continue;
 		int port = tcp_port_offset + i;
-		DOLOG(info, false, "Configuring DZ11 device for TCP socket on port %d", port);
+		DOLOG(log_ss::LS_GENERIC, "Configuring DZ11 device for TCP socket on port %d", port);
 		if (io_channels->set_device(i, new comm_tcp_socket_server(port, dz11_setup_telnet)) == false)
-			DOLOG(warning, false, "Failed to configure device");
+			DOLOG(log_ss::LS_GENERIC, "Failed to configure device");
 	}
 
 	dz11 *dz11_ = new dz11(b, io_channels);
@@ -633,9 +615,9 @@ int main(int argc, char *argv[])
 		if (io_channels2->is_defined(i))
 			continue;
 		int port = tcp_port_offset + i + dz11_n_lines;
-		DOLOG(info, false, "Configuring DC11 device for TCP socket on port %d", port);
+		DOLOG(log_ss::LS_GENERIC, "Configuring DC11 device for TCP socket on port %d", port);
 		if (io_channels2->set_device(i, new comm_tcp_socket_server(port, dc11_setup_telnet)) == false)
-			DOLOG(warning, false, "Failed to configure device");
+			DOLOG(log_ss::LS_GENERIC, "Failed to configure device");
 	}
 	dc11 *dc11_ = new dc11(b, io_channels2);
 	dc11_->begin();
@@ -672,7 +654,7 @@ int main(int argc, char *argv[])
 	if (start_addr.has_value())
 		b->getCpu()->set_register(7, start_addr.value());
 
-	DOLOG(info, true, "Start running at %06o", b->getCpu()->get_register(7));
+	DOLOG(log_ss::LS_GENERIC, "Start running at %06o", b->getCpu()->get_register(7));
 
 #if defined(_WIN32)
 	signal(SIGINT, sw_handler);

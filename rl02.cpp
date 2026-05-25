@@ -151,7 +151,7 @@ uint16_t rl02::read_word(const uint16_t addr)
 		value = registers[reg];
 	}
 
-	TRACE("RL02: read \"%s\"/%o: %06o", regnames[reg], addr, value);
+	DOLOG(log_ss::LS_DISK, "RL02: read \"%s\"/%o: %06o", regnames[reg], addr, value);
 
 	return value;
 }
@@ -199,7 +199,7 @@ void rl02::write_word(const uint16_t addr, uint16_t v)
 {
 	const int reg = (addr - RL02_BASE) / 2;
 
-	TRACE("RL02: write \"%s\"/%06o: %06o", regnames[reg], addr, v);
+	DOLOG(log_ss::LS_DISK, "RL02: write \"%s\"/%06o: %06o", regnames[reg], addr, v);
 
         registers[reg] = v;
 
@@ -210,12 +210,12 @@ void rl02::write_word(const uint16_t addr, uint16_t v)
 
 		int           device  = (v >> 8) & 3;
 
-		TRACE("RL02: device %d, set command %d, exec: %d (%s)", device, command, do_exec, commands[command]);
+		DOLOG(log_ss::LS_DISK, "RL02: device %d, set command %d, exec: %d (%s)", device, command, do_exec, commands[command]);
 
 		bool          do_int  = false;
 
 		if (size_t(device) >= fhs.size()) {
-			DOLOG(info, false, "RL02: PDP11/70 is accessing virtual disk %d which is not attached", device);
+			DOLOG(log_ss::LS_DISK, "RL02: PDP11/70 is accessing virtual disk %d which is not attached", device);
 
 			registers[(RL02_CSR - RL02_BASE) / 2] |= (1 << 10) | (1 << 15);
 
@@ -237,7 +237,7 @@ void rl02::write_word(const uint16_t addr, uint16_t v)
 			else if (new_track >= rl02_track_count)
 				new_track = rl02_track_count - 1;
 
-			TRACE("RL02: device %d, seek from cylinder %d to %d (distance: %d, DAR: %06o)", device, track, new_track, cylinder_count, temp);
+			DOLOG(log_ss::LS_DISK, "RL02: device %d, seek from cylinder %d to %d (distance: %d, DAR: %06o)", device, track, new_track, cylinder_count, temp);
 			track  = new_track;
 
 //			update_dar();
@@ -249,7 +249,7 @@ void rl02::write_word(const uint16_t addr, uint16_t v)
 			mpr[1] = 0;  // zero
 			mpr[2] = 0;  // TODO: CRC
 
-			TRACE("RL02: device %d, read header [cylinder: %d, head: %d, sector: %d] %06o", device, track, head, sector, mpr[0]);
+			DOLOG(log_ss::LS_DISK, "RL02: device %d, read header [cylinder: %d, head: %d, sector: %d] %06o", device, track, head, sector, mpr[0]);
 
 			do_int = true;
 		}
@@ -271,7 +271,7 @@ void rl02::write_word(const uint16_t addr, uint16_t v)
 
 			uint32_t temp_disk_offset = calc_offset();
 
-			TRACE("RL02: device %d, write %d bytes (dec) to %d (dec) from %06o (oct) [cylinder: %d, head: %d, sector: %d]", device, count, temp_disk_offset, memory_address, track, head, sector);
+			DOLOG(log_ss::LS_DISK, "RL02: device %d, write %d bytes (dec) to %d (dec) from %06o (oct) [cylinder: %d, head: %d, sector: %d]", device, count, temp_disk_offset, memory_address, track, head, sector);
 
 			while(count > 0) {
 				uint32_t cur = std::min(uint32_t(sizeof xfer_buffer), count);
@@ -286,7 +286,7 @@ void rl02::write_word(const uint16_t addr, uint16_t v)
 				}
 
 				if (fhs.at(device) == nullptr || fhs.at(device)->write(temp_disk_offset, cur, xfer_buffer, 256) == false) {
-					DOLOG(ll_error, true, "RL02: write error, device %d, disk offset %u, read size %u, cylinder %d, head %d, sector %d", device, temp_disk_offset, cur, track, head, sector);
+					DOLOG(log_ss::LS_DISK, "RL02: write error, device %d, disk offset %u, read size %u, cylinder %d, head %d, sector %d", device, temp_disk_offset, cur, track, head, sector);
 					break;
 				}
 
@@ -332,7 +332,7 @@ void rl02::write_word(const uint16_t addr, uint16_t v)
 
 			uint32_t temp_disk_offset = calc_offset();
 
-			TRACE("RL02: device %d, read %d bytes (dec) from %d (dec) to %06o (oct) [cylinder: %d, head: %d, sector: %d]", device, count, temp_disk_offset, memory_address, track, head, sector);
+			DOLOG(log_ss::LS_DISK, "RL02: device %d, read %d bytes (dec) from %d (dec) to %06o (oct) [cylinder: %d, head: %d, sector: %d]", device, count, temp_disk_offset, memory_address, track, head, sector);
 
 //			update_dar();
 
@@ -340,7 +340,7 @@ void rl02::write_word(const uint16_t addr, uint16_t v)
 				uint32_t cur = std::min(uint32_t(sizeof xfer_buffer), count);
 
 				if (fhs.at(device) == nullptr || fhs.at(device)->read(temp_disk_offset, cur, xfer_buffer, 256) == false) {
-					DOLOG(ll_error, true, "RL02: read error, device %d, disk offset %u, read size %u, cylinder %d, head %d, sector %d", device, temp_disk_offset, cur, track, head, sector);
+					DOLOG(log_ss::LS_DISK, "RL02: read error, device %d, disk offset %u, read size %u, cylinder %d, head %d, sector %d", device, temp_disk_offset, cur, track, head, sector);
 					break;
 				}
 
@@ -379,12 +379,12 @@ void rl02::write_word(const uint16_t addr, uint16_t v)
 				*disk_read_activity = false;
 		}
 		else {
-			TRACE("RL02: command %d not implemented", command);
+			DOLOG(log_ss::LS_DISK, "RL02: command %d not implemented", command);
 		}
 
 		if (do_int) {
 			if (registers[(RL02_CSR - RL02_BASE) / 2] & 64) {  // interrupt enable?
-				TRACE("RL02: triggering interrupt");
+				DOLOG(log_ss::LS_DISK, "RL02: triggering interrupt");
 
 				b->getCpu()->queue_interrupt(5, 0160);
 			}

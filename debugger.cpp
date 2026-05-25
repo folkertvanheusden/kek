@@ -496,7 +496,7 @@ std::tuple<int, uint32_t, bool, std::string> disassemble(cpu *const c, console *
 	for(auto sp_val : data["sp"])
 		sp += (sp.empty() ? "" : ",") + sp_val;
 
-	DOLOG(debug, false, "SP: %s, MMR0/1/2/3: %s/%s/%s/%s", sp.c_str(), MMR0.c_str(), MMR1.c_str(), MMR2.c_str(), MMR3.c_str());
+	DOLOG(log_ss::LS_TRACE, "SP: %s, MMR0/1/2/3: %s/%s/%s/%s", sp.c_str(), MMR0.c_str(), MMR1.c_str(), MMR2.c_str(), MMR3.c_str());
 
 	if (cnsl)
 		cnsl->put_string_lf(result);
@@ -777,7 +777,6 @@ struct debugger_state {
 	int      n_single_step      {  1    };
 	bool     turbo              { false };
 	bool     marker             { false };
-	std::optional<int> t_rl;  // trace runlevel
 	bool     single_step        { false };
 	bool     pc_monitor_enabled { false };
 	unsigned pc_monitor_count   { 0 };
@@ -1016,9 +1015,9 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 	}
 	else if (parts[0] == "trace" || parts[0] == "t") {
 		if (parts.size() == 2)
-			settrace(parts[1] == "on" || parts[1] == "ON");
+			set_ss_log(parts[1] == "on" || parts[1] == "ON" ? log_ss::LS_TRACE : log_ss(0));
 
-		cnsl->put_string_lf(format("Tracing set to %s", gettrace() ? "ON" : "OFF"));
+		cnsl->put_string_lf(format("Tracing set to %s", get_masks() & uint64_t(log_ss::LS_TRACE) ? "ON" : "OFF"));
 		return true;
 	}
 	else if (parts[0] == "state" || parts[0] == "show") {
@@ -1179,14 +1178,6 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 
 		return true;
 	}
-	else if (parts[0] == "trl") {
-		if (parts.size() == 1)
-			state->t_rl.reset();
-		else
-			state->t_rl = std::stoi(parts.at(1));
-
-		return true;
-	}
 	else if (cmd == "cls") {
 		const char cls[] = { 27, '[', '2', 'J', 27, '[', 'H', 12, 0 };
 		cnsl->put_string_lf(cls);
@@ -1208,24 +1199,6 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		cnsl->put_string_lf(format("Debug mode set to %s", new_mode ? "ON" : "OFF"));
 		return true;
 	}
-	else if (parts[0] == "setll" && parts.size() == 2) {
-		auto ll_parts = split(parts[1], ",");
-
-#if IS_POSIX || defined(_WIN32)
-		if (ll_parts.size() != 2)
-			cnsl->put_string_lf("Loglevel for either screen or file missing");
-		else {
-			log_level_t ll_screen  = parse_ll(ll_parts[0]);
-			log_level_t ll_file    = parse_ll(ll_parts[1]);
-
-			setll(ll_screen, ll_file);
-		}
-#else
-		log_level_t ll_screen  = parse_ll(ll_parts[0]);
-		setll(ll_screen, ll_error);
-#endif
-		return true;
-	}
 #if IS_POSIX
 	else if (parts[0] == "ser" && parts.size() == 2) {
 		serialize_state(cnsl, b, parts.at(1));
@@ -1237,18 +1210,6 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 	}
 	else if (parts[0] == "setinthz" && parts.size() == 2) {
 		set_kw11_l_interrupt_freq(cnsl, b, std::stoi(parts.at(1)));
-		return true;
-	}
-	else if (parts[0] == "setsl") {
-		if (parts.size() != 3)
-			cnsl->put_string_lf("Parameter(s) missing");
-		else if (network_configured == false)
-			cnsl->put_string_lf("Please configure network first (cfgnet)");
-		else if (setloghost(parts.at(1).c_str(), parse_ll(parts[2])) == false)
-			cnsl->put_string_lf("Failed parsing IP address");
-		else
-			send_syslog(info, "Hello, world!");
-
 		return true;
 	}
 	else if (parts[0] == "pts" && parts.size() == 2) {
@@ -1279,7 +1240,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 	}
 #endif
 	else if (parts[0] == "log") {
-		DOLOG(info, true, cmd.c_str());
+		DOLOG(log_ss::LS_GENERIC, cmd.c_str());
 
 		return true;
 	}
@@ -1336,6 +1297,28 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 	}
 	else if (cmd == "dp") {
 		cnsl->stop_panel_thread();
+		return true;
+	}
+	else if (cmd == "clss") {
+		disable_all_lss();
+		cnsl->put_string_lf("OK");
+		return true;
+	}
+	else if (cmd == "getlss") {
+		cnsl->put_string_lf("Enabled subsystems logging: " + get_log_mask());
+		return true;
+	}
+	else if (cmd == "lss") {
+		cnsl->put_string_lf("Available subsystems: " + get_all_masks());
+		return true;
+	}
+	else if (parts[0] == "tlss") {
+		for(size_t i=1; i<parts.size(); i++) {
+			if (toggle_ss_log(parts[i]))
+				cnsl->put_string_lf(parts[i] + " toggled");
+			else
+				cnsl->put_string_lf(parts[i] + " not known");
+		}
 		return true;
 	}
 	else if (parts[0] == "mdeqna" && parts.size() == 2) {
@@ -1521,14 +1504,16 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			"                follows v/p (virtual/physical), all octal values, mmr0-3 and psw are",
 			"                registers. \"action\" can be stop, trace or log. instr can have a mask between the [] and on the right an instruction-opcode to compare against.",
 			"trace/t       - toggle tracing",
-			"setll x,y     - set loglevel: terminal,file",
-			"setsl hst ll  - set syslog target: requires a hostname and a loglevel",
+			"getlss        - show what subystems logging is enabled for",
+			"clss          - stop logging for all subsystems (use tlss to re-enable)",
+			"tlss x [...]  - toggle logging for on or more subsystems",
+			"lss           - list subsystems",
+			"setsl hst     - set syslog target: requires a hostname",
 			"pts x         - enable (1) / disable (0) timestamps",
 			"turbo         - toggle turbo mode (cannot be interrupted)",
 			"debug         - enable CPU debug mode",
 			"bt            - show backtrace - need to enable debug first",
 			"strace x      - start tracing from address - invoke without address to disable",
-			"trl x         - set trace run-level (0...3), empty for all",
 			"state [reset [hard]] x - dump state of (or reset) a device: rl02, rk05, rp06, rp07, mmu, tm11, kw11l, cpu, dc11, dz11 or deqna",
 			"mmures x      - resolve a virtual address",
 			"qi            - show queued interrupts",
@@ -1605,28 +1590,28 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		uint64_t start_trap_count    = c->get_trap_counter();
 		std::unordered_map<uint16_t, uint32_t> trap_counts_before = c->get_trap_counts();
 		while(*stop_event == EVENT_NONE) {
-			if ((gettrace() || state->single_step) && (state->t_rl.has_value() == false || state->t_rl.value() == c->getPSW_runmode())) {
+			if ((get_masks() & uint64_t(log_ss::LS_TRACE)) || state->single_step) {
 				if (!state->single_step)
-					TRACE("---");
+					DOLOG(log_ss::LS_TRACE, "---");
 
 				auto rc = disassemble(c, state->single_step ? cnsl : nullptr, c->getPC(), false);
 				took += std::get<1>(rc);
-				DOLOG(debug, false, "%s", std::get<3>(rc).c_str());
+				DOLOG(log_ss::LS_TRACE, "%s", std::get<3>(rc).c_str());
 			}
 
 			auto bp_result = c->check_breakpoint();
 			if (bp_result.has_value()) {
-				DOLOG(debug, false, "Breakpoint: %s", bp_result.value().second.c_str());
+				DOLOG(log_ss::LS_TRACE, "Breakpoint: %s", bp_result.value().second.c_str());
 				if (bp_result.value().first.get_action() == breakpoint::bp_action::stop_running) {
 					cnsl->put_string_lf("Breakpoint: " + bp_result.value().second);
 					if (!state->single_step)
 						break;
 				}
 				else if (bp_result.value().first.get_action() == breakpoint::bp_action::start_tracing) {
-					settrace(true);
+					set_ss_log(log_ss::LS_TRACE);
 				}
 				else if (bp_result.value().first.get_action() == breakpoint::bp_action::only_log_entry) {
-					DOLOG(debug, false, "Breakpoint: %s", bp_result.value().second.c_str());
+					DOLOG(log_ss::LS_TRACE, "Breakpoint: %s", bp_result.value().second.c_str());
 				}
 			}
 
@@ -1679,7 +1664,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			cnsl->put_string_lf(format("%" PRIzu " counters in %u instructions", ordered.size(), state->pc_monitor_count));
 		}
 
-		if (gettrace() || go_verbose || state->pc_monitor_enabled) {
+		if ((get_masks() & uint64_t(log_ss::LS_TRACE)) || go_verbose || state->pc_monitor_enabled) {
 			cnsl->put_string_lf(format("Took %.3f emulated ms, %.3f s wall clock time, avg. wait duration: %.3f us, traps: %" PRIzu "",
 						took / 1000000.,  // took is nanoseconds
 						(get_us() - since) / 1000000.,
@@ -1751,15 +1736,15 @@ void debugger(console *const cnsl, bus *const b, kek_event_t *const stop_event, 
 void simple_run(console *const cnsl, bus *const b, kek_event_t *const stop_event)
 {
 	cpu  *const c = b->getCpu();
-	bool        t = gettrace();
+	bool        t = get_masks() & uint64_t(log_ss::LS_TRACE);
 
 	*cnsl->get_running_flag() = true;
 
 	while(*stop_event == EVENT_NONE) {
 		if (t) {
 			auto rc = disassemble(c, nullptr, c->getPC(), false);
-			DOLOG(debug, false, "%s", std::get<3>(rc).c_str());
-			DOLOG(debug, false, "---");
+			DOLOG(log_ss::LS_TRACE, "%s", std::get<3>(rc).c_str());
+			DOLOG(log_ss::LS_TRACE, "---");
 		}
 
 		c->step();

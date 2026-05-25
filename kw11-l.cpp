@@ -83,7 +83,7 @@ void kw11_l::operator()()
 {
 	set_thread_name("kek:kw-11l");
 
-	TRACE("Starting KW11-L thread");
+	DOLOG(log_ss::LS_GENERIC, "Starting KW11-L thread");
 
 	while(!stop_flag) {
 		total_ticks++;
@@ -95,7 +95,7 @@ void kw11_l::operator()()
 			do_interrupt();
 	}
 
-	TRACE("KW11-L thread terminating");
+	DOLOG(log_ss::LS_GENERIC, "KW11-L thread terminating");
 }
 
 uint8_t kw11_l::read_byte(const uint16_t addr)
@@ -109,7 +109,7 @@ uint8_t kw11_l::read_byte(const uint16_t addr)
 uint16_t kw11_l::read_word(const uint16_t a)
 {
 	if (a != ADDR_LFC) {
-		TRACE("KW11-L read_word not for us (%06o)", a);
+		DOLOG(log_ss::LS_GENERIC, "KW11-L read_word not for us (%06o)", a);
 		return 0;
 	}
 
@@ -126,7 +126,7 @@ void kw11_l::set_interrupt_frequency(const int Hz)
 void kw11_l::write_byte(const uint16_t addr, const uint8_t value)
 {
 	if (addr != ADDR_LFC) {
-		TRACE("KW11-L write_byte not for us (%06o to %06o)", value, addr);
+		DOLOG(log_ss::LS_GENERIC, "KW11-L write_byte not for us (%06o to %06o)", value, addr);
 		return;
 	}
 
@@ -149,13 +149,13 @@ void kw11_l::write_byte(const uint16_t addr, const uint8_t value)
 void kw11_l::write_word(const uint16_t a, const uint16_t value)
 {
 	if (a != ADDR_LFC) {
-		TRACE("KW11-L write_word not for us (%06o to %06o)", value, a);
+		DOLOG(log_ss::LS_GENERIC, "KW11-L write_word not for us (%06o to %06o)", value, a);
 		return;
 	}
 
 	my_unique_lock lck(&lc_csr_lock);
 
-	TRACE("WRITE-I/O set line frequency clock/status register: %06o", value);
+	DOLOG(log_ss::LS_GENERIC, "WRITE-I/O set line frequency clock/status register: %06o", value);
 	lf_csr = value;
 }
 

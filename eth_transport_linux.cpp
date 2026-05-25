@@ -25,13 +25,13 @@ static bool invoke_if_ioctl(const std::string & dev_name, const int ioctl_nr, if
 {
 	int temp_fd = socket(AF_INET, SOCK_DGRAM, 0);
 	if (temp_fd == -1)
-		DOLOG(ll_error, false, "create socket failed");
+		DOLOG(log_ss::LS_ETH, "create socket failed");
 	else {
 		set_ifr_name(p, dev_name);
 
 		bool ok = true;
 		if (ioctl(temp_fd, ioctl_nr, p) == -1) {
-			DOLOG(ll_error, false, "deqna: ioctl %d failed: %s", ioctl_nr, strerror(errno));
+			DOLOG(log_ss::LS_ETH, "deqna: ioctl %d failed: %s", ioctl_nr, strerror(errno));
 			ok = false;
 		}
 
@@ -51,12 +51,12 @@ static int open_tun(const std::string & dev_name)
 	do {
 		fd = open("/dev/net/tun", O_RDWR);
 		if (fd == -1) {
-			DOLOG(ll_error, false, "cannot open /dev/net/tun");
+			DOLOG(log_ss::LS_ETH, "cannot open /dev/net/tun");
 			break;
 		}
 
 		if (fcntl(fd, F_SETFD, FD_CLOEXEC) == -1) {
-			DOLOG(ll_error, false, "FD_CLOEXEC on fd failed");
+			DOLOG(log_ss::LS_ETH, "FD_CLOEXEC on fd failed");
 			break;
 		}
 
@@ -65,7 +65,7 @@ static int open_tun(const std::string & dev_name)
 		set_ifr_name(&ifr_tap, dev_name);
 
 		if (ioctl(fd, TUNSETIFF, &ifr_tap) == -1) {
-			DOLOG(ll_error, false, "ioctl TUNSETIFF failed");
+			DOLOG(log_ss::LS_ETH, "ioctl TUNSETIFF failed");
 			break;
 		}
 

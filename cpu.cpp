@@ -355,7 +355,7 @@ void cpu::execute_any_pending_interrupt()
 				}
 			}
 
-			TRACE("Invoking interrupt vector %o (IPL %d, current: %d)", v, i, current_level);
+			DOLOG(log_ss::LS_CPU, "Invoking interrupt vector %o (IPL %d, current: %d)", v, i, current_level);
 			trap(v, i, true);
 
 #if defined(FREERTOS)
@@ -379,7 +379,7 @@ void cpu::queue_interrupt(const uint8_t level, const uint16_t vector)
 #endif
 
 	queued_interrupts[level].insert(vector);
-	TRACE("Queueing interrupt vector %o (IPL %d, current: %d), n: %" PRIzu "", vector, level, getPSW_spl(), queued_interrupts[level].size());
+	DOLOG(log_ss::LS_CPU, "Queueing interrupt vector %o (IPL %d, current: %d), n: %" PRIzu "", vector, level, getPSW_spl(), queued_interrupts[level].size());
 
 #if defined(FREERTOS)
 	xSemaphoreGive(qi_lock);
@@ -416,7 +416,7 @@ void cpu::add_to_MMR1(const int reg, const int delta)
 	assert(delta >= -2 && delta <= 2);
 
 	if (mmu_->isMMR1Locked() == false) {
-		TRACE("MMR1: add %d to register R%d", delta, reg);
+		DOLOG(log_ss::LS_CPU, "MMR1: add %d to register R%d", delta, reg);
 		mmu_->add_to_MMR1(delta, reg);
 	}
 }
@@ -670,7 +670,7 @@ uint32_t cpu::shifter(uint32_t value, int shift, bool is32b)
 	uint32_t mask        = is32b ? 0xffffffff : 0xffff;
 	bool     sign        = value & sign_mask;
 
-	TRACE("shift %012o with %d", value, shift);
+	DOLOG(log_ss::LS_CPU, "shift %012o with %d", value, shift);
 
 	setPSW_v(false);
 
@@ -1524,7 +1524,6 @@ bool cpu::misc_operations(const uint16_t instr)
 		case 0b0000000000000001: // WAIT
 			{
 				uint64_t start = get_us();
-				bool     int_  = false;
 
 				do
 				{
@@ -1541,13 +1540,13 @@ bool cpu::misc_operations(const uint16_t instr)
 #endif
 					if (wait_stuck == false && get_us() - start > 1500000) {
 						wait_stuck = true;
-						DOLOG(debug, true, "cpu: WAIT/KW11-L stuck? no interrupts seen for 1,5 seconds");
+						DOLOG(log_ss::LS_CPU, "cpu: WAIT/KW11-L stuck? no interrupts seen for 1,5 seconds");
 					}
 				}
 				while(check_pending_interrupts() == false);
 			}
 
-			TRACE("WAIT returned");
+			DOLOG(log_ss::LS_CPU, "WAIT returned");
 
 			return true;
 
@@ -1665,7 +1664,7 @@ bool cpu::misc_operations(const uint16_t instr)
 // 'is_interrupt' is not correct naming; it is true for mmu faults and interrupts
 void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 {
-	TRACE("*** CPU::TRAP %o, new-ipl: %d, is-interrupt: %d, run mode: %d ***", vector, new_ipl, is_interrupt, getPSW_runmode());
+	DOLOG(log_ss::LS_CPU, "*** CPU::TRAP %o, new-ipl: %d, is-interrupt: %d, run mode: %d ***", vector, new_ipl, is_interrupt, getPSW_runmode());
 
 	auto it = trap_counts.find(vector);
 	if (it == trap_counts.end())
@@ -1686,7 +1685,7 @@ void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 			bool kernel_mode = !(psw >> 14);
 
 			if (processing_trap_depth >= 2) {
-				TRACE("Trap depth %d", processing_trap_depth);
+				DOLOG(log_ss::LS_CPU, "Trap depth %d", processing_trap_depth);
 
 				if (processing_trap_depth >= 3) {
 					*event = EVENT_HALT;
@@ -1734,10 +1733,10 @@ void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 
 			// if we reach this point then the trap was processed without causing
 			// another trap
-			TRACE("Trapping to %06o with PSW %06o", pc, psw);
+			DOLOG(log_ss::LS_CPU, "Trapping to %06o with PSW %06o", pc, psw);
 		}
 		catch(const int exception) {
-			TRACE("trap during execution of trap (%d)", exception);
+			DOLOG(log_ss::LS_CPU, "trap during execution of trap (%d)", exception);
 
 			setPSW(before_psw, false);
 		}
@@ -2028,7 +2027,7 @@ uint32_t cpu::calc_instruction_duration(const uint16_t pc) const
 							ef_time = 1500;
 							break;
 						default:
-							DOLOG(warning, false, "DEFAULT group 1 0/%o -> %06o", (instruction >> 6) & 077, instruction);
+							DOLOG(log_ss::LS_CPU, "DEFAULT group 1 0/%o -> %06o", (instruction >> 6) & 077, instruction);
 							break;
 					}
 					break;
@@ -2091,7 +2090,7 @@ uint32_t cpu::calc_instruction_duration(const uint16_t pc) const
 							 break;
 						 }
 					 }
-					 DOLOG(warning, false, "DEFAULT group 2 %o -> %06o", (instruction >> 6) & 077, instruction);
+					 DOLOG(log_ss::LS_CPU, "DEFAULT group 2 %o -> %06o", (instruction >> 6) & 077, instruction);
 					 break;
 			}
 			break;
@@ -2128,7 +2127,7 @@ uint32_t cpu::calc_instruction_duration(const uint16_t pc) const
 							ef_time = src == 0 ? 1950 : 2100;
 							break;
 						default:
-							DOLOG(warning, false, "DEFAULT group 3");
+							DOLOG(log_ss::LS_CPU, "DEFAULT group 3");
 							break;
 					}
 				}
@@ -2188,7 +2187,7 @@ uint32_t cpu::calc_instruction_duration(const uint16_t pc) const
 					ef_time  = lowlevel_register_get(get_register_set(), src_reg) >= 1 ? 600 : 750;  // branch is faster
 					break;
 				default:
-					DOLOG(warning, false, "DEFAULT group 4");
+					DOLOG(log_ss::LS_CPU, "DEFAULT group 4");
 					break;
 			}
 			break;
@@ -2240,7 +2239,7 @@ uint32_t cpu::calc_instruction_duration(const uint16_t pc) const
 					ef_time += work_val & 1 ? 150 : 0;
 					break;
 				default:
-					DOLOG(warning, false, "DEFAULT group 5");
+					DOLOG(log_ss::LS_CPU, "DEFAULT group 5");
 					break;
 			}
 			break;
@@ -2248,13 +2247,13 @@ uint32_t cpu::calc_instruction_duration(const uint16_t pc) const
 			// FPP
 			break;
 		default:
-			DOLOG(warning, false, "DEFAULT group 6");
+			DOLOG(log_ss::LS_CPU, "DEFAULT group 6");
 			break;
 	}
 
 	uint32_t result = src_time + ef_time + dst_time;
 	if (result == 0)
-		DOLOG(debug, false, "%06o @ %06o: unspecified duration", instruction, pc);
+		DOLOG(log_ss::LS_CPU, "%06o @ %06o: unspecified duration", instruction, pc);
 	return result;
 }
 
@@ -2755,14 +2754,14 @@ bool cpu::step()
 			return true;
 		}
 
-		DOLOG(debug, false, "UNHANDLED instruction %06o @ %06o", instr, instruction_start);
+		DOLOG(log_ss::LS_CPU, "UNHANDLED instruction %06o @ %06o", instr, instruction_start);
 
 		trap(010);  // floating point nog niet geimplementeerd
 
 		return false;
 	}
 	catch(const int exception_nr) {
-		TRACE("trap during execution of command (%d)", exception_nr);
+		DOLOG(log_ss::LS_CPU, "trap during execution of command (%d)", exception_nr);
 	}
 
 	return true;

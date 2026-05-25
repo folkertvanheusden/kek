@@ -17,10 +17,10 @@ extern "C" uint8_t external_psram_size;
 memory::memory(const uint32_t size): size(size)
 {
 #if defined(ESP32)
-	DOLOG(info, false, "Memory size (in bytes, decimal): %d", size);
+	DOLOG(log_ss::LS_GENERIC, "Memory size (in bytes, decimal): %d", size);
 
 	if (psramFound()) {
-		DOLOG(info, false, "Using PSRAM");
+		DOLOG(log_ss::LS_GENERIC, "Using PSRAM");
 		m = reinterpret_cast<uint8_t *>(ps_malloc(size));
 		reset(true);
 	}

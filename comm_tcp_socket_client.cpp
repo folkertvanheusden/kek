@@ -90,14 +90,14 @@ uint8_t comm_tcp_socket_client::get_byte()
 	uint8_t c = 0;
 #if defined(_WIN32)
 	if (recv(use_fd, reinterpret_cast<char *>(&c), 1, 0) <= 0) {
-		DOLOG(warning, false, "comm_tcp_socket_client::get_byte: failed");
+		DOLOG(log_ss::LS_COMM, "comm_tcp_socket_client::get_byte: failed");
 		my_unique_lock lck(&cfd_lock);
 		closesocket(cfd);
 		cfd = INVALID_SOCKET;
 	}
 #else
 	if (read(use_fd, reinterpret_cast<char *>(&c), 1) <= 0) {
-		DOLOG(warning, false, "comm_tcp_socket_client::get_byte: failed");
+		DOLOG(log_ss::LS_COMM, "comm_tcp_socket_client::get_byte: failed");
 		my_unique_lock lck(&cfd_lock);
 		close(cfd);
 		cfd = -1;
@@ -117,7 +117,7 @@ void comm_tcp_socket_client::send_data(const uint8_t *const in, const size_t n)
 #if defined(_WIN32)
 		int rc = send(cfd, reinterpret_cast<const char *>(p), len, 0);
 		if (rc <= 0) {
-			DOLOG(warning, false, "comm_tcp_socket_client::send_data: failed");
+			DOLOG(log_ss::LS_COMM, "comm_tcp_socket_client::send_data: failed");
 			closesocket(cfd);
 			cfd = INVALID_SOCKET;
 			break;
@@ -125,7 +125,7 @@ void comm_tcp_socket_client::send_data(const uint8_t *const in, const size_t n)
 #else
 		int rc = write(cfd, p, len);
 		if (rc <= 0) {
-			DOLOG(warning, false, "comm_tcp_socket_client::send_data: failed");
+			DOLOG(log_ss::LS_COMM, "comm_tcp_socket_client::send_data: failed");
 			close(cfd);
 			cfd = INVALID_SOCKET;
 			break;
@@ -141,7 +141,7 @@ void comm_tcp_socket_client::operator()()
 {
 	set_thread_name("kek:COMMTCPC");
 
-	DOLOG(info, true, "TCP comm (client) thread started for %s:%d", host.c_str(), port);
+	DOLOG(log_ss::LS_COMM, "TCP comm (client) thread started for %s:%d", host.c_str(), port);
 
 	while(!stop_flag) {
 		myusleep(101000l);
@@ -161,9 +161,9 @@ void comm_tcp_socket_client::operator()()
 		int rc = getaddrinfo(host.c_str(), port_str, &hints, &res);
 		if (rc != 0) {
 #ifdef ESP32
-			DOLOG(ll_error, true, "comm_tcp_socket_client: cannot resolve \"%s\":%s", host.c_str(), port_str);
+			DOLOG(log_ss::LS_COMM, "comm_tcp_socket_client: cannot resolve \"%s\":%s", host.c_str(), port_str);
 #else
-			DOLOG(ll_error, true, "comm_tcp_socket_client: cannot resolve \"%s\":%s: %s", host.c_str(), port_str, gai_strerror(rc));
+			DOLOG(log_ss::LS_COMM, "comm_tcp_socket_client: cannot resolve \"%s\":%s: %s", host.c_str(), port_str, gai_strerror(rc));
 #endif
 
 			continue;
@@ -176,7 +176,7 @@ void comm_tcp_socket_client::operator()()
 			if (::connect(cfd, p->ai_addr, p->ai_addrlen) == -1) {
 				closesocket(cfd);
 				cfd = INVALID_SOCKET;
-				DOLOG(ll_error, true, "comm_tcp_socket_client: cannot connect");
+				DOLOG(log_ss::LS_COMM, "comm_tcp_socket_client: cannot connect");
 				continue;
 			}
 
@@ -189,7 +189,7 @@ void comm_tcp_socket_client::operator()()
 			set_nodelay(cfd);
 	}
 
-	DOLOG(info, true, "comm_tcp_socket_client thread terminating");
+	DOLOG(log_ss::LS_COMM, "comm_tcp_socket_client thread terminating");
 
 	closesocket(cfd);
 }

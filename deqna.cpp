@@ -84,7 +84,7 @@ void deqna::queue_rx_packet(const uint8_t *const in, const size_t n)
 		received.push({ copy, n });
 	}
 	else {
-		DOLOG(debug, false, "deqna: rx queue full, packet dropped");
+		DOLOG(log_ss::LS_DEQNA, "deqna: rx queue full, packet dropped");
 		total_n_rx_drop++;
 	}
 }
@@ -121,7 +121,7 @@ void dump_packet(console *const cnsl, const uint8_t *const data, const size_t n_
 void deqna::receiver_low()
 {
 	set_thread_name("deqna:rx_low");
-	DOLOG(info, false, "deqna(rxl) LOW RECEIVER THREAD starting");
+	DOLOG(log_ss::LS_DEQNA, "deqna(rxl) LOW RECEIVER THREAD starting");
 
 	while(!stop_flag) {
 		auto pkt = eth_dev->get(100);
@@ -132,7 +132,7 @@ void deqna::receiver_low()
 			dump_packet(cnsl, pkt.first, pkt.second, true);
 
 		if (pkt.second < 14) {
-			DOLOG(debug, false, "deqna(rxl) packet too short (%zu)", pkt.second);
+			DOLOG(log_ss::LS_DEQNA, "deqna(rxl) packet too short (%zu)", pkt.second);
 			delete [] pkt.first;
 			continue;
 		}
@@ -143,11 +143,11 @@ void deqna::receiver_low()
 				if (monitor_mode == filtered)
 					dump_packet(cnsl, pkt.first, pkt.second, false);
 				total_n_rx_pkts++;
-				DOLOG(debug, false, "deqna(rxl) packet received from real Ethernet");
+				DOLOG(log_ss::LS_DEQNA, "deqna(rxl) packet received from real Ethernet");
 				queue_rx_packet(pkt.first, pkt.second);
 			}
 			else {
-				DOLOG(debug, false, "deqna(rxl) dropped packet from %02x:%02x:%02x:%02x:%02x:%02x: receiver not enabled",
+				DOLOG(log_ss::LS_DEQNA, "deqna(rxl) dropped packet from %02x:%02x:%02x:%02x:%02x:%02x: receiver not enabled",
 						pkt.first[6], pkt.first[7],  pkt.first[8],
 						pkt.first[9], pkt.first[10], pkt.first[11]);
 				total_n_rx_drop++;
@@ -160,20 +160,20 @@ void deqna::receiver_low()
 	rx_low_stopped = true;
 #endif
 
-	DOLOG(info, false, "deqna(rxl) LOW RECEIVER THREAD TERMINATING");
+	DOLOG(log_ss::LS_DEQNA, "deqna(rxl) LOW RECEIVER THREAD TERMINATING");
 }
 
 void deqna::receiver_high()
 {
 	set_thread_name("deqna:rx_high");
-	DOLOG(info, false, "deqna(rxh) HIGH RECEIVER THREAD starting");
+	DOLOG(log_ss::LS_DEQNA, "deqna(rxh) HIGH RECEIVER THREAD starting");
 
 	bool invalid_list_shown = false;
 	while(!stop_flag) {
 		// receive list invalid?
 		if (registers[7] & 32) {
 			if (!invalid_list_shown) {
-				DOLOG(debug, false, "deqna(rxh): receive list invalid");
+				DOLOG(log_ss::LS_DEQNA, "deqna(rxh): receive list invalid");
 				invalid_list_shown = true;
 			}
 			myusleep(received.is_empty() ? 10000 : 1000);
@@ -191,12 +191,12 @@ void deqna::receiver_high()
 		const uint8_t *const buffer   = item.value().first;
 		const size_t         byte_cnt = item.value().second;
 
-		DOLOG(debug, false, "deqna(rxh): Ethernet packet received (%" PRIzu " bytes, from %02x:%02x:%02x:%02x:%02x:%02x, type: %04x)",
+		DOLOG(log_ss::LS_DEQNA, "deqna(rxh): Ethernet packet received (%" PRIzu " bytes, from %02x:%02x:%02x:%02x:%02x:%02x, type: %04x)",
 				byte_cnt,
 				buffer[6], buffer[7], buffer[8], buffer[9], buffer[10], buffer[11], (buffer[12] << 8) | buffer[13]);
 
 		uint32_t p_buffers = ((registers[3] & 63) << 16) | registers[2];
-		DOLOG(debug, false, "deqna(rxh): RBL is at %08o", p_buffers);
+		DOLOG(log_ss::LS_DEQNA, "deqna(rxh): RBL is at %08o", p_buffers);
 
 		// push into pdp memory
 		bool     queued    = false;
@@ -208,12 +208,12 @@ void deqna::receiver_high()
 			auto     len   = b->read_unibus_word(p_buffers + 3 * 2);  // buffer length, 2s complement
 			int      length = ((~len & 0xffff) + 1) * 2;
 			if ((ph & 0x8000) == 0) {  // valid?
-				DOLOG(debug, false, "deqna(rxh): %08o is an end maker", p_buffers);
+				DOLOG(log_ss::LS_DEQNA, "deqna(rxh): %08o is an end maker", p_buffers);
 				break;
 			}
 			if ((ph & 0x4000) == 0) {  // chain? no, use as buffer
-				DOLOG(debug, false, "deqna(rxh): flags: %06o, ph: %06o, status1: %06o, status2: %06o", b->read_unibus_word(p_buffers + 0 * 2), ph, b->read_unibus_word(p_buffers + 4 * 2), b->read_unibus_word(p_buffers + 5 * 2));
-				DOLOG(debug, false, "deqna(rxh): %08o is not a chain pointer, use as buffer-pointer (%d bytes)", chain, length);
+				DOLOG(log_ss::LS_DEQNA, "deqna(rxh): flags: %06o, ph: %06o, status1: %06o, status2: %06o", b->read_unibus_word(p_buffers + 0 * 2), ph, b->read_unibus_word(p_buffers + 4 * 2), b->read_unibus_word(p_buffers + 5 * 2));
+				DOLOG(log_ss::LS_DEQNA, "deqna(rxh): %08o is not a chain pointer, use as buffer-pointer (%d bytes)", chain, length);
 				b->write_unibus_word(p_buffers + 0 * 2, 0xffff);  // processing
 				for(size_t i=0; i<std::min(byte_cnt, size_t(length)); i++)
 					b->write_unibus_byte(chain + i, buffer[i]);
@@ -226,7 +226,7 @@ void deqna::receiver_high()
 				registers[7] |= 0x8000;  // RI
 				if (registers[7] & 64) {  // IE
 					uint16_t vector = registers[6] & 0x3fc;
-					DOLOG(debug, false, "deqna(rxh): packet queued, trigger %06o", vector);
+					DOLOG(log_ss::LS_DEQNA, "deqna(rxh): packet queued, trigger %06o", vector);
 					b->getCpu()->queue_interrupt(DEQNA_IRQ_LEVEL, vector);
 					queued = true;
 				}
@@ -244,7 +244,7 @@ void deqna::receiver_high()
 
 		if (!queued) {
 			total_n_rx_drop++;
-			DOLOG(debug, false, "deqna(rxh): packet NOT queued");
+			DOLOG(log_ss::LS_DEQNA, "deqna(rxh): packet NOT queued");
 		}
 
 		*activity_flag = false;
@@ -254,7 +254,7 @@ void deqna::receiver_high()
 	rx_high_stopped = true;
 #endif
 
-	DOLOG(info, false, "deqna(rxh) HIGH RECEIVER THREAD TERMINATING");
+	DOLOG(log_ss::LS_DEQNA, "deqna(rxh) HIGH RECEIVER THREAD TERMINATING");
 }
 
 void deqna::transmitter()
@@ -284,27 +284,27 @@ void deqna::transmitter()
 		auto     len   = b->read_unibus_word(p_buffers + 3 * 2);  // buffer length, 2s complement
 		int      length = ((~len & 0xffff) + 1) * 2;
 
-		DOLOG(debug, false, "deqna(tx): checking descr at %08o, points to %08o which is %d bytes (0x%04x | %04x)", p_buffers, chain, length, len, ~len);
+		DOLOG(log_ss::LS_DEQNA, "deqna(tx): checking descr at %08o, points to %08o which is %d bytes (0x%04x | %04x)", p_buffers, chain, length, len, ~len);
 
 		if ((ph & 0x8000) == 0) {  // valid?
-			DOLOG(debug, false, "deqna(tx): %08o is end of BDL", p_buffers);
+			DOLOG(log_ss::LS_DEQNA, "deqna(tx): %08o is end of BDL", p_buffers);
 			break;
 		}
 		else {
 			b->write_unibus_word(p_buffers + 0, 0xffff);  // buffer busy
 
 			if ((ph & 0x4000) == 0x0000) {  // chain? no, use as buffer
-				DOLOG(debug, false, "deqna(tx): %08o is not a chain pointer, use as buffer-pointer", chain);
+				DOLOG(log_ss::LS_DEQNA, "deqna(tx): %08o is not a chain pointer, use as buffer-pointer", chain);
 				if (length > 2048) {
-					DOLOG(debug, false, "deqna(tx): buffer has invalid size %d", length);
+					DOLOG(log_ss::LS_DEQNA, "deqna(tx): buffer has invalid size %d", length);
 					break;
 				}
 				if (chain + length > b->get_memory_size()) {
-					DOLOG(debug, false, "deqna(tx): buffer does not fit in RAM");
+					DOLOG(log_ss::LS_DEQNA, "deqna(tx): buffer does not fit in RAM");
 					break;
 				}
 
-				DOLOG(info, false, "deqna(tx): flags: %06o, ph: %06o, status1: %06o, status2: %06o", flags, ph, b->read_unibus_word(p_buffers + 4 * 2), b->read_unibus_word(p_buffers + 5 * 2));
+				DOLOG(log_ss::LS_DEQNA, "deqna(tx): flags: %06o, ph: %06o, status1: %06o, status2: %06o", flags, ph, b->read_unibus_word(p_buffers + 4 * 2), b->read_unibus_word(p_buffers + 5 * 2));
 
 				for(int i=0; i<length && size_t(buffer_offset) < sizeof(buffer); i++)
 					buffer[buffer_offset++] = b->read_unibus_byte(chain + i);
@@ -315,24 +315,24 @@ void deqna::transmitter()
 		}
 
 		if (ph & 0x2000) {  // END bit
-			DOLOG(debug, false, "deqna(tx): packet for %02x:%02x:%02x:%02x:%02x:%02x, type: %04x", 
+			DOLOG(log_ss::LS_DEQNA, "deqna(tx): packet for %02x:%02x:%02x:%02x:%02x:%02x, type: %04x", 
 				buffer[0], buffer[1], buffer[2], buffer[3], buffer[4], buffer[5],
 				(buffer[12] << 8) | buffer[13]);
 
 			if (buffer_offset == 0) {
-				DOLOG(warning, false, "deqna(tx): failed transmitting - empty buffer");
+				DOLOG(log_ss::LS_DEQNA, "deqna(tx): failed transmitting - empty buffer");
 			}
 			else {
 				bool crs08 = registers[7] & 256; // bit 8
 				if (crs08 == false) {  // active low
 					bool crs09 = registers[7] & 512;
-					DOLOG(debug, false, "deqna(tx): %sloopback", crs09 ? "extended " : "");
+					DOLOG(log_ss::LS_DEQNA, "deqna(tx): %sloopback", crs09 ? "extended " : "");
 					queue_rx_packet(buffer, buffer_offset);
 				}
 				else {  // push on the wire
 					if (eth_dev->transmit(buffer, buffer_offset) == false) {
 						total_n_tx_fail++;
-						DOLOG(debug, false, "deqna(tx): cannot transmit frame");
+						DOLOG(log_ss::LS_DEQNA, "deqna(tx): cannot transmit frame");
 					}
 				}
 
@@ -346,7 +346,7 @@ void deqna::transmitter()
 			queued = true;
 			if (registers[7] & 64) {  // IE
 				uint16_t vector = registers[6] & 0x3fc;
-				DOLOG(debug, false, "deqna(tx): packet sent, trigger %06o", vector);
+				DOLOG(log_ss::LS_DEQNA, "deqna(tx): packet sent, trigger %06o", vector);
 				b->getCpu()->queue_interrupt(DEQNA_IRQ_LEVEL, vector);
 			}
 		}
@@ -364,7 +364,7 @@ void deqna::transmitter()
 
 	if (!queued) {
 		total_n_tx_drop++;
-		DOLOG(debug, false, "deqna(tx): packet NOT queued");
+		DOLOG(log_ss::LS_DEQNA, "deqna(tx): packet NOT queued");
 	}
 
 	*activity_flag = false;
@@ -372,7 +372,7 @@ void deqna::transmitter()
 
 void deqna::reset(const bool hard)
 {
-	DOLOG(debug, false, "deqna %s reset", hard ? "hard" : "soft");
+	DOLOG(log_ss::LS_DEQNA, "deqna %s reset", hard ? "hard" : "soft");
 
 	if (hard) {
 		for(int i=0; i<8; i++)
@@ -424,7 +424,7 @@ uint16_t deqna::read_word(const uint16_t addr)
 		rc |= 0x1000;  // fuse ok
 	}
 
-	DOLOG(debug, false, "deqna read from %06o (%d): %06o", addr, reg_nr, rc);
+	DOLOG(log_ss::LS_DEQNA, "deqna read from %06o (%d): %06o", addr, reg_nr, rc);
 
 	return rc;
 }
@@ -433,7 +433,7 @@ void deqna::write_byte(const uint16_t addr, const uint8_t v)
 {
 	// just for completeness: the deqna only supports word-access
 	int reg_nr = (addr - DEQNA_BASE) / 2;
-	DOLOG(debug, false, "deqna write_b %03o to %06o (%d)", v, addr, reg_nr);
+	DOLOG(log_ss::LS_DEQNA, "deqna write_b %03o to %06o (%d)", v, addr, reg_nr);
         uint16_t vtemp = registers[reg_nr];
         update_word(&vtemp, addr & 1, v);
         write_word(addr, vtemp);
@@ -442,7 +442,7 @@ void deqna::write_byte(const uint16_t addr, const uint8_t v)
 void deqna::write_word(const uint16_t addr, const uint16_t v)
 {
 	int reg_nr = (addr - DEQNA_BASE) / 2;
-	DOLOG(debug, false, "deqna write %06o to %06o (%d)", v, addr, reg_nr);
+	DOLOG(log_ss::LS_DEQNA, "deqna write %06o to %06o (%d)", v, addr, reg_nr);
 
 	uint16_t old_v = registers[reg_nr];
 	registers[reg_nr] = v;

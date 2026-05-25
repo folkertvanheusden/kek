@@ -37,7 +37,7 @@ std::optional<uint16_t> set_boot_loader(bus *const b, const bootloader_t which)
 	int                     size   = 0;
 
 	if (which == BL_RK05) {
-		DOLOG(debug, false, "Enabling RK05 bootloader");
+		DOLOG(log_ss::LS_GENERIC, "Enabling RK05 bootloader");
 		start = offset = 01000;
 
 		static const uint16_t rk05_code[] = {
@@ -57,7 +57,7 @@ std::optional<uint16_t> set_boot_loader(bus *const b, const bootloader_t which)
 		size = sizeof(rk05_code)/sizeof(rk05_code[0]);
 	}
 	else if (which == BL_RL02) {
-		DOLOG(debug, false, "Enabling RL02 bootloader");
+		DOLOG(log_ss::LS_GENERIC, "Enabling RL02 bootloader");
 		start = offset = 01000;
 
 		// from http://gunkies.org/wiki/RL11_disk_controller
@@ -79,7 +79,7 @@ std::optional<uint16_t> set_boot_loader(bus *const b, const bootloader_t which)
 		bl = rl02_code;
 	}
 	else if (which == BL_RP06) {
-		DOLOG(debug, false, "Enabling RP06 bootloader");
+		DOLOG(log_ss::LS_GENERIC, "Enabling RP06 bootloader");
 		start = offset = 02000;
 
 		static const uint16_t rp06_code[] = {
@@ -91,7 +91,7 @@ std::optional<uint16_t> set_boot_loader(bus *const b, const bootloader_t which)
 		bl = rp06_code;
 	}
 	else if (which == BL_TM11) {
-		DOLOG(debug, false, "Enabling TM1 bootloader");
+		DOLOG(log_ss::LS_GENERIC, "Enabling TM1 bootloader");
 		start = offset = 010000;
 
 		static const uint16_t tm11_code[] = {
@@ -118,7 +118,7 @@ std::optional<uint16_t> load_tape(bus *const b, const std::string & file)
 #if defined(ESP32)
 	File32 fh;
 	if (!fh.open(file.c_str(), O_RDONLY)) {
-		DOLOG(ll_error, true, "Cannot open %s", file.c_str());
+		DOLOG(log_ss::LS_GENERIC, "Cannot open %s", file.c_str());
 		return { };
 	}
 #elif defined(TEENSY4_1)
@@ -126,7 +126,7 @@ std::optional<uint16_t> load_tape(bus *const b, const std::string & file)
 #else
 	FILE *fh = fopen(file.c_str(), "rb");
 	if (!fh) {
-		DOLOG(ll_error, true, "Cannot open %s", file.c_str());
+		DOLOG(log_ss::LS_GENERIC, "Cannot open %s", file.c_str());
 		return { };
 	}
 #endif
@@ -156,26 +156,26 @@ std::optional<uint16_t> load_tape(bus *const b, const std::string & file)
 
 		if (count == 6) { // eg no data
 			if (p != 1) {
-				DOLOG(info, true, "Setting start address to %o", p);
+				DOLOG(log_ss::LS_GENERIC, "Setting start address to %o", p);
 				start = p;
 			}
 		}
 
 #if !defined(ESP32)
-		TRACE("%ld] reading %d (dec) bytes to %o (oct)", ftell(fh), count - 6, p);
+		DOLOG(log_ss::LS_GENERIC, "reading %d (dec) bytes to %o (oct)", ftell(fh), count - 6, p);
 #endif
 
 		for(int i=0; i<count - 6; i++) {
 #if defined(ESP32)
 			uint8_t c = 0;
 			if (fh.read(&c, 1) != 1) {
-				DOLOG(warning, true, "short read");
+				DOLOG(log_ss::LS_GENERIC, "short read");
 				break;
 			}
 #else
 			int c = fgetc(fh);
 			if (c == -1) {
-				DOLOG(warning, true, "read failure");
+				DOLOG(log_ss::LS_GENERIC, "read failure");
 				break;
 			}
 #endif
@@ -192,7 +192,7 @@ std::optional<uint16_t> load_tape(bus *const b, const std::string & file)
 		csum += fgetc(fh);
 #endif
 		if (csum != 255)
-			DOLOG(warning, true, "checksum error %d", csum);
+			DOLOG(log_ss::LS_GENERIC, "checksum error %d", csum);
 	}
 
 #if defined(ESP32)

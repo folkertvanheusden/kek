@@ -40,7 +40,7 @@ dc11::dc11(bus *const b, comm_io *const io_channels):
 
 dc11::~dc11()
 {
-	DOLOG(debug, false, "DC11 closing");
+	DOLOG(log_ss::LS_COMM, "DC11 closing");
 
 	stop_flag = true;
 
@@ -80,7 +80,7 @@ bool dc11::begin()
 
 void dc11::test_port(const size_t nr, const std::string & txt) const
 {
-	DOLOG(info, false, "DC11 test line %" PRIzu "", nr);
+	DOLOG(log_ss::LS_COMM, "DC11 test line %" PRIzu, nr);
 
 	io_channels->send_data(nr, reinterpret_cast<const uint8_t *>(txt.c_str()), txt.size());
 }
@@ -93,7 +93,7 @@ void dc11::test_ports(const std::string & txt) const
 
 void dc11::trigger_interrupt(const int line_nr, const bool is_tx)
 {
-	TRACE("DC11: interrupt for line %d, %s", line_nr, is_tx ? "TX" : "RX");
+	DOLOG(log_ss::LS_COMM, "DC11 interrupt for line %d, %s", line_nr, is_tx ? "TX" : "RX");
 
 	b->getCpu()->queue_interrupt(5, 0300 + line_nr * 010 + 4 * is_tx);
 }
@@ -102,7 +102,7 @@ void dc11::operator()()
 {
 	set_thread_name("kek:DC11");
 
-	DOLOG(info, true, "DC11 thread started");
+	DOLOG(log_ss::LS_COMM, "DC11 thread started");
 
 	while(!stop_flag) {
 		myusleep(10000);  // TODO replace polling
@@ -113,7 +113,7 @@ void dc11::operator()()
 			// (dis-)connected?
 			bool is_connected  = io_channels->is_connected(line_nr);
 			if (is_connected != connected[line_nr]) {
-				DOLOG(debug, false, "DC11 line %d state changed to %d", line_nr, is_connected);
+				DOLOG(log_ss::LS_COMM, "DC11 line %d state changed to %d", line_nr, is_connected);
 #if defined(ESP32)
 				Serial.printf("DC11 line %d state changed to %d\r\n", line_nr, is_connected);
 #endif
@@ -146,7 +146,7 @@ void dc11::operator()()
 		}
 	}
 
-	DOLOG(info, true, "DC11 thread terminating");
+	DOLOG(log_ss::LS_COMM, "DC11 thread terminating");
 }
 
 void dc11::reset(const bool reset)
@@ -199,7 +199,7 @@ uint16_t dc11::read_word(const uint16_t addr)
 		registers[line_nr * 4 + 0] &= ~0160000;
 	}
 	else if (sub_reg == 1) {  // read data register
-		TRACE("DC11: %" PRIzu " characters in buffer for line %d", recv_buffers[line_nr].size(), line_nr);
+		DOLOG(log_ss::LS_COMM, "DC11: %" PRIzu " characters in buffer for line %d", recv_buffers[line_nr].size(), line_nr);
 
 		// get oldest byte in buffer
 		if (recv_buffers[line_nr].empty() == false) {
@@ -232,7 +232,7 @@ uint16_t dc11::read_word(const uint16_t addr)
 		vtemp = registers[line_nr * 4 + 2];
 	}
 
-	TRACE("DC11: read register %06o (\"%s\", %d line %d): %06o", addr, dc11_register_names[sub_reg], sub_reg, line_nr, vtemp);
+	DOLOG(log_ss::LS_COMM, "DC11: read register %06o (\"%s\", %d line %d): %06o", addr, dc11_register_names[sub_reg], sub_reg, line_nr, vtemp);
 
 	return vtemp;
 }
@@ -262,15 +262,15 @@ void dc11::write_word(const uint16_t addr, const uint16_t v)
 
 	my_unique_lock lck(&input_lock[line_nr]);
 
-	TRACE("DC11: write register %06o (\"%s\", %d line_nr %d) to %06o", addr, dc11_register_names[sub_reg], sub_reg, line_nr, v);
+	DOLOG(log_ss::LS_COMM, "DC11: write register %06o (\"%s\", %d line_nr %d) to %06o", addr, dc11_register_names[sub_reg], sub_reg, line_nr, v);
 
 	if (sub_reg == 3) {  // transmit buffer
 		char c = v & 127;  // strip parity
 
 		if (c <= 32 || c >= 127)
-			TRACE("DC11: transmit [%d] on line %d", c, line_nr);
+			DOLOG(log_ss::LS_COMM, "DC11: transmit [%d] on line %d", c, line_nr);
 		else
-			TRACE("DC11: transmit %c on line %d", c, line_nr);
+			DOLOG(log_ss::LS_COMM, "DC11: transmit %c on line %d", c, line_nr);
 
 		io_channels->send_data(line_nr, reinterpret_cast<const uint8_t *>(&c), 1);
 

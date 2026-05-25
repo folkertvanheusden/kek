@@ -84,11 +84,11 @@ bool disk_backend_nbd::begin(const bool snapshots)
 	use_overlay = snapshots;
 #endif
 	if (!connect(false)) {
-		DOLOG(ll_error, true, "disk_backend_nbd: cannot connect to NBD server");
+		DOLOG(log_ss::LS_DISK, "disk_backend_nbd: cannot connect to NBD server");
 		return false;
 	}
 
-	DOLOG(info, true, "disk_backend_nbd: connected to NBD server");
+	DOLOG(log_ss::LS_DISK, "disk_backend_nbd: connected to NBD server");
 
 	return true;
 }
@@ -113,7 +113,7 @@ int blocking_read(qn::EthernetClient & handle, uint8_t *const to, const size_t n
 
 bool disk_backend_nbd::connect(const bool retry)
 {
-	TRACE("disk_backend_nbd::connect %sretry", retry ? "":"no ");
+	DOLOG(log_ss::LS_GENERIC, "disk_backend_nbd::connect %sretry", retry ? "":"no ");
 
 	struct __attribute__ ((packed)) {
 		uint8_t  magic1[8];
@@ -134,27 +134,27 @@ bool disk_backend_nbd::connect(const bool retry)
 		while(handle.connected() == false && get_us() - start < 1000000);
 
 		if (handle.connected()) {
-			TRACE("disk_backend_nbd::connect nbd_hello");
+			DOLOG(log_ss::LS_GENERIC, "disk_backend_nbd::connect nbd_hello");
 
 			handle.setNoDelay(true);
 
 			if (int rc = blocking_read(handle, reinterpret_cast<uint8_t *>(&nbd_hello), sizeof nbd_hello); rc != sizeof(nbd_hello)) {
 				handle.stop();
-				DOLOG(warning, true, "disk_backend_nbd::connect: connect short read: %d", rc);
+				DOLOG(log_ss::LS_DISK, "disk_backend_nbd::connect: connect short read: %d", rc);
 				myusleep(101000);
 				continue;
 			}
 
 			if (memcmp(nbd_hello.magic1, "NBDMAGIC", 8) != 0) {
 				handle.stop();
-				DOLOG(warning, true, "disk_backend_nbd::connect: magic invalid");
+				DOLOG(log_ss::LS_DISK, "disk_backend_nbd::connect: magic invalid");
 				myusleep(101000);
 				continue;
 			}
 			break;
 		}
 		else {
-			DOLOG(warning, true, "disk_backend_nbd: NOT connected to %s:%d", host.c_str(), port);
+			DOLOG(log_ss::LS_DISK, "disk_backend_nbd: NOT connected to %s:%d", host.c_str(), port);
 			if (retry)
 				myusleep(101000);
 		}
@@ -177,9 +177,9 @@ bool disk_backend_nbd::connect(const bool retry)
 		int rc = getaddrinfo(host.c_str(), port_str, &hints, &res);
 		if (rc != 0) {
 #ifdef ESP32
-			DOLOG(ll_error, true, "disk_backend_nbd: cannot resolve \"%s\":%s", host.c_str(), port_str);
+			DOLOG(log_ss::LS_DISK, "disk_backend_nbd: cannot resolve \"%s\":%s", host.c_str(), port_str);
 #else
-			DOLOG(ll_error, true, "disk_backend_nbd: cannot resolve \"%s\":%s: %s", host.c_str(), port_str, gai_strerror(rc));
+			DOLOG(log_ss::LS_DISK, "disk_backend_nbd: cannot resolve \"%s\":%s: %s", host.c_str(), port_str, gai_strerror(rc));
 #endif
 			myusleep(101000);
 			continue;
@@ -193,7 +193,7 @@ bool disk_backend_nbd::connect(const bool retry)
 				close(fd);
 				fd = -1;
 				freeaddrinfo(res);
-				DOLOG(ll_error, true, "disk_backend_nbd: cannot connect");
+				DOLOG(log_ss::LS_DISK, "disk_backend_nbd: cannot connect");
 				continue;
 			}
 			break;
@@ -201,23 +201,23 @@ bool disk_backend_nbd::connect(const bool retry)
 		freeaddrinfo(res);
 
 		if (fd != -1) {
-			TRACE("disk_backend_nbd::connect nbd_hello");
+			DOLOG(log_ss::LS_GENERIC, "disk_backend_nbd::connect nbd_hello");
 			if (READ(fd, reinterpret_cast<char *>(&nbd_hello), sizeof nbd_hello) != sizeof nbd_hello) {
 				close(fd);
 				fd = -1;
-				DOLOG(warning, true, "disk_backend_nbd::connect: connect short read");
+				DOLOG(log_ss::LS_DISK, "disk_backend_nbd::connect: connect short read");
 			}
 		}
 
 		if (fd != -1 && memcmp(nbd_hello.magic1, "NBDMAGIC", 8) != 0) {
-			TRACE("disk_backend_nbd::connect NBDMAGIC");
+			DOLOG(log_ss::LS_GENERIC, "disk_backend_nbd::connect NBDMAGIC");
 			close(fd);
 			fd = -1;
-			DOLOG(warning, true, "disk_backend_nbd::connect: magic invalid");
+			DOLOG(log_ss::LS_DISK, "disk_backend_nbd::connect: magic invalid");
 		}
 
 		if (fd != -1) {
-			DOLOG(info, false, "NBD size: %u", NTOHLL(nbd_hello.size));
+			DOLOG(log_ss::LS_DISK, "NBD size: %u", NTOHLL(nbd_hello.size));
 			set_nodelay(fd);
 		}
 	}
@@ -229,7 +229,7 @@ bool disk_backend_nbd::connect(const bool retry)
 
 bool disk_backend_nbd::read(const off_t offset_in, const size_t n, uint8_t *const target, const size_t sector_size)
 {
-	TRACE("disk_backend_nbd::read: read %" PRIzu " bytes from offset %" PRIzu "", n, offset_in);
+	DOLOG(log_ss::LS_GENERIC, "disk_backend_nbd::read: read %" PRIzu " bytes from offset %" PRIzu "", n, offset_in);
 	if (n == 0)
 		return true;
 
@@ -272,18 +272,18 @@ bool disk_backend_nbd::read(const off_t offset_in, const size_t n, uint8_t *cons
 		nbd_request.offset = HTONLL(uint64_t(offset));
 		nbd_request.length = htonl(sector_size);
 
-		TRACE("NBD: send READ request");
+		DOLOG(log_ss::LS_GENERIC, "NBD: send READ request");
 #if defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 		if (size_t rc = handle.write(reinterpret_cast<const uint8_t *>(&nbd_request), sizeof nbd_request); rc != sizeof nbd_request) {
 			printf("send read req error: %" PRIzu "\n", rc);
-			DOLOG(warning, true, "disk_backend_nbd::read: problem sending request");
+			DOLOG(log_ss::LS_DISK, "disk_backend_nbd::read: problem sending request");
 			handle.stop();
 			myusleep(101000);
 			continue;
 		}
 #else
 		if (WRITE(fd, reinterpret_cast<const char *>(&nbd_request), sizeof nbd_request) != sizeof nbd_request) {
-			DOLOG(warning, true, "disk_backend_nbd::read: problem sending request");
+			DOLOG(log_ss::LS_DISK, "disk_backend_nbd::read: problem sending request");
 			close(fd);
 			fd = -1;
 			myusleep(101000);
@@ -297,18 +297,18 @@ bool disk_backend_nbd::read(const off_t offset_in, const size_t n, uint8_t *cons
 			uint64_t handle;
 		} nbd_reply;
 
-		TRACE("NBD: receiving READ reply header");
+		DOLOG(log_ss::LS_GENERIC, "NBD: receiving READ reply header");
 #if defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 		if (int rc = blocking_read(handle, reinterpret_cast<uint8_t *>(&nbd_reply), sizeof nbd_reply); rc != sizeof nbd_reply) {
 			printf("recv read req error: %d %d\n", rc, handle.connected());
-			DOLOG(warning, true, "disk_backend_nbd::read: problem receiving reply header");
+			DOLOG(log_ss::LS_DISK, "disk_backend_nbd::read: problem receiving reply header");
 			handle.stop();
 			myusleep(101000);
 			continue;
 		}
 #else
 		if (READ(fd, reinterpret_cast<char *>(&nbd_reply), sizeof nbd_reply) != sizeof nbd_reply) {
-			DOLOG(warning, true, "disk_backend_nbd::read: problem receiving reply header");
+			DOLOG(log_ss::LS_DISK, "disk_backend_nbd::read: problem receiving reply header");
 			close(fd);
 			fd = -1;
 			myusleep(101000);
@@ -318,7 +318,7 @@ bool disk_backend_nbd::read(const off_t offset_in, const size_t n, uint8_t *cons
 
 		if (ntohl(nbd_reply.magic) != 0x67446698) {
 			printf("magic invalid\n");
-			DOLOG(warning, true, "disk_backend_nbd::read: bad reply header %08x", nbd_reply.magic);
+			DOLOG(log_ss::LS_DISK, "disk_backend_nbd::read: bad reply header %08x", nbd_reply.magic);
 #if defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 			handle.stop();
 #else
@@ -331,22 +331,22 @@ bool disk_backend_nbd::read(const off_t offset_in, const size_t n, uint8_t *cons
 
 		int error = ntohl(nbd_reply.error);
 		if (error) {
-			DOLOG(warning, true, "disk_backend_nbd::read: NBD server indicated error: %d", error);
+			DOLOG(log_ss::LS_DISK, "disk_backend_nbd::read: NBD server indicated error: %d", error);
 			return false;
 		}
 
-		TRACE("NBD: receiving READ reply payload");
+		DOLOG(log_ss::LS_GENERIC, "NBD: receiving READ reply payload");
 #if defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 		if (int rc = blocking_read(handle, reinterpret_cast<uint8_t *>(target), sector_size); rc != ssize_t(sector_size)) {
 			printf("recv payload error %d\r\n", rc);
-			DOLOG(warning, true, "disk_backend_nbd::read: problem receiving payload");
+			DOLOG(log_ss::LS_DISK, "disk_backend_nbd::read: problem receiving payload");
 			handle.stop();
 			myusleep(101000);
 			continue;
 		}
 #else
 		if (READ(fd, reinterpret_cast<char *>(target), sector_size) != ssize_t(sector_size)) {
-			DOLOG(warning, true, "disk_backend_nbd::read: problem receiving payload");
+			DOLOG(log_ss::LS_DISK, "disk_backend_nbd::read: problem receiving payload");
 			close(fd);
 			fd = -1;
 			myusleep(101000);
@@ -362,7 +362,7 @@ bool disk_backend_nbd::read(const off_t offset_in, const size_t n, uint8_t *cons
 
 bool disk_backend_nbd::write(const off_t offset, const size_t n, const uint8_t *const from, const size_t sector_size)
 {
-	TRACE("disk_backend_nbd::write: write %" PRIzu " bytes to offset %" PRIzu "", n, offset);
+	DOLOG(log_ss::LS_GENERIC, "disk_backend_nbd::write: write %" PRIzu " bytes to offset %" PRIzu "", n, offset);
 
 	if (n == 0)
 		return true;
@@ -375,13 +375,13 @@ bool disk_backend_nbd::write(const off_t offset, const size_t n, const uint8_t *
 	for(;;) {
 #if defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 		if (handle.connected() == false && !connect(true)) {
-			DOLOG(warning, true, "disk_backend_nbd::write: (re-)connect");
+			DOLOG(log_ss::LS_DISK, "disk_backend_nbd::write: (re-)connect");
 			myusleep(101000);
 			continue;
 		}
 #else
 		if (fd == -1 && !connect(true)) {
-			DOLOG(warning, true, "disk_backend_nbd::write: (re-)connect");
+			DOLOG(log_ss::LS_DISK, "disk_backend_nbd::write: (re-)connect");
 			myusleep(101000);
 			continue;
 		}
@@ -402,21 +402,21 @@ bool disk_backend_nbd::write(const off_t offset, const size_t n, const uint8_t *
 
 #if defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 		if (handle.write(reinterpret_cast<const uint8_t *>(&nbd_request), sizeof nbd_request) != sizeof nbd_request) {
-			DOLOG(warning, true, "disk_backend_nbd::write: problem sending request");
+			DOLOG(log_ss::LS_DISK, "disk_backend_nbd::write: problem sending request");
 			handle.stop();
 			myusleep(101000);
 			continue;
 		}
 
 		if (handle.write(reinterpret_cast<const uint8_t *>(from), n) != ssize_t(n)) {
-			DOLOG(warning, true, "disk_backend_nbd::write: problem sending request");
+			DOLOG(log_ss::LS_DISK, "disk_backend_nbd::write: problem sending request");
 			handle.stop();
 			myusleep(101000);
 			continue;
 		}
 #else
 		if (WRITE(fd, reinterpret_cast<const char *>(&nbd_request), sizeof nbd_request) != sizeof nbd_request) {
-			DOLOG(warning, true, "disk_backend_nbd::write: problem sending request");
+			DOLOG(log_ss::LS_DISK, "disk_backend_nbd::write: problem sending request");
 			close(fd);
 			fd = -1;
 			myusleep(101000);
@@ -424,7 +424,7 @@ bool disk_backend_nbd::write(const off_t offset, const size_t n, const uint8_t *
 		}
 
 		if (WRITE(fd, reinterpret_cast<const char *>(from), n) != ssize_t(n)) {
-			DOLOG(warning, true, "disk_backend_nbd::write: problem sending payload");
+			DOLOG(log_ss::LS_DISK, "disk_backend_nbd::write: problem sending payload");
 			close(fd);
 			fd = -1;
 			myusleep(101000);
@@ -440,14 +440,14 @@ bool disk_backend_nbd::write(const off_t offset, const size_t n, const uint8_t *
 
 #if defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 		if (blocking_read(handle, reinterpret_cast<uint8_t *>(&nbd_reply), sizeof nbd_reply) != sizeof nbd_reply) {
-			DOLOG(warning, true, "disk_backend_nbd::read: problem receiving reply header");
+			DOLOG(log_ss::LS_DISK, "disk_backend_nbd::read: problem receiving reply header");
 			handle.stop();
 			myusleep(101000);
 			continue;
 		}
 #else
 		if (READ(fd, reinterpret_cast<char *>(&nbd_reply), sizeof nbd_reply) != sizeof nbd_reply) {
-			DOLOG(warning, true, "disk_backend_nbd::write: problem receiving reply header");
+			DOLOG(log_ss::LS_DISK, "disk_backend_nbd::write: problem receiving reply header");
 			close(fd);
 			fd = -1;
 			myusleep(101000);
@@ -456,7 +456,7 @@ bool disk_backend_nbd::write(const off_t offset, const size_t n, const uint8_t *
 #endif
 
 		if (ntohl(nbd_reply.magic) != 0x67446698) {
-			DOLOG(warning, true, "disk_backend_nbd::write: bad reply header %08x", nbd_reply.magic);
+			DOLOG(log_ss::LS_DISK, "disk_backend_nbd::write: bad reply header %08x", nbd_reply.magic);
 #if defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 			handle.stop();
 #else
@@ -469,7 +469,7 @@ bool disk_backend_nbd::write(const off_t offset, const size_t n, const uint8_t *
 
 		int error = ntohl(nbd_reply.error);
 		if (error) {
-			DOLOG(warning, true, "disk_backend_nbd::write: NBD server indicated error: %d", error);
+			DOLOG(log_ss::LS_DISK, "disk_backend_nbd::write: NBD server indicated error: %d", error);
 			return false;
 		}
 

@@ -44,7 +44,7 @@ dz11::dz11(bus *const b, comm_io *const io_channels):
 
 dz11::~dz11()
 {
-	DOLOG(debug, false, "DZ11 closing");
+	DOLOG(log_ss::LS_COMM, "DZ11 closing");
 
 	stop_flag = true;
 
@@ -92,7 +92,7 @@ bool dz11::begin()
 void dz11::test_port(const size_t nr) const
 {
 	auto str = format("DZ11 test line %" PRIzu "", nr);
-	DOLOG(info, false, str.c_str());
+	DOLOG(log_ss::LS_COMM, str.c_str());
 
 	io_channels->send_data(nr, reinterpret_cast<const uint8_t *>(str.c_str()), str.size());
 }
@@ -107,7 +107,7 @@ void dz11::test_ports(const int cnt) const
 
 void dz11::trigger_interrupt(const bool is_tx)
 {
-	TRACE("DZ11: %s interrupt", is_tx ? "TX" : "RX");
+	DOLOG(log_ss::LS_GENERIC, "DZ11: %s interrupt", is_tx ? "TX" : "RX");
 	b->getCpu()->queue_interrupt(DZ11_INTERRUPT_LEVEL, is_tx ? DZ11_INTERRUPT_VECTOR_TX : DZ11_INTERRUPT_VECTOR_RX);
 }
 
@@ -139,7 +139,7 @@ void dz11::operator()()
 {
 	set_thread_name("kek:DZ11");
 
-	DOLOG(info, true, "DZ11 thread started");
+	DOLOG(log_ss::LS_COMM, "DZ11 thread started");
 
 	while(!stop_flag) {
 		myusleep(10000);
@@ -152,7 +152,7 @@ void dz11::operator()()
 			bool was_connected = connected[line_nr] != NOT_CONNECTED;
 
 			if (is_connected != was_connected) {
-				DOLOG(debug, false, "DZ11 line %d state changed to %d", line_nr, is_connected);
+				DOLOG(log_ss::LS_COMM, "DZ11 line %d state changed to %d", line_nr, is_connected);
 #if defined(ESP32)
 				Serial.printf("DZ11 line %d state changed to %d\r\n", line_nr, is_connected);
 #endif
@@ -186,17 +186,17 @@ void dz11::operator()()
 			if (have_data) {
 				// registers[2]: LINE ENAB
 				if (is_rx_interrupt_enabled()) {
-					TRACE("DZ11: have data, trigger interrupt");
+					DOLOG(log_ss::LS_GENERIC, "DZ11: have data, trigger interrupt");
 					trigger_interrupt(false);
 				}
 				else {
-					TRACE("DZ11: have data, interrupt disabled! (%06o)", registers[0]);
+					DOLOG(log_ss::LS_GENERIC, "DZ11: have data, interrupt disabled! (%06o)", registers[0]);
 				}
 			}
 		}
 	}
 
-	DOLOG(info, true, "DZ11 thread terminating");
+	DOLOG(log_ss::LS_COMM, "DZ11 thread terminating");
 }
 
 void dz11::reset(const bool hard)
@@ -238,7 +238,7 @@ uint16_t dz11::read_word(const uint16_t addr)
 		vtemp &= ~128;
 		for(int i=0; i<dz11_n_lines; i++) {
 			if (recv_buffers[i].empty() == false) {
-				TRACE("DZ11 CSR: line %d has data", i);
+				DOLOG(log_ss::LS_GENERIC, "DZ11 CSR: line %d has data", i);
 				vtemp |= 128;  // RDONE
 				break;
 			}
@@ -285,7 +285,7 @@ uint16_t dz11::read_word(const uint16_t addr)
 		registers[reg] &= 0xff00;
 	}
 
-	TRACE("DZ11: read %06o from register %06o (\"%s\", %d)", vtemp, addr, dz11_register_names[reg], reg);
+	DOLOG(log_ss::LS_GENERIC, "DZ11: read %06o from register %06o (\"%s\", %d)", vtemp, addr, dz11_register_names[reg], reg);
 
 	return vtemp;
 }
@@ -295,7 +295,7 @@ void dz11::write_byte(const uint16_t addr, const uint8_t v)
 {
 	uint16_t vtemp = registers[(addr - DZ11_BASE) / 2];
 	if (addr & 1) {
-		TRACE("DZ11 write byte %03o at odd address %06o", v, addr);
+		DOLOG(log_ss::LS_GENERIC, "DZ11 write byte %03o at odd address %06o", v, addr);
 		vtemp &= 0x00ff;
 		vtemp |= v << 8;
 	}
@@ -315,7 +315,7 @@ void dz11::tx_scanner_do(const int line, const bool force)
 	registers[0] |= 0x8000;  // TRDY
 
 	if (is_tx_interrupt_enabled() || force) {
-		TRACE("DZ11 TX INTERRUPT for line %" PRIzu "", line);
+		DOLOG(log_ss::LS_GENERIC, "DZ11 TX INTERRUPT for line %" PRIzu "", line);
 		trigger_interrupt(true);
 	}
 }
@@ -324,7 +324,7 @@ void dz11::tx_scanner(const std::optional<int> line, const bool force)
 {
 	if (line.has_value()) {
 		int use_line_nr = line.value();
-		TRACE("DZ11 specific line interrupt: %" PRIzu "", use_line_nr);
+		DOLOG(log_ss::LS_GENERIC, "DZ11 specific line interrupt: %" PRIzu "", use_line_nr);
 		tx_scanner_do(use_line_nr, force);
 	}
 }
@@ -333,7 +333,7 @@ void dz11::write_word(const uint16_t addr, const uint16_t v)
 {
 	int      reg   = (addr - DZ11_BASE) / 2;
 	uint16_t v_set = v;
-	TRACE("DZ11: write %06o to register %06o (\"%s\", %d)", v, addr, dz11_register_names[reg], reg);
+	DOLOG(log_ss::LS_GENERIC, "DZ11: write %06o to register %06o (\"%s\", %d)", v, addr, dz11_register_names[reg], reg);
 
 	my_unique_lock lck(&input_lock);
 	if (addr == DZ11_CSR) {
@@ -364,7 +364,7 @@ void dz11::write_word(const uint16_t addr, const uint16_t v)
 		if (line_nr < dz11_n_lines) {
 			char c = parity_setting[line_nr] != NO_PARITY ? v & 127 : v;  // mask off parity
 			io_channels->send_data(line_nr, reinterpret_cast<const uint8_t *>(&c), 1);
-			TRACE("DZ11 TRANSMIT %c (%d) on line %d", c, v, line_nr);
+			DOLOG(log_ss::LS_GENERIC, "DZ11 TRANSMIT %c (%d) on line %d", c, v, line_nr);
 		}
 
 		tx_scanner(line_nr);
@@ -381,7 +381,7 @@ void dz11::write_word(const uint16_t addr, const uint16_t v)
 		}
 
 		if ((v & 0xff) == 0) {
-			TRACE("DZ11: unqueuing any pending interrupts");
+			DOLOG(log_ss::LS_GENERIC, "DZ11: unqueuing any pending interrupts");
 			b->getCpu()->unqueue_interrupt(DZ11_INTERRUPT_LEVEL, DZ11_INTERRUPT_VECTOR_RX);
 			b->getCpu()->unqueue_interrupt(DZ11_INTERRUPT_LEVEL, DZ11_INTERRUPT_VECTOR_TX);
 		}

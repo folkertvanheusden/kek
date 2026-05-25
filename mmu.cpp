@@ -156,7 +156,7 @@ bool mmu::get_use_data_space(const int run_mode) const
 
 void mmu::clearMMR1()
 {
-	TRACE("clear MMR1");
+	DOLOG(log_ss::LS_MMU, "clear MMR1");
 	MMR1 = 0;
 }
 
@@ -190,7 +190,7 @@ void mmu::write_pdr(const uint32_t a, const int run_mode, const uint16_t value, 
 
 	pages[page_index].pdr &= ~(32768 + 128 /*A*/ + 64 /*W*/ + 32 + 16);  // set bit 4, 5 & 15 to 0 as they are unused and A/W are set to 0 by writes
 
-	TRACE("mmu WRITE-I/O PDR run-mode %d: %c for %d: %o [%d]", run_mode, d == d_space ? 'D' : 'I', page, value, word_mode);
+	DOLOG(log_ss::LS_MMU, "mmu WRITE-I/O PDR run-mode %d: %c for %d: %o [%d]", run_mode, d == d_space ? 'D' : 'I', page, value, word_mode);
 }
 
 void mmu::write_par(const uint32_t a, const int run_mode, const uint16_t value, const word_mode_t word_mode)
@@ -210,7 +210,7 @@ void mmu::write_par(const uint32_t a, const int run_mode, const uint16_t value, 
 
 	pages[page_index].pdr &= ~(128 /*A*/ + 64 /*W*/);  // reset PDR A/W when PAR is written to
 
-	TRACE("mmu WRITE-I/O PAR run-mode %d: %c for %d: %o (%07o)", run_mode, d == d_space ? 'D' : 'I', page, word_mode == wm_byte ? value & 0xff : value, pages[page_index].par_preshifted);
+	DOLOG(log_ss::LS_MMU, "mmu WRITE-I/O PAR run-mode %d: %c for %d: %o (%07o)", run_mode, d == d_space ? 'D' : 'I', page, word_mode == wm_byte ? value & 0xff : value, pages[page_index].par_preshifted);
 }
 
 uint16_t mmu::read_word(const uint16_t a)
@@ -347,7 +347,7 @@ void mmu::mmudebug(const uint16_t a)
 #if !defined(TURBO)
 	for(int rm=0; rm<4; rm++) {
 		auto ma = calculate_physical_address(rm, a);
-		TRACE("RM %d, a: %06o, apf: %d, PI: %08o (PSW: %d), PD: %08o (PSW: %d)", rm, ma.virtual_address, ma.apf, ma.physical_instruction, ma.physical_instruction_is_psw, ma.physical_data, ma.physical_data_is_psw);
+		DOLOG(log_ss::LS_MMU, "RM %d, a: %06o, apf: %d, PI: %08o (PSW: %d), PD: %08o (PSW: %d)", rm, ma.virtual_address, ma.apf, ma.physical_instruction, ma.physical_instruction_is_psw, ma.physical_data, ma.physical_data_is_psw);
 	}
 #endif
 }
@@ -377,7 +377,7 @@ void mmu::verify_page_access(const int page_index, const bool is_write)
 
 		setMMR0_as_is(temp);
 
-		TRACE("MMR0: %06o", temp);
+		DOLOG(log_ss::LS_MMU, "MMR0: %06o", temp);
 	}
 
 	c->trap(0250);  // abort
@@ -387,7 +387,7 @@ void mmu::verify_page_access(const int page_index, const bool is_write)
 void mmu::verify_access_valid(const uint32_t m_offset, const int page_index, const bool is_io, const bool is_write)
 {
 	if (m_offset >= m->get_memory_size() && !is_io) [[unlikely]] {
-		TRACE("TRAP(04) (throw 6) on address %08o", m_offset);
+		DOLOG(log_ss::LS_MMU, "TRAP(04) (throw 6) on address %08o", m_offset);
 
 		if (is_locked() == false) {
 			uint16_t temp = getMMR0();
@@ -419,8 +419,8 @@ void mmu::verify_page_length(const uint16_t virt_addr, const int page_index, con
 	bool     direction = get_pdr_direction(page_index);
 
 	if (direction == false ? pdr_cmp > pdr_len : pdr_cmp < pdr_len) [[unlikely]] {
-		TRACE("mmu::calculate_physical_address::p_offset %o versus %o direction %d", pdr_cmp, pdr_len, direction);
-		TRACE("TRAP(0250) (throw 7) on address %06o", virt_addr);
+		DOLOG(log_ss::LS_MMU, "mmu::calculate_physical_address::p_offset %o versus %o direction %d", pdr_cmp, pdr_len, direction);
+		DOLOG(log_ss::LS_MMU, "TRAP(0250) (throw 7) on address %06o", virt_addr);
 
 		if (is_locked() == false) {
 			uint16_t temp = getMMR0();

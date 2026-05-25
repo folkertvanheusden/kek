@@ -75,7 +75,7 @@ public:
 		q.push_front(std::move(value));
 		uint8_t v = 1;
 		if (xQueueSend(cv, &v, portMAX_DELAY) == pdFALSE)
-			TRACE("xQueueSend failed");
+			DOLOG(log_ss::LS_GENERIC, "xQueueSend failed");
 		xSemaphoreGive(l);
 #else
 		std::unique_lock<std::mutex> lck(l);
@@ -91,7 +91,7 @@ public:
 		q.push_back(std::move(value));
 		uint8_t v = 1;
 		if (xQueueSend(cv, &v, portMAX_DELAY) == pdFALSE)
-			TRACE("xQueueSend failed");
+			DOLOG(log_ss::LS_GENERIC, "xQueueSend failed");
 		xSemaphoreGive(l);
 #else
 		std::unique_lock<std::mutex> lck(l);

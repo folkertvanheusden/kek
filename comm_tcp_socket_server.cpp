@@ -73,7 +73,7 @@ comm_tcp_socket_server::~comm_tcp_socket_server()
 	if (cfd != INVALID_SOCKET)
 		closesocket(cfd);
 
-	DOLOG(debug, false, "comm_tcp_socket_server: destructor for port %d finished", port);
+	DOLOG(log_ss::LS_COMM, "destructor for port %d finished", port);
 }
 
 bool comm_tcp_socket_server::begin()
@@ -131,14 +131,14 @@ uint8_t comm_tcp_socket_server::get_byte()
 
 #if defined(_WIN32)
 		if (recv(use_fd, reinterpret_cast<char *>(&c), 1, 0) <= 0) {
-			DOLOG(warning, false, "comm_tcp_socket_server::get_byte: failed");
+			DOLOG(log_ss::LS_COMM, "comm_tcp_socket_server::get_byte: failed");
 			my_unique_lock lck(&cfd_lock);
 			closesocket(cfd);
 			cfd = INVALID_SOCKET;
 		}
 #else
 		if (read(use_fd, reinterpret_cast<char *>(&c), 1) <= 0) {
-			DOLOG(warning, false, "comm_tcp_socket_server::get_byte: failed");
+			DOLOG(log_ss::LS_COMM, "comm_tcp_socket_server::get_byte: failed");
 			my_unique_lock lck(&cfd_lock);
 			close(cfd);
 			cfd = -1;
@@ -167,7 +167,7 @@ void comm_tcp_socket_server::send_data(const uint8_t *const in, const size_t n)
 #if defined(_WIN32)
 		int rc = send(use_fd, reinterpret_cast<const char *>(p), len, 0);
 		if (rc <= 0) {
-			DOLOG(warning, false, "comm_tcp_socket_client::send_data: failed");
+			DOLOG(log_ss::LS_COMM, "comm_tcp_socket_client::send_data: failed");
 			my_unique_lock lck(&cfd_lock);
 			closesocket(cfd);
 			cfd = INVALID_SOCKET;
@@ -176,7 +176,7 @@ void comm_tcp_socket_server::send_data(const uint8_t *const in, const size_t n)
 #else
 		int rc = write(use_fd, p, len);
 		if (rc <= 0) {
-			DOLOG(warning, false, "comm_tcp_socket_client::send_data: failed");
+			DOLOG(log_ss::LS_COMM, "comm_tcp_socket_client::send_data: failed");
 			my_unique_lock lck(&cfd_lock);
 			close(cfd);
 			cfd = INVALID_SOCKET;
@@ -192,7 +192,7 @@ void comm_tcp_socket_server::operator()()
 {
 	set_thread_name("kek:COMMTCPS");
 
-	DOLOG(info, true, "TCP comm thread started for port %d", port);
+	DOLOG(log_ss::LS_COMM, "TCP comm thread started for port %d", port);
 
 	fd = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -202,7 +202,7 @@ void comm_tcp_socket_server::operator()()
 		closesocket(fd);
 		fd = INVALID_SOCKET;
 
-		DOLOG(warning, true, "Cannot set reuseaddress for port %d (comm_tcp_socket_server)", port);
+		DOLOG(log_ss::LS_COMM, "Cannot set reuseaddress for port %d (comm_tcp_socket_server)", port);
 		return;
 	}
 #endif
@@ -215,7 +215,7 @@ void comm_tcp_socket_server::operator()()
 	listen_addr.sin_port        = htons(port);
 
 	if (bind(fd, reinterpret_cast<struct sockaddr *>(&listen_addr), sizeof(listen_addr)) == -1) {
-		DOLOG(warning, true, "Cannot bind to port %d (send_datacomm_tcp_socket_server): %s", port, strerror(errno));
+		DOLOG(log_ss::LS_COMM, "Cannot bind to port %d (send_datacomm_tcp_socket_server): %s", port, strerror(errno));
 
 		closesocket(fd);
 		fd = INVALID_SOCKET;
@@ -226,7 +226,7 @@ void comm_tcp_socket_server::operator()()
 		closesocket(fd);
 		fd = INVALID_SOCKET;
 
-		DOLOG(warning, true, "Cannot listen on port %d (comm_tcp_socket_server)", port);
+		DOLOG(log_ss::LS_COMM, "Cannot listen on port %d (comm_tcp_socket_server)", port);
 		return;
 	}
 
@@ -251,14 +251,14 @@ void comm_tcp_socket_server::operator()()
 			// yes, one can 'DOS' with this
 			if (cfd != INVALID_SOCKET) {
 				closesocket(cfd);
-				DOLOG(info, false, "Restarting session for port %d", port);
+				DOLOG(log_ss::LS_COMM, "Restarting session for port %d", port);
 			}
 		}
 
 		int temp = accept(fd, nullptr, nullptr);
 		if (temp != INVALID_SOCKET) {
 			set_nodelay(temp);
-			DOLOG(info, false, "Connected with %s", get_endpoint_name(temp).c_str());
+			DOLOG(log_ss::LS_COMM, "Connected with %s", get_endpoint_name(temp).c_str());
 		}
 		{
 			my_unique_lock lck(&cfd_lock);
@@ -269,7 +269,7 @@ void comm_tcp_socket_server::operator()()
 			setup_telnet_session();
 	}
 
-	DOLOG(info, true, "comm_tcp_socket_server thread terminating");
+	DOLOG(log_ss::LS_COMM, "comm_tcp_socket_server thread terminating");
 }
 
 JsonDocument comm_tcp_socket_server::serialize() const

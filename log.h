@@ -10,51 +10,45 @@
 
 class console;
 
-typedef enum { ll_emerg = 0, ll_alert, ll_critical, ll_error, warning, notice, info, debug, none } log_level_t;  // TODO ll_ prefix
+// ss = subsystem
+enum class log_ss : uint64_t {
+	LS_GENERIC = 1,
+	LS_CPU     = 2,
+	LS_DEQNA   = 4,
+	LS_ETH     = 8,
+	LS_TRACE   = 16,
+	LS_BLINKEN = 32,
+	LS_BUS     = 64,
+	LS_COMM    = 128,
+	LS_DISK    = 256,
+	LS_MMU     = 512,
+	LS_TAPE    = 1024,
+};
 
-log_level_t parse_ll(const std::string & str);
-void setlogfile(const char *const lf, const log_level_t ll_file, const log_level_t ll_screen, const bool l_timestamp);
-bool setloghost(const char *const host, const log_level_t ll);
-void setll(const log_level_t ll_screen, const log_level_t ll_file);
+void setlogfile(const char *const lf, const bool l_timestamp);
+bool setloghost(const char *const host);
 void setloguid(const int uid, const int gid);
-void send_syslog(const int ll, const std::string & what);
+void send_syslog(const std::string & what);
 void closelog();
-void dolog(const log_level_t ll, const char *fmt, ...);
-void settrace(const bool on);
-bool gettrace();
+void dolog(const log_ss ls, const char *fmt, ...);
 #if defined(ESP32)
 void set_clock_reference(const char *const ntp_server);
 #endif
 void set_terminal(console *const cnsl);
 bool is_terminal_set();
+bool toggle_ss_log(const std::string & name);
+void set_ss_log(const log_ss ls);
+std::string get_log_mask();
+void disable_all_lss();
+std::string get_all_masks();
+uint64_t get_masks();
 
 #ifdef TURBO
-#define DOLOG(ll, always, fmt, ...) do { } while(0)
+#define DOLOG(ls, fmt, ...) do { } while(0)
 #else
-#if defined(ESP32) || defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
-#define DOLOG(ll, always, fmt, ...) do {				\
-	extern log_level_t log_level_file, log_level_screen;		\
-									\
-	if (always || ll <= log_level_file || ll <= log_level_screen)   \
-		dolog(ll, fmt, ##__VA_ARGS__);				\
-	} while(0)
-#else
-#define DOLOG(ll, always, fmt, ...) do {				\
-	extern log_level_t log_level_file, log_level_screen;		\
-									\
-	if (always || ll <= log_level_file || ll <= log_level_screen) [[unlikely]] \
-		dolog(ll, fmt, ##__VA_ARGS__);				\
-	} while(0)
-#endif
-#endif
-
-#if defined(TURBO)
-#define TRACE(fmt, ...) do { } while(0)
-#else
-#define TRACE(fmt, ...) do {			\
-	extern bool log_trace_enabled;		\
-	if (log_trace_enabled) {		\
-		dolog(debug, fmt, ##__VA_ARGS__);	\
-	}					\
-} while(0)
+#define DOLOG(ls, fmt, ...) do {		\
+	extern uint64_t log_mask;		\
+	if (log_mask & uint64_t(ls))            \
+		dolog(ls, fmt, ##__VA_ARGS__);	\
+	} while(0) 
 #endif

@@ -85,7 +85,7 @@ comm *comm::deserialize(const JsonVariantConst j, bus *const b)
                 d = comm_posix_tty::deserialize(j);
 #endif
 	else {
-		DOLOG(warning, false, "comm::deserialize: \"%s\" not de-serialized", type.c_str());
+		DOLOG(log_ss::LS_COMM, "comm::deserialize: \"%s\" not de-serialized", type.c_str());
 		return nullptr;
 	}
 
@@ -93,7 +93,7 @@ comm *comm::deserialize(const JsonVariantConst j, bus *const b)
 
         if (!d->begin()) {
 		delete d;
-		DOLOG(warning, false, "comm::deserialize: begin() \"%s\" failed", type.c_str());
+		DOLOG(log_ss::LS_COMM, "comm::deserialize: begin() \"%s\" failed", type.c_str());
 		return nullptr;
 	}
 

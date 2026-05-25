@@ -96,7 +96,7 @@ uint16_t rp06::read_word(const uint16_t addr)
 	else if (addr == RP06_DS)
 		value |= default_DS;
 
-	TRACE("RP06: read \"%s\"/%o: %06o", regnames[reg], addr, value);
+	DOLOG(log_ss::LS_DISK, "RP06: read \"%s\"/%o: %06o", regnames[reg], addr, value);
 
 	return value;
 }
@@ -163,7 +163,7 @@ void rp06::write_word(const uint16_t addr, uint16_t v)
 {
 	const int reg = reg_num(addr);
 
-	TRACE("RP06: write \"%s\"/%06o: %06o", regnames[reg], addr, v);
+	DOLOG(log_ss::LS_DISK, "RP06: write \"%s\"/%06o: %06o", regnames[reg], addr, v);
 
         registers[reg] = v;
 
@@ -179,7 +179,7 @@ void rp06::write_word(const uint16_t addr, uint16_t v)
 
 			if (function_code == 006 || function_code == 012 || function_code == 016 ||
 					function_code == 020 || function_code == 022) {
-				DOLOG(debug, false, "RP06: ignoring command %03o", function_code);
+				DOLOG(log_ss::LS_DISK, "RP06: ignoring command %03o", function_code);
 
 				registers[reg_num(RP06_CS1)] |= uint16_t(rp06::cs1_bits::RDY);  // drive ready
 
@@ -204,10 +204,10 @@ void rp06::write_word(const uint16_t addr, uint16_t v)
 					uint32_t cur_n = std::min(end_offset - cur_offset, uint32_t(SECTOR_SIZE));
 
 					if (function_code == 070) {
-						DOLOG(debug, false, "RP06: reading %u bytes from %u (dec) to %06o (oct)", cur_n, cur_offset, addr);
+						DOLOG(log_ss::LS_DISK, "RP06: reading %u bytes from %u (dec) to %06o (oct)", cur_n, cur_offset, addr);
 
 						if (!fhs.at(0)->read(cur_offset, cur_n, xfer_buffer, SECTOR_SIZE)) {
-							DOLOG(ll_error, true, "RP06 read error %s from %u", strerror(errno), cur_offset);
+							DOLOG(log_ss::LS_DISK, "RP06 read error %s from %u", strerror(errno), cur_offset);
 							//registers[(RK05_ERROR - RK05_BASE) / 2] |= 32;  // non existing sector
 							//registers[(RK05_CS - RK05_BASE) / 2] |= 3 << 14;  // an error occured
 							break;
@@ -217,13 +217,13 @@ void rp06::write_word(const uint16_t addr, uint16_t v)
 							b->write_unibus_byte(addr++, xfer_buffer[i]);
 					}
 					else {
-						DOLOG(debug, false, "RP06: writing %u bytes to %u (dec) from %06o (oct)", cur_n, cur_offset, addr);
+						DOLOG(log_ss::LS_DISK, "RP06: writing %u bytes to %u (dec) from %06o (oct)", cur_n, cur_offset, addr);
 
 						for(uint32_t i=0; i<cur_n; i++)
 							xfer_buffer[i] = b->read_unibus_byte(addr++);
 
 						if (!fhs.at(0)->write(cur_offset, cur_n, xfer_buffer, SECTOR_SIZE)) {
-							DOLOG(ll_error, true, "RP06 write error %s from %u", strerror(errno), cur_offset);
+							DOLOG(log_ss::LS_DISK, "RP06 write error %s from %u", strerror(errno), cur_offset);
 							//registers[(RK05_ERROR - RK05_BASE) / 2] |= 32;  // non existing sector
 							//registers[(RK05_CS - RK05_BASE) / 2] |= 3 << 14;  // an error occured
 							break;
@@ -237,7 +237,7 @@ void rp06::write_word(const uint16_t addr, uint16_t v)
 				generate_interrupt = true;
 			}
 			else {
-				DOLOG(warning, true, "RP06: command %03o not implemented", function_code);
+				DOLOG(log_ss::LS_DISK, "RP06: command %03o not implemented", function_code);
 			}
 
 			if (generate_interrupt) {
@@ -250,6 +250,6 @@ void rp06::write_word(const uint16_t addr, uint16_t v)
 		}
 	}
 	else {
-		DOLOG(debug, false, "RP06: write ignored to %06o", addr);
+		DOLOG(log_ss::LS_DISK, "RP06: write ignored to %06o", addr);
 	}
 }
