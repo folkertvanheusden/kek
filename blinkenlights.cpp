@@ -199,7 +199,7 @@ static const std::pair<const rpc_msg_reply *, int> exchange_message(const std::s
 		if (packet_size > 0) {
 			reply = new uint8_t[packet_size];
 			if (!reply) {
-				DOLOG(log_ss::LS_BLINKEN, true, "malloc issue");
+				DOLOG(log_ss::LS_BLINKEN, "malloc issue");
 				return { nullptr, 0 };
 			}
 			udp.read(reply, packet_size);

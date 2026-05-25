@@ -133,7 +133,7 @@ std::pair<uint8_t *, size_t> eth_transport_vxlan::get(const int timeout)
 		if (rc > 0) {
 			pkt = new uint8_t[rc];
 			if (!pkt) {
-				DOLOG(log_ss::LS_ETH, ll_critical, true, "malloc issue");
+				DOLOG(log_ss::LS_ETH, "malloc issue");
 				return { nullptr, 0 };
 			}
 			udp.read(pkt, rc);
