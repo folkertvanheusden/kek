@@ -1597,9 +1597,10 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		uint64_t since               = get_us();
 		uint64_t took                = 0;
 		uint64_t start_trap_count    = c->get_trap_counter();
+		bool     is_trace_enabled    = trace_enabled();
 		std::unordered_map<uint16_t, uint32_t> trap_counts_before = c->get_trap_counts();
 		while(*stop_event == EVENT_NONE) {
-			if (trace_enabled() || state->single_step) {
+			if (is_trace_enabled || state->single_step) {
 				if (!state->single_step)
 					DOLOG(log_ss::LS_TRACE, "---");
 
