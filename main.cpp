@@ -124,7 +124,7 @@ int run_cpu_validation(console *const cnsl, const std::string & filename)
 	for(JsonObjectConst test : array) {
 		n_tests++;
 
-		cnsl->put_string_lf(format("Test %d: %s", n_tests, test["id"].as<std::string>().c_str()));
+		// cnsl->put_string_lf(format("Test %d: %s", n_tests, test["id"].as<std::string>().c_str()));
 
 		// create environment
 		event = 0;
