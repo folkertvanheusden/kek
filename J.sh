@@ -7,6 +7,6 @@ N=0
 for f in ${INPUT}/*.json
 do
 	N=$((N+1))
-	echo test ${N}, input: ${f}
-	$BIN -J $f -S 8 -L cpu
+	echo test ${N}.log, input: ${f}
+	$BIN -J $f -L cpu,mmu,trace -l ${N}.log
 done

@@ -112,6 +112,8 @@ bool compare_values(console *const cnsl, uint32_t v, uint32_t should_be, const s
 
 int run_cpu_validation(console *const cnsl, const std::string & filename)
 {
+	DOLOG(log_ss::LS_TRACE, "run_cpu_validation(%s)", filename.c_str());
+
 	std::optional<JsonDocument> doc = deserialize_file(filename);
 	if (doc.has_value() == false)
 		return -1;
