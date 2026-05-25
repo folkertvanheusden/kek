@@ -12,11 +12,10 @@
 #include "utils.h"
 
 
-#if defined(ESP32) || defined(FREERTOS)
+#if defined(FREERTOS)
 static void thread_wrapper_kw11(void *p)
 {
 	kw11_l *const kw11l = reinterpret_cast<kw11_l *>(p);
-
 	kw11l->operator()();
 }
 #endif
@@ -29,10 +28,9 @@ kw11_l::~kw11_l()
 {
 	stop_flag = true;
 
-#if !defined(ESP32) && !defined(FREERTOS)
+#if !defined(FREERTOS)
 	if (th) {
 		th->join();
-
 		delete th;
 	}
 #endif
@@ -48,7 +46,7 @@ void kw11_l::begin(console *const cnsl)
 {
 	this->cnsl = cnsl;
 
-#if defined(ESP32) || defined(FREERTOS)
+#if defined(FREERTOS)
 	xTaskCreate(&thread_wrapper_kw11, "kw11-l", 1536, this, 2, nullptr);
 #else
 	th = new std::thread(std::ref(*this));
@@ -88,7 +86,7 @@ void kw11_l::operator()()
 	while(!stop_flag) {
 		total_ticks++;
 
-		int f = int_frequency;
+		int f = std::max(1, int(int_frequency));
 		myusleep(1000000 / f);  // usually 50 or 60 Hz
 
 		if (*cnsl->get_running_flag())
