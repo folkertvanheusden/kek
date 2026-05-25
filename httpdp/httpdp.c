@@ -11,7 +11,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
-char *response = "HTTP/1.0 200 PDP11/70 says OK\r\n\r\n";
+char *response = "HTTP/1.0 200 PDP11/70 says OK\r\nServer: httpdp on a PDP-11/70\r\n\r\n";
 char *default_file = "index.html";
 
 void sighandler(sig)
