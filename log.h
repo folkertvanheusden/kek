@@ -11,7 +11,8 @@
 class console;
 
 // ss = subsystem
-enum class log_ss : uint64_t {
+typedef uint32_t log_ss_type;
+enum class log_ss : log_ss_type {
 	LS_GENERIC = 1,
 	LS_CPU     = 2,
 	LS_DEQNA   = 4,
@@ -40,15 +41,15 @@ bool toggle_ss_log(const bool is_console, const std::string & name);
 void set_ss_log(const bool is_console, const log_ss ls);
 std::string get_ss_mask(const bool is_console);
 void disable_all_log_ss(const bool is_console);
-uint64_t get_log_ss_masks(const bool is_console);
+log_ss_type get_log_ss_masks(const bool is_console);
 std::string get_all_available_log_ss_masks();
 
 #ifdef TURBO
 #define DOLOG(ls, fmt, ...) do { } while(0)
 #else
 #define DOLOG(ls, fmt, ...) do {		      \
-	extern uint64_t log_mask_c, log_mask_f;	      \
-	if ((log_mask_c | log_mask_f) & uint64_t(ls)) \
+	extern log_ss_type log_mask_match;	      \
+	if (log_mask_match & log_ss_type(ls))         \
 		dolog(ls, fmt, ##__VA_ARGS__);	      \
 	} while(0) 
 #endif

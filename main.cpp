@@ -274,7 +274,7 @@ int main(int argc, char *argv[])
 
 	const char  *logfile   = nullptr;
 	bool         timestamp = true;
-	std::string  log_subsystems;
+	std::optional<std::string> log_subsystems;
 
 	std::optional<uint16_t> start_addr;
 
@@ -454,12 +454,14 @@ int main(int argc, char *argv[])
 	console *cnsl = nullptr;
 
 	setlogfile(logfile, timestamp);
+	if (logfile == nullptr)
+		disable_all_log_ss(false);
 
-	if (log_subsystems.empty() == false) {
+	if (log_subsystems.has_value()) {
 		disable_all_log_ss(true );
 		disable_all_log_ss(false);
 
-		auto parts = split(log_subsystems, ",");
+		auto parts = split(log_subsystems.value(), ",");
 		for(auto & ss: parts) {
 			if (toggle_ss_log(true, ss) == false || toggle_ss_log(false, ss) == false)
 				error_exit(false, "\"%s\" is now known", ss.c_str());

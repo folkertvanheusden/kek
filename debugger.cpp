@@ -775,7 +775,7 @@ device *name_to_dev(bus *const b, const std::string & name)
 
 bool trace_enabled()
 {
-	return (get_log_ss_masks(true) | get_log_ss_masks(false)) & uint64_t(log_ss::LS_TRACE);
+	return (get_log_ss_masks(true) | get_log_ss_masks(false)) & log_ss_type(log_ss::LS_TRACE);
 }
 
 struct debugger_state {
@@ -1023,7 +1023,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		if (parts.size() == 3)
 			set_ss_log(is_console, parts[2] == "on" || parts[2] == "ON" ? log_ss::LS_TRACE : log_ss(0));
 
-		cnsl->put_string_lf(format("Tracing set to %s", get_log_ss_masks(is_console) & uint64_t(log_ss::LS_TRACE) ? "ON" : "OFF"));
+		cnsl->put_string_lf(format("Tracing set to %s", get_log_ss_masks(is_console) & log_ss_type(log_ss::LS_TRACE) ? "ON" : "OFF"));
 		return true;
 	}
 	else if (parts[0] == "state" || parts[0] == "show") {

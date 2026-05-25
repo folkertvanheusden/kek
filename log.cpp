@@ -54,8 +54,9 @@ static int          lf_gid            = -1;
 static bool         l_timestamp       = true;
 char                dummy_buffer[2] { 0 };
 static console     *log_cnsl          = nullptr;
-uint64_t            log_mask_c        = ~0 & (~(uint64_t(log_ss::LS_TRACE) | uint64_t(log_ss::LS_COMM)));
-uint64_t            log_mask_f        = ~0;
+log_ss_type         log_mask_c        =  0;
+log_ss_type         log_mask_f        = ~0;
+log_ss_type         log_mask_match    = log_mask_c | log_mask_f;
 constexpr const char *const ls_names[] { "GENERIC", "CPU", "DEQNA", "ETH", "TRACE", "BLINKEN", "BUS", "COMM", "DISK", "MMU", "TAPE" };
 
 
@@ -65,44 +66,46 @@ void disable_all_log_ss(const bool console)
 		log_mask_c = 0;
 	else
 		log_mask_f = 0;
+	log_mask_match = log_mask_c | log_mask_f;
 }
 
 void set_ss_log(const bool console, const log_ss ls)
 {
-	(console ? log_mask_c : log_mask_f) |= uint64_t(ls);
+	(console ? log_mask_c : log_mask_f) |= log_ss_type(ls);
+	log_mask_match = log_mask_c | log_mask_f;
 }
 
-uint64_t get_log_ss_masks(const bool console)
+log_ss_type get_log_ss_masks(const bool console)
 {
 	return console ? log_mask_c : log_mask_f;
 }
 
 bool toggle_ss_log(const bool console, const std::string & name)
 {
-	uint64_t mask = 0;
+	log_ss_type mask = 0;
 
 	if (name == "generic")
-		mask = uint64_t(log_ss::LS_GENERIC);
+		mask = log_ss_type(log_ss::LS_GENERIC);
 	else if (name == "cpu")
-		mask = uint64_t(log_ss::LS_CPU);
+		mask = log_ss_type(log_ss::LS_CPU);
 	else if (name == "deqna")
-		mask = uint64_t(log_ss::LS_DEQNA);
+		mask = log_ss_type(log_ss::LS_DEQNA);
 	else if (name == "eth")
-		mask = uint64_t(log_ss::LS_ETH);
+		mask = log_ss_type(log_ss::LS_ETH);
 	else if (name == "trace")
-		mask = uint64_t(log_ss::LS_TRACE);
+		mask = log_ss_type(log_ss::LS_TRACE);
 	else if (name == "blinken" || name == "blinkenlights" || name == "bl")
-		mask = uint64_t(log_ss::LS_BLINKEN);
+		mask = log_ss_type(log_ss::LS_BLINKEN);
 	else if (name == "bus")
-		mask = uint64_t(log_ss::LS_BUS);
+		mask = log_ss_type(log_ss::LS_BUS);
 	else if (name == "comm")
-		mask = uint64_t(log_ss::LS_COMM);
+		mask = log_ss_type(log_ss::LS_COMM);
 	else if (name == "disk")
-		mask = uint64_t(log_ss::LS_DISK);
+		mask = log_ss_type(log_ss::LS_DISK);
 	else if (name == "mmu")
-		mask = uint64_t(log_ss::LS_MMU);
+		mask = log_ss_type(log_ss::LS_MMU);
 	else if (name == "tape")
-		mask = uint64_t(log_ss::LS_TAPE);
+		mask = log_ss_type(log_ss::LS_TAPE);
 	else
 		return false;
 
@@ -111,6 +114,7 @@ bool toggle_ss_log(const bool console, const std::string & name)
 		log_mask &= ~mask;
 	else
 		log_mask |= mask;
+	log_mask_match = log_mask_c | log_mask_f;
 
 	return true;
 }
@@ -120,27 +124,27 @@ std::string get_ss_mask(const bool console)
 	auto log_mask = console ? log_mask_c : log_mask_f;
 
 	std::string out;
-	if (log_mask & uint64_t(log_ss::LS_GENERIC))
+	if (log_mask & log_ss_type(log_ss::LS_GENERIC))
 		out += "generic,";
-	if (log_mask & uint64_t(log_ss::LS_CPU))
+	if (log_mask & log_ss_type(log_ss::LS_CPU))
 		out += "cpu,";
-	if (log_mask & uint64_t(log_ss::LS_DEQNA))
+	if (log_mask & log_ss_type(log_ss::LS_DEQNA))
 		out += "deqna,";
-	if (log_mask & uint64_t(log_ss::LS_ETH))
+	if (log_mask & log_ss_type(log_ss::LS_ETH))
 		out += "eth,";
-	if (log_mask & uint64_t(log_ss::LS_TRACE))
+	if (log_mask & log_ss_type(log_ss::LS_TRACE))
 		out += "trace,";
-	if (log_mask & uint64_t(log_ss::LS_BLINKEN))
+	if (log_mask & log_ss_type(log_ss::LS_BLINKEN))
 		out += "blinken,";
-	if (log_mask & uint64_t(log_ss::LS_BUS))
+	if (log_mask & log_ss_type(log_ss::LS_BUS))
 		out += "bus,";
-	if (log_mask & uint64_t(log_ss::LS_COMM))
+	if (log_mask & log_ss_type(log_ss::LS_COMM))
 		out += "comm,";
-	if (log_mask & uint64_t(log_ss::LS_DISK))
+	if (log_mask & log_ss_type(log_ss::LS_DISK))
 		out += "disk,";
-	if (log_mask & uint64_t(log_ss::LS_MMU))
+	if (log_mask & log_ss_type(log_ss::LS_MMU))
 		out += "mmu,";
-	if (log_mask & uint64_t(log_ss::LS_TAPE))
+	if (log_mask & log_ss_type(log_ss::LS_TAPE))
 		out += "tape,";
 	return out;
 }
@@ -254,6 +258,9 @@ void dolog(const log_ss ls, const char *fmt, ...)
 #endif
 	}
 
+	bool log_file    = log_mask_f & log_ss_type(ls);
+	bool log_console = log_mask_c & log_ss_type(ls);
+
 	va_list ap;
 	va_start(ap, fmt);
 	ssize_t needed_length = vsnprintf(dummy_buffer, 1, fmt, ap);
@@ -278,35 +285,39 @@ void dolog(const log_ss ls, const char *fmt, ...)
 
 		snprintf(ts_str, sizeof ts_str, "%04d-%02d-%02d %02d:%02d:%02d.%06d %-7s|%s] ",
 				tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, int(now % 1000000),
-				ls_names[std::countr_zero(uint64_t(ls))], get_thread_name().c_str());
+				ls_names[std::countr_zero(log_ss_type(ls))], get_thread_name().c_str());
 
 		if (is_file == false)
 			send_syslog(log_buffer.data());
 #if !defined(ESP32)
-		if (log_fh != nullptr)
+		if (log_fh != nullptr && log_file)
 			fprintf(log_fh, "%s%s\n", ts_str, log_buffer.data());
 #endif
 
-		if (log_cnsl) {
-			log_cnsl->put_string(ts_str);
-			log_cnsl->put_string_lf(log_buffer.data());
-		}
-		else {
-			printf("%s%s\r\n", ts_str, log_buffer.data());
+		if (log_console) {
+			if (log_cnsl) {
+				log_cnsl->put_string(ts_str);
+				log_cnsl->put_string_lf(log_buffer.data());
+			}
+			else {
+				printf("%s%s\r\n", ts_str, log_buffer.data());
+			}
 		}
 	}
 	else {
 		if (is_file == false)
 			send_syslog(log_buffer.data());
 #if !defined(ESP32)
-		if (log_fh != nullptr)
+		if (log_fh != nullptr && log_file)
 			fprintf(log_fh, "%s\n", log_buffer.data());
 #endif
 
-		if (log_cnsl)
-			log_cnsl->put_string_lf(log_buffer.data());
-		else
-			printf("%s\r\n", log_buffer.data());
+		if (log_console) {
+			if (log_cnsl)
+				log_cnsl->put_string_lf(log_buffer.data());
+			else
+				printf("%s\r\n", log_buffer.data());
+		}
 	}
 #endif
 }
