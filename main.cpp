@@ -244,6 +244,7 @@ void help()
 	printf("-s x,y   set console switche state: set bit x (0...15) to y (0/1)\n");
 	printf("-t       enable tracing (disassemble to stderr, requires -d as well)\n");
 	printf("-l x     log to file x\n");
+	printf("%s\n", ("-L x[,]  select what subsystems to log (" + get_all_masks() + ")").c_str());
 	printf("-X       do not include timestamp in logging\n");
 	printf("-J x     run validation suite x against the CPU emulation\n");
 	printf("-1 x     use x as device for DZ-11 (instead of 8 tcp-sockets starting at port %d)\n", default_port_offset);
@@ -273,6 +274,7 @@ int main(int argc, char *argv[])
 
 	const char  *logfile   = nullptr;
 	bool         timestamp = true;
+	std::string  log_subsystems;
 
 	std::optional<uint16_t> start_addr;
 
@@ -300,7 +302,7 @@ int main(int argc, char *argv[])
 	std::string  deqna_type;
 
 	int  opt = -1;
-	while((opt = getopt(argc, argv, "hD:T:B:r:R:p:ndf:tb:l:s:Q:N:J:XS:P1:m:Q:28:I:c:")) != -1)
+	while((opt = getopt(argc, argv, "hL:D:T:B:r:R:p:ndf:tb:l:s:Q:N:J:XS:P1:m:Q:28:I:c:")) != -1)
 	{
 		switch(opt) {
 			case 'h':
@@ -418,6 +420,10 @@ int main(int argc, char *argv[])
 				logfile = optarg;
 				break;
 
+			case 'L':
+				log_subsystems = optarg;
+				break;
+
 			case 'S':
 				set_ram_size = std::stoi(optarg);
 				break;
@@ -447,6 +453,17 @@ int main(int argc, char *argv[])
 	console *cnsl = nullptr;
 
 	setlogfile(logfile, timestamp);
+
+	if (log_subsystems.empty() == false) {
+		disable_all_lss();
+
+		auto parts = split(log_subsystems, ",");
+		for(auto & ss: parts) {
+			if (toggle_ss_log(ss) == false)
+				error_exit(false, "\"%s\" is now known", ss.c_str());
+		}
+	}
+
 	DOLOG(log_ss::LS_GENERIC, "PDP11 emulator, by Folkert van Heusden");
 	DOLOG(log_ss::LS_GENERIC, "Built on: " __DATE__ " " __TIME__);
 
