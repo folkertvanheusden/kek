@@ -72,26 +72,28 @@ void sw_handler(int s)
 #endif
 }
 
-#if !defined(_WIN32)
-std::vector<std::pair<uint32_t, uint8_t> > get_memory_settings(const JsonArrayConst & ja)
+#if defined(JANSSON)
+#include <jansson.h>
+
+std::vector<std::pair<uint32_t, uint8_t> > get_memory_settings(const json_t *const ja)
 {
 	std::vector<std::pair<uint32_t, uint8_t> > out;
-	for(auto kv_dict: ja) {
+	size_t array_size = json_array_size(ja);
+	for(size_t i=0; i<array_size; i++) {
+		json_t *kv_dict = json_array_get(ja, i);
+
+		const char *key   { nullptr };
+		json_t     *value { nullptr };
 		// should be one element
-		for(const auto & kv: kv_dict.as<JsonObjectConst>()) {
-			uint32_t a = std::stoi(kv.key().c_str(), nullptr, 8);
-			uint16_t v = kv.value().as<int>();
+		json_object_foreach(kv_dict, key, value) {
+			uint32_t a = std::stoi(key, nullptr, 8);
+			uint16_t v = json_integer_value(json_object_get(kv_dict, key));
 			out.push_back({ a, v });
 			if (a == 0 && v == 0)
 				printf("Suspect\n");
 		}
 	}
 	return out;
-}
-
-uint16_t get_register_value(const JsonObjectConst & o, const std::string & name)
-{
-	return o[name].as<int>();
 }
 
 bool compare_values(console *const cnsl, uint32_t v, uint32_t should_be, const std::string & name)
@@ -114,16 +116,19 @@ int run_cpu_validation(console *const cnsl, const std::string & filename)
 {
 	DOLOG(log_ss::LS_TRACE, "run_cpu_validation(%s)", filename.c_str());
 
-	std::optional<JsonDocument> doc = deserialize_file(filename);
-	if (doc.has_value() == false)
-		return -1;
+	json_error_t error { };
+	json_t      *doc = json_load_file(filename.c_str(), 0, &error);
+	if (!doc)
+		return { };
 
 	int n_tests                = 0;
 	int total_error_count      = 0;
 	int tests_with_error_count = 0;
 
-	JsonArray array = doc.value().as<JsonArray>();
-	for(JsonObjectConst test : array) {
+	size_t array_len = json_array_size(doc);
+	for(size_t el_nr = 0; el_nr<array_len; el_nr++) {
+		json_t *element = json_array_get(doc, el_nr);
+
 		n_tests++;
 
 		DOLOG(log_ss::LS_TRACE, "--- test %d start ---", n_tests);
@@ -136,38 +141,36 @@ int run_cpu_validation(console *const cnsl, const std::string & filename)
 		b->add_cpu(c);
 
 		// SET
+		json_t *before = json_object_get(element, "before");
 		{
-			auto before = test["before"];
-
 			// PC
-			c->setPC(get_register_value(before, "PC"));
+			c->setPC(json_integer_value(json_object_get(before, "PC")));
 
 			// PSW
-			c->setPSW(get_register_value(before, "PSW"), false);
+			c->setPSW(json_integer_value(json_object_get(before, "PSW")), false);
 
 			// stackpointers
 			for(int i=0; i<4; i++)
-				c->set_stackpointer(i, get_register_value(before, format("stack-%d", i)));
+				c->set_stackpointer(i, json_integer_value(json_object_get(before, format("stack-%d", i).c_str())));
 
-			b->getMMU()->setMMR1(get_register_value(before, "mmr1"));
-			b->getMMU()->setMMR2(get_register_value(before, "mmr2"));
+			b->getMMU()->setMMR1(json_integer_value(json_object_get(before, "mmr1")));
+			b->getMMU()->setMMR2(json_integer_value(json_object_get(before, "mmr2")));
 
 			// registers
 			for(int set=0; set<2; set++) {
 				for(int i=0; i<6; i++)
-					c->lowlevel_register_set(set, i, get_register_value(before, format("reg-%d.%d", i, set)));
+					c->lowlevel_register_set(set, i, json_integer_value(json_object_get(before, format("reg-%d.%d", i, set).c_str())));
 			}
 
 			// memory
-			auto memory_before = before["memory"];
+			json_t *memory_before = json_object_get(before, "memory");
 			auto memory_before_settings = get_memory_settings(memory_before);
 			for(auto & element: memory_before_settings)
 				b->write_unibus_byte(element.first, element.second);
 		}
 
-		int run_n_instructions = test["before"]["run-n-instructions"].as<int>();
-
-		int cur_n_errors = 0;
+		int run_n_instructions = json_integer_value(json_object_get(before, "run-n-instructions"));
+		int cur_n_errors       = 0;
 
 		// DO!
 		for(int k=0; k<run_n_instructions; k++) {
@@ -186,23 +189,23 @@ int run_cpu_validation(console *const cnsl, const std::string & filename)
 
 		// VERIFY
 		if (cur_n_errors == 0) {
-			auto after = test["after"];
+			json_t *after = json_object_get(element, "after");
 
-			cur_n_errors += !compare_values(cnsl, c->getPC(),  get_register_value(after, "PC" ), "PC" );
-			cur_n_errors += !compare_values(cnsl, c->getPSW(), get_register_value(after, "PSW"), "PSW");
+			cur_n_errors += !compare_values(cnsl, c->getPC(),  json_integer_value(json_object_get(after, "PC" )), "PC" );
+			cur_n_errors += !compare_values(cnsl, c->getPSW(), json_integer_value(json_object_get(after, "PSW")), "PSW");
 
 			for(int i=0; i<4; i++)
-				cur_n_errors += !compare_values(cnsl, c->get_stackpointer(i), get_register_value(after, format("stack-%d", i)), format("Stack pointer %d", i));
+				cur_n_errors += !compare_values(cnsl, c->get_stackpointer(i), json_integer_value(json_object_get(after, format("stack-%d", i).c_str())), format("Stack pointer %d", i));
 
-			cur_n_errors += !compare_values(cnsl, b->getMMU()->getMMR1(), get_register_value(after, "mmr1"), "MMR1");
-			cur_n_errors += !compare_values(cnsl, b->getMMU()->getMMR2(), get_register_value(after, "mmr2"), "MMR2");
+			cur_n_errors += !compare_values(cnsl, b->getMMU()->getMMR1(), json_integer_value(json_object_get(after, "mmr1")), "MMR1");
+			cur_n_errors += !compare_values(cnsl, b->getMMU()->getMMR2(), json_integer_value(json_object_get(after, "mmr2")), "MMR2");
 
 			for(int set=0; set<2; set++) {
 				for(int i=0; i<6; i++)
-					cur_n_errors += !compare_values(cnsl, c->lowlevel_register_get(set, i), get_register_value(after, format("reg-%d.%d", i, set)), format("Register %d", i));
+					cur_n_errors += !compare_values(cnsl, c->lowlevel_register_get(set, i), json_integer_value(json_object_get(after, format("reg-%d.%d", i, set).c_str())), format("Register %d", i));
 			}
 
-			auto memory_after = after["memory"];
+			json_t *memory_after = json_object_get(after, "memory");
 			auto memory_after_settings = get_memory_settings(memory_after);
 			for(auto & element: memory_after_settings)
 				cur_n_errors += !compare_values(cnsl, b->read_physical_byte(element.first), element.second, format("Memory address %06o", element.first));
@@ -211,11 +214,14 @@ int run_cpu_validation(console *const cnsl, const std::string & filename)
 		total_error_count      +=   cur_n_errors;
 		tests_with_error_count += !!cur_n_errors;
 
-		DOLOG(log_ss::LS_TRACE, "Test result for %d, id: %s: %s", n_tests, test["id"].as<std::string>().c_str(), cur_n_errors ? "FAILED":"OK");
+		const char *id = json_string_value(json_object_get(doc, "id"));
+		DOLOG(log_ss::LS_TRACE, "Test result for %d, id: %s: %s", n_tests, id, cur_n_errors ? "FAILED":"OK");
 
 		// clean-up
 		delete b;
 	}
+
+	json_decref(doc);
 
 	cnsl->put_string_lf(format("test count: %d, tests with errors: %d, total error count: %d", n_tests, tests_with_error_count, total_error_count));
 
@@ -253,7 +259,9 @@ void help()
 	printf("%s\n", ("-L x[,...] select what subsystems to log to a file (" + get_all_available_log_ss_masks() + ")").c_str());
 	printf("-C x[,...] select what subsystems to log to the console\n");
 	printf("-X       do not include timestamp in logging\n");
+#if defined(JANSSON)
 	printf("-J x     run validation suite x against the CPU emulation\n");
+#endif
 	printf("-1 x     use x as device for DZ-11 (instead of 8 tcp-sockets starting at port %d)\n", default_port_offset);
 	printf("-2       set DZ-11 tcp-socket sessions to initialize as a telnet session\n");
 	printf("-8 x     setup a blinkenlights/PiDP11 connection on IP-address x\n");
@@ -342,9 +350,11 @@ int main(int argc, char *argv[])
 				timestamp = false;
 				break;
 
+#if defined(JANSSON)
 			case 'J':
 				validate_json = optarg;
 				break;
+#endif
 
 			case 's': {
 					char *c = strchr(optarg, ',');
