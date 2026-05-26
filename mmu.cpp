@@ -380,6 +380,7 @@ void mmu::verify_page_access(const int page_index, const bool is_write)
 		DOLOG(log_ss::LS_MMU, "MMR0: %06o", temp);
 	}
 
+	DOLOG(log_ss::LS_MMU, "TRAP 250 for page access");
 	c->trap(0250);  // abort
 	throw 5;
 }
@@ -406,6 +407,7 @@ void mmu::verify_access_valid(const uint32_t m_offset, const int page_index, con
 			setMMR0_as_is(temp);
 		}
 
+		DOLOG(log_ss::LS_MMU, "TRAP 250 for access valid");
 		c->trap(0250);
 
 		throw 6;
@@ -442,6 +444,7 @@ void mmu::verify_page_length(const uint16_t virt_addr, const int page_index, con
 			setMMR0_as_is(temp);
 		}
 
+		DOLOG(log_ss::LS_MMU, "TRAP 250 for page length");
 		c->trap(0250);  // invalid access
 
 		throw 7;

@@ -126,6 +126,8 @@ int run_cpu_validation(console *const cnsl, const std::string & filename)
 	for(JsonObjectConst test : array) {
 		n_tests++;
 
+		DOLOG(log_ss::LS_TRACE, "--- test %d start ---", n_tests);
+
 		// create environment
 		event = 0;
 		bus *b = new bus();
@@ -169,6 +171,8 @@ int run_cpu_validation(console *const cnsl, const std::string & filename)
 
 		// DO!
 		for(int k=0; k<run_n_instructions; k++) {
+			DOLOG(log_ss::LS_TRACE, "instruction %d out of %d", k + 1, run_n_instructions);
+
 			auto rc = disassemble(c, nullptr, c->getPC(), false);
 			DOLOG(log_ss::LS_TRACE, "%s", std::get<3>(rc).c_str());
 			if (c->step() == false) {
@@ -207,7 +211,7 @@ int run_cpu_validation(console *const cnsl, const std::string & filename)
 		total_error_count      +=   cur_n_errors;
 		tests_with_error_count += !!cur_n_errors;
 
-		DOLOG(log_ss::LS_TRACE, "Test result for %d, %s: %s", n_tests, test["id"].as<std::string>().c_str(), cur_n_errors ? "FAILED":"OK");
+		DOLOG(log_ss::LS_TRACE, "Test result for %d, id: %s: %s", n_tests, test["id"].as<std::string>().c_str(), cur_n_errors ? "FAILED":"OK");
 
 		// clean-up
 		delete b;
