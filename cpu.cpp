@@ -2736,16 +2736,15 @@ bool cpu::step()
 	try {
 		instruction_start = getPC();
 
-		if (!mmu_->isMMR1Locked())
+		if (!mmu_->isMMR1Locked()) {
 			mmu_->setMMR2(instruction_start);
+			mmu_->clearMMR1();
+		}
 
 		uint16_t instr = b->read_word(instruction_start);
 		add_register(7, 2);
 
 		if (double_operand_instructions(instr) || conditional_branch_instructions(instr) || condition_code_operations(instr) || misc_operations(instr)) {
-			if (!mmu_->isMMR1Locked())
-				mmu_->clearMMR1();
-
 			if (delayed_trap.has_value()) {
 				trap(delayed_trap.value(), 7);
 				delayed_trap.reset();

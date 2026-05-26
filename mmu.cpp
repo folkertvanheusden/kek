@@ -157,7 +157,6 @@ bool mmu::get_use_data_space(const int run_mode) const
 void mmu::clearMMR1()
 {
 	DOLOG(log_ss::LS_MMU, "clear MMR1, was: %06o", MMR1);
-	pMMR1 = MMR1;
 	MMR1 = 0;
 }
 

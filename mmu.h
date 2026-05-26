@@ -49,7 +49,6 @@ private:
 
 	uint16_t MMR0    { 0 };
 	uint16_t MMR1    { 0 };
-	uint16_t pMMR1   { 0 };
 	uint16_t MMR2    { 0 };
 	uint16_t MMR3    { 0 };
 	uint16_t CPUERR  { 0 };
@@ -105,7 +104,6 @@ public:
 
 	uint16_t getMMR0()  const { return  MMR0; }
 	uint16_t getMMR1()  const { return  MMR1; }
-	uint16_t getpMMR1() const { return pMMR1; }
 	uint16_t getMMR2()  const { return  MMR2; }
 	uint16_t getMMR3()  const { return  MMR3; }
 
