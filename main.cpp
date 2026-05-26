@@ -118,7 +118,7 @@ int run_cpu_validation(console *const cnsl, const std::string & filename)
 	if (doc.has_value() == false)
 		return -1;
 
-	int n_tests               = 0;
+	int n_tests                = 0;
 	int total_error_count      = 0;
 	int tests_with_error_count = 0;
 

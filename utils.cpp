@@ -268,13 +268,12 @@ std::string get_endpoint_name(const int fd)
 
 std::optional<JsonDocument> deserialize_file(const std::string & filename)
 {
-	JsonDocument j;
-
 #if defined(ESP32)
         File data_file = LittleFS.open(filename.c_str(), "r");
         if (!data_file)
 		return { };
 
+	JsonDocument j;
 	deserializeJson(j, data_file);
 	data_file.close();
 #elif defined(TEENSY4_1)
@@ -284,23 +283,20 @@ std::optional<JsonDocument> deserialize_file(const std::string & filename)
 	if (!fh)
 		return { };
 
-	std::string j_in;
-	char        buffer[4096];
-	for(;;) {
-		char *rc = fgets(buffer, sizeof buffer, fh);
-		if (!rc)
-			break;
-
-		j_in += buffer;
-	}
-
+	fseek(fh, 0, SEEK_END);
+	long size = ftell(fh);
+	fseek(fh, 0, SEEK_SET);
+	std::vector<char> j_in(size + 1);
+	DynamicJsonDocument j(size);
+	fread(j_in.data(), 1, size, fh);
 	fclose(fh);
 
-	DeserializationError error = deserializeJson(j, j_in);
-	if (error)
+	DeserializationError error = deserializeJson(j, reinterpret_cast<const char *>(j_in.data()));
+	if (error) {
+		printf("DeserializationError %s\n", error.c_str());
 		return { };
+	}
 #endif
-
 	return j;
 }
 
