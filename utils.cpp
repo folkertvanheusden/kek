@@ -276,6 +276,7 @@ std::optional<JsonDocument> deserialize_file(const std::string & filename)
 	JsonDocument j;
 	deserializeJson(j, data_file);
 	data_file.close();
+	return j;
 #elif defined(TEENSY4_1)
 	return { };
 #else
@@ -296,8 +297,8 @@ std::optional<JsonDocument> deserialize_file(const std::string & filename)
 		printf("DeserializationError %s\n", error.c_str());
 		return { };
 	}
-#endif
 	return j;
+#endif
 }
 
 std::string file_in_user_home(const std::string & file)
