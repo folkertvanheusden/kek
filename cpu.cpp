@@ -347,11 +347,11 @@ void cpu::execute_any_pending_interrupt()
 				if (v == 0100) {  // 50 Hz interrupt
 					if (++kw11l_counter >= 25) {
 						kw11l_counter = 0;
-						cnsl->toggle_LED_state();
+						cnsl->pulse_LED();
 					}
 				}
 				else {
-					cnsl->toggle_LED_state();
+					cnsl->pulse_LED();
 				}
 			}
 

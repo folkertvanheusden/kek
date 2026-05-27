@@ -310,6 +310,6 @@ void console::set_LED_state(const bool state)
 {
 }
 
-void console::toggle_LED_state()
+void console::pulse_LED()
 {
 }

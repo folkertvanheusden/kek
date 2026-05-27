@@ -89,6 +89,7 @@ void kw11_l::operator()()
 		int f = std::max(1, int(int_frequency));
 		myusleep(1000000 / f);  // usually 50 or 60 Hz
 
+		cnsl->set_LED_state(false);
 		if (*cnsl->get_running_flag())
 			do_interrupt();
 	}

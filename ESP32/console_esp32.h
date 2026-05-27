@@ -16,7 +16,7 @@ private:
 #if defined(WAVESHARE_S3_ETH)
 	Adafruit_NeoPixel rgb_led        { Adafruit_NeoPixel(1, 21, NEO_GRB + NEO_KHZ800) };
 #endif
-	bool              prev_led_state { false };
+	int               led_pulses = 0;
 
 protected:
 	int wait_for_char_ll(const short timeout) override;
@@ -33,6 +33,6 @@ public:
 
 	void set_panel_mode(const panel_mode_t pm);
 	void panel_update_thread() override;
-	void set_LED_state   (const bool state) override;
-	void toggle_LED_state(                ) override;
+	void set_LED_state(const bool state) override;
+	void pulse_LED    (                ) override;
 };
