@@ -66,6 +66,15 @@ void kw11_l::begin(console *const cnsl)
 	xTaskCreate(&thread_wrapper_kw11, "kw11-l", 1536, this, 2, nullptr);
 #else
 	th = new std::thread(std::ref(*this));
+
+#if !defined(_WIN32)
+	int         policy { };
+	sched_param param  { };
+	pthread_getschedparam(th->native_handle(), &policy, &param);
+	policy = SCHED_RR;
+	param.sched_priority = sched_get_priority_max(policy);
+	pthread_setschedparam(th->native_handle(), policy, &param);
+#endif
 #endif
 }
 
