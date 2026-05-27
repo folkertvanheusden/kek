@@ -214,7 +214,7 @@ int run_cpu_validation(console *const cnsl, const std::string & filename)
 		total_error_count      +=   cur_n_errors;
 		tests_with_error_count += !!cur_n_errors;
 
-		const char *id = json_string_value(json_object_get(doc, "id"));
+		const char *id = json_string_value(json_object_get(element, "id"));
 		DOLOG(log_ss::LS_TRACE, "Test result for %d, id: %s: %s", n_tests, id, cur_n_errors ? "FAILED":"OK");
 
 		// clean-up
