@@ -11,8 +11,15 @@
 #include "log.h"
 #include "utils.h"
 
+#if defined(ESP32)
+static esp_timer_handle_t kw11l_periodic_timer { };
+static void periodic_timer_callback(void *arg)
+{
+	auto p = reinterpret_cast<kw11_l *>(arg);
+	p->tick();
 
-#if defined(FREERTOS)
+}
+#elif defined(FREERTOS)
 static void thread_wrapper_kw11(void *p)
 {
 	kw11_l *const kw11l = reinterpret_cast<kw11_l *>(p);
@@ -27,8 +34,9 @@ kw11_l::kw11_l(bus *const b): b(b)
 kw11_l::~kw11_l()
 {
 	stop_flag = true;
-
-#if !defined(FREERTOS)
+#if defined(ESP32)
+	esp_timer_delete(kw11l_periodic_timer);
+#elif !defined(FREERTOS)
 	if (th) {
 		th->join();
 		delete th;
@@ -46,7 +54,15 @@ void kw11_l::begin(console *const cnsl)
 {
 	this->cnsl = cnsl;
 
-#if defined(FREERTOS)
+#if defined(ESP32)
+	const esp_timer_create_args_t periodic_timer_args = {
+		.callback = &periodic_timer_callback,
+		.arg      = this,
+		.name     = "kw11-l"
+	};
+	ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args, &kw11l_periodic_timer));
+	ESP_ERROR_CHECK(esp_timer_start_periodic(kw11l_periodic_timer, 1000000 / int_frequency));
+#elif defined(FREERTOS)
 	xTaskCreate(&thread_wrapper_kw11, "kw11-l", 1536, this, 2, nullptr);
 #else
 	th = new std::thread(std::ref(*this));
@@ -77,6 +93,15 @@ int kw11_l::get_interrupt_frequency()
 	return int_frequency;
 }
 
+void kw11_l::tick()
+{
+	total_ticks++;
+
+	cnsl->set_LED_state(false);
+	if (*cnsl->get_running_flag())
+		do_interrupt();
+}
+
 void kw11_l::operator()()
 {
 	set_thread_name("kek:kw-11l");
@@ -84,14 +109,9 @@ void kw11_l::operator()()
 	DOLOG(log_ss::LS_GENERIC, "Starting KW11-L thread");
 
 	while(!stop_flag) {
-		total_ticks++;
-
 		int f = std::max(1, int(int_frequency));
 		myusleep(1000000 / f);  // usually 50 or 60 Hz
-
-		cnsl->set_LED_state(false);
-		if (*cnsl->get_running_flag())
-			do_interrupt();
+		tick();
 	}
 
 	DOLOG(log_ss::LS_GENERIC, "KW11-L thread terminating");
@@ -120,6 +140,10 @@ uint16_t kw11_l::read_word(const uint16_t a)
 void kw11_l::set_interrupt_frequency(const int Hz)
 {
 	int_frequency = Hz;
+#if defined(ESP32)
+	ESP_ERROR_CHECK(esp_timer_stop(kw11l_periodic_timer));
+	ESP_ERROR_CHECK(esp_timer_start_periodic(kw11l_periodic_timer, 1000000 / int_frequency));
+#endif
 }
 
 void kw11_l::write_byte(const uint16_t addr, const uint8_t value)

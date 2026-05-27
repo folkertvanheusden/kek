@@ -18,7 +18,7 @@ private:
 	console           *cnsl       { nullptr };
 
 	my_lock            lc_csr_lock;
-#if !defined(FREERTOS)
+#if !defined(FREERTOS) && !defined(ESP32)
 	std::thread       *th         { nullptr };
 #endif
 	aint               int_frequency { 50   };
@@ -51,6 +51,7 @@ public:
 	static kw11_l *deserialize(const JsonVariantConst j, bus *const b, console *const cnsl);
 
 	void     begin(console *const cnsl);
+	void     tick();
 	void     operator()();
 
 	uint8_t  read_byte(const uint16_t a) override;
