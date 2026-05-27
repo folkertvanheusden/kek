@@ -3,6 +3,9 @@
 
 #include "gen.h"
 #include <ArduinoJson.h>
+#if defined(TEENSY4_1)
+#include <TeensyTimerTool.h>
+#endif
 #include <thread>
 
 #include "bus.h"
@@ -19,7 +22,7 @@ private:
 
 	my_lock            lc_csr_lock;
 #if defined(TEENSY4_1)
-	IntervalTimer      timer;
+	TeensyTimerTool::PeriodicTimer t1;
 #elif !defined(FREERTOS) && !defined(ESP32)
 	std::thread       *th         { nullptr };
 #endif

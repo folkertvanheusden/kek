@@ -19,11 +19,6 @@ static void periodic_timer_callback(void *arg)
 	p->tick();
 }
 #elif defined(TEENSY4_1)
-static kw11_l *dev_p = nullptr;
-static void periodic_timer_callback()
-{
-	dev_p->tick();
-}
 #elif defined(BUILD_FOR_PICO2W)
 static bool periodic_timer_callback(repeating_timer *arg)
 {
@@ -49,7 +44,7 @@ kw11_l::~kw11_l()
 #if defined(ESP32)
 	esp_timer_delete(kw11l_periodic_timer);
 #elif defined(TEENSY4_1)
-	timer.end();
+	t1.stop();
 #elif defined(BUILD_FOR_PICO2W)
 	cancel_repeating_timer(&timer);
 #elif !defined(FREERTOS)
@@ -79,8 +74,7 @@ void kw11_l::begin(console *const cnsl)
 	ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args, &kw11l_periodic_timer));
 	ESP_ERROR_CHECK(esp_timer_start_periodic(kw11l_periodic_timer, 1000000 / int_frequency));
 #elif defined(TEENSY4_1)
-	dev_p = this;
-	timer.begin(periodic_timer_callback, 1000000. / int_frequency);
+	t1.begin([&] { tick(); }, 1000000 / int_frequency);
 #elif defined(BUILD_FOR_PICO2W)
 	add_repeating_timer_us(-1000000 / int_frequency, periodic_timer_callback, this, &timer);
 #elif defined(FREERTOS)
@@ -174,7 +168,7 @@ void kw11_l::set_interrupt_frequency(const int Hz)
 	ESP_ERROR_CHECK(esp_timer_stop(kw11l_periodic_timer));
 	ESP_ERROR_CHECK(esp_timer_start_periodic(kw11l_periodic_timer, 1000000 / int_frequency));
 #elif defined(TEENSY4_1)
-	timer.update(1000000. / int_frequency);
+	t1.setPeriod(1000000 / int_frequency);
 #elif defined(BUILD_FOR_PICO2W)
 	cancel_repeating_timer(&timer);
 	add_repeating_timer_ms(1000 / int_frequency, periodic_timer_callback, this, &timer);
