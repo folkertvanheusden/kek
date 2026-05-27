@@ -71,7 +71,7 @@ void kw11_l::begin(console *const cnsl)
 	ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args, &kw11l_periodic_timer));
 	ESP_ERROR_CHECK(esp_timer_start_periodic(kw11l_periodic_timer, 1000000 / int_frequency));
 #elif defined(BUILD_FOR_PICO2W)
-	add_repeating_timer_ms(1000 / int_frequency, periodic_timer_callback, this, &timer);
+	add_repeating_timer_us(-1000000 / int_frequency, periodic_timer_callback, this, &timer);
 #elif defined(FREERTOS)
 	xTaskCreate(&thread_wrapper_kw11, "kw11-l", 1536, this, 2, nullptr);
 #else
