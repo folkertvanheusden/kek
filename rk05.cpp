@@ -23,10 +23,10 @@ static const char * const regnames[] = {
 	"RK05_DATABUF      "
 	};
 
-rk05::rk05(bus *const b, abool *const disk_read_acitivity, abool *const disk_write_acitivity) :
+rk05::rk05(bus *const b, abool *const disk_read_activity, abool *const disk_write_activity) :
 	b(b),
-	disk_read_acitivity (disk_read_acitivity ),
-	disk_write_acitivity(disk_write_acitivity)
+	disk_read_activity (disk_read_activity ),
+	disk_write_activity(disk_write_activity)
 {
 }
 
@@ -153,7 +153,7 @@ void rk05::write_word(const uint16_t addr, const uint16_t v)
 				registers[(RK05_ERROR - RK05_BASE) / 2] = 0;
 			}
 			else if (func == 1) { // write
-				*disk_write_acitivity = true;
+				*disk_write_activity = true;
 
 				DOLOG(log_ss::LS_DISK, "RK05 drive %d position sec %d surf %d cyl %d, reclen %zo, WRITE to %o, mem: %o", device, sector, surface, cylinder, reclen, diskoffb, memoff);
 
@@ -200,11 +200,9 @@ void rk05::write_word(const uint16_t addr, const uint16_t v)
 
 					registers[(RK05_DA - RK05_BASE) / 2] = sector | (surface << 4) | (cylinder << 5);
 				}
-
-				*disk_write_acitivity = false;
 			}
 			else if (func == 2) { // read
-				*disk_read_acitivity = true;
+				*disk_read_activity = true;
 
 				DOLOG(log_ss::LS_DISK, "RK05 drive %d position sec %d surf %d cyl %d, reclen %zo, READ from %o, mem: %o", device, sector, surface, cylinder, reclen, diskoffb, memoff);
 
@@ -250,8 +248,6 @@ void rk05::write_word(const uint16_t addr, const uint16_t v)
 
 					registers[(RK05_DA - RK05_BASE) / 2] = sector | (surface << 4) | (cylinder << 5);
 				}
-
-				*disk_read_acitivity = false;
 			}
 			else if (func == 4) {
 				DOLOG(log_ss::LS_DISK, "RK05 invoke %d (seek) to %o", func, diskoffb);

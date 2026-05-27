@@ -246,8 +246,6 @@ void deqna::receiver_high()
 			total_n_rx_drop++;
 			DOLOG(log_ss::LS_DEQNA, "deqna(rxh): packet NOT queued");
 		}
-
-		*activity_flag = false;
 	}
 
 #if defined(FREERTOS)

@@ -164,9 +164,12 @@ void console_esp32::panel_update_thread()
 				pixels.setPixelColor(pixel_offset++, running_flag             ? white : 0);
 
 				pixels.setPixelColor(pixel_offset++, disk_read_activity_flag  ? blue  : 0);
+				disk_read_activity_flag  = false;
 				pixels.setPixelColor(pixel_offset++, disk_write_activity_flag ? blue  : 0);
+				disk_write_activity_flag = false;
 
-				pixels.setPixelColor(pixel_offset++, network_activity_flag    ? green : 0);
+				pixels.setPixelColor(pixel_offset++, network_activity_flag    ? yellow: 0);
+				network_activity_flag    = false;
 			}
 			else {
 				pixels.clear();

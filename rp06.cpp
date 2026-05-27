@@ -192,6 +192,10 @@ void rp06::write_word(const uint16_t addr, uint16_t v)
 				generate_interrupt = true;
 			}
 			else if (function_code == 060 || function_code == 070) {  // WRITE (060), READ (070)
+				if (function_code == 070)
+					*disk_read_activity  = true;
+				else
+					*disk_write_activity = true;
 				uint32_t offs = compute_offset();
 				uint32_t addr = getphysaddr();
 

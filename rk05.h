@@ -33,8 +33,8 @@ private:
 	uint16_t        registers  [7]   { 0       };
 	uint8_t         xfer_buffer[512] { 0       };
 
-	abool *const disk_read_acitivity  { nullptr };
-	abool *const disk_write_acitivity { nullptr };
+	abool *const disk_read_activity  { nullptr };
+	abool *const disk_write_activity { nullptr };
 
 	uint32_t get_bus_address() const;
 	void     update_bus_address(const uint16_t v);

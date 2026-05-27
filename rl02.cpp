@@ -310,9 +310,6 @@ void rl02::write_word(const uint16_t addr, uint16_t v)
 			}
 
 			do_int = true;
-
-			if (disk_write_activity)
-				*disk_write_activity = false;
 		}
 		else if (command == 6 || command == 7) {  // read data / read data without header check
 			if (disk_read_activity)
@@ -374,9 +371,6 @@ void rl02::write_word(const uint16_t addr, uint16_t v)
 			}
 
 			do_int = true;
-
-			if (disk_read_activity)
-				*disk_read_activity = false;
 		}
 		else {
 			DOLOG(log_ss::LS_DISK, "RL02: command %d not implemented", command);
