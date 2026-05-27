@@ -156,7 +156,7 @@ void ls_l(console *const cnsl)
 
 		if (!entry.isDirectory()) {
 #if defined(TEENSY4_1) || defined(BUILD_FOR_PICO2W)
-			cnsl->put_string_lf(format("%s\t\t%ld", entry.name(), entry.size()));
+			cnsl->put_string_lf(format("%s\t\t%d", entry.name(), int(entry.size())));
 #else
 			char buffer[32] { };
 			entry.getName(buffer, sizeof buffer);

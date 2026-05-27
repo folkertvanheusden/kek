@@ -15,6 +15,8 @@ class console_esp32 : public console_comm
 private:
 #if defined(WAVESHARE_S3_ETH)
 	Adafruit_NeoPixel rgb_led        { Adafruit_NeoPixel(1, 21, NEO_GRB + NEO_KHZ800) };
+#elif !defined(BUILD_FOR_PICO2W)
+	my_lock           led_lock;
 #endif
 	int               led_pulses = 0;
 

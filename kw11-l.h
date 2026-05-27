@@ -18,7 +18,9 @@ private:
 	console           *cnsl       { nullptr };
 
 	my_lock            lc_csr_lock;
-#if !defined(FREERTOS) && !defined(ESP32)
+#if defined(TEENSY4_1)
+	IntervalTimer      timer;
+#elif !defined(FREERTOS) && !defined(ESP32)
 	std::thread       *th         { nullptr };
 #endif
 	aint               int_frequency { 50   };

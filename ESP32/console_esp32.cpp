@@ -200,22 +200,27 @@ void console_esp32::panel_update_thread()
 void console_esp32::set_LED_state(const bool state)
 {
 	led_pulses = state;
+#if 0
 #if defined(WAVESHARE_S3_ETH)
 	uint8_t intensity = state ? 255 : 0;
 	rgb_led.setPixelColor(0, intensity, intensity, intensity);
 	rgb_led.show();
-#elif !defined(TEENSY4_1) && !defined(BUILD_FOR_PICO2W)
+#elif !defined(BUILD_FOR_PICO2W)
+	my_unique_lock lck(&led_lock);
 	digitalWrite(HEARTBEAT_PIN, state);
+#endif
 #endif
 }
 
 void console_esp32::pulse_LED()
 {
+#if 0
 #if defined(WAVESHARE_S3_ETH)
 	if (led_pulses <= 5)
 		led_pulses++;
 	uint8_t intensity = 255 - (led_pulses - 1) * 50;
 	rgb_led.setPixelColor(0, 255, intensity, intensity);
 	rgb_led.show();
+#endif
 #endif
 }

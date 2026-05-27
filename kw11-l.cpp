@@ -19,6 +19,12 @@ static void periodic_timer_callback(void *arg)
 	p->tick();
 
 }
+#elif defined(TEENSY4_1)
+static kw11_l *dev_p = nullptr;
+static void periodic_timer_callback()
+{
+	dev_p->tick();
+}
 #elif defined(FREERTOS)
 static void thread_wrapper_kw11(void *p)
 {
@@ -36,6 +42,8 @@ kw11_l::~kw11_l()
 	stop_flag = true;
 #if defined(ESP32)
 	esp_timer_delete(kw11l_periodic_timer);
+#elif defined(TEENSY4_1)
+	timer.end();
 #elif !defined(FREERTOS)
 	if (th) {
 		th->join();
@@ -62,6 +70,9 @@ void kw11_l::begin(console *const cnsl)
 	};
 	ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args, &kw11l_periodic_timer));
 	ESP_ERROR_CHECK(esp_timer_start_periodic(kw11l_periodic_timer, 1000000 / int_frequency));
+#elif defined(TEENSY4_1)
+	dev_p = this;
+	timer.begin(periodic_timer_callback, 1000000. / int_frequency);
 #elif defined(FREERTOS)
 	xTaskCreate(&thread_wrapper_kw11, "kw11-l", 1536, this, 2, nullptr);
 #else
@@ -143,6 +154,8 @@ void kw11_l::set_interrupt_frequency(const int Hz)
 #if defined(ESP32)
 	ESP_ERROR_CHECK(esp_timer_stop(kw11l_periodic_timer));
 	ESP_ERROR_CHECK(esp_timer_start_periodic(kw11l_periodic_timer, 1000000 / int_frequency));
+#elif defined(TEENSY4_1)
+	timer.update(1000000. / int_frequency);
 #endif
 }
 

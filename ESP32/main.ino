@@ -592,6 +592,15 @@ void setup() {
 	cs->println(format("Free RAM after init (decimal bytes): %d", freeram()));
 #endif
 
+#if defined(HEARTBEAT_PIN)
+	cs->println(format("Enable heartbeat pin on GPIO %d", HEARTBEAT_PIN));
+#if defined(TEENSY4_1)
+	pinMode(HEARTBEAT_PIN, arduino::OUTPUT);
+#else
+	pinMode(HEARTBEAT_PIN, OUTPUT);
+#endif
+#endif
+
 	cs->println("* Init CPU");
 	c = new cpu(b, &stop_event);
 	b->add_cpu(c);
@@ -635,11 +644,6 @@ void setup() {
 
 	cs->println("* Starting KW11-L");
 	b->getKW11_L()->begin(cnsl);
-
-#if defined(HEARTBEAT_PIN)
-	cs->println(format("Enable heartbeat pin on GPIO %d", HEARTBEAT_PIN));
-	pinMode(HEARTBEAT_PIN, OUTPUT);
-#endif
 
 #if !defined(BUILD_FOR_PICO2W) && (defined(NEOPIXELS_PIN) || defined(HEARTBEAT_PIN))
 	cs->println("Starting panel");
