@@ -21,6 +21,9 @@ private:
 #if !defined(FREERTOS) && !defined(ESP32)
 	std::thread       *th         { nullptr };
 #endif
+#if defined(BUILD_FOR_PICO2W)
+	repeating_timer    timer      {         };
+#endif
 	aint               int_frequency { 50   };
 	uint16_t           lf_csr     { 0       };
 	bool               wall_clock { true    };
