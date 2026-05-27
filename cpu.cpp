@@ -481,6 +481,7 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t wo
 			break;
 		case 7:  // @x(Rn)  /  @a
 			next_word = b->read(getPC(), wm_word, run_mode, i_space);
+			add_register(7, + 2);
 			g.addr  = b->read(get_register(reg) + next_word, wm_word, run_mode, d_space);
 			g.space = d_space;
 			break;
