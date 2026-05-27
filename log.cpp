@@ -278,10 +278,22 @@ void dolog(const log_ss ls, const char *fmt, ...)
 		if (!localtime_r(&t_now, &tm))
 			error_exit(true, "localtime_r failed");
 #endif
-		char ts_str[64] { };
+#if defined(BUILD_FOR_PICO2W)
+		const char *ls_name = "?";
+		const auto  ls_int  = log_ss_type(ls);
+		for(int i=0; i<32; i++) {
+			if (ls_int & (1 << i)) {
+				ls_name = ls_names[i];
+				break;
+			}
+		}
+#else
+		const char *ls_name = ls_names[std::countr_zero(log_ss_type(ls))];
+#endif
+		char        ts_str[64] { };
 		snprintf(ts_str, sizeof ts_str, "%04d-%02d-%02d %02d:%02d:%02d.%06d %-7s|%s] ",
 				tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, int(now % 1000000),
-				ls_names[std::countr_zero(log_ss_type(ls))], get_thread_name().c_str());
+				ls_name, get_thread_name().c_str());
 
 		if (is_syslog)
 			send_syslog(log_buffer.data());

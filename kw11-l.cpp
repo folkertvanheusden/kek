@@ -17,13 +17,19 @@ static void periodic_timer_callback(void *arg)
 {
 	auto p = reinterpret_cast<kw11_l *>(arg);
 	p->tick();
-
 }
 #elif defined(TEENSY4_1)
 static kw11_l *dev_p = nullptr;
 static void periodic_timer_callback()
 {
 	dev_p->tick();
+}
+#elif defined(BUILD_FOR_PICO2W)
+static bool periodic_timer_callback(repeating_timer *arg)
+{
+	auto p = reinterpret_cast<kw11_l *>(arg->user_data);
+	p->tick();
+	return true;
 }
 #elif defined(FREERTOS)
 static void thread_wrapper_kw11(void *p)
@@ -44,6 +50,8 @@ kw11_l::~kw11_l()
 	esp_timer_delete(kw11l_periodic_timer);
 #elif defined(TEENSY4_1)
 	timer.end();
+#elif defined(BUILD_FOR_PICO2W)
+	cancel_repeating_timer(&timer);
 #elif !defined(FREERTOS)
 	if (th) {
 		th->join();
@@ -73,10 +81,21 @@ void kw11_l::begin(console *const cnsl)
 #elif defined(TEENSY4_1)
 	dev_p = this;
 	timer.begin(periodic_timer_callback, 1000000. / int_frequency);
+#elif defined(BUILD_FOR_PICO2W)
+	add_repeating_timer_us(-1000000 / int_frequency, periodic_timer_callback, this, &timer);
 #elif defined(FREERTOS)
 	xTaskCreate(&thread_wrapper_kw11, "kw11-l", 1536, this, 2, nullptr);
 #else
 	th = new std::thread(std::ref(*this));
+
+#if !defined(_WIN32)
+	int         policy { };
+	sched_param param  { };
+	pthread_getschedparam(th->native_handle(), &policy, &param);
+	policy = SCHED_RR;
+	param.sched_priority = sched_get_priority_max(policy);
+	pthread_setschedparam(th->native_handle(), policy, &param);
+#endif
 #endif
 }
 
@@ -156,6 +175,9 @@ void kw11_l::set_interrupt_frequency(const int Hz)
 	ESP_ERROR_CHECK(esp_timer_start_periodic(kw11l_periodic_timer, 1000000 / int_frequency));
 #elif defined(TEENSY4_1)
 	timer.update(1000000. / int_frequency);
+#elif defined(BUILD_FOR_PICO2W)
+	cancel_repeating_timer(&timer);
+	add_repeating_timer_ms(1000 / int_frequency, periodic_timer_callback, this, &timer);
 #endif
 }
 
