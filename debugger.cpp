@@ -243,8 +243,7 @@ std::optional<disk_backend *> select_disk_file(console *const cnsl)
 int wait_for_key(const std::string & title, console *const cnsl, const std::vector<char> & allowed)
 {
 	cnsl->put_string_lf(title);
-
-	cnsl->put_string("> ");
+	cnsl->put_string(")> ");
 
 	int ch = -1;
 	while(ch == -1) {

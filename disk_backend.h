@@ -18,7 +18,8 @@
 class disk_backend
 {
 protected:
-	bool use_overlay { false };
+	uint64_t size        { 0     };
+	bool     use_overlay { false };
 	std::map<off_t, std::vector<uint8_t> > overlay;
 
 	void store_object_in_overlay(const off_t id, const std::vector<uint8_t> & data);
@@ -27,13 +28,14 @@ protected:
 	std::optional<std::vector<uint8_t> > get_from_overlay(const off_t offset, const size_t sector_size);
 
 	JsonDocument serialize_overlay() const;
-	void deserialize_overlay(const JsonVariantConst j);
+	void         deserialize_overlay(const JsonVariantConst j);
+	std::optional<uint32_t> crc_over_data();
 
 public:
 	disk_backend();
 	virtual ~disk_backend();
 
-	virtual JsonDocument serialize() const = 0;
+	virtual JsonDocument serialize() = 0;
 	static disk_backend *deserialize(const JsonVariantConst j);
 
 	virtual std::string get_identifier() const = 0;

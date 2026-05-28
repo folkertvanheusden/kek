@@ -32,7 +32,7 @@ public:
 	disk_backend_nbd(const std::string & host, const unsigned port);
 	virtual ~disk_backend_nbd();
 
-	JsonDocument serialize() const override;
+	JsonDocument serialize() override;
 	static disk_backend_nbd *deserialize(const JsonVariantConst j);
 
 	std::string get_identifier() const override { return format("NBD:%s:%d", host.c_str(), port); }

@@ -59,23 +59,35 @@ void disk_backend_nbd::show_state(console *const cnsl) const
 	cnsl->put_string_lf("identifier: " + get_identifier());
 }
 
-JsonDocument disk_backend_nbd::serialize() const
+JsonDocument disk_backend_nbd::serialize()
 {
 	JsonDocument j;
 
 	j["disk-backend-type"] = "nbd";
 	j["overlay"] = serialize_overlay();
-	// TODO store checksum of backend
 	j["host"] = host.c_str();
 	j["port"] = port;
+	auto crc = crc_over_data();
+	if (crc.has_value())
+		j["crc32"] = crc.value();
 
 	return j;
 }
 
 disk_backend_nbd *disk_backend_nbd::deserialize(const JsonVariantConst j)
 {
-	// TODO verify checksum of backend
-	return new disk_backend_nbd(j["host"], j["port"]);
+	auto out = new disk_backend_nbd(j["host"], j["port"]);
+
+	if (j.containsKey("crc32")) {
+		auto crc = out->crc_over_data();
+		if (crc.has_value() == false || crc.value() != j["crc32"]) {
+			delete out;
+			return nullptr;
+		}
+	}
+
+	// TODO overlay
+	return out;
 }
 
 bool disk_backend_nbd::begin(const bool snapshots)
@@ -151,6 +163,8 @@ bool disk_backend_nbd::connect(const bool retry)
 				myusleep(101000);
 				continue;
 			}
+
+			size = NTOHLL(nbd_hello.size);
 			break;
 		}
 		else {

@@ -121,3 +121,30 @@ disk_backend *disk_backend::deserialize(const JsonVariantConst j)
 
 	return d;
 }
+
+constexpr const uint32_t CRC32_POLY = 0xEDB88320;  // reverse of 0x04C11DB7
+static uint32_t crc32(uint32_t crc, uint8_t data)
+{
+	crc ^= data;
+	for(int i = 8; i > 0; i--) {
+		if (crc & 1)
+			crc = (crc >> 1) ^ CRC32_POLY;
+		else
+			crc >>= 1;
+	}
+	return crc;
+}
+
+std::optional<uint32_t> disk_backend::crc_over_data()
+{
+	uint8_t  buffer[4096];
+	uint32_t crc = ~0;
+	for(uint64_t offset=0; offset<size; offset += sizeof buffer) {
+		if (!read(offset, 1, buffer, sizeof buffer))
+			return { };
+
+		for(size_t i=0; i<sizeof buffer; i++)
+			crc = crc32(crc, buffer[i]);
+	}
+	return crc;
+}

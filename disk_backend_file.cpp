@@ -26,23 +26,34 @@ void disk_backend_file::show_state(console *const cnsl) const
 	cnsl->put_string_lf("identifier: " + get_identifier());
 }
 
-JsonDocument disk_backend_file::serialize() const
+JsonDocument disk_backend_file::serialize()
 {
 	JsonDocument j;
 
 	j["disk-backend-type"] = "file";
-	j["overlay"] = serialize_overlay();
-	// TODO store checksum of backend
+	j["overlay"]  = serialize_overlay();
 	j["filename"] = filename;
+	auto crc = crc_over_data();
+	if (crc.has_value())
+		j["crc32"] = crc.value();
 
 	return j;
 }
 
 disk_backend_file *disk_backend_file::deserialize(const JsonVariantConst j)
 {
-	// TODO verify checksum of backend
+	auto out = new disk_backend_file(j["filename"].as<std::string>());
+
+	if (j.containsKey("crc32")) {
+		auto crc = out->crc_over_data();
+		if (crc.has_value() == false || crc.value() != j["crc32"]) {
+			delete out;
+			return nullptr;
+		}
+	}
+
 	// TODO overlay
-	return new disk_backend_file(j["filename"].as<std::string>());
+	return out;
 }
 
 bool disk_backend_file::begin(const bool snapshots)
@@ -59,6 +70,8 @@ bool disk_backend_file::begin(const bool snapshots)
 		DOLOG(log_ss::LS_DISK, "disk_backend_file: cannot open \"%s\": %s", filename.c_str(), strerror(errno));
 		return false;
 	}
+
+	size = lseek(fd, 0, SEEK_END);
 
 	return true;
 }
