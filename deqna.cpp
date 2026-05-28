@@ -29,7 +29,8 @@ static void thread_wrapper_receiver_high(void *p)
 
 deqna::deqna(bus *const b, const uint8_t mac_address[6], eth_transport *const eth_dev, abool *const activity_flag):
 	b(b),
-	eth_dev(eth_dev)
+	eth_dev(eth_dev),
+	activity_flag(activity_flag)
 {
 	memcpy(this->mac_address, mac_address, sizeof this->mac_address);
 	reset(true);
