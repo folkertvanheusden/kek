@@ -82,11 +82,14 @@ disk_backend_nbd *disk_backend_nbd::deserialize(const JsonVariantConst j)
 		auto crc = out->crc_over_data();
 		if (crc.has_value() == false || crc.value() != j["crc32"]) {
 			delete out;
+			DOLOG(log_ss::LS_DISK, "disk_backend_nbd::deserialize CRC32 mismatch; did the disk change outside this emulator?");
 			return nullptr;
 		}
 	}
 
-	// TODO overlay
+	// AFTER crc check
+	out->deserialize(j);
+
 	return out;
 }
 
