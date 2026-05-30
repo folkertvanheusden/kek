@@ -75,6 +75,7 @@ void console_esp32::refresh_virtual_terminal()
 {
 }
 
+#if defined(NEOPIXELS_PIN)
 void test_leds(Adafruit_NeoPixel & pixels, const int n_leds)
 {
 	// initial animation
@@ -89,6 +90,7 @@ void test_leds(Adafruit_NeoPixel & pixels, const int n_leds)
 		delay(10);
 	}
 }
+#endif
 
 void console_esp32::panel_update_thread()
 {
@@ -117,7 +119,9 @@ void console_esp32::panel_update_thread()
 
 	const uint32_t run_mode_led_color[4] = { red, yellow, blue, green };
 
+#if defined(NEOPIXELS_PIN)
 	test_leds(pixels, n_leds);
+#endif
 
 	pixels.clear();
 	pixels.show();
@@ -129,7 +133,9 @@ void console_esp32::panel_update_thread()
 			do_test_panel = false;
 			if (p_blinkenlights)
 				p_blinkenlights->test();
+#if defined(NEOPIXELS_PIN)
 			test_leds(pixels, n_leds);
+#endif
 		}
 
 		if (p_blinkenlights)
