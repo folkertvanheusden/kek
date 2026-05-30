@@ -9,13 +9,13 @@ jobs:
     runs-on: macos-latest
     steps:
     - uses: actions/checkout@v4
-    - name: install ncursesw & libjansson
+    - name: install ncurses & libjansson
       run: |
         git submodule init
         git submodule update
         brew install ncurses jansson
     - name: cmake
-      run: cmake -DCMAKE_PREFIX_PATH=$(brew --prefix ncurses) -S . -B build 
+      run: cmake -DCMAKE_PREFIX_PATH=$(brew --prefix ncurses) -DPKG_CONFIG_PATH=$(brew --prefix ncurses)/lib/pkgconfig -S . -B build 
     - name: make
       run: make -C build kek
     - name: store artifact in GitHub
