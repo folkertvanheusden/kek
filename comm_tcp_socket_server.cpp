@@ -27,6 +27,9 @@
 #include <thread>
 #include <unistd.h>
 #endif
+#if defined(__FreeBSD__)
+#include <netinet/in.h>
+#endif
 
 #include "comm_tcp_socket_server.h"
 #include "log.h"

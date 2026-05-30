@@ -31,6 +31,9 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #endif
+#if defined(__FreeBSD__)
+#include <netinet/in.h>
+#endif
 
 #include "blinkenlights.h"
 #include "bus.h"

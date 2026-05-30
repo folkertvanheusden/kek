@@ -79,7 +79,7 @@ void start_network(console *const cnsl);
 constexpr const bool network_configured = true;
 #endif
 
-#if !defined(linux) && !defined(_WIN32) && !defined(__APPLE__)
+#if !defined(linux) && !defined(_WIN32) && !defined(__APPLE__) && !defined(__FreeBSD__)
 extern SdFs SDinstance;
 #endif
 
@@ -130,7 +130,7 @@ void ls_l(console *const cnsl)
 	cnsl->put_string_lf("Files on SD-card:");
 #endif
 
-#if defined(linux)
+#if defined(linux) || defined(__FreeBSD__)
 	DIR *dir = opendir(".");
 	if (!dir) {
 		cnsl->put_string_lf("Cannot access directory");
@@ -166,7 +166,7 @@ void ls_l(console *const cnsl)
 
 		entry.close();
 	}
-#elif defined(_WIN32) || defined(__APPLE__)
+#elif defined(_WIN32)
 #else
 	SDinstance.ls("/", LS_DATE | LS_SIZE | LS_R);
 #endif

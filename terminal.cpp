@@ -4,7 +4,11 @@
 #if !defined(_WIN32)
 #include <algorithm>
 #include <assert.h>
+#if defined(__FreeBSD__)
+#include <ncurses/curses.h>
+#else
 #include <ncursesw/curses.h>
+#endif
 #include <stdlib.h>
 #include <string>
 #include <string.h>

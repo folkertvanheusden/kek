@@ -17,6 +17,9 @@
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #endif
+#if defined(__FreeBSD__)
+#include <netinet/in.h>
+#endif
 
 #include "eth_transport_vxlan.h"
 #include "log.h"

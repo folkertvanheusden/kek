@@ -11,6 +11,8 @@
 #if defined(ESP32) || defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 #include <Arduino.h>
 #elif defined(_WIN32)
+#elif defined(__FreeBSD__)
+#include <ncurses/ncurses.h>
 #else
 #include <ncursesw/ncurses.h>
 #endif
