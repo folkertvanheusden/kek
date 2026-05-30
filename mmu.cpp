@@ -115,24 +115,6 @@ void mmu::setMMR0(uint16_t value)
 	update_io_base();
 }
 
-void mmu::setMMR0Bit(const int bit)
-{
-	assert(bit != 10 && bit != 11);
-	assert(bit < 16 && bit >= 0);
-
-	MMR0 |= 1 << bit;
-	update_io_base();
-}
-
-void mmu::clearMMR0Bit(const int bit)
-{
-	assert(bit != 10 && bit != 11);
-	assert(bit < 16 && bit >= 0);
-
-	MMR0 &= ~(1 << bit);
-	update_io_base();
-}
-
 void mmu::setMMR1(const uint16_t value) 
 {
 	MMR1 = value;

@@ -117,9 +117,6 @@ public:
 	void     clearMMR1();
 	void     add_to_MMR1(const int8_t delta, const uint8_t reg);
 
-	void     setMMR0Bit  (const int bit);
-	void     clearMMR0Bit(const int bit);
-
 	void     trap_if_odd(const int page_index, const bool is_write);
 
 	uint16_t getCPUERR() const { return CPUERR; }
