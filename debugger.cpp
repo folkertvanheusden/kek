@@ -130,7 +130,7 @@ void ls_l(console *const cnsl)
 	cnsl->put_string_lf("Files on SD-card:");
 #endif
 
-#if defined(linux) || defined(__FreeBSD__)
+#if defined(linux) || defined(__FreeBSD__) || defined(__APPLE__)
 	DIR *dir = opendir(".");
 	if (!dir) {
 		cnsl->put_string_lf("Cannot access directory");
