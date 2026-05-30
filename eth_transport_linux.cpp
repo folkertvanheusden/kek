@@ -1,5 +1,5 @@
 #include "gen.h"
-#if IS_POSIX
+#if defined(linux)
 #include <fcntl.h>
 #include <poll.h>
 #include <unistd.h>

@@ -522,7 +522,7 @@ int main(int argc, char *argv[])
 #endif
 	}
 
-#if !defined(_WIN32)
+#if !defined(_WIN32) && defined(JANSSON)
 	if (validate_json.empty() == false) {
 		int rc = run_cpu_validation(cnsl, validate_json);
 		delete cnsl;

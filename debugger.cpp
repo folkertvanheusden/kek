@@ -79,7 +79,7 @@ void start_network(console *const cnsl);
 constexpr const bool network_configured = true;
 #endif
 
-#if !defined(linux) && !defined(_WIN32)
+#if !defined(linux) && !defined(_WIN32) && !defined(__APPLE__)
 extern SdFs SDinstance;
 #endif
 
@@ -166,7 +166,7 @@ void ls_l(console *const cnsl)
 
 		entry.close();
 	}
-#elif defined(_WIN32)
+#elif defined(_WIN32) || defined(__APPLE__)
 #else
 	SDinstance.ls("/", LS_DATE | LS_SIZE | LS_R);
 #endif

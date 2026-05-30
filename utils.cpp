@@ -169,7 +169,11 @@ void set_thread_name(std::string name)
 	if (name.length() > 15)
 		name = name.substr(0, 15);
 
+#if defined(__APPLE__)
+	pthread_setname_np(name.c_str());
+#else
 	pthread_setname_np(pthread_self(), name.c_str());
+#endif
 #endif
 }
 
@@ -242,7 +246,7 @@ void update_word(uint16_t *const w, const bool msb, const uint8_t v)
 bool set_nodelay(const int fd)
 {
         int flags = 1;
-#if defined(__FreeBSD__) || defined(ESP32) || defined(_WIN32)
+#if defined(__FreeBSD__) || defined(ESP32) || defined(_WIN32) || defined(__APPLE__)
         if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<char *>(&flags), sizeof(flags)) == -1)
 		return false;
 #elif !defined(BUILD_FOR_PICO2W) && !defined(TEENSY4_1)

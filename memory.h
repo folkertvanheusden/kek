@@ -9,7 +9,7 @@
 #if defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)  // TODO also teensy4.1?
 #define __LITTLE_ENDIAN 1
 #define __BYTE_ORDER __LITTLE_ENDIAN
-#elif !defined(_WIN32)
+#elif !defined(_WIN32) && !defined(__APPLE__)
 #include <endian.h>
 #endif
 

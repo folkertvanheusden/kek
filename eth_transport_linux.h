@@ -1,5 +1,5 @@
 #include "gen.h"
-#if IS_POSIX
+#if defined(linux)
 #include <cstdint>
 #include <string>
 #include "eth_transport.h"
