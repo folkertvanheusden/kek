@@ -120,7 +120,11 @@ target_compile_options(kek-native PRIVATE -march=native -Ofast -fomit-frame-poin
 target_compile_options(kek-codecoverage PRIVATE -fprofile-arcs -ftest-coverage)
 target_link_options(kek-codecoverage PRIVATE -fprofile-arcs -ftest-coverage)
 
+if (${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
+pkg_check_modules(NCURSES REQUIRED ncursesw)
+else ()
 pkg_check_modules(NCURSES REQUIRED ncurses)
+endif ()
 target_link_libraries(kek ${NCURSES_LIBRARIES})
 target_include_directories(kek PUBLIC ${NCURSES_INCLUDE_DIRS})
 target_compile_options(kek PUBLIC ${NCURSES_CFLAGS_OTHER})
