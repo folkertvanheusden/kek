@@ -45,6 +45,7 @@ protected:
 	abool                   disk_write_activity_flag { false };
 	abool                   network_activity_flag    { false };
 	abool                   running_flag     { false };
+	abool                   do_test_panel    { false };
 
 	bool                    stop_thread_flag { false };
 
@@ -109,6 +110,7 @@ public:
 	virtual void panel_update_thread() = 0;
 	int          get_refreshrate(              ) const { return refreshrate; }
 	void         set_refreshrate(const int rate)       { refreshrate = rate; }
+	void         test_panel() { do_test_panel = true; }
 
 	virtual void set_LED_state(const bool state);
 	virtual void pulse_LED    (                );

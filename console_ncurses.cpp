@@ -134,8 +134,14 @@ void console_ncurses::panel_update_thread()
 	while(*stop_event != EVENT_TERMINATE && stop_panel == false) {
 		myusleep(1000000 / refreshrate);
 
-		if (p_blinkenlights)
+		if (p_blinkenlights) {
 			p_blinkenlights->push(b, running_flag);
+
+			if (do_test_panel) {
+				do_test_panel = false;
+				p_blinkenlights->test();
+			}
+		}
 
 		// note that these are approximately as there's no mutex on the emulation
 		try {

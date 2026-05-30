@@ -24,4 +24,5 @@ public:
 	bool begin();
 	bool set_target(const std::string & ip);
 	void push(bus *const b, const bool running_flag);
+	void test();
 };

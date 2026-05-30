@@ -111,7 +111,7 @@ void dc11::operator()()
 			my_unique_lock lck(&input_lock[line_nr]);
 
 			// (dis-)connected?
-			bool is_connected  = io_channels->is_connected(line_nr);
+			bool is_connected = io_channels->is_connected(line_nr);
 			if (is_connected != connected[line_nr]) {
 				DOLOG(log_ss::LS_COMM, "DC11 line %d state changed to %d", line_nr, is_connected);
 #if defined(ESP32)

@@ -75,6 +75,11 @@ void console_comm::panel_update_thread()
 		while(!stop_panel) {
 			myusleep(1000000 / refreshrate);
 			p_blinkenlights->push(b, running_flag);
+			// teensy 4.1 does not have atomics, so exchange() won't compile
+			if (do_test_panel) {
+				do_test_panel = false;
+				p_blinkenlights->test();
+			}
 		}
 	}
 }

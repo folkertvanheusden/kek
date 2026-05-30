@@ -735,3 +735,28 @@ void blinkenlights::push(bus *const b, const bool running_flag)
 		DOLOG(log_ss::LS_BLINKEN, "Unexpected exception in blinkenlights::push (set/get)");
 	}
 }
+
+void blinkenlights::test()
+{
+	my_unique_lock lck(&controls_lock);
+	if (!valid)
+		return;
+	auto panel             = controls.find("11/70");
+	try {
+		auto address_control   = panel->second.find("ADDRESS"  );
+		address_control->second.value = 0x3FFFFF;
+		auto data_control      = panel->second.find("DATA"     );
+		data_control->second.value = 0xffff;
+		auto mmr0_control      = panel->second.find("MMR0_MODE");
+		mmr0_control->second.value = 7;
+		auto run_control       = panel->second.find("RUN"      );
+		run_control->second.value = 1;
+
+		set_blinkenlight_controls(server, udp_port, panel->second.begin()->second.panel_nr, panel->second);
+		get_blinkenlight_controls(server, udp_port, 0);
+	}
+	catch(...) {
+		// most likely a find() that failed
+		DOLOG(log_ss::LS_BLINKEN, "Unexpected exception in blinkenlights::test");
+	}
+}

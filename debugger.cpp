@@ -1294,15 +1294,6 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		tm11_unload_tape(b);
 		return true;
 	}
-	else if (parts[0] == "testdz11") {
-		if (b->getDZ11()) {
-			b->getDZ11()->test_ports(parts.size() == 2 ? std::stoi(parts[1]) : 1);
-		}
-		else {
-			cnsl->put_string_lf("DZ11 not started yet, first invoke \"startnet\"");
-		}
-		return true;
-	}
 	else if (cmd == "dp") {
 		cnsl->stop_panel_thread();
 		cnsl->put_string_lf("OK");
@@ -1376,6 +1367,15 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			else {
 				cnsl->put_string_lf("DEQNA emulation is not configured yet");
 			}
+		}
+		else if (parts[1] =="dz11") {
+			if (b->getDZ11())
+				b->getDZ11()->test_ports(parts.size() == 3 ? std::stoi(parts[2]) : 1);
+			else
+				cnsl->put_string_lf("DZ11 not started yet, first invoke \"startnet\"");
+		}
+		else if (parts[1] =="panel") {
+			cnsl->test_panel();
 		}
 		else {
 			cnsl->put_string_lf("?");
@@ -1574,10 +1574,9 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			"pm x          - panel mode (bits or address)",
 #endif
 			"blights x     - enable blinkenlights on IP address x", 
-			"testdz11      - test DZ11",
 			"cfgdisk       - configure disk",
 			"deqna x[,y,z] - set deqna emulation to use (x): \"linux\" (tap), \"teensy4.1\", \"esp32\" or \"vxlan\" (with host (y) & port (z))",
-			"test deqna    - test the DEQNA emulation",
+			"test x        - test the dz11/DEQNA/panel emulation",
 			"mdeqna x      - set DEQNA monitor mode: none, filtered, everything",
 			"log ...       - log a message to the logfile",
 			nullptr

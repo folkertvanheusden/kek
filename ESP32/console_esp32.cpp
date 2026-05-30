@@ -23,6 +23,8 @@
 #include "utils.h"
 
 
+constexpr const uint8_t brightness = 16;
+
 console_esp32::console_esp32(kek_event_t *const stop_event, comm *const io_port, const int t_width, const int t_height) :
 	console_comm(stop_event, io_port, t_width, t_height)
 {
@@ -73,6 +75,21 @@ void console_esp32::refresh_virtual_terminal()
 {
 }
 
+void test_leds(Adafruit_NeoPixel & pixels, const int n_leds)
+{
+	// initial animation
+	for(int i=0; i<n_leds; i++) {
+		pixels.setPixelColor(i, brightness, brightness, brightness);
+		int p = i - 10;
+		if (p < 0)
+			p += n_leds;
+		pixels.setPixelColor(p, 0, 0, 0);
+		pixels.show();
+
+		delay(10);
+	}
+}
+
 void console_esp32::panel_update_thread()
 {
 	DOLOG(log_ss::LS_COMM, "panel task started");
@@ -91,7 +108,6 @@ void console_esp32::panel_update_thread()
 	pixels.clear();
 	pixels.show();
 
-	constexpr uint8_t brightness = 16;
 	const uint32_t magenta = pixels.Color(brightness, 0,          brightness);
 	const uint32_t red     = pixels.Color(brightness, 0,          0);
 	const uint32_t green   = pixels.Color(0,          brightness, 0);
@@ -101,23 +117,20 @@ void console_esp32::panel_update_thread()
 
 	const uint32_t run_mode_led_color[4] = { red, yellow, blue, green };
 
-	// initial animation
-	for(uint8_t i=0; i<n_leds; i++) {
-		pixels.setPixelColor(i, brightness, brightness, brightness);
-		int p = i - 10;
-		if (p < 0)
-			p += n_leds;
-		pixels.setPixelColor(p, 0, 0, 0);
-		pixels.show();
-
-		delay(10);
-	}
+	test_leds(pixels, n_leds);
 
 	pixels.clear();
 	pixels.show();
 
 	while(!stop_panel) {
 		vTaskDelay(1000 / (portTICK_PERIOD_MS * refreshrate));
+
+		if (do_test_panel) {
+			do_test_panel = false;
+			if (p_blinkenlights)
+				p_blinkenlights->test();
+			test_leds(pixels, n_leds);
+		}
 
 		if (p_blinkenlights)
 			p_blinkenlights->push(b, running_flag);

@@ -65,8 +65,8 @@ JsonDocument disk_backend_nbd::serialize()
 
 	j["disk-backend-type"] = "nbd";
 	j["overlay"] = serialize_overlay();
-	j["host"] = host.c_str();
-	j["port"] = port;
+	j["host"   ] = host.c_str();
+	j["port"   ] = port;
 	auto crc = crc_over_data();
 	if (crc.has_value())
 		j["crc32"] = crc.value();
