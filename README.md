@@ -15,7 +15,7 @@ To build for e.g. linux:
     make
 
     Required:
-    * libncursesw5-dev
+    * libncursesw5-dev, cmake, build-essential, pkg-config, libjansson-dev
 
 To build for e.g. windows:
 
