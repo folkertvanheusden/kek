@@ -9,7 +9,7 @@ jobs:
     runs-on: macos-latest
     steps:
     - uses: actions/checkout@v4
-    - name: install ncurses & libjansson
+    - name: init
       run: |
         git submodule init
         git submodule update
@@ -22,5 +22,5 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: my-artifact
-        path: build/ke
+        path: build/kek
         retention-days: 2
