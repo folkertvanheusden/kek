@@ -275,7 +275,6 @@ void console::put_string(const std::string & what)
 void console::operator()()
 {
 	DOLOG(log_ss::LS_GENERIC, "Console thread started");
-
 	set_thread_name("kek::console");
 
 	while(*stop_event != EVENT_TERMINATE && !stop_thread_flag) {
