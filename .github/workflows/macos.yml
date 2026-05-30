@@ -1,0 +1,26 @@
+name: macos
+
+on:
+  push:
+
+jobs:
+  build:
+
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: install sdl3 etc
+      run: |
+        git submodule init
+        git submodule update
+        brew install ncurses jansson
+    - name: cmake
+      run: cmake -S . -B build
+    - name: make
+      run: make -C build kek
+    - name: store artifact in GitHub
+      uses: actions/upload-artifact@v4
+      with:
+        name: my-artifact
+        path: build/kek
+        retention-days: 2
