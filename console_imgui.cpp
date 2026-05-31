@@ -111,7 +111,9 @@ void console_imgui::gui_event_loop()
 				stop = true;
 			if (event.type == SDL_EVENT_KEY_DOWN) {
 				SDL_Keycode keycode = SDL_GetKeyFromScancode(event.key.scancode, event.key.mod, false);
-				if (keycode < 127)
+				if (event.key.mod & SDL_KMOD_CTRL)
+					kb_buffer.push(toupper(keycode & 0xff) - 'A' + 1);
+				else if (keycode < 127)
 					kb_buffer.push(keycode);
 			}
 		}
