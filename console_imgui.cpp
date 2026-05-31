@@ -59,12 +59,11 @@ void console_imgui::panel_update_thread()
 	set_thread_name("panel");
 
 	constexpr const auto pixel_format = SDL_PIXELFORMAT_ARGB8888;
-	uint32_t             c_red_bright = 0xff0000;  // FIXME
-	uint32_t             c_red_low    = 0x0f0000;  // FIXME
-
+	uint32_t             c_red_bright = 0;
+	uint32_t             c_red_dim    = 0;
 	cpu                 *const c      = b->getCpu();
 
-	while(!stop) {
+	while(!stop && *stop_event != EVENT_TERMINATE) {
 		if (panel_w <= 0) {
 			SDL_Delay(100);
 			continue;
@@ -76,6 +75,10 @@ void console_imgui::panel_update_thread()
 			new_surface = SDL_CreateSurface(panel_w, panel_h, pixel_format);
 		}
 
+		const SDL_PixelFormatDetails *format = SDL_GetPixelFormatDetails(new_surface->format);
+		c_red_bright = SDL_MapRGB(format, nullptr, 255, 0, 0);
+		c_red_dim    = SDL_MapRGB(format, nullptr, 16, 0, 0);
+
 		uint16_t           current_PSW   = c->getPSW();
 		int                run_mode      = current_PSW >> 14;
 		uint16_t           current_PC    = c->getPC();
@@ -83,11 +86,10 @@ void console_imgui::panel_update_thread()
 		auto               current_instr = b->peek_word(run_mode, current_PC);
 
 		int pix_w = new_surface->w * 80 / 100;
-		int led_d = pix_w / 22;
-		printf("%d %d %d\n", new_surface->w, pix_w, led_d);
+		int led_d = pix_w / 23;
 		for(int i=0; i<22; i++) {
 			SDL_Rect rect { 0 + led_d * i, 0, led_d, led_d };
-			SDL_FillSurfaceRect(new_surface, &rect, rc.physical_instruction & (1 << i) ? c_red_bright : c_red_low);
+			SDL_FillSurfaceRect(new_surface, &rect, rc.physical_instruction & (1 << i) ? c_red_bright : c_red_dim);
 		}
 
 		{
@@ -148,7 +150,7 @@ void console_imgui::gui_event_loop()
 	ImGui_ImplSDL3_InitForSDLRenderer(window, renderer);
 	ImGui_ImplSDLRenderer3_Init(renderer);
 
-	while(!stop) {
+	while(!stop && *stop_event != EVENT_TERMINATE) {
 		SDL_Delay(1);
 		SDL_Event event;
 		while (SDL_PollEvent(&event)) {
@@ -176,6 +178,19 @@ void console_imgui::gui_event_loop()
 		ImGui::NewFrame();
 
 		///
+		ImGui::Begin("Front panel");
+		auto         available_space = ImGui::GetContentRegionAvail();
+		SDL_Texture *texture         = nullptr;
+		{
+			my_unique_lock lck(&panel_lock);
+			texture  = panel ? SDL_CreateTextureFromSurface(renderer, panel) : nullptr;
+			panel_w  = available_space.x;
+			panel_h  = available_space.y;
+		}
+		if (texture)
+			ImGui::Image(ImTextureID(intptr_t(texture)), ImVec2(float(texture->w) / 2, float(texture->h) / 2));
+		ImGui::End();
+
 		ImGui::Begin("Terminal");
 		char *buffer_copy = new char[t_width * t_height];
 		for(int i=0; i<t_width * t_height; i++)
@@ -187,24 +202,15 @@ void console_imgui::gui_event_loop()
 		delete [] buffer_copy;
 		ImGui::End();
 
-		ImGui::Begin("Front panel");
-		SDL_Texture *texture = nullptr;
-		{
-			my_unique_lock lck(&panel_lock);
-			texture = panel ? SDL_CreateTextureFromSurface(renderer, panel) : nullptr;
-		}
-		if (texture) {
-			ImGui::Image(ImTextureID(intptr_t(panel)), ImVec2(float(panel->w), float(panel->h)));
-			SDL_DestroyTexture(texture);
-		}
-		ImGui::End();
-
 	        // Rendering
 		ImGui::Render();
 		SDL_SetRenderScale(renderer, io.DisplayFramebufferScale.x, io.DisplayFramebufferScale.y);
 		SDL_RenderClear(renderer);
 		ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
 		SDL_RenderPresent(renderer);
+
+		if (texture)
+			SDL_DestroyTexture(texture);
 	}
 
 	*stop_event = EVENT_TERMINATE;
