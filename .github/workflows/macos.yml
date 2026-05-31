@@ -14,10 +14,6 @@ jobs:
         git submodule init
         git submodule update
         brew install ncurses jansson
-        echo config
-        brew config
-        echo doctor
-        brew doctor
     - name: cmake
       run: LDFLAGS="-L/opt/homebrew/opt/ncurses/lib" CPPFLAGS="-I/opt/homebrew/opt/ncurses/include" PKG_CONFIG_PATH="/opt/homebrew/opt/ncurses/lib/pkgconfig" cmake -S . -B build
     - name: make
