@@ -4,9 +4,9 @@
 #if defined(USE_IMGUI)
 #include "gen.h"
 #include <atomic>
-#include <imgui/imgui.h>
-#include <imgui/backends/imgui_impl_sdl3.h>
-#include <imgui/backends/imgui_impl_sdlrenderer3.h>
+#include "imgui/imgui.h"
+#include "imgui/backends/imgui_impl_sdl3.h"
+#include "imgui/backends/imgui_impl_sdlrenderer3.h"
 #include <SDL3/SDL.h>
 
 #include "console_imgui.h"
@@ -35,6 +35,7 @@ void console_imgui::put_char_ll(const char c)
 
 void console_imgui::put_string_lf(const std::string & what)
 {
+	put_string(what + "\n");
 }
 
 void console_imgui::resize_terminal()
@@ -78,6 +79,7 @@ void console_imgui::operator()()
 	ImGui::CreateContext();
 	ImGuiIO& io = ImGui::GetIO();
 	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+	io.Fonts->AddFontDefaultVector();
 
 	ImGui::StyleColorsDark();
 	ImGuiStyle& style = ImGui::GetStyle();
@@ -90,13 +92,16 @@ void console_imgui::operator()()
 
 	while(*stop_event == EVENT_NONE) {
 		SDL_Event event;
-		while (SDL_PollEvent(&event))
-		{
+		while (SDL_PollEvent(&event)) {
 			ImGui_ImplSDL3_ProcessEvent(&event);
 			if (event.type == SDL_EVENT_QUIT)
 				*stop_event = EVENT_TERMINATE;
 			if (event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED && event.window.windowID == SDL_GetWindowID(window))
 				*stop_event = EVENT_TERMINATE;
+			if (event.type == SDL_EVENT_KEY_DOWN) {
+				SDL_Keycode keycode = SDL_GetKeyFromScancode(event.key.scancode, event.key.mod, false);
+				//
+			}
 		}
 
 		if (SDL_GetWindowFlags(window) & SDL_WINDOW_MINIMIZED) {
@@ -109,6 +114,16 @@ void console_imgui::operator()()
 		ImGui::NewFrame();
 
 		/// TODO
+		ImGui::Begin("Terminal");
+		char *buffer_copy = new char[t_width * t_height];
+		for(int i=0; i<t_width * t_height; i++)
+			buffer_copy[i] = screen_buffer[i] ? screen_buffer[i] : ' ';
+		for(int y=0; y<t_height; y++) {
+			auto offset = y * t_width;
+			ImGui::TextUnformatted(&buffer_copy[offset], &buffer_copy[offset + t_width]);
+		}
+		delete [] buffer_copy;
+		ImGui::End();
 
 	        // Rendering
 		ImGui::Render();

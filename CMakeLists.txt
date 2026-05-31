@@ -14,12 +14,23 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 include(FindPkgConfig)
 
+pkg_check_modules(SDL3 REQUIRED sdl3)
+
 if (TURBO EQUAL 1)
 	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DTURBO=1")
 	MESSAGE("TURBO BUILD")
 else()
 	MESSAGE("normal build")
 endif()
+
+set(APP_IMGUI_SOURCES
+	${CMAKE_SOURCE_DIR}/imgui/imgui.cpp
+	${CMAKE_SOURCE_DIR}/imgui/imgui_draw.cpp
+	${CMAKE_SOURCE_DIR}/imgui/imgui_tables.cpp
+	${CMAKE_SOURCE_DIR}/imgui/imgui_widgets.cpp
+	${CMAKE_SOURCE_DIR}/imgui/backends/imgui_impl_sdl3.cpp
+	${CMAKE_SOURCE_DIR}/imgui/backends/imgui_impl_sdlrenderer3.cpp
+)
 
 set(APP_SOURCES
   benchmark.cpp
@@ -54,7 +65,6 @@ set(APP_SOURCES
   eth_transport.cpp
   eth_transport_linux.cpp
   eth_transport_vxlan.cpp
-  imgui_impl_sdlrenderer3.cpp
   kw11-l.cpp
   loaders.cpp
   log.cpp
@@ -83,11 +93,20 @@ add_executable(
   main.cpp
 )
 
-add_executable(
-  kek-native
-  ${APP_SOURCES}
-  main.cpp
-)
+if (SDL3_FOUND)
+	add_executable(
+	  kek-native
+	  ${APP_SOURCES}
+	  ${APP_IMGUI_SOURCES}
+	  main.cpp
+	)
+else ()
+	add_executable(
+	  kek-native
+	  ${APP_SOURCES}
+	  main.cpp
+	)
+endif ()
 
 ###
 include(FetchContent)
@@ -149,18 +168,6 @@ target_compile_options(kek-native PUBLIC ${PANEL_CFLAGS_OTHER})
 target_link_libraries(dz11-test ${PANEL_LIBRARIES})
 target_include_directories(dz11-test PUBLIC ${PANEL_INCLUDE_DIRS})
 target_compile_options(dz11-test PUBLIC ${PANEL_CFLAGS_OTHER})
-
-pkg_check_modules(IMGUI REQUIRED imgui sdl3)
-if (IMGUI_FOUND)
-	MESSAGE("IMGUI found")
-	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_IMGUI=1")
-	target_link_libraries(kek ${IMGUI_LIBRARIES})
-	target_include_directories(kek PUBLIC ${IMGUI_INCLUDE_DIRS})
-	target_compile_options(kek PUBLIC ${IMGUI_CFLAGS_OTHER})
-	target_link_libraries(kek-native PUBLIC ${IMGUI_LIBRARIES})
-	target_include_directories(kek-native PUBLIC ${IMGUI_INCLUDE_DIRS})
-	target_compile_options(kek-native PUBLIC ${IMGUI_CFLAGS_OTHER})
-endif ()
 endif (NOT WIN32)
 
 if (WIN32)
@@ -205,6 +212,17 @@ target_link_libraries(kek ArduinoJson)
 target_link_libraries(kek-native PUBLIC ArduinoJson)
 target_link_libraries(kek-codecoverage ArduinoJson)
 target_link_libraries(dz11-test ArduinoJson)
+endif ()
+
+if (SDL3_FOUND)
+	MESSAGE("SDL3 found")
+	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_IMGUI=1")
+	target_link_libraries(kek ${SDL3_LIBRARIES})
+	target_include_directories(kek PUBLIC ${SDL3_INCLUDE_DIRS} ${CMAKE_SOURCE_DIR}/imgui)
+	target_compile_options(kek PUBLIC ${SDL3_CFLAGS_OTHER})
+	target_link_libraries(kek-native PUBLIC ${SDL3_LIBRARIES})
+	target_include_directories(kek-native PUBLIC ${SDL3_INCLUDE_DIRS} ${CMAKE_SOURCE_DIR}/imgui)
+	target_compile_options(kek-native PUBLIC ${SDL3_CFLAGS_OTHER})
 endif ()
 
 if (UNIX)
