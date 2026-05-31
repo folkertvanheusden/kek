@@ -55,7 +55,7 @@ void console_ncurses::begin()
 	th_panel = new std::thread(&console_ncurses::panel_update_thread, this);
 }
 
-int console_ncurses::wait_for_char_ll(const short timeout)
+int console_ncurses::wait_for_char_ll(const int timeout)
 {
 	pollfd fds[] = { { STDIN_FILENO, POLLIN, 0 } };
 

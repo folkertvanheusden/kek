@@ -6,17 +6,18 @@
 #include <thread>
 
 #include "console.h"
+#include "my_lock.h"
 
 
 class console_imgui : public console
 {
 private:
-	std::thread  *th { nullptr };
+	std::thread                 *th { nullptr };
+	my_threadsafe_queue<uint8_t> kb_buffer;
 
 protected:
-	int wait_for_char_ll(const short timeout) override;
-
-	void put_char_ll(const char c) override;
+	int  wait_for_char_ll(const int  timeout) override;
+	void put_char_ll     (const char c      ) override;
 
 public:
 	console_imgui(std::atomic_uint32_t *const stop_event);
@@ -30,6 +31,6 @@ public:
 
 	void panel_update_thread() override;
 
-	void operator()();
+	void gui_event_loop();
 };
 #endif

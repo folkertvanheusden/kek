@@ -22,20 +22,25 @@ console_imgui::~console_imgui()
 
 void console_imgui::begin()
 {
-	th = new std::thread(std::ref(*this));
+	th = new std::thread(&console_imgui::gui_event_loop, this);
 }
 
-int console_imgui::wait_for_char_ll(const short timeout)
+int console_imgui::wait_for_char_ll(const int timeout)
 {
+	auto rc = kb_buffer.pop(timeout);
+	if (rc.has_value() == false)
+		return -1;
+	return rc.value();
 }
 
 void console_imgui::put_char_ll(const char c)
 {
+	// TODO trigger refresh
 }
 
 void console_imgui::put_string_lf(const std::string & what)
 {
-	put_string(what + "\n");
+	put_string(what + "\r\n");
 }
 
 void console_imgui::resize_terminal()
@@ -50,7 +55,7 @@ void console_imgui::refresh_virtual_terminal()
 {
 }
 
-void console_imgui::operator()()
+void console_imgui::gui_event_loop()
 {
 	set_thread_name("IMGUI");
 
@@ -91,6 +96,7 @@ void console_imgui::operator()()
 	ImGui_ImplSDLRenderer3_Init(renderer);
 
 	while(*stop_event == EVENT_NONE) {
+		SDL_Delay(1);
 		SDL_Event event;
 		while (SDL_PollEvent(&event)) {
 			ImGui_ImplSDL3_ProcessEvent(&event);
@@ -100,7 +106,8 @@ void console_imgui::operator()()
 				*stop_event = EVENT_TERMINATE;
 			if (event.type == SDL_EVENT_KEY_DOWN) {
 				SDL_Keycode keycode = SDL_GetKeyFromScancode(event.key.scancode, event.key.mod, false);
-				//
+				if (keycode < 127)
+					kb_buffer.push(keycode);
 			}
 		}
 
