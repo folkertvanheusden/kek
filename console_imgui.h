@@ -12,7 +12,8 @@
 class console_imgui : public console
 {
 private:
-	std::thread                 *th { nullptr };
+	std::atomic_bool             stop { false   };
+	std::thread                 *th   { nullptr };
 	my_threadsafe_queue<uint8_t> kb_buffer;
 
 protected:

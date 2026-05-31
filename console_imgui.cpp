@@ -18,6 +18,11 @@ console_imgui::console_imgui(std::atomic_uint32_t *const stop_event): console(st
 
 console_imgui::~console_imgui()
 {
+	if (th) {
+		stop = true;
+		th->join();
+		delete th;
+	}
 }
 
 void console_imgui::begin()
@@ -95,15 +100,15 @@ void console_imgui::gui_event_loop()
 	ImGui_ImplSDL3_InitForSDLRenderer(window, renderer);
 	ImGui_ImplSDLRenderer3_Init(renderer);
 
-	while(*stop_event == EVENT_NONE) {
+	while(!stop) {
 		SDL_Delay(1);
 		SDL_Event event;
 		while (SDL_PollEvent(&event)) {
 			ImGui_ImplSDL3_ProcessEvent(&event);
-			if (event.type == SDL_EVENT_QUIT)
-				*stop_event = EVENT_TERMINATE;
+			if (event.type == SDL_EVENT_QUIT) 
+				stop = true;
 			if (event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED && event.window.windowID == SDL_GetWindowID(window))
-				*stop_event = EVENT_TERMINATE;
+				stop = true;
 			if (event.type == SDL_EVENT_KEY_DOWN) {
 				SDL_Keycode keycode = SDL_GetKeyFromScancode(event.key.scancode, event.key.mod, false);
 				if (keycode < 127)
@@ -139,6 +144,8 @@ void console_imgui::gui_event_loop()
 		ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
 		SDL_RenderPresent(renderer);
 	}
+
+	*stop_event = EVENT_TERMINATE;
 
 	ImGui_ImplSDLRenderer3_Shutdown();
 	ImGui_ImplSDL3_Shutdown();
