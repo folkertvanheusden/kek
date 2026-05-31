@@ -23,6 +23,9 @@ console_imgui::~console_imgui()
 		th->join();
 		delete th;
 	}
+
+	if (panel)
+		SDL_DestroyTexture(panel);
 }
 
 void console_imgui::begin()
@@ -54,6 +57,10 @@ void console_imgui::resize_terminal()
 
 void console_imgui::panel_update_thread()
 {
+	for(;;) {
+		SDL_Delay(100);  // div by int_interval
+		// draw to texture
+	}
 }
 
 void console_imgui::refresh_virtual_terminal()
@@ -83,6 +90,9 @@ void console_imgui::gui_event_loop()
 	}
 	// SDL_SetRenderVSync(renderer, 1);
 	SDL_ShowWindow(window);
+
+	// placeholder
+	panel = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_BGRA32, SDL_TEXTUREACCESS_STREAMING, 320, 100);
 
 	// Setup Dear ImGui context
 	IMGUI_CHECKVERSION();
@@ -137,6 +147,13 @@ void console_imgui::gui_event_loop()
 			ImGui::TextUnformatted(&buffer_copy[offset], &buffer_copy[offset + t_width]);
 		}
 		delete [] buffer_copy;
+		ImGui::End();
+
+		ImGui::Begin("Front panel");
+		{
+			my_unique_lock lck(&panel_lock);
+			ImGui::Image(ImTextureID(intptr_t(panel)), ImVec2(float(panel->w), float(panel->h)));
+		}
 		ImGui::End();
 
 	        // Rendering
