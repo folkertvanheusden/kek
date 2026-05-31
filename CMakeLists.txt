@@ -38,6 +38,7 @@ set(APP_SOURCES
   comm_tcp_socket_server.cpp
   console.cpp
   console_comm.cpp
+  console_imgui.cpp
   console_ncurses.cpp
   console_posix.cpp
   cpu.cpp
@@ -53,6 +54,7 @@ set(APP_SOURCES
   eth_transport.cpp
   eth_transport_linux.cpp
   eth_transport_vxlan.cpp
+  imgui_impl_sdlrenderer3.cpp
   kw11-l.cpp
   loaders.cpp
   log.cpp
@@ -147,6 +149,18 @@ target_compile_options(kek-native PUBLIC ${PANEL_CFLAGS_OTHER})
 target_link_libraries(dz11-test ${PANEL_LIBRARIES})
 target_include_directories(dz11-test PUBLIC ${PANEL_INCLUDE_DIRS})
 target_compile_options(dz11-test PUBLIC ${PANEL_CFLAGS_OTHER})
+
+pkg_check_modules(IMGUI REQUIRED imgui sdl3)
+if (IMGUI_FOUND)
+	MESSAGE("IMGUI found")
+	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_IMGUI=1")
+	target_link_libraries(kek ${IMGUI_LIBRARIES})
+	target_include_directories(kek PUBLIC ${IMGUI_INCLUDE_DIRS})
+	target_compile_options(kek PUBLIC ${IMGUI_CFLAGS_OTHER})
+	target_link_libraries(kek-native PUBLIC ${IMGUI_LIBRARIES})
+	target_include_directories(kek-native PUBLIC ${IMGUI_INCLUDE_DIRS})
+	target_compile_options(kek-native PUBLIC ${IMGUI_CFLAGS_OTHER})
+endif ()
 endif (NOT WIN32)
 
 if (WIN32)

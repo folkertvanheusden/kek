@@ -16,6 +16,8 @@ To build for e.g. linux:
 
     Required:
     * libncursesw5-dev, cmake, build-essential, pkg-config, libjansson-dev
+    Optional:
+    * libsdl3-dev, libimgui-dev
 
 To build for e.g. windows:
 

@@ -16,6 +16,9 @@
 #include "comm.h"
 #include "comm_posix_tty.h"
 #include "comm_tcp_socket_server.h"
+#if defined(USE_IMGUI)
+#include "console_imgui.h"
+#endif
 #if defined(_WIN32)
 #include "win32.h"
 #else
@@ -46,10 +49,9 @@
 #include "utils.h"
 
 
-bool              withUI       { false };
 std::atomic_uint32_t event     { 0 };
-std::atomic_bool *running      { nullptr };
-blinkenlights     bl;
+std::atomic_bool    *running   { nullptr };
+blinkenlights        bl;
 
 std::atomic_bool  sigw_event   { false };
 
@@ -249,7 +251,7 @@ void help()
 	printf("-R x     select disk type (rk05, rl02, rp06 or rp07)\n");
 	printf("-p 123   set CPU start pointer to octal value\n");
 	printf("-b x     enable builtin bootloader, see -R for values (+ \"tm11\") of x\n");
-	printf("-n       ncurses UI\n");
+	printf("-u x     ncurses, imgui (optional)\n");
 	printf("-d       enable debugger\n");
 	printf("-f x     first process the commands from file x before entering the debugger\n");
 	printf("-S x     set ram size (in number of 8 kB pages)\n");
@@ -282,6 +284,7 @@ int main(int argc, char *argv[])
 	std::vector<disk_backend *> disk_files;
 	std::string  disk_type = "rk05";
 
+	enum { ui_ncurses, ui_imgui, ui_none } with_ui = ui_none;
 	bool          run_debugger  = false;
 	std::optional<std::string> debugger_init;
 
@@ -318,7 +321,7 @@ int main(int argc, char *argv[])
 	std::string  deqna_type;
 
 	int  opt = -1;
-	while((opt = getopt(argc, argv, "hC:L:D:T:B:r:R:p:ndf:tb:l:s:Q:N:J:XS:P1:m:Q:28:I:c:")) != -1)
+	while((opt = getopt(argc, argv, "u:hC:L:D:T:B:r:R:p:df:tb:l:s:Q:N:J:XS:P1:m:Q:28:I:c:")) != -1)
 	{
 		switch(opt) {
 			case 'h':
@@ -391,8 +394,15 @@ int main(int argc, char *argv[])
 				set_ss_log(false, log_ss::LS_TRACE);
 				break;
 
-			case 'n':
-				withUI = true;
+			case 'u':
+				if (strcmp(optarg, "ncurses") == 0)
+					with_ui = ui_ncurses;
+				else if (strcmp(optarg, "imgui") == 0)
+					with_ui = ui_imgui;
+				else if (strcmp(optarg, "none") == 0)
+					with_ui = ui_none;
+				else
+					error_exit(false, "\"%s\" is not known for -u", optarg);
 				break;
 
 			case 'T':
@@ -512,10 +522,16 @@ int main(int argc, char *argv[])
 #if defined(_WIN32)
 		cnsl = new console_posix(&event);
 #else
-		if (withUI) {
+		if (with_ui == ui_ncurses) {
 			cnsl = new console_ncurses(&event);
 			set_terminal(cnsl);
 		}
+#if defined(USE_IMGUI)
+		else if (with_ui == ui_imgui) {
+			cnsl = new console_imgui(&event);
+			set_terminal(cnsl);
+		}
+#endif
 		else {
 			cnsl = new console_posix(&event);
 		}
@@ -714,7 +730,7 @@ int main(int argc, char *argv[])
 	sigemptyset(&sa.sa_mask);
 	sa.sa_flags = SA_RESTART;
 
-	if (withUI)
+	if (with_ui == ui_ncurses)
 		sigaction(SIGWINCH, &sa, nullptr);
 
 	sigaction(SIGTERM, &sa, nullptr);
