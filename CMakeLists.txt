@@ -124,16 +124,16 @@ SET(LINKING_STUFF
   Threads::Threads
 )
 
-add_executable(
-  dz11-test
-  ${APP_SOURCES}
-)
+#add_executable(
+#  dz11-test
+#  ${APP_SOURCES}
+#)
 
-target_link_libraries(
-  dz11-test
-  ${LINKING_STUFF}
-)
-target_compile_options(dz11-test PRIVATE -O1 -fno-inline -DUNIT_TEST)
+#target_link_libraries(
+#dz11-test
+#  ${LINKING_STUFF}
+#)
+#target_compile_options(dz11-test PRIVATE -O1 -fno-inline -DUNIT_TEST)
 ###
 
 target_compile_options(kek-native PRIVATE -march=native -Ofast -fomit-frame-pointer)
@@ -151,9 +151,9 @@ target_compile_options(kek-codecoverage PUBLIC ${PANEL_CFLAGS_OTHER})
 target_link_libraries(kek-native PUBLIC ${PANEL_LIBRARIES})
 target_include_directories(kek-native PUBLIC ${PANEL_INCLUDE_DIRS})
 target_compile_options(kek-native PUBLIC ${PANEL_CFLAGS_OTHER})
-target_link_libraries(dz11-test ${PANEL_LIBRARIES})
-target_include_directories(dz11-test PUBLIC ${PANEL_INCLUDE_DIRS})
-target_compile_options(dz11-test PUBLIC ${PANEL_CFLAGS_OTHER})
+#target_link_libraries(dz11-test ${PANEL_LIBRARIES})
+#target_include_directories(dz11-test PUBLIC ${PANEL_INCLUDE_DIRS})
+#target_compile_options(dz11-test PUBLIC ${PANEL_CFLAGS_OTHER})
 endif (NOT WIN32)
 
 pkg_check_modules(NCURSES REQUIRED ncurses)
@@ -166,9 +166,9 @@ target_compile_options(kek-codecoverage PUBLIC ${NCURSES_CFLAGS_OTHER})
 target_link_libraries(kek-native PUBLIC ${NCURSES_LIBRARIES})
 target_include_directories(kek-native PUBLIC ${NCURSES_INCLUDE_DIRS})
 target_compile_options(kek-native PUBLIC ${NCURSES_CFLAGS_OTHER})
-target_link_libraries(dz11-test ${NCURSES_LIBRARIES})
-target_include_directories(dz11-test PUBLIC ${NCURSES_INCLUDE_DIRS})
-target_compile_options(dz11-test PUBLIC ${NCURSES_CFLAGS_OTHER})
+#target_link_libraries(dz11-test ${NCURSES_LIBRARIES})
+#target_include_directories(dz11-test PUBLIC ${NCURSES_INCLUDE_DIRS})
+#target_compile_options(dz11-test PUBLIC ${NCURSES_CFLAGS_OTHER})
 
 if (WIN32)
 add_executable(
@@ -207,7 +207,7 @@ else()
 target_link_libraries(kek ArduinoJson)
 target_link_libraries(kek-native PUBLIC ArduinoJson)
 target_link_libraries(kek-codecoverage ArduinoJson)
-target_link_libraries(dz11-test ArduinoJson)
+#target_link_libraries(dz11-test ArduinoJson)
 endif ()
 
 if (SDL3_FOUND)
