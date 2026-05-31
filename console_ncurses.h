@@ -3,7 +3,6 @@
 
 #if !defined(_WIN32)
 #include <mutex>
-#include <ncurses.h>
 
 #include "console.h"
 #include "terminal.h"
