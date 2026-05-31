@@ -2,8 +2,8 @@
 // Released under MIT license
 
 #if !defined(_WIN32)
+#include <cstdio>
 #include <poll.h>
-#include <stdio.h>
 #include <ncurses.h>
 #include <unistd.h>
 
@@ -57,7 +57,7 @@ void console_ncurses::begin()
 
 int console_ncurses::wait_for_char_ll(const short timeout)
 {
-	struct pollfd fds[] = { { STDIN_FILENO, POLLIN, 0 } };
+	pollfd fds[] = { { STDIN_FILENO, POLLIN, 0 } };
 
 	if (poll(fds, 1, timeout) == 1 && fds[0].revents) {
 		std::unique_lock<std::mutex> lck(ncurses_mutex);
