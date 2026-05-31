@@ -86,10 +86,19 @@ void console_imgui::panel_update_thread()
 		auto               current_instr = b->peek_word(run_mode, current_PC);
 
 		int pix_w = new_surface->w * 80 / 100;
-		int led_d = pix_w / 23;
+		int led_d = pix_w / 22;
+		// address
 		for(int i=0; i<22; i++) {
 			SDL_Rect rect { 0 + led_d * i, 0, led_d, led_d };
 			SDL_FillSurfaceRect(new_surface, &rect, rc.physical_instruction & (1 << i) ? c_red_bright : c_red_dim);
+		}
+
+		// data
+		if (current_instr.has_value()) {
+			for(int i=0; i<16; i++) {
+				SDL_Rect rect { 0 + led_d * i, led_d, led_d, led_d };
+				SDL_FillSurfaceRect(new_surface, &rect, current_instr.value() & (1 << i) ? c_red_bright : c_red_dim);
+			}
 		}
 
 		{
