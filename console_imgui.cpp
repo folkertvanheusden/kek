@@ -4,12 +4,14 @@
 #if defined(USE_IMGUI)
 #include "gen.h"
 #include <atomic>
+#include <SDL3/SDL.h>
 #include "imgui/imgui.h"
 #include "imgui/backends/imgui_impl_sdl3.h"
 #include "imgui/backends/imgui_impl_sdlrenderer3.h"
-#include <SDL3/SDL.h>
 
+#include "bus.h"
 #include "console_imgui.h"
+#include "cpu.h"
 
 
 console_imgui::console_imgui(std::atomic_uint32_t *const stop_event): console(stop_event)
@@ -23,9 +25,6 @@ console_imgui::~console_imgui()
 		th->join();
 		delete th;
 	}
-
-	if (panel)
-		SDL_DestroyTexture(panel);
 }
 
 void console_imgui::begin()
@@ -57,10 +56,52 @@ void console_imgui::resize_terminal()
 
 void console_imgui::panel_update_thread()
 {
-	for(;;) {
-		SDL_Delay(100);  // div by int_interval
-		// draw to texture
+	set_thread_name("panel");
+
+	constexpr const auto pixel_format = SDL_PIXELFORMAT_ARGB8888;
+	uint32_t             c_red_bright = 0xff0000;  // FIXME
+	uint32_t             c_red_low    = 0x0f0000;  // FIXME
+
+	cpu                 *const c      = b->getCpu();
+
+	while(!stop) {
+		if (panel_w <= 0) {
+			SDL_Delay(100);
+			continue;
+		}
+
+		SDL_Surface *new_surface = nullptr;
+		{
+			my_unique_lock lck(&panel_lock);
+			new_surface = SDL_CreateSurface(panel_w, panel_h, pixel_format);
+		}
+
+		uint16_t           current_PSW   = c->getPSW();
+		int                run_mode      = current_PSW >> 14;
+		uint16_t           current_PC    = c->getPC();
+		memory_addresses_t rc            = b->getMMU()->calculate_physical_address(run_mode, current_PC);
+		auto               current_instr = b->peek_word(run_mode, current_PC);
+
+		int pix_w = new_surface->w * 80 / 100;
+		int led_d = pix_w / 22;
+		printf("%d %d %d\n", new_surface->w, pix_w, led_d);
+		for(int i=0; i<22; i++) {
+			SDL_Rect rect { 0 + led_d * i, 0, led_d, led_d };
+			SDL_FillSurfaceRect(new_surface, &rect, rc.physical_instruction & (1 << i) ? c_red_bright : c_red_low);
+		}
+
+		{
+			my_unique_lock lck(&panel_lock);
+			SDL_DestroySurface(panel);
+			panel = new_surface;
+		}
+
+		SDL_Delay(1000 / refreshrate);
 	}
+
+	my_unique_lock lck(&panel_lock);
+	SDL_DestroySurface(panel);
+	panel = nullptr;
 }
 
 void console_imgui::refresh_virtual_terminal()
@@ -69,7 +110,7 @@ void console_imgui::refresh_virtual_terminal()
 
 void console_imgui::gui_event_loop()
 {
-	set_thread_name("IMGUI");
+	set_thread_name("imgui");
 
 	if (!SDL_Init(SDL_INIT_VIDEO)) {
 		printf("Error: SDL_Init(): %s\n", SDL_GetError());
@@ -90,9 +131,6 @@ void console_imgui::gui_event_loop()
 	}
 	// SDL_SetRenderVSync(renderer, 1);
 	SDL_ShowWindow(window);
-
-	// placeholder
-	panel = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_BGRA32, SDL_TEXTUREACCESS_STREAMING, 320, 100);
 
 	// Setup Dear ImGui context
 	IMGUI_CHECKVERSION();
@@ -137,7 +175,7 @@ void console_imgui::gui_event_loop()
 		ImGui_ImplSDL3_NewFrame();
 		ImGui::NewFrame();
 
-		/// TODO
+		///
 		ImGui::Begin("Terminal");
 		char *buffer_copy = new char[t_width * t_height];
 		for(int i=0; i<t_width * t_height; i++)
@@ -150,9 +188,14 @@ void console_imgui::gui_event_loop()
 		ImGui::End();
 
 		ImGui::Begin("Front panel");
+		SDL_Texture *texture = nullptr;
 		{
 			my_unique_lock lck(&panel_lock);
+			texture = panel ? SDL_CreateTextureFromSurface(renderer, panel) : nullptr;
+		}
+		if (texture) {
 			ImGui::Image(ImTextureID(intptr_t(panel)), ImVec2(float(panel->w), float(panel->h)));
+			SDL_DestroyTexture(texture);
 		}
 		ImGui::End();
 

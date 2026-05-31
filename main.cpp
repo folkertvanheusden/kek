@@ -512,6 +512,7 @@ int main(int argc, char *argv[])
 
 	start_disk_devices(disk_files, disk_snapshots);
 
+	std::thread *panel_th = nullptr;
 	if (console_port.has_value()) {
 		auto io = new comm_tcp_socket_server(console_port.value(), true);
 		cnsl = new console_comm(&event, io, 80, 24);
@@ -530,6 +531,7 @@ int main(int argc, char *argv[])
 		else if (with_ui == ui_imgui) {
 			cnsl = new console_imgui(&event);
 			set_terminal(cnsl);
+			panel_th = new std::thread([&] { cnsl->panel_update_thread(); });
 		}
 #endif
 		else {
@@ -763,6 +765,10 @@ int main(int argc, char *argv[])
 	event = EVENT_TERMINATE;
 
 	cnsl->stop_thread();
+	if (panel_th) {
+		panel_th->join();
+		delete panel_th;
+	}
 
 	delete b;
 	delete cnsl;

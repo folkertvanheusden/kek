@@ -44,9 +44,9 @@ void console_esp32::set_panel_mode(const panel_mode_t pm)
 	panel_mode = pm;
 }
 
-int console_esp32::wait_for_char_ll(const short timeout)
+int console_esp32::wait_for_char_ll(const int timeout)
 {
-	for(short i=0; i<timeout / 10; i++) {
+	for(int i=0; i<timeout / 10; i++) {
 		if (io_port->has_data())
 			return io_port->get_byte();
 
@@ -150,11 +150,9 @@ void console_esp32::panel_update_thread()
 			uint16_t current_PC    = c->getPC();
 
 			if (panel_mode == PM_BITS) {
-				memory_addresses_t rc  = b->getMMU()->calculate_physical_address(run_mode, current_PC);
-
-				auto current_instr = b->peek_word(run_mode, current_PC);
-
-				int pixel_offset = 0;
+				memory_addresses_t rc            = b->getMMU()->calculate_physical_address(run_mode, current_PC);
+				auto               current_instr = b->peek_word(run_mode, current_PC);
+				int                pixel_offset  = 0;
 
 				for(uint8_t b=0; b<22; b++)
 					pixels.setPixelColor(pixel_offset++, rc.physical_instruction & (1 << b) ? led_color : 0);

@@ -13,11 +13,13 @@
 class console_imgui : public console
 {
 private:
-	std::atomic_bool             stop  { false   };
-	std::thread                 *th    { nullptr };
-	my_threadsafe_queue<uint8_t> kb_buffer;
-	SDL_Texture                 *panel { nullptr };
-	my_lock                      panel_lock;
+	std::atomic_bool              stop    { false   };
+	std::thread                  *th      { nullptr };
+	my_threadsafe_queue<uint8_t>  kb_buffer;
+	int                           panel_w { 320     };
+	int                           panel_h { 200     };
+	SDL_Surface                  *panel   { nullptr };
+	my_lock                       panel_lock;
 
 protected:
 	int  wait_for_char_ll(const int  timeout) override;
