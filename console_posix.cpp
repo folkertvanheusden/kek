@@ -86,14 +86,14 @@ void console_posix::begin()
 	th_panel = new std::thread(&console_posix::panel_update_thread, this);
 }
 
-int console_posix::wait_for_char_ll(const short timeout)
+int console_posix::wait_for_char_ll(const int timeout)
 {
 #if defined(_WIN32)
 	fd_set rfds;
 	FD_ZERO(&rfds);
 	FD_SET(STDIN_FILENO, &rfds);
 
-	timeval to { timeout / 1000000, timeout % 1000000 };
+	timeval to { timeout / 1000, (timeout % 1000) * 1000 };
 
 	if (select(STDIN_FILENO + 1, &rfds, nullptr, nullptr, &to) == 1 && FD_ISSET(STDIN_FILENO, &rfds)) {
 		INPUT_RECORD record      { };

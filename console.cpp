@@ -258,9 +258,7 @@ void console::put_char(const char c)
 
 	if (ty == t_height) {
 		memmove(&screen_buffer[0 * t_width], &screen_buffer[1 * t_width], sizeof(char) * t_width * (t_height - 1));
-
 		ty--;
-
 		memset(&screen_buffer[(t_height - 1) * t_width], ' ', t_width);
 	}
 }

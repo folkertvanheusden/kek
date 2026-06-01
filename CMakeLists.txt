@@ -14,12 +14,25 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 include(FindPkgConfig)
 
+if (NOT WIN32)
+pkg_check_modules(SDL3 sdl3 sdl3-ttf)
+endif ()
+
 if (TURBO EQUAL 1)
 	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DTURBO=1")
 	MESSAGE("TURBO BUILD")
 else()
 	MESSAGE("normal build")
 endif()
+
+set(APP_IMGUI_SOURCES
+	${CMAKE_SOURCE_DIR}/imgui/imgui.cpp
+	${CMAKE_SOURCE_DIR}/imgui/imgui_draw.cpp
+	${CMAKE_SOURCE_DIR}/imgui/imgui_tables.cpp
+	${CMAKE_SOURCE_DIR}/imgui/imgui_widgets.cpp
+	${CMAKE_SOURCE_DIR}/imgui/backends/imgui_impl_sdl3.cpp
+	${CMAKE_SOURCE_DIR}/imgui/backends/imgui_impl_sdlrenderer3.cpp
+)
 
 set(APP_SOURCES
   benchmark.cpp
@@ -38,6 +51,7 @@ set(APP_SOURCES
   comm_tcp_socket_server.cpp
   console.cpp
   console_comm.cpp
+  console_imgui.cpp
   console_ncurses.cpp
   console_posix.cpp
   cpu.cpp
@@ -68,86 +82,51 @@ set(APP_SOURCES
   utils.cpp
 )
 
-if (NOT WIN32)
-add_executable(
-  kek
-  ${APP_SOURCES}
-  main.cpp
-)
-
-add_executable(
-  kek-codecoverage
-  ${APP_SOURCES}
-  main.cpp
-)
-
-add_executable(
-  kek-native
-  ${APP_SOURCES}
-  main.cpp
-)
-
-###
-include(FetchContent)
-FetchContent_Declare(
-  googletest
-  GIT_REPOSITORY https://github.com/google/googletest.git
-  GIT_TAG        v1.17.0
-)
-FetchContent_MakeAvailable(googletest)
-
-enable_testing()
-
-SET(LINKING_STUFF
-  GTest::gtest_main
-  Threads::Threads
-)
-
-#add_executable(
-#  dz11-test
-#  ${APP_SOURCES}
-#)
-
-#target_link_libraries(
-#dz11-test
-#  ${LINKING_STUFF}
-#)
-#target_compile_options(dz11-test PRIVATE -O1 -fno-inline -DUNIT_TEST)
-###
+if (SDL3_FOUND)
+	add_executable(
+	  kek-native
+	  ${APP_SOURCES}
+	  ${APP_IMGUI_SOURCES}
+	  main.cpp
+	)
+	add_executable(
+	  kek
+	  ${APP_SOURCES}
+	  ${APP_IMGUI_SOURCES}
+	  main.cpp
+	)
+else ()
+	add_executable(
+	  kek-native
+	  ${APP_SOURCES}
+	  main.cpp
+	)
+	add_executable(
+	  kek
+	  ${APP_SOURCES}
+	  main.cpp
+	)
+endif ()
 
 target_compile_options(kek-native PRIVATE -march=native -Ofast -fomit-frame-pointer)
 
-target_compile_options(kek-codecoverage PRIVATE -fprofile-arcs -ftest-coverage)
-target_link_options(kek-codecoverage PRIVATE -fprofile-arcs -ftest-coverage)
-
+if (NOT WIN32)
 pkg_check_modules(PANEL REQUIRED panel)
 target_link_libraries(kek ${PANEL_LIBRARIES})
 target_include_directories(kek PUBLIC ${PANEL_INCLUDE_DIRS})
 target_compile_options(kek PUBLIC ${PANEL_CFLAGS_OTHER})
-target_link_libraries(kek-codecoverage ${PANEL_LIBRARIES})
-target_include_directories(kek-codecoverage PUBLIC ${PANEL_INCLUDE_DIRS})
-target_compile_options(kek-codecoverage PUBLIC ${PANEL_CFLAGS_OTHER})
 target_link_libraries(kek-native PUBLIC ${PANEL_LIBRARIES})
 target_include_directories(kek-native PUBLIC ${PANEL_INCLUDE_DIRS})
 target_compile_options(kek-native PUBLIC ${PANEL_CFLAGS_OTHER})
-#target_link_libraries(dz11-test ${PANEL_LIBRARIES})
-#target_include_directories(dz11-test PUBLIC ${PANEL_INCLUDE_DIRS})
-#target_compile_options(dz11-test PUBLIC ${PANEL_CFLAGS_OTHER})
 
 pkg_check_modules(NCURSES REQUIRED ncurses)
 target_link_libraries(kek ${NCURSES_LIBRARIES})
 target_include_directories(kek PUBLIC ${NCURSES_INCLUDE_DIRS})
 target_compile_options(kek PUBLIC ${NCURSES_CFLAGS_OTHER})
-target_link_libraries(kek-codecoverage ${NCURSES_LIBRARIES})
-target_include_directories(kek-codecoverage PUBLIC ${NCURSES_INCLUDE_DIRS})
-target_compile_options(kek-codecoverage PUBLIC ${NCURSES_CFLAGS_OTHER})
 target_link_libraries(kek-native PUBLIC ${NCURSES_LIBRARIES})
 target_include_directories(kek-native PUBLIC ${NCURSES_INCLUDE_DIRS})
 target_compile_options(kek-native PUBLIC ${NCURSES_CFLAGS_OTHER})
-#target_link_libraries(dz11-test ${NCURSES_LIBRARIES})
-#target_include_directories(dz11-test PUBLIC ${NCURSES_INCLUDE_DIRS})
-#target_compile_options(dz11-test PUBLIC ${NCURSES_CFLAGS_OTHER})
-endif (NOT WIN32)
+endif ()
 
 if (WIN32)
 add_executable(
@@ -176,7 +155,6 @@ target_link_libraries(kek-win32 ws2_32)
 else ()
 target_link_libraries(kek Threads::Threads)
 target_link_libraries(kek-native PUBLIC Threads::Threads)
-target_link_libraries(kek-codecoverage Threads::Threads)
 endif ()
 
 add_subdirectory(arduinojson)
@@ -185,8 +163,17 @@ target_link_libraries(kek-win32 ArduinoJson)
 else()
 target_link_libraries(kek ArduinoJson)
 target_link_libraries(kek-native PUBLIC ArduinoJson)
-target_link_libraries(kek-codecoverage ArduinoJson)
-#target_link_libraries(dz11-test ArduinoJson)
+endif ()
+
+if (SDL3_FOUND)
+	MESSAGE("SDL3 found")
+	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_IMGUI=1")
+	target_link_libraries(kek ${SDL3_LIBRARIES})
+	target_include_directories(kek PUBLIC ${SDL3_INCLUDE_DIRS} ${CMAKE_SOURCE_DIR}/imgui)
+	target_compile_options(kek PUBLIC ${SDL3_CFLAGS_OTHER})
+	target_link_libraries(kek-native PUBLIC ${SDL3_LIBRARIES})
+	target_include_directories(kek-native PUBLIC ${SDL3_INCLUDE_DIRS} ${CMAKE_SOURCE_DIR}/imgui)
+	target_compile_options(kek-native PUBLIC ${SDL3_CFLAGS_OTHER})
 endif ()
 
 if (UNIX)

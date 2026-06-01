@@ -16,8 +16,8 @@ protected:
 	comm         *const io_port    { nullptr };
 	panel_mode_t        panel_mode { PM_BITS };  // TODO: atomic_int or locking (altough int...)
 
-	int wait_for_char_ll(const short timeout) override;
-	void put_char_ll    (const char c) override;
+	int wait_for_char_ll(const int  timeout) override;
+	void put_char_ll    (const char c      ) override;
 
 public:
 	console_comm(kek_event_t *const stop_event, comm *const io_port, const int t_width, const int t_height);

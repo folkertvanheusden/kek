@@ -121,7 +121,6 @@ public:
 		return c;
 #else
 		using namespace std::chrono_literals;
-
 		std::unique_lock<std::mutex> lck(l);
 		if (q.empty() == false || cv.wait_for(lck, timeout_ms * 1ms, [this] { return q.empty() == false; }) == true) {
 			auto v = std::move(q.front());

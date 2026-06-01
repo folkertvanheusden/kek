@@ -36,9 +36,9 @@ void console_comm::set_panel_mode(const panel_mode_t pm)
 {
 }
 
-int console_comm::wait_for_char_ll(const short timeout)
+int console_comm::wait_for_char_ll(const int timeout)
 {
-	for(short i=0; i<timeout / 10 && !stop_panel; i++) {
+	for(int i=0; i<timeout / 10 && !stop_panel; i++) {
 		if (io_port->has_data())
 			return io_port->get_byte();
 		myusleep(10000);

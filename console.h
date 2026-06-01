@@ -64,9 +64,8 @@ protected:
 
 	tty                    *have_data_cb_notifier { nullptr };
 
-	virtual int  wait_for_char_ll(const short timeout) = 0;
-
-	virtual void put_char_ll(const char c) = 0;
+	virtual int  wait_for_char_ll(const int  timeout) = 0;
+	virtual void put_char_ll     (const char c      ) = 0;
 
 public:
 	console(kek_event_t *const stop_event, const int t_width = 80, const int t_height = 25);

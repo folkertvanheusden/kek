@@ -4,3 +4,6 @@
 [submodule "TEENSY4_1/w5500"]
 	path = ESP32/w5500
 	url = https://github.com/folkertvanheusden/W5500MacRaw.git
+[submodule "imgui"]
+	path = imgui
+	url = https://github.com/ocornut/imgui/
