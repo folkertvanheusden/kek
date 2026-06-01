@@ -73,26 +73,6 @@ std::unordered_map<int, breakpoint *> cpu::list_breakpoints()
 	return breakpoints;
 }
 
-void cpu::add_to_stack_trace(const uint16_t p)
-{
-	auto da = disassemble(p);
-
-	stacktrace.push_back({ p, da["instruction-text"][0] });
-	while (stacktrace.size() >= max_stacktrace_depth)
-		stacktrace.erase(stacktrace.begin());
-}
-
-void cpu::pop_from_stack_trace()
-{
-	if (!stacktrace.empty())
-		stacktrace.pop_back();
-}
-
-std::vector<std::pair<uint16_t, std::string> > cpu::get_stack_trace() const
-{
-	return stacktrace;
-}
-
 void cpu::reset()
 {
 	memset(regs0_5, 0x00, sizeof regs0_5);
@@ -1550,8 +1530,6 @@ bool cpu::misc_operations(const uint16_t instr)
 			return true;
 
 		case 0b0000000000000010: // RTI
-			if (debug_mode)
-				pop_from_stack_trace();
 			setPC(pop_stack());
 			setPSW(pop_stack(), !!getPSW_runmode());
 			return true;
@@ -1565,8 +1543,6 @@ bool cpu::misc_operations(const uint16_t instr)
 			return true;
 
 		case 0b0000000000000110: // RTT
-			if (debug_mode)
-				pop_from_stack_trace();
 			setPC(pop_stack());
 			setPSW(pop_stack(), !!getPSW_runmode());
 			return true;
@@ -1608,9 +1584,6 @@ bool cpu::misc_operations(const uint16_t instr)
 	}
 
 	if ((instr & 0b1111111000000000) == 0b0000100000000000) { // JSR
-		if (debug_mode)
-			add_to_stack_trace(instruction_start);
-
 		int dst_mode = (instr >> 3) & 7;
 		if (dst_mode == 0)  // cannot jump to a register
 			return false;
@@ -1637,9 +1610,6 @@ bool cpu::misc_operations(const uint16_t instr)
 	}
 
 	if ((instr & 0b1111111111111000) == 0b0000000010000000) { // RTS
-		if (debug_mode)
-			pop_from_stack_trace();
-
 		const int link_reg = instr & 7;
 
 		// MOVE link, PC
@@ -1696,9 +1666,6 @@ void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 			}
 			before_psw = getPSW();
 			before_pc  = getPC();
-
-			if (debug_mode)
-				add_to_stack_trace(instruction_start);
 
 			// make sure the trap vector is retrieved from kernel space
 			psw &= 037777;  // mask off 14/15 to make it into kernel-space
@@ -2736,7 +2703,7 @@ bool cpu::step()
 #endif
 
 	try {
-		instruction_start = getPC();
+		uint16_t instruction_start = getPC();
 
 		if (!mmu_->isMMR1Locked()) {
 			mmu_->setMMR2(instruction_start);
@@ -2776,12 +2743,10 @@ JsonDocument cpu::serialize()
 		j[format("sp-%d", spnr)] = sp[spnr];
 
         j["pc"]                    = pc;
-        j["instruction_start"]     = instruction_start;
         j["psw"]                   = psw;
         j["fpsr"]                  = fpsr;
         j["stack_limit_register"]  = stack_limit_register;
         j["processing_trap_depth"] = processing_trap_depth;
-        j["debug_mode"]            = debug_mode;
 
 	if (delayed_trap.has_value())
 		j["delayed_trap"] = delayed_trap.value();
@@ -2816,12 +2781,10 @@ cpu *cpu::deserialize(const JsonVariantConst j, bus *const b, kek_event_t *const
 		c->sp[spnr] = j[format("sp-%d", spnr)];
 
         c->pc                    = j["pc"];
-        c->instruction_start     = j["instruction_start"];
         c->psw                   = j["psw"];
         c->fpsr                  = j["fpsr"];
         c->stack_limit_register  = j["stack_limit_register"];
         c->processing_trap_depth = j["processing_trap_depth"];
-        c->debug_mode            = j["debug_mode"];
 
 	if (j.containsKey("delayed_trap"))
 		c->delayed_trap  = j["delayed_trap"];

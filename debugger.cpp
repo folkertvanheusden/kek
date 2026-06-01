@@ -1194,17 +1194,8 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 	else if (cmd == "turbo") {
 		state->turbo = !state->turbo;
 
-		if (state->turbo)
-			c->set_debug(false);
-
 		cnsl->put_string_lf(format("Turbo set to %s", state->turbo ? "ON" : "OFF"));
 
-		return true;
-	}
-	else if (cmd == "debug") {
-		bool new_mode = !c->get_debug();
-		c->set_debug(new_mode);
-		cnsl->put_string_lf(format("Debug mode set to %s", new_mode ? "ON" : "OFF"));
 		return true;
 	}
 #if IS_POSIX
@@ -1471,16 +1462,6 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 
 		return true;
 	}
-	else if (cmd == "bt") {
-		if (c->get_debug() == false)
-			cnsl->put_string_lf("Debug mode is disabled!");
-
-		auto backtrace = c->get_stack_trace();
-		for(auto & element: backtrace)
-			cnsl->put_string_lf(format("%06o %s", element.first, element.second.c_str()));
-
-		return true;
-	}
 #if defined(BUILD_FOR_PICO2W)
 	else if (cmd == "flash") {
 		int ch_opt = wait_for_key("y/n", cnsl, { 'y', 'n' });
@@ -1533,8 +1514,6 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			"setsl hst     - set syslog target: requires a hostname",
 			"pts x         - enable (1) / disable (0) timestamps",
 			"turbo         - toggle turbo mode (cannot be interrupted)",
-			"debug         - enable CPU debug mode",
-			"bt            - show backtrace - need to enable debug first",
 			"strace x      - start tracing from address - invoke without address to disable",
 			"state [reset [hard]] x - dump state of (or reset) a device: rl02, rk05, rp06, rp07, mmu, tm11, kw11l, cpu, dc11, dz11 or deqna",
 			"mmures x      - resolve a virtual address",
