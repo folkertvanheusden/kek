@@ -133,7 +133,6 @@ target_compile_options(kek-native PUBLIC ${PANEL_CFLAGS_OTHER})
 #target_link_libraries(dz11-test ${PANEL_LIBRARIES})
 #target_include_directories(dz11-test PUBLIC ${PANEL_INCLUDE_DIRS})
 #target_compile_options(dz11-test PUBLIC ${PANEL_CFLAGS_OTHER})
-endif (NOT WIN32)
 
 pkg_check_modules(NCURSES REQUIRED ncurses)
 target_link_libraries(kek ${NCURSES_LIBRARIES})
@@ -148,6 +147,7 @@ target_compile_options(kek-native PUBLIC ${NCURSES_CFLAGS_OTHER})
 #target_link_libraries(dz11-test ${NCURSES_LIBRARIES})
 #target_include_directories(dz11-test PUBLIC ${NCURSES_INCLUDE_DIRS})
 #target_compile_options(dz11-test PUBLIC ${NCURSES_CFLAGS_OTHER})
+endif (NOT WIN32)
 
 if (WIN32)
 add_executable(
