@@ -14,7 +14,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 include(FindPkgConfig)
 
-pkg_check_modules(SDL3 REQUIRED sdl3)
+pkg_check_modules(SDL3 REQUIRED sdl3 sdl3-ttf)
 
 if (TURBO EQUAL 1)
 	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DTURBO=1")

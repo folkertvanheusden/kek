@@ -5,6 +5,7 @@
 #include "gen.h"
 #include <atomic>
 #include <SDL3/SDL.h>
+#include <SDL3_ttf/SDL_ttf.h>
 #include "imgui/imgui.h"
 #include "imgui/backends/imgui_impl_sdl3.h"
 #include "imgui/backends/imgui_impl_sdlrenderer3.h"
@@ -63,6 +64,14 @@ void console_imgui::panel_update_thread()
 	uint32_t             c_red_dim    = 0;
 	cpu                 *const c      = b->getCpu();
 
+	TTF_Init();
+	TTF_Font    *font             = TTF_OpenFont("/usr/share/vlc/skins2/fonts/FreeSans.ttf", 32);
+
+	SDL_Color    white { 255, 255, 255, 255 };
+	SDL_Surface *text_address     = TTF_RenderText_Blended(font, "address", 0, white);
+	SDL_Surface *text_instruction = TTF_RenderText_Blended(font, "instr.",  0, white);
+	SDL_Surface *text_psw         = TTF_RenderText_Blended(font, "psw",     0, white);
+
 	while(!stop && *stop_event != EVENT_TERMINATE) {
 		if (panel_w <= 0) {
 			SDL_Delay(100);
@@ -85,21 +94,35 @@ void console_imgui::panel_update_thread()
 		memory_addresses_t rc            = b->getMMU()->calculate_physical_address(run_mode, current_PC);
 		auto               current_instr = b->peek_word(run_mode, current_PC);
 
-		int pix_w = new_surface->w * 80 / 100;
-		int led_d = pix_w / 22;
+		int pix_w  = new_surface->w * 80 / 100;
+		int text_w = new_surface->w * 20 / 100;
+		int led_d  = pix_w / 22;
+		int text_h = pix_w / 26;
 		// address
 		for(int i=0; i<22; i++) {
 			SDL_Rect rect { 0 + led_d * i, 0, led_d, led_d };
-			SDL_FillSurfaceRect(new_surface, &rect, rc.physical_instruction & (1 << i) ? c_red_bright : c_red_dim);
+			SDL_FillSurfaceRect(new_surface, &rect, rc.physical_instruction & (1 << (21 - i)) ? c_red_bright : c_red_dim);
 		}
+		SDL_Rect text_address_to     { 23 * led_d,     0, text_w, text_h };
+		SDL_BlitSurface(text_address,     nullptr, new_surface, &text_address_to    );
 
 		// data
 		if (current_instr.has_value()) {
 			for(int i=0; i<16; i++) {
 				SDL_Rect rect { 0 + led_d * i, led_d, led_d, led_d };
-				SDL_FillSurfaceRect(new_surface, &rect, current_instr.value() & (1 << i) ? c_red_bright : c_red_dim);
+				SDL_FillSurfaceRect(new_surface, &rect, current_instr.value() & (1 << (15 - i)) ? c_red_bright : c_red_dim);
 			}
 		}
+		SDL_Rect text_instruction_to { 23 * led_d, led_d, text_w, text_h };
+		SDL_BlitSurface(text_instruction, nullptr, new_surface, &text_instruction_to);
+
+		// PSW
+		for(int i=0; i<16; i++) {
+			SDL_Rect rect { 0 + led_d * i, led_d * 2, led_d, led_d };
+			SDL_FillSurfaceRect(new_surface, &rect, current_PSW & (1 << (15 - i)) ? c_red_bright : c_red_dim);
+		}
+		SDL_Rect text_psw_to { 23 * led_d, led_d * 2, text_w, text_h };
+		SDL_BlitSurface(text_psw, nullptr, new_surface, &text_psw_to);
 
 		{
 			my_unique_lock lck(&panel_lock);
@@ -113,6 +136,11 @@ void console_imgui::panel_update_thread()
 	my_unique_lock lck(&panel_lock);
 	SDL_DestroySurface(panel);
 	panel = nullptr;
+
+	SDL_DestroySurface(text_address    );
+	SDL_DestroySurface(text_instruction);
+	SDL_DestroySurface(text_psw        );
+	TTF_CloseFont(font);
 }
 
 void console_imgui::refresh_virtual_terminal()
@@ -197,7 +225,7 @@ void console_imgui::gui_event_loop()
 			panel_h  = available_space.y;
 		}
 		if (texture)
-			ImGui::Image(ImTextureID(intptr_t(texture)), ImVec2(float(texture->w) / 2, float(texture->h) / 2));
+			ImGui::Image(ImTextureID(intptr_t(texture)), ImVec2(float(texture->w), float(texture->h)));
 		ImGui::End();
 
 		ImGui::Begin("Terminal");
