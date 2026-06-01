@@ -1485,12 +1485,12 @@ void cpu::push_stack(const uint16_t v)
 				uint16_t a = add_register(6, -2);
 				b->write_word(a, v, d_space);
 				delayed_trap = 04;
+				any_queued_interrupts = true;
 				mmu_->setCPUERRBit(8);
 			}
 			else {
 				set_register(6, 4);  // red zone
 				trap(04, 7);
-				delayed_trap = 04;
 				processing_trap_depth = 127;  // double trap so halt
 			}
 			return;
@@ -2729,8 +2729,15 @@ bool cpu::step()
 	if (any_queued_interrupts)
 		execute_any_pending_interrupt();
 #else
-	if (any_queued_interrupts.load(std::memory_order_relaxed))
+	if (any_queued_interrupts.load(std::memory_order_relaxed)) {
+		if (delayed_trap.has_value()) {
+			DOLOG(log_ss::LS_CPU, "delayed trap %06o", delayed_trap.value());
+			trap(delayed_trap.value(), 7);
+			delayed_trap.reset();
+		}
+
 		execute_any_pending_interrupt();
+	}
 #endif
 
 	try {
@@ -2745,11 +2752,6 @@ bool cpu::step()
 		add_register(7, 2);
 
 		if (double_operand_instructions(instr) || conditional_branch_instructions(instr) || condition_code_operations(instr) || misc_operations(instr)) {
-			if (delayed_trap.has_value()) {
-				trap(delayed_trap.value(), 7);
-				delayed_trap.reset();
-			}
-
 			return true;
 		}
 
