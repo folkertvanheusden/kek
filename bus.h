@@ -152,7 +152,7 @@ public:
 	uint16_t read_physical(const uint32_t a);
 	uint16_t read_physical_byte(const uint32_t a);
 
-	bool     write(const uint16_t a, const word_mode_t word_mode, uint16_t value, const int run_mode, const d_i_space_t s = i_space);
+	bool     write(const uint16_t a, const word_mode_t word_mode, const uint16_t value, const int run_mode, const d_i_space_t s = i_space);
 	void     write_unibus_byte(const uint32_t a, const uint8_t value);
 	void     write_byte(const uint16_t a, const uint8_t value) override { write(a, wm_byte, value, c->getPSW_runmode()); }
 	void     write_word(const uint16_t a, const uint16_t value, const d_i_space_t s);

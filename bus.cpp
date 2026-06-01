@@ -845,15 +845,12 @@ bool bus::write_IO(const uint16_t a, const word_mode_t word_mode, const int run_
 	throw 9;
 }
 
-bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t value, const int run_mode, const d_i_space_t space_in)
+bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, const uint16_t value, const int run_mode, const d_i_space_t space_in)
 {
 	const uint8_t apf        = addr_in >> 13; // active page field
 	auto          space      = mmu_->get_use_data_space(run_mode) ? space_in : i_space;
 	int           page_index = mmu_->calc_par_pdr_index(run_mode, space, apf);
 	uint32_t      m_offset   = mmu_->calculate_physical_address(run_mode, addr_in, true, space);
-
-	if (mmu_->is_enabled())
-		mmu_->set_page_written_to(page_index);
 
 	uint32_t io_base  = mmu_->get_io_base();
 	bool     is_io    = m_offset >= io_base;
@@ -872,6 +869,8 @@ bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 	DOLOG(log_ss::LS_BUS, "WRITE to %06o/%07o %c %c: %06o", addr_in, m_offset, space == d_space ? 'D' : 'I', word_mode == wm_byte ? 'B' : 'W', value);
 
 	verify_pointer_bounds(m_offset, page_index);
+
+	mmu_->set_page_written_to(page_index);
 
 	mmu_->set_page_accessed(page_index);
 
