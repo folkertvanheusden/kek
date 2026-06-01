@@ -540,6 +540,35 @@ uint16_t bus::read_IO(const uint16_t a, const word_mode_t word_mode, const int r
 	return 0;
 }
 
+void bus::verify_pointer_bounds(const uint32_t m_offset, const int page_index)
+{
+	if (m_offset >= m->get_memory_size()) [[unlikely]] {
+		DOLOG(log_ss::LS_BUS, "TRAP(04) (throw 6) on address %08o", m_offset);
+
+		if (mmu_->is_locked() == false) {
+			uint16_t temp = mmu_->getMMR0();
+
+			temp &= 017777;
+			temp |= 1l << 15;  // non-resident
+
+			const auto [ run_mode, d, apf ] = mmu_->explode_page_index(page_index);
+
+			temp &= ~14;  // add current page
+			temp |= apf << 1;
+
+			temp &= ~(3 << 5);
+			temp |= run_mode << 5;
+
+			mmu_->setMMR0_as_is(temp);
+		}
+
+		DOLOG(log_ss::LS_BUS, "TRAP 250 for access valid");
+		c->trap(0250);
+
+		throw 6;
+	}
+}
+
 uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const int run_mode, const d_i_space_t space_in)
 {
 	auto     space    = mmu_->get_use_data_space(run_mode) ? space_in : i_space;
@@ -561,11 +590,7 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const in
 		throw 2;
 	}
 
-	if (m_offset >= m->get_memory_size()) {
-		mmu_->setCPUERRBit(5);
-		c->trap(004);  // no such RAM
-		throw 1;
-	}
+	verify_pointer_bounds(m_offset, page_index);
 
 	mmu_->set_page_accessed(page_index);
 
@@ -846,11 +871,7 @@ bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, uint16_t va
 
 	DOLOG(log_ss::LS_BUS, "WRITE to %06o/%07o %c %c: %06o", addr_in, m_offset, space == d_space ? 'D' : 'I', word_mode == wm_byte ? 'B' : 'W', value);
 
-	if (m_offset >= m->get_memory_size()) {
-		mmu_->setCPUERRBit(5);
-		c->trap(004);  // no such RAM
-		throw 1;
-	}
+	verify_pointer_bounds(m_offset, page_index);
 
 	mmu_->set_page_accessed(page_index);
 

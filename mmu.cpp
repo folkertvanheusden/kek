@@ -366,35 +366,6 @@ void mmu::verify_page_access(const int page_index, const bool is_write)
 	throw 5;
 }
 
-void mmu::verify_access_valid(const uint32_t m_offset, const int page_index, const bool is_io, const bool is_write)
-{
-	if (m_offset >= m->get_memory_size() && !is_io) [[unlikely]] {
-		DOLOG(log_ss::LS_MMU, "TRAP(04) (throw 6) on address %08o", m_offset);
-
-		if (is_locked() == false) {
-			uint16_t temp = getMMR0();
-
-			temp &= 017777;
-			temp |= 1l << 15;  // non-resident
-
-			const auto [ run_mode, d, apf ] = explode_page_index(page_index);
-
-			temp &= ~14;  // add current page
-			temp |= apf << 1;
-
-			temp &= ~(3 << 5);
-			temp |= run_mode << 5;
-
-			setMMR0_as_is(temp);
-		}
-
-		DOLOG(log_ss::LS_MMU, "TRAP 250 for access valid");
-		c->trap(0250);
-
-		throw 6;
-	}
-}
-
 void mmu::verify_page_length(const uint16_t virt_addr, const int page_index, const bool is_write)
 {
 	uint16_t pdr_len    = get_pdr_len(page_index);
@@ -434,14 +405,12 @@ void mmu::verify_page_length(const uint16_t virt_addr, const int page_index, con
 
 uint32_t mmu::calculate_physical_address(const int run_mode, const uint16_t a, const bool is_write, const d_i_space_t space)
 {
-	uint32_t m_offset = a;
-
 	if (is_enabled() || (is_write && (getMMR0() & (1 << 8 /* maintenance check */)))) {
 		uint16_t p_offset   = a & 8191;  // page offset
 		uint8_t  apf        = a >> 13;  // active page field
 		int      page_index = calc_par_pdr_index(run_mode, space, apf);
 
-		m_offset  = get_physical_memory_offset(page_index);
+		uint32_t m_offset  = get_physical_memory_offset(page_index);
 		m_offset += p_offset;
 
 		if ((getMMR3() & 16) == 0)  // off is 18bit
@@ -449,15 +418,12 @@ uint32_t mmu::calculate_physical_address(const int run_mode, const uint16_t a, c
 
 		verify_page_access(page_index, is_write);
 
-		// e.g. ram or i/o, not unmapped
-		bool     is_io    = m_offset >= io_base;
-
-		verify_access_valid(m_offset, page_index, is_io, is_write);
-
 		verify_page_length(a, page_index, is_write);
+
+		return m_offset;
 	}
 
-	return m_offset;
+	return a;
 }
 
 JsonDocument mmu::add_par_pdr(const int run_mode, const d_i_space_t d) const
