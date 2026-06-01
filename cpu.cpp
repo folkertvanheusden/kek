@@ -102,7 +102,6 @@ void cpu::reset()
 	fpsr = 0;
 	init_interrupt_queue();
 
-        it_is_a_trap          = false;
 	processing_trap_depth = 0;
 	kw11l_counter         = 0;
 }
@@ -1676,8 +1675,6 @@ void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 	uint16_t before_psw = 0;
 	uint16_t before_pc  = 0;
 
-	it_is_a_trap = true;
-
 	do {
 		try {
 			processing_trap_depth++;
@@ -2723,8 +2720,6 @@ std::unordered_map<std::string, std::vector<std::string> > cpu::disassemble(cons
 
 bool cpu::step()
 {
-	it_is_a_trap = false;
-
 #if defined(TEENSY4_1)
 	if (any_queued_interrupts)
 		execute_any_pending_interrupt();
@@ -2786,7 +2781,6 @@ JsonDocument cpu::serialize()
         j["fpsr"]                  = fpsr;
         j["stack_limit_register"]  = stack_limit_register;
         j["processing_trap_depth"] = processing_trap_depth;
-        j["it_is_a_trap"]          = it_is_a_trap;
         j["debug_mode"]            = debug_mode;
 
 	if (delayed_trap.has_value())
@@ -2827,7 +2821,6 @@ cpu *cpu::deserialize(const JsonVariantConst j, bus *const b, kek_event_t *const
         c->fpsr                  = j["fpsr"];
         c->stack_limit_register  = j["stack_limit_register"];
         c->processing_trap_depth = j["processing_trap_depth"];
-        c->it_is_a_trap          = j["it_is_a_trap"];
         c->debug_mode            = j["debug_mode"];
 
 	if (j.containsKey("delayed_trap"))

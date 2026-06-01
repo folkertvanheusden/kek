@@ -50,7 +50,6 @@ private:
 	uint16_t fpsr               { 0     };
 	uint16_t stack_limit_register { 0400 };
 	int      processing_trap_depth { 0  };
-	bool     it_is_a_trap       { false };
 	std::optional<int> delayed_trap {   };  // invoked after completion of the instruction
 	bool     debug_mode         { false };
 	std::vector<std::pair<uint16_t, std::string> > stacktrace;
@@ -155,7 +154,6 @@ public:
 	bool check_if_interrupts_pending() const { return any_queued_interrupts; }
 
 	void trap(uint16_t vector, const int new_ipl = -1, const bool is_interrupt = false);
-	bool is_it_a_trap() const { return it_is_a_trap; }
 
 	bool getPSW_c() const;
 	bool getPSW_v() const;
