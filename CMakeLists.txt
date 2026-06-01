@@ -14,7 +14,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 include(FindPkgConfig)
 
-pkg_check_modules(SDL3 REQUIRED sdl3 sdl3-ttf)
+if (NOT WIN32)
+pkg_check_modules(SDL3 sdl3 sdl3-ttf)
+endif ()
 
 if (TURBO EQUAL 1)
 	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DTURBO=1")
@@ -108,6 +110,7 @@ endif ()
 
 target_compile_options(kek-native PRIVATE -march=native -Ofast -fomit-frame-pointer)
 
+if (NOT WIN32)
 pkg_check_modules(PANEL REQUIRED panel)
 target_link_libraries(kek ${PANEL_LIBRARIES})
 target_include_directories(kek PUBLIC ${PANEL_INCLUDE_DIRS})
@@ -123,6 +126,7 @@ target_compile_options(kek PUBLIC ${NCURSES_CFLAGS_OTHER})
 target_link_libraries(kek-native PUBLIC ${NCURSES_LIBRARIES})
 target_include_directories(kek-native PUBLIC ${NCURSES_INCLUDE_DIRS})
 target_compile_options(kek-native PUBLIC ${NCURSES_CFLAGS_OTHER})
+endif ()
 
 if (WIN32)
 add_executable(
