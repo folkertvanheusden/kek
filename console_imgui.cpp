@@ -68,9 +68,13 @@ void console_imgui::panel_update_thread()
 	TTF_Font    *font             = TTF_OpenFont("/usr/share/vlc/skins2/fonts/FreeSans.ttf", 32);
 
 	SDL_Color    white { 255, 255, 255, 255 };
-	SDL_Surface *text_address     = TTF_RenderText_Blended(font, "address", 0, white);
-	SDL_Surface *text_instruction = TTF_RenderText_Blended(font, "instr.",  0, white);
-	SDL_Surface *text_psw         = TTF_RenderText_Blended(font, "psw",     0, white);
+	SDL_Surface *text_address     = TTF_RenderText_Blended(font, "address",    0, white);
+	SDL_Surface *text_instruction = TTF_RenderText_Blended(font, "instr.",     0, white);
+	SDL_Surface *text_psw         = TTF_RenderText_Blended(font, "psw",        0, white);
+	SDL_Surface *text_disk_read   = TTF_RenderText_Blended(font, "disk read",  0, white);
+	SDL_Surface *text_disk_write  = TTF_RenderText_Blended(font, "disk write", 0, white);
+	SDL_Surface *text_network     = TTF_RenderText_Blended(font, "network",    0, white);
+	SDL_Surface *text_mmu_ena     = TTF_RenderText_Blended(font, "mmu enabl.", 0, white);
 
 	while(!stop && *stop_event != EVENT_TERMINATE) {
 		if (panel_w <= 0) {
@@ -124,6 +128,31 @@ void console_imgui::panel_update_thread()
 		SDL_Rect text_psw_to { 23 * led_d, led_d * 2, text_w, text_h };
 		SDL_BlitSurface(text_psw, nullptr, new_surface, &text_psw_to);
 
+		// activity LEDs
+		SDL_Rect rect_dr { 0 + 0, led_d * 3, led_d, led_d };
+		SDL_FillSurfaceRect(new_surface, &rect_dr, disk_read_activity_flag ? c_red_bright : c_red_dim);
+		disk_read_activity_flag  = false;
+		SDL_Rect text_disk_read_to { 23 * led_d, led_d * 3, text_w, text_h };
+		SDL_BlitSurface(text_disk_read, nullptr, new_surface, &text_disk_read_to);
+		//
+		SDL_Rect rect_dw { 0 + 0, led_d * 4, led_d, led_d };
+		SDL_FillSurfaceRect(new_surface, &rect_dw, disk_write_activity_flag ? c_red_bright : c_red_dim);
+		disk_write_activity_flag  = false;
+		SDL_Rect text_disk_write_to { 23 * led_d, led_d * 4, text_w, text_h };
+		SDL_BlitSurface(text_disk_write, nullptr, new_surface, &text_disk_write_to);
+		//
+		SDL_Rect rect_n { 0 + 0, led_d * 5, led_d, led_d };
+		SDL_FillSurfaceRect(new_surface, &rect_n, network_activity_flag ? c_red_bright : c_red_dim);
+		network_activity_flag  = false;
+		SDL_Rect text_network_to { 23 * led_d, led_d * 5, text_w, text_h };
+		SDL_BlitSurface(text_network, nullptr, new_surface, &text_network_to);
+
+		// MMU
+		SDL_Rect rect_mmu_ena { 0 + 0, led_d * 6, led_d, led_d };
+		SDL_FillSurfaceRect(new_surface, &rect_mmu_ena, b->getMMU()->is_enabled() ? c_red_bright : c_red_dim);
+		SDL_Rect text_mmu_ena_to { 23 * led_d, led_d * 6, text_w, text_h };
+		SDL_BlitSurface(text_mmu_ena, nullptr, new_surface, &text_mmu_ena_to);
+
 		{
 			my_unique_lock lck(&panel_lock);
 			SDL_DestroySurface(panel);
@@ -140,6 +169,10 @@ void console_imgui::panel_update_thread()
 	SDL_DestroySurface(text_address    );
 	SDL_DestroySurface(text_instruction);
 	SDL_DestroySurface(text_psw        );
+	SDL_DestroySurface(text_disk_read  );
+	SDL_DestroySurface(text_disk_write );
+	SDL_DestroySurface(text_network    );
+	SDL_DestroySurface(text_mmu_ena    );
 	TTF_CloseFont(font);
 }
 
