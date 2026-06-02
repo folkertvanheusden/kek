@@ -74,10 +74,9 @@ unsigned long get_ms()
 #if defined(ESP32) || defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 	return millis();
 #else
-	timeval tv { };
-	// TODO replace gettimeofday by clock_gettime
-	gettimeofday(&tv, NULL);
-	return tv.tv_sec * 1000 + tv.tv_usec / 1000;
+	timespec tp { };
+	clock_gettime(CLOCK_REALTIME_COARSE, &tp);
+	return tp.tv_sec * 1000 + tp.tv_nsec / 1000000;
 #endif
 }
 
@@ -86,10 +85,9 @@ uint64_t get_us()
 #if defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 	return micros();
 #else
-	timeval tv { };
-	// TODO replace gettimeofday by clock_gettime
-	gettimeofday(&tv, NULL);
-	return tv.tv_sec * 1000000l + tv.tv_usec;
+	timespec tp { };
+	clock_gettime(CLOCK_REALTIME, &tp);
+	return tp.tv_sec * 1000000l + tp.tv_nsec / 1000;
 #endif
 }
 
