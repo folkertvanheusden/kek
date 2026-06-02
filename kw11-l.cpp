@@ -148,7 +148,7 @@ void kw11_l::operator()()
 	while(!stop_flag) {
 		int f = std::max(1, int(int_frequency));
 
-		next.tv_nsec += 1000000000 / f;  // usually 50 or 60 Hz
+		next.tv_nsec += 1000'000'000 / f;  // usually 50 or 60 Hz
 		while (next.tv_nsec >= 1'000'000'000) {
 			next.tv_nsec -= 1'000'000'000;
 			next.tv_sec++;
