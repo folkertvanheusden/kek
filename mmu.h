@@ -64,8 +64,8 @@ private:
 
 	void update_io_base() { io_base = is_enabled() ? (getMMR3() & 16 ? 017760000 : 0760000) : 0160000; }
 
-	void verify_page_access (const int page_index, const bool is_write);
-	void verify_page_length (const uint16_t virt_addr, const int page_index, const bool is_write);
+	void verify_page_access(const int page_index, const bool is_write);
+	void verify_page_length(const uint16_t virt_addr, const int page_index);
 
 public:
 	mmu();
@@ -118,7 +118,7 @@ public:
 	void     clearMMR1();
 	void     add_to_MMR1(const int8_t delta, const uint8_t reg);
 
-	void     trap_if_odd(const int page_index, const bool is_write);
+	void     trap_if_odd(const int page_index);
 
 	uint16_t getCPUERR() const { return CPUERR; }
 	void     setCPUERR(const uint16_t v) { CPUERR = v; }

@@ -261,7 +261,7 @@ void mmu::write_byte(const uint16_t a, const uint8_t value)
 		write_par(a, 3, value, wm_byte);
 }
 
-void mmu::trap_if_odd(const int page_index, const bool is_write)
+void mmu::trap_if_odd(const int page_index)
 {
 	MMR0 &= ~(7 << 1);
 	MMR0 |= (page_index & 7) << 1;
@@ -365,7 +365,7 @@ void mmu::verify_page_access(const int page_index, const bool is_write)
 	throw 5;
 }
 
-void mmu::verify_page_length(const uint16_t virt_addr, const int page_index, const bool is_write)
+void mmu::verify_page_length(const uint16_t virt_addr, const int page_index)
 {
 	uint16_t pdr_len    = get_pdr_len(page_index);
 	uint16_t pdr_cmp   = (virt_addr >> 6) & 127;
@@ -417,7 +417,7 @@ uint32_t mmu::calculate_physical_address(const int run_mode, const uint16_t a, c
 
 		verify_page_access(page_index, is_write);
 
-		verify_page_length(a, page_index, is_write);
+		verify_page_length(a, page_index);
 
 		return m_offset;
 	}
