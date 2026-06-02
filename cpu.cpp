@@ -303,8 +303,6 @@ void cpu::execute_any_pending_interrupt()
 #else
 	std::unique_lock<std::mutex> lck(qi_lock);
 #endif
-	any_queued_interrupts = false;
-
 	uint8_t current_level = getPSW_spl();
 
 	// uint8_t start_level = current_level <= 3 ? 0 : current_level + 1;
@@ -2688,10 +2686,12 @@ std::unordered_map<std::string, std::vector<std::string> > cpu::disassemble(cons
 bool cpu::step()
 {
 #if defined(TEENSY4_1)
-	if (any_queued_interrupts)
+	if (any_queued_interrupts) {
+		any_queued_interrupts = false;
 		execute_any_pending_interrupt();
 #else
-	if (any_queued_interrupts.load(std::memory_order_relaxed)) {
+	if (any_queued_interrupts.exchange(false, std::memory_order_relaxed)) {
+#endif
 		if (delayed_trap.has_value()) {
 			DOLOG(log_ss::LS_CPU, "delayed trap %06o", delayed_trap.value());
 			trap(delayed_trap.value(), 7);
@@ -2700,7 +2700,6 @@ bool cpu::step()
 
 		execute_any_pending_interrupt();
 	}
-#endif
 
 	try {
 		uint16_t instruction_start = getPC();
