@@ -75,6 +75,7 @@ unsigned long get_ms()
 	return millis();
 #else
 	timespec tp { };
+	// assuming 1ms resolution (true on linux)
 	clock_gettime(CLOCK_REALTIME_COARSE, &tp);
 	return tp.tv_sec * 1000 + tp.tv_nsec / 1000000;
 #endif
