@@ -118,20 +118,12 @@ void myusleep(uint64_t us)
 		}
 	}
 #else
-	timespec req;
-
-	req.tv_sec  = us / 1000000l;
-	req.tv_nsec = (us % 1000000l) * 1000l;
-
-	for(;;) {
-		timespec rem { 0, 0 };
-
-		int rc = nanosleep(&req, &rem);
-		if (rc == 0 || (rc == -1 && errno != EINTR))
-			break;
-
-		memcpy(&req, &rem, sizeof(timespec));
-	}
+        timespec end { };
+        clock_gettime(CLOCK_MONOTONIC, &end);
+	us *= 1000;
+	end.tv_nsec += us % 1000'000'000;
+	end.tv_sec  += us / 1000'000'000;
+	clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &end, nullptr);
 #endif
 }
 
