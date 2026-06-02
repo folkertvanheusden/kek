@@ -2702,18 +2702,15 @@ bool cpu::step()
 	}
 
 	try {
-		uint16_t instruction_start = getPC();
-
-		mmu_->MMRStartInstruction(instruction_start);
-
-		uint16_t instr = b->read_word(instruction_start);
+		mmu_->MMRStartInstruction(pc);
+		uint16_t instr = b->read_word(pc);
 		add_register(7, 2);
 
 		if (double_operand_instructions(instr) || conditional_branch_instructions(instr) || condition_code_operations(instr) || misc_operations(instr)) {
 			return true;
 		}
 
-		DOLOG(log_ss::LS_CPU, "UNHANDLED instruction %06o @ %06o", instr, instruction_start);
+		DOLOG(log_ss::LS_CPU, "UNHANDLED instruction %06o @ %06o", instr, pc - 2);
 
 		trap(010);  // floating point nog niet geimplementeerd
 
