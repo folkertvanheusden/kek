@@ -1576,7 +1576,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 	bool reset_cpu = true;
 
 	if (state->turbo) {
-		while(*stop_event == EVENT_NONE)
+		while(stop_event->load(std::memory_order_relaxed) == EVENT_NONE)
 			c->step();
 	}
 	else {
@@ -1590,7 +1590,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		uint64_t start_trap_count    = c->get_trap_counter();
 		bool     is_trace_enabled    = trace_enabled();
 		std::unordered_map<uint16_t, uint32_t> trap_counts_before = c->get_trap_counts();
-		while(*stop_event == EVENT_NONE) {
+		while(stop_event->load(std::memory_order_relaxed) == EVENT_NONE) {
 			if (is_trace_enabled || state->single_step) {
 				if (!state->single_step)
 					DOLOG(log_ss::LS_TRACE, "---");
@@ -1713,7 +1713,7 @@ void debugger(console *const cnsl, bus *const b, kek_event_t *const stop_event, 
 		}
 	}
 
-	while(*stop_event != EVENT_TERMINATE) {
+	while(stop_event->load(std::memory_order_relaxed) != EVENT_TERMINATE) {
 		try {
 			if (state.marker)
 				cnsl->put_string_lf("---");
