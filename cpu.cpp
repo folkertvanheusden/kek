@@ -413,22 +413,19 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t wo
 	d_i_space_t read_space = d_space;
 	int         run_mode   = getPSW_runmode();
 
-        uint16_t temp      = 0;
-	uint16_t next_word = 0;
-	int      delta     = 0;
-
 	switch(mode) {
 		case 1:  // (Rn)
 			g.addr     = get_register(reg);
 			read_space = isR7_space;
 			break;
-		case 2:  // (Rn)+  /  #n
-			g.addr  = get_register(reg);
-			delta   = word_mode == wm_word || reg >= 6 ? 2 : 1;
-			add_register(reg, delta);
-			add_to_MMR1(reg, delta);
-			read_space = isR7_space;
-			break;
+		case 2:  { // (Rn)+  /  #n
+				 int delta = word_mode == wm_word || reg >= 6 ? 2 : 1;
+				 g.addr    = get_register(reg);
+				 add_register(reg, delta);
+				 add_to_MMR1(reg, delta);
+				 read_space = isR7_space;
+				 break;
+			 }
 		case 3:  // @(Rn)+  /  @#a
 			g.addr  = b->read(get_register(reg), wm_word, run_mode, isR7_space);
 			add_to_MMR1(reg, 2);
@@ -436,32 +433,36 @@ gam_rc_t cpu::getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t wo
 			// might be wrong: the adds should happen when the read is really performed(?), because of traps
 			add_register(reg, 2);
 			break;
-		case 4:  // -(Rn)
-			delta   = word_mode == wm_word || reg >= 6 ? -2 : -1;
-			temp    = add_register(reg, delta);
-			add_to_MMR1(reg, delta);
-			g.space = d_space;
-			g.addr  = temp;
-			read_space = isR7_space;
-			break;
-		case 5:  // @-(Rn)
-			temp    = add_register(reg, -2);
-			add_to_MMR1(reg, -2);
-			g.addr  = b->read(temp, wm_word, run_mode, isR7_space);
-			g.space = d_space;
-			break;
-		case 6:  // x(Rn)  /  a
-			next_word = b->read(getPC(), wm_word, run_mode, i_space);
-			add_register(7, + 2);
-			g.addr  = get_register(reg) + next_word;
-			g.space = d_space;
-			break;
-		case 7:  // @x(Rn)  /  @a
-			next_word = b->read(getPC(), wm_word, run_mode, i_space);
-			add_register(7, + 2);
-			g.addr  = b->read(get_register(reg) + next_word, wm_word, run_mode, d_space);
-			g.space = d_space;
-			break;
+		case 4: {  // -(Rn)
+				int      delta = word_mode == wm_word || reg >= 6 ? -2 : -1;
+				uint16_t temp  = add_register(reg, delta);
+				add_to_MMR1(reg, delta);
+				g.space = d_space;
+				g.addr  = temp;
+				read_space = isR7_space;
+				break;
+			}
+		case 5: {  // @-(Rn)
+				uint16_t temp = add_register(reg, -2);
+				add_to_MMR1(reg, -2);
+				g.addr  = b->read(temp, wm_word, run_mode, isR7_space);
+				g.space = d_space;
+				break;
+			}
+		case 6: {  // x(Rn)  /  a
+				uint16_t next_word = b->read(getPC(), wm_word, run_mode, i_space);
+				add_register(7, + 2);
+				g.addr  = get_register(reg) + next_word;
+				g.space = d_space;
+				break;
+			}
+		case 7: {  // @x(Rn)  /  @a
+				uint16_t next_word = b->read(getPC(), wm_word, run_mode, i_space);
+				add_register(7, + 2);
+				g.addr  = b->read(get_register(reg) + next_word, wm_word, run_mode, d_space);
+				g.space = d_space;
+				break;
+			}
 	}
 
 	if (read_value)
