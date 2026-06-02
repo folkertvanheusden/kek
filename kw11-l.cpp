@@ -142,9 +142,20 @@ void kw11_l::operator()()
 
 	DOLOG(log_ss::LS_GENERIC, "Starting KW11-L thread");
 
+	timespec next { };
+	clock_gettime(CLOCK_MONOTONIC, &next);
+
 	while(!stop_flag) {
 		int f = std::max(1, int(int_frequency));
-		myusleep(1000000 / f);  // usually 50 or 60 Hz
+
+		next.tv_nsec += 1000000000 / f;  // usually 50 or 60 Hz
+		while (next.tv_nsec >= 1'000'000'000) {
+			next.tv_nsec -= 1'000'000'000;
+			next.tv_sec++;
+		}
+
+		clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next, nullptr);
+
 		tick();
 	}
 
@@ -195,7 +206,7 @@ void kw11_l::write_byte(const uint16_t addr, const uint8_t value)
 	my_unique_lock lck(&lc_csr_lock);
 
 	uint16_t vtemp = lf_csr;
-	
+
 	if (addr & 1) {
 		vtemp &= ~0xff00;
 		vtemp |= value << 8;
