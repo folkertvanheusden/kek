@@ -82,7 +82,9 @@ unsigned long get_ms()
 
 uint64_t get_us()
 {
-#if defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
+#if defined(ESP32)
+	return esp_timer_get_time();
+#elif defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 	return micros();
 #else
 	timespec tp { };
@@ -290,7 +292,7 @@ std::optional<JsonDocument> deserialize_file(const std::string & filename)
 	long size = ftell(fh);
 	fseek(fh, 0, SEEK_SET);
 	std::vector<char> j_in(size + 1);
-	DynamicJsonDocument j(size);
+	JsonDocument j;
 	fread(j_in.data(), 1, size, fh);
 	fclose(fh);
 
