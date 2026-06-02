@@ -112,6 +112,8 @@ public:
 	void     setMMR2(const uint16_t value);
 	void     setMMR3(const uint16_t value);
 
+	void     MMRStartInstruction(const uint16_t pc);
+
 	bool     isMMR1Locked() const { return MMR0 & 0160000; }
 	void     clearMMR1();
 	void     add_to_MMR1(const int8_t delta, const uint8_t reg);

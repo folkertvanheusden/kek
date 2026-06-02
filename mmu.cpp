@@ -138,7 +138,6 @@ bool mmu::get_use_data_space(const int run_mode) const
 
 void mmu::clearMMR1()
 {
-	DOLOG(log_ss::LS_MMU, "clear MMR1, was: %06o", MMR1);
 	MMR1 = 0;
 }
 
@@ -512,4 +511,12 @@ mmu *mmu::deserialize(const JsonVariantConst j, memory *const mem, cpu *const c)
         m->CSR    = j["CSR"];
 
 	return m;
+}
+
+void mmu::MMRStartInstruction(const uint16_t pc)
+{
+	if (!isMMR1Locked()) {
+		setMMR2(pc);
+		clearMMR1();
+	}
 }

@@ -2704,10 +2704,7 @@ bool cpu::step()
 	try {
 		uint16_t instruction_start = getPC();
 
-		if (!mmu_->isMMR1Locked()) {
-			mmu_->setMMR2(instruction_start);
-			mmu_->clearMMR1();
-		}
+		mmu_->MMRStartInstruction(instruction_start);
 
 		uint16_t instr = b->read_word(instruction_start);
 		add_register(7, 2);
