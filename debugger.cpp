@@ -804,7 +804,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		go_verbose = parts.size() == 2 && parts[1] == "-v";
 	}
 	else if (parts[0] == "benchmark") {
-		cnsl->put_string_lf("Stopping panel first...");
+		cnsl->put_string_lf("Stopping panel first");
 		cnsl->stop_panel_thread();
 
 		*cnsl->get_running_flag() = true;  // enable the KW11-L interrupt

@@ -410,7 +410,7 @@ uint32_t mmu::calculate_physical_address(const int run_mode, const uint16_t a, c
 		uint8_t  apf        = a >> 13;  // active page field
 		int      page_index = calc_par_pdr_index(run_mode, space, apf);
 
-		uint32_t m_offset  = get_physical_memory_offset(page_index);
+		uint32_t m_offset   = get_physical_memory_offset(page_index);
 		m_offset += p_offset;
 
 		if ((getMMR3() & 16) == 0)  // off is 18bit
