@@ -585,12 +585,6 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const in
 
 	int page_index = mmu_->calc_par_pdr_index(run_mode, space, apf);
 
-	if ((addr_in & 1) && word_mode == wm_word) {
-		DOLOG(log_ss::LS_BUS, "READ from %06o - odd address!", addr_in);
-		mmu_->trap_if_odd(page_index);
-		throw 2;
-	}
-
 	verify_pointer_bounds(m_offset, page_index);
 
 	mmu_->set_page_accessed(page_index);
@@ -598,8 +592,15 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const in
 	uint16_t temp = 0;
 	if (word_mode == wm_byte)
 		temp = m->read_byte(m_offset);
-	else
+	else {
+		if (m_offset & 1) {
+			DOLOG(log_ss::LS_BUS, "READ from %08o - odd address!", m_offset);
+			mmu_->trap_if_odd(page_index);
+			throw 2;
+		}
+
 		temp = m->read_word(m_offset);
+	}
 
 	DOLOG(log_ss::LS_BUS, "READ from %06o/%07o %c %c: %06o (%d)", addr_in, m_offset, space == d_space ? 'D' : 'I', word_mode == wm_byte ? 'B' : 'W', temp, run_mode);
 
@@ -861,24 +862,23 @@ bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, const uint1
 		return write_IO(a, word_mode, apf, value);
 	}
 
-	if ((addr_in & 1) && word_mode == wm_word) [[unlikely]] {
-		DOLOG(log_ss::LS_BUS, "WRITE to %06o (value: %06o) - odd address!", addr_in, value);
-		mmu_->trap_if_odd(page_index);
-		throw 10;
-	}
-
 	DOLOG(log_ss::LS_BUS, "WRITE to %06o/%07o %c %c: %06o", addr_in, m_offset, space == d_space ? 'D' : 'I', word_mode == wm_byte ? 'B' : 'W', value);
 
 	verify_pointer_bounds(m_offset, page_index);
 
 	mmu_->set_page_written_to(page_index);
 
-	mmu_->set_page_accessed(page_index);
-
 	if (word_mode == wm_byte)
 		m->write_byte(m_offset, value);
-	else
+	else {
+		if (m_offset & 1) [[unlikely]] {
+			DOLOG(log_ss::LS_BUS, "WRITE to %08o (value: %06o) - odd address!", m_offset, value);
+			mmu_->trap_if_odd(page_index);
+			throw 10;
+		}
+
 		m->write_word(m_offset, value);
+	}
 
 	return false;
 }
