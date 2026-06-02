@@ -576,13 +576,14 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const in
 
 	uint32_t io_base  = mmu_->get_io_base();
 	bool     is_io    = m_offset >= io_base;
+	int      apf      = addr_in >> 13;
 
 	if (is_io) {
 		uint16_t a = m_offset - io_base + 0160000;  // TODO
-		return read_IO(a, word_mode, run_mode, space, addr_in >> 13);
+		return read_IO(a, word_mode, run_mode, space, apf);
 	}
 
-	int page_index = mmu_->calc_par_pdr_index(run_mode, space, addr_in >> 13);
+	int page_index = mmu_->calc_par_pdr_index(run_mode, space, apf);
 
 	if ((addr_in & 1) && word_mode == wm_word) {
 		DOLOG(log_ss::LS_BUS, "READ from %06o - odd address!", addr_in);
@@ -852,8 +853,8 @@ bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, const uint1
 	int           page_index = mmu_->calc_par_pdr_index(run_mode, space, apf);
 	uint32_t      m_offset   = mmu_->calculate_physical_address(run_mode, addr_in, true, space);
 
-	uint32_t io_base  = mmu_->get_io_base();
-	bool     is_io    = m_offset >= io_base;
+	uint32_t      io_base    = mmu_->get_io_base();
+	bool          is_io      = m_offset >= io_base;
 
 	if (is_io) {
 		uint16_t a = m_offset - io_base + 0160000;  // TODO
