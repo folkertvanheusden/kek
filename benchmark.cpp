@@ -101,7 +101,7 @@ void benchmark(console *const cnsl, bus *const b, kek_event_t *const stop_event,
 		uint64_t start_ts1    = get_us();
 		size_t   cycle_count  = 0;
 		uint64_t duration     = 0;
-		while(stop_event->load(std::memory_order_relaxed) == EVENT_NONE) {
+		while(load_relaxed_p(stop_event) == EVENT_NONE) {
 			uint16_t pc = c->getPC();
 			cycle_count++;
 			// c->step() may alter what is beneath pc, so this first
@@ -117,7 +117,7 @@ void benchmark(console *const cnsl, bus *const b, kek_event_t *const stop_event,
 
 		uint64_t start_ts2    = get_us();
 		*stop_event = EVENT_NONE;
-		while(stop_event->load(std::memory_order_relaxed) == EVENT_NONE)
+		while(load_relaxed_p(stop_event) == EVENT_NONE)
 			c->step();
 		uint64_t end_ts2      = get_us();
 
@@ -138,7 +138,7 @@ void benchmark(console *const cnsl, bus *const b, kek_event_t *const stop_event,
 	}
 	else {
 		cnsl->put_string_lf("benchmark: please wait ~10 seconds");
-		while(stop_event->load(std::memory_order_relaxed) == EVENT_NONE)
+		while(load_relaxed_p(stop_event) == EVENT_NONE)
 			c->step();
 	}
 }

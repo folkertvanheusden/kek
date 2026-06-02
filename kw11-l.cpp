@@ -136,6 +136,7 @@ void kw11_l::tick()
 		do_interrupt();
 }
 
+#if !defined(TEENSY4_1)
 void kw11_l::operator()()
 {
 	set_thread_name("kek:kw-11l");
@@ -161,6 +162,7 @@ void kw11_l::operator()()
 
 	DOLOG(log_ss::LS_GENERIC, "KW11-L thread terminating");
 }
+#endif
 
 uint8_t kw11_l::read_byte(const uint16_t addr)
 {

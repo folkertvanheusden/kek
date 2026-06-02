@@ -61,6 +61,7 @@ typedef enum { wm_word = 0, wm_byte = 1 } word_mode_t;
 #define PRIzd        "d"
 #define PRIzu        "u"
 #define PRIlu        "u"
+#define load_relaxed_p(x) (*(x))
 #else
 #include <atomic>
 #define kek_event_t  std::atomic_uint32_t
@@ -70,4 +71,5 @@ typedef enum { wm_word = 0, wm_byte = 1 } word_mode_t;
 #define PRIzd        "zd"
 #define PRIzu        "zu"
 #define PRIlu        "lu"
+#define load_relaxed_p(x) ((x)->load(std::memory_order_relaxed))
 #endif
