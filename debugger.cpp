@@ -916,11 +916,6 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 
 		return true;
 	}
-	else if (parts[0] == "getpc") {
-		cnsl->put_string_lf(format("PC = %06o", c->getPC()));
-
-		return true;
-	}
 	else if (parts[0] == "setreg") {
 		if (parts.size() == 3) {
 			int      reg = std::stoi(parts.at(1));
@@ -960,11 +955,6 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		else {
 			cnsl->put_string_lf("setpsw requires an octal value");
 		}
-
-		return true;
-	}
-	else if (parts[0] == "getpsw") {
-		cnsl->put_string_lf(format("PSW = %06o", c->getPSW()));
 
 		return true;
 	}
@@ -1500,82 +1490,92 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		return true;
 	}
 	else if (cmd == "help" || cmd == "h" || cmd == "?") {
-		constexpr const char *const help[] = {
-			"dis[assemble] - show current instruction (pc=/n=)",
-			"go            - run until trap or ^e",
-			"benchmark [-v][-m]- run a benchmark, -v=verbose, -m=with mmu",
-#if !defined(ESP32) || defined(BUILD_FOR_PICO2W)
-			"quit/q        - stop emulator",
-#endif
-#if defined(BUILD_FOR_RP204o)
-			"flash         - jump to the bootloader to allow flashing new firmware",
-#endif
-			"examine/e     - show memory address (<octal address> <p|v> [<n>])",
-			"reset/r       - reset cpu/bus/etc",
-			"single/s [x]  - run 1 (or x-) instruction (implicit 'disassemble' command)",
-			"sbp/cbp/lbp   - set/clear/list breakpoint(s)",
-			"                e.g.: action (pc=0123 and memwv[04000]=0200,0300 and (r4=07,05 or r5=0456) and instr[]=1)",
-			"                values seperated by ',', char after mem is w/b (word/byte), then",
-			"                follows v/p (virtual/physical), all octal values, mmr0-3 and psw are",
-			"                registers. \"action\" can be stop, trace or log. instr can have a mask between the [] and on the right an instruction-opcode to compare against.",
-			"trace con/fil - toggle tracing for console/file logging",
-			"getlss con/fil- show what subystems logging is enabled for",
-			"clss          - stop logging for all subsystems (use tlss to re-enable)",
-			"toggle_ss con/fil x,[...] - toggle logging for on or more subsystems",
-			"list_ss       - list subsystems",
-			"setsl hst     - set syslog target: requires a hostname",
-			"pts x         - enable (1) / disable (0) timestamps",
-			"turbo         - toggle turbo mode (cannot be interrupted)",
-			"strace x      - start tracing from address - invoke without address to disable",
-			"state [reset [hard]] x - dump state of (or reset) a device: rl02, rk05, rp06, rp07, mmu, tm11, kw11l, cpu, dc11, dz11 or deqna",
-			"mmures x      - resolve a virtual address",
-			"qi            - show queued interrupts",
-			"setpc x       - set PC to value (octal)",
-			"getpc         -",
-			"setreg x y    - set register x to value y (octal)",
-			"setstack x y  - set stack register x to value y (octal)",
-			"setpsw x      - set PSW value y (octal)",
-			"getpsw        -",
-			"d[eposit] x y - set memory x to value y, octal word",
-			"setmem ...    - set memory (a=) to value (v=), both in octal, one byte",
-			"getmem ...    - get memory (a=), in octal, one byte",
-			"toggle ...    - set switch (s=, 0...15 (decimal)) of the front panel to state (t=, 0 or 1)",
-			"pcmon x       - track for x cycles what memory addresses were read an instruction from",
-			"setinthz x    - set KW11-L interrupt frequency (Hz)",
-			"cls           - clear screen",
-			"dir           - list files",
-			"bic x         - run BIC/LDA file",
-			"lt x          - load tape (parameter is filename)",
-			"ult           - unload tape",
-			"stats         - show run statistics",
-			"ramsize x     - set ram size (page (8 kB) count, decimal)",
-			"cdz11         - configure DZ11 device",
-			"serdz11       - store DZ11 device settings",
-			"dserdz11      - load DZ11 device settings",
-#if IS_POSIX
-			"ser x         - serialize state to a file (deserialize with -D commandline parameter)",
-			// "dser          - deserialize state from a file",         ^^^^
-#endif
-			"dp            - disable panel",
-			"refr [x]      - set panel refreshrate (fps)",
-#if defined(ESP32) || defined(BUILD_FOR_PICO2W)
-			"cfgnet        - configure network (e.g. WiFi)",
-			"startnet      - start network",
-			"chknet        - check network status",
-			"pm x          - panel mode (bits or address)",
-#endif
-			"blights x     - enable blinkenlights on IP address x", 
-			"cfgdisk       - configure disk",
-			"deqna x[,y,z] - set deqna emulation to use (x): \"linux\" (tap), \"teensy4.1\", \"esp32\" or \"vxlan\" (with host (y) & port (z))",
-			"test x        - test the dz11/DEQNA/panel emulation",
-			"mdeqna x      - set DEQNA monitor mode: none, filtered, everything",
-			"log ...       - log a message to the logfile",
-			nullptr
+		struct help_pair {
+			const char *const command;
+			const char *const descr;
 		};
 
-		size_t i=0;
-		while(help[i])
-			cnsl->put_string_lf(help[i++]);
+		constexpr const help_pair help_pairs[] {
+			{ "dis[assemble]", "show current instruction (pc=/n=)" },
+			{ "go", "run until trap or ^e" },
+			{ "benchmark [-v][-m]", "v=verbose, -m=with mmu" },
+#if !defined(ESP32) || defined(BUILD_FOR_PICO2W)
+			{ "quit/q", "stop emulator" },
+#endif
+#if defined(BUILD_FOR_RP204o)
+			{ "flash", "jump to the bootloader to allow flashing new firmware" },
+#endif
+			{ "examine/e", "show memory address (<octal address> <p|v> [<n>])" },
+			{ "reset/r", "reset cpu/bus/etc" },
+			{ "single/s [x]", "run 1 (or x-) instruction (implicit 'disassemble' command)" },
+			{ "sbp/cbp/lbp", "set/clear/list breakpoint(s), e.g.: action (pc=0123 and memwv[04000]=0200,0300 and (r4=07,05 or r5=0456) and instr[]=1), values seperated by ',', char after mem is w/b (word/byte), then follows v/p (virtual/physical), all octal values, mmr0-3 and psw are registers. \"action\" can be stop, trace or log. instr can have a mask between the [] and on the right an instruction-opcode to compare against." },
+			{ "trace con/fil", "toggle tracing for console/file logging" },
+			{ "getlss con/fil", "show what subystems logging is enabled for" },
+			{ "clss", "stop logging for all subsystems (use tlss to re-enable)" },
+			{ "toggle_ss con/fil x,[...]", "toggle logging for on or more subsystems" },
+			{ "list_ss", "list subsystems" },
+			{ "setsl hst", "set syslog target: requires a hostname" },
+			{ "pts x", "enable (1) / disable (0) timestamps" },
+			{ "turbo", "toggle turbo mode (cannot be interrupted)" },
+			{ "strace x", "start tracing from address, invoke without address to disable" },
+			{ "state [reset [hard]] x", "dump state of (or reset) a device: rl02, rk05, rp06, rp07, mmu, tm11, kw11l, cpu, dc11, dz11 or deqna" },
+			{ "mmures x", "resolve a virtual address" },
+			{ "qi", "show queued interrupts" },
+			{ "setpc x", "set PC to value (octal)" },
+			{ "setreg x y", "set register x to value y (octal)" },
+			{ "setstack x y", "set stack register x to value y (octal)" },
+			{ "setpsw x", "set PSW value y (octal)" },
+			{ "d[eposit] x y", "set memory x to value y, octal word" },
+			{ "setmem ...", "set memory (a=) to value (v=), both in octal, one byte" },
+			{ "getmem ...", "get memory (a=), in octal, one byte" },
+			{ "toggle ...", "set switch (s=, 0...15 (decimal)) of the front panel to state (t=, 0 or 1)" },
+			{ "pcmon x", "track for x cycles what memory addresses were read an instruction from" },
+			{ "setinthz x", "set KW11-L interrupt frequency (Hz)" },
+			{ "cls", "clear screen" },
+			{ "dir", "list files" },
+			{ "bic x", "run BIC/LDA file" },
+			{ "lt x", "load tape (parameter is filename)" },
+			{ "ult", "unload tape" },
+			{ "stats", "show run statistics" },
+			{ "ramsize x", "set ram size (page (8 kB) count, decimal)" },
+			{ "cdz11", "configure DZ11 device" },
+			{ "serdz11", "store DZ11 device settings" },
+			{ "dserdz11", "load DZ11 device settings" },
+#if IS_POSIX
+			{ "ser x", "serialize state to a file (deserialize with -D commandline parameter)" },
+			// { "dser", "deserialize state from a file",         ^^^^ },
+#endif
+			{ "dp", "disable panel" },
+			{ "refr [x]", "set panel refreshrate (fps)" },
+#if defined(ESP32) || defined(BUILD_FOR_PICO2W)
+			{ "cfgnet", "configure network (e.g. WiFi)" },
+			{ "startnet", "start network" },
+			{ "chknet", "check network status" },
+			{ "pm x", "panel mode (bits or address)" },
+#endif
+			{ "blights x", "enable blinkenlights on IP address x" },
+			{ "cfgdisk", "configure disk" },
+			{ "deqna x[,y,z]", "set deqna emulation to use (x): \"linux\" (tap), \"teensy4.1\", \"esp32\" or \"vxlan\" (with host (y) & port (z))" },
+			{ "test x", "test the dz11/DEQNA/panel emulation" },
+			{ "mdeqna x", "set DEQNA monitor mode: none, filtered, everything" },
+			{ "log ...", "log a message to the logfile" },
+			{ nullptr, nullptr }
+		};
+
+		size_t max_cmd_len   = 0;
+		size_t max_descr_len = 0;
+		size_t n             = 0;
+		while(help_pairs[n].command) {
+			max_cmd_len   = std::max(max_cmd_len,   strlen(help_pairs[n].command));
+			max_descr_len = std::max(max_descr_len, strlen(help_pairs[n].descr  ));
+			n++;
+		}
+
+		for(size_t i=0; i<n; i++) {
+			cnsl->put_string(format("%-*s - ", max_cmd_len, help_pairs[i].command));
+			cnsl->put_string_lf(help_pairs[i].descr);
+		}
+
 		return true;
 	}
 	else {
