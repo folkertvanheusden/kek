@@ -995,6 +995,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 				cnsl->put_string_lf(format("Set %06o to %06o", a, v));
 			}
 		}
+		return true;
 	}
 	else if (parts[0] == "setmem") {
 		auto a_it = kv.find("a");
@@ -1216,6 +1217,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 #endif
 	else if (parts[0] == "getinthz") {
 		cnsl->put_string_lf(format("kw11 Hz: %d", b->getKW11_L()->get_interrupt_frequency()));
+		return true;
 	}
 	else if (parts[0] == "setinthz" && parts.size() == 2) {
 		set_kw11_l_interrupt_freq(cnsl, b, std::stoi(parts.at(1)));
