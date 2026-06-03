@@ -101,11 +101,11 @@ public:
 
 	void show_state(console *const cnsl) const override;
 
-	void set_console_switches(const uint16_t new_state) { console_switches = new_state; }
-	void set_console_switch(const int bit, const bool state) { console_switches &= ~(1 << bit); console_switches |= state << bit; }
+	void     set_console_switches(const uint16_t new_state       ) { console_switches = new_state; }
+	void     set_console_switch  (const int bit, const bool state) { console_switches &= ~(1 << bit); console_switches |= state << bit; }
 	uint16_t get_console_switches() { return console_switches; }
-	void set_debug_mode() { console_switches |= 128; }
-	uint16_t get_console_leds() { return console_leds; }
+	void     set_debug_mode      () { console_switches |= 128; }
+	uint16_t get_console_leds    () { return console_leds;     }
 
 	void set_memory_size(const int n_pages);
 	uint32_t get_memory_size() const { return m->get_memory_size(); }
