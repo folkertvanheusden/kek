@@ -804,11 +804,21 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		go_verbose = parts.size() == 2 && parts[1] == "-v";
 	}
 	else if (parts[0] == "benchmark") {
+		bool verbose  = false;
+		bool with_mmu = false;
+
+		for(size_t i=1; i<parts.size(); i++) {
+			verbose  |= parts[i] == "-v";
+			with_mmu |= parts[i] == "-m";
+		}
+
 		cnsl->put_string_lf("Stopping panel first");
 		cnsl->stop_panel_thread();
 
+		cnsl->put_string_lf("Proceeding with enabling KW11-L interrupt");
 		*cnsl->get_running_flag() = true;  // enable the KW11-L interrupt
-		benchmark(cnsl, b, stop_event, parts.size() == 2 && parts[1] == "-v");
+		benchmark(cnsl, b, stop_event, verbose, with_mmu);
+		cnsl->put_string_lf("Disabling KW11-L interrupt");
 		*cnsl->get_running_flag() = false;
 		return true;
 	}
@@ -1491,7 +1501,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 		constexpr const char *const help[] = {
 			"dis[assemble] - show current instruction (pc=/n=)",
 			"go            - run until trap or ^e",
-			"benchmark [-v]- run a benchmark",
+			"benchmark [-v][-m]- run a benchmark, -v=verbose, -m=with mmu",
 #if !defined(ESP32) || defined(BUILD_FOR_PICO2W)
 			"quit/q        - stop emulator",
 #endif
