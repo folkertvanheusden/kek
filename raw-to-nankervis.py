@@ -1,11 +1,12 @@
 #! /usr/bin/python3
 
+import sys
 
 print('var BOOTBASE=01000;')
 print('var bootcode=[')
 
 n = 0
-fh = open('benchmark.raw', 'rb')
+fh = open(sys.argv[1], 'rb')
 while True:
     b = fh.read(2)
     if len(b) == 0:
