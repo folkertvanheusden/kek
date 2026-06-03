@@ -136,7 +136,7 @@ void kw11_l::tick()
 		do_interrupt();
 }
 
-#if !defined(TEENSY4_1)
+#if !defined(TEENSY4_1) && !defined(BUILD_FOR_PICO2W)
 void kw11_l::operator()()
 {
 	set_thread_name("kek:kw-11l");
