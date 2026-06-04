@@ -1,7 +1,6 @@
 // (C) 2018-2026 by Folkert van Heusden
 // Released under MIT license
 
-#include <ArduinoJson.h>
 #include <atomic>
 #include <cassert>
 #include <cinttypes>
@@ -242,8 +241,10 @@ void start_disk_devices(const std::vector<disk_backend *> & backends, const bool
 void help()
 {
 	printf("-h       this help\n");
+#if IS_POSIX
 	printf("-D x     deserialize state from file\n");
 	printf("-P       when serializing state to file (in the debugger), include an overlay: changes to disk-files are then non-persistent, they only exist in the state-dump\n");
+#endif
 	printf("-T t.bin load file as a binary tape file (like simh \"load\" command), also see -B\n");
 	printf("-B x     1: only load tape (default), 2: load & boot tape, 3: run as a unit test (for .BIC files)\n");
 	printf("-r d.img load file as a disk device\n");
@@ -625,6 +626,7 @@ int main(int argc, char *argv[])
 			error_exit(false, "Internal error: disk-type %s not understood", disk_type.c_str());
 		}
 	}
+#if IS_POSIX
 	else {
 		auto rc = deserialize_file(deserialize);
 		if (rc.has_value() == false)
@@ -632,8 +634,9 @@ int main(int argc, char *argv[])
 
 		b = bus::deserialize(rc.value(), cnsl, &event);
 
-		myusleep(251000);
+		myusleep(251000);  // ??? TODO
 	}
+#endif
 
 	if (b->getTty() == nullptr) {
 		tty *tty_ = new tty(cnsl, b);

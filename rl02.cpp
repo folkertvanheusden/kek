@@ -75,6 +75,7 @@ void rl02::show_state(console *const cnsl) const
 	show_disk_backends(cnsl);
 }
 
+#if IS_POSIX
 JsonDocument rl02::serialize() const
 {
 	JsonDocument j;
@@ -119,6 +120,7 @@ rl02 *rl02::deserialize(const JsonVariantConst j, bus *const b)
 
 	return r;
 }
+#endif
 
 uint8_t rl02::read_byte(const uint16_t addr)
 {

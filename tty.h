@@ -4,7 +4,9 @@
 #pragma once
 
 #include "gen.h"
+#if IS_POSIX
 #include <ArduinoJson.h>
+#endif
 #include <mutex>
 #include <stdint.h>
 #include <stdio.h>
@@ -39,8 +41,10 @@ public:
 
 	void notify_rx();
 
+#if IS_POSIX
 	JsonDocument serialize();
 	static tty *deserialize(const JsonVariantConst j, bus *const b, console *const cnsl);
+#endif
 
 	void reset(const bool hard);
 

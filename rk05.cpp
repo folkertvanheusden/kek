@@ -277,6 +277,7 @@ void rk05::write_word(const uint16_t addr, const uint16_t v)
 	}
 }
 
+#if IS_POSIX
 JsonDocument rk05::serialize() const
 {
 	JsonDocument j;
@@ -306,3 +307,4 @@ rk05 *rk05::deserialize(const JsonVariantConst j, bus *const b)
 
 	return r;
 }
+#endif

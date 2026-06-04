@@ -47,8 +47,10 @@ public:
 
 	bool begin();
 
+#if IS_POSIX
 	JsonDocument serialize() const;
 	static dc11 *deserialize(const JsonVariantConst j, bus *const b);
+#endif
 
 	comm_io * get_comm_interfaces() { return io_channels; }
 

@@ -26,8 +26,10 @@ public:
 
 	void    configure_port(const int baud_rate);
 
+#if IS_POSIX
 	JsonDocument serialize() const override;
 	static comm_esp32_SC16IS752 *deserialize(const JsonVariantConst j, SC16IS752 *const a, SC16IS752 *const b);
+#endif
 
 	std::string get_identifier() const;
 

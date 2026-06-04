@@ -275,6 +275,7 @@ void comm_tcp_socket_server::operator()()
 	DOLOG(log_ss::LS_COMM, "comm_tcp_socket_server thread terminating");
 }
 
+#if IS_POSIX
 JsonDocument comm_tcp_socket_server::serialize() const
 {
 	JsonDocument j;
@@ -291,3 +292,4 @@ comm_tcp_socket_server *comm_tcp_socket_server::deserialize(const JsonVariantCon
 	comm_tcp_socket_server *r = new comm_tcp_socket_server(j["port"].as<int>(), j["setup-telnet"].as<bool>());
 	return r;
 }
+#endif

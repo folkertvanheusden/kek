@@ -9,7 +9,9 @@
 #include <string>
 #include <vector>
 
+#if IS_POSIX
 #include "ArduinoJson.h"
+#endif
 #include "my_lock.h"
 
 #if defined(ESP32)
@@ -36,8 +38,10 @@ public:
 #if defined(ESP32)
 	void            set_comm(SC16IS752 *const a, SC16IS752 *const b);
 #endif
+#if IS_POSIX
 	virtual JsonDocument serialize() const = 0;
 	static comm    *deserialize(const JsonVariantConst j, bus *const b);
+#endif
 
 	virtual std::string get_identifier() const = 0;
 
@@ -70,6 +74,7 @@ struct comm_io
 			delete c;
 	}
 
+#if IS_POSIX
 	JsonDocument serialize() const {
 		my_unique_lock lck(&lock);
 
@@ -93,6 +98,7 @@ struct comm_io
 		out->channels = temp;
 		return out;
 	}
+#endif
 
 	bool set_device(const int idx, comm *const p) {
 		my_unique_lock lck(&lock);

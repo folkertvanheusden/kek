@@ -194,6 +194,7 @@ void comm_tcp_socket_client::operator()()
 	closesocket(cfd);
 }
 
+#if IS_POSIX
 JsonDocument comm_tcp_socket_client::serialize() const
 {
 	JsonDocument j;
@@ -212,3 +213,4 @@ comm_tcp_socket_client *comm_tcp_socket_client::deserialize(const JsonVariantCon
 
 	return r;
 }
+#endif

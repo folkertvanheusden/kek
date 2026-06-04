@@ -68,6 +68,7 @@ void memory::reset(const bool hard)
 		memset(m, 0x00, size);
 }
 
+#if IS_POSIX
 JsonDocument memory::serialize() const
 {
 	JsonDocument j;
@@ -95,3 +96,4 @@ memory *memory::deserialize(const JsonVariantConst j)
 
 	return m;
 }
+#endif

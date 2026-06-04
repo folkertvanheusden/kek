@@ -4,7 +4,9 @@
 #pragma once
 
 #include "gen.h"
+#if IS_POSIX
 #include <ArduinoJson.h>
+#endif
 #include <array>
 #include <cassert>
 #include <condition_variable>
@@ -114,8 +116,10 @@ public:
 
 	void set_console(console *const cnsl) { this->cnsl = cnsl; }
 
+#if IS_POSIX
 	JsonDocument serialize();
 	static cpu *deserialize(const JsonVariantConst j, bus *const b, kek_event_t *const event);
+#endif
 
 	std::optional<std::pair<breakpoint &, const std::string> > check_breakpoint();
 	int                         set_breakpoint(breakpoint *const bp);

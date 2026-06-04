@@ -21,8 +21,10 @@ public:
 
 	bool    begin() override;
 
+#if IS_POSIX
 	JsonDocument serialize() const override;
 	static comm_esp32_hardwareserial *deserialize(const JsonVariantConst j);
+#endif
 
 	std::string get_identifier() const;
 

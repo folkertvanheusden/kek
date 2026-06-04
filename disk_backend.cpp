@@ -62,6 +62,7 @@ bool disk_backend::store_mem_range_in_overlay(const off_t offset, const size_t n
 	return false;
 }
 
+#if IS_POSIX
 JsonDocument disk_backend::serialize_overlay() const
 {
 	JsonDocument out;
@@ -148,3 +149,4 @@ std::optional<uint32_t> disk_backend::crc_over_data()
 	}
 	return crc;
 }
+#endif

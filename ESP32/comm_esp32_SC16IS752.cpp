@@ -59,6 +59,7 @@ void comm_esp32_SC16IS752::send_data(const uint8_t *const in, const size_t n)
 		parent->write(port_nr, in[i]);
 }
 
+#if IS_POSIX
 JsonDocument comm_esp32_SC16IS752::serialize() const
 {
 	JsonDocument j;
@@ -75,6 +76,7 @@ comm_esp32_SC16IS752 *comm_esp32_SC16IS752::deserialize(const JsonVariantConst j
 	r->begin();
 	return r;
 }
+#endif
 
 void comm_esp32_SC16IS752::configure_port(const int baud_rate)
 {

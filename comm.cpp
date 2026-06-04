@@ -56,6 +56,7 @@ void comm::set_comm(SC16IS752 *const a, SC16IS752 *const b)
 }
 #endif
 
+#if IS_POSIX
 comm *comm::deserialize(const JsonVariantConst j, bus *const b)
 {
         std::string   type = j["comm-backend-type"];
@@ -100,3 +101,4 @@ comm *comm::deserialize(const JsonVariantConst j, bus *const b)
         return d;
 
 }
+#endif

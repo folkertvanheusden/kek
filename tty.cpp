@@ -127,6 +127,7 @@ void tty::write_word(const uint16_t addr, uint16_t v)
 	registers[(addr - PDP11TTY_BASE) / 2] = v;
 }
 
+#if IS_POSIX
 JsonDocument tty::serialize()
 {
 	JsonDocument j;
@@ -151,3 +152,4 @@ tty *tty::deserialize(const JsonVariantConst j, bus *const b, console *const cns
 
 	return out;
 }
+#endif

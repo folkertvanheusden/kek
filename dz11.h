@@ -72,8 +72,10 @@ public:
 	void wait_have_data(const int line_nr) const;
 #endif
 
+#if IS_POSIX
 	JsonDocument serialize() const;
 	static dz11 *deserialize(const JsonVariantConst j, bus *const b);
+#endif
 
 	comm_io * get_comm_interfaces() { return io_channels; }
 

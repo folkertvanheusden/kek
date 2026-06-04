@@ -1,7 +1,9 @@
 #pragma once
 
 #include "gen.h"
+#if IS_POSIX
 #include <ArduinoJson.h>
+#endif
 #include <cstdint>
 #include <string>
 #include "cpu.h"
@@ -59,8 +61,10 @@ private:
 	memory  *m      { nullptr };
 	cpu     *c      { nullptr };
 
+#if IS_POSIX
 	JsonDocument add_par_pdr(const int run_mode, const d_i_space_t d) const;
 	void set_par_pdr(const JsonVariantConst j_in, const int run_mode, const d_i_space_t d);
+#endif
 
 	void update_io_base() { io_base = is_enabled() ? (getMMR3() & 16 ? 017760000 : 0760000) : 0160000; }
 
@@ -73,8 +77,10 @@ public:
 
 	void     begin(memory *const m, cpu *const c);
 
+#if IS_POSIX
 	JsonDocument serialize() const;
 	static mmu *deserialize(const JsonVariantConst j, memory *const m, cpu *const c);
+#endif
 
 	void     mmudebug(const uint16_t a);
 

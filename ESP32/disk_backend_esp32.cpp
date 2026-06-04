@@ -35,15 +35,14 @@ void disk_backend_esp32::show_state(console *const cnsl) const
 	cnsl->put_string_lf(format("offset: %u", fh->curPosition()));
 }
 
+#if IS_POSIX
 JsonDocument disk_backend_esp32::serialize()
 {
 	JsonDocument j;
-#if !defined(TEENSY4_1) && !defined(BUILD_FOR_PICO2W)
 	j["disk-backend-type"] = "esp32";
         j["overlay"] = serialize_overlay();
         // TODO store checksum of backend
         j["filename"] = filename;
-#endif
 	return j;
 }
 
@@ -52,6 +51,7 @@ disk_backend_esp32 *disk_backend_esp32::deserialize(const JsonVariantConst j)
 	// TODO verify checksum of backend
 	return new disk_backend_esp32(j["file"].as<std::string>());
 }
+#endif
 
 void disk_backend_esp32::emit_error()
 {

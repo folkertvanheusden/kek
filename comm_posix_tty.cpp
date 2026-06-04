@@ -121,6 +121,7 @@ void comm_posix_tty::send_data(const uint8_t *const in, const size_t n)
 	}
 }
 
+#if IS_POSIX
 JsonDocument comm_posix_tty::serialize() const
 {
 	JsonDocument j;
@@ -140,4 +141,5 @@ comm_posix_tty *comm_posix_tty::deserialize(const JsonVariantConst j)
 
 	return r;
 }
+#endif
 #endif

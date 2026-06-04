@@ -21,8 +21,10 @@ public:
 	disk_backend_esp32(const std::string & filename);
 	virtual ~disk_backend_esp32();
 
+#if IS_POSIX
 	JsonDocument serialize() override;
 	static disk_backend_esp32 *deserialize(const JsonVariantConst j);
+#endif
 
 	std::string get_identifier() const { return filename; }
 	void show_state(console *const cnsl) const override;

@@ -2,7 +2,9 @@
 // Released under MIT license
 
 #include "gen.h"
+#if IS_POSIX
 #include <ArduinoJson.h>
+#endif
 #include <thread>
 
 #include "bus.h"
@@ -52,8 +54,10 @@ public:
 	int      get_interrupt_frequency();
 	void     set_interrupt_frequency(const int Hz);
 
+#if IS_POSIX
 	JsonDocument serialize();
 	static kw11_l *deserialize(const JsonVariantConst j, bus *const b, console *const cnsl);
+#endif
 
 	void     begin(console *const cnsl);
 	void     tick();

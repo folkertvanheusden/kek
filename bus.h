@@ -4,7 +4,9 @@
 #pragma once
 
 #include "gen.h"
+#if IS_POSIX
 #include <ArduinoJson.h>
+#endif
 #include <assert.h>
 #include <mutex>
 #include <stdint.h>
@@ -93,8 +95,10 @@ public:
 	bus();
 	~bus();
 
+#if IS_POSIX
 	JsonDocument serialize() const;
 	static bus *deserialize(const JsonDocument j, console *const cnsl, kek_event_t *const event);
+#endif
 
 	void reset(const bool hard) override;
 	void init ();

@@ -281,6 +281,7 @@ void dc11::write_word(const uint16_t addr, const uint16_t v)
 	registers[reg] = v;
 }
 
+#if IS_POSIX
 JsonDocument dc11::serialize() const
 {
 	JsonDocument j;
@@ -304,3 +305,4 @@ dc11 *dc11::deserialize(const JsonVariantConst j, bus *const b)
 
 	return r;
 }
+#endif

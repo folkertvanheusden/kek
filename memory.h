@@ -4,7 +4,9 @@
 #pragma once
 
 #include "gen.h"
+#if IS_POSIX
 #include <ArduinoJson.h>
+#endif
 #include <cstdint>
 #if defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)  // TODO also teensy4.1?
 #define __LITTLE_ENDIAN 1
@@ -27,8 +29,10 @@ public:
 
 	void reset(const bool hard);
 
+#if IS_POSIX
 	JsonDocument serialize() const;
 	static memory *deserialize(const JsonVariantConst j);
+#endif
 
 	uint16_t read_byte(const uint32_t a) const { return m[a]; }
 	void write_byte(const uint32_t a, const uint16_t v) { m[a] = v; }

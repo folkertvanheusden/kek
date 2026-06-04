@@ -2,7 +2,6 @@
 // Released under MIT license
 
 #include "gen.h"
-#include <ArduinoJson.h>
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
@@ -51,6 +50,7 @@ bus::~bus()
 	delete m;
 }
 
+#if IS_POSIX
 JsonDocument bus::serialize() const
 {
 	JsonDocument j_out;
@@ -131,6 +131,7 @@ bus *bus::deserialize(const JsonDocument j, console *const cnsl, kek_event_t *co
 
 	return b;
 }
+#endif
 
 void bus::show_state(console *const cnsl) const
 {

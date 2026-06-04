@@ -425,6 +425,7 @@ uint32_t mmu::calculate_physical_address(const int run_mode, const uint16_t a, c
 	return a;
 }
 
+#if IS_POSIX
 JsonDocument mmu::add_par_pdr(const int run_mode, const d_i_space_t d) const
 {
 	JsonDocument j;
@@ -512,6 +513,7 @@ mmu *mmu::deserialize(const JsonVariantConst j, memory *const mem, cpu *const c)
 
 	return m;
 }
+#endif
 
 void mmu::MMRStartInstruction(const uint16_t pc)
 {

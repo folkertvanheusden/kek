@@ -26,6 +26,7 @@ void disk_backend_file::show_state(console *const cnsl) const
 	cnsl->put_string_lf("identifier: " + get_identifier());
 }
 
+#if IS_POSIX
 JsonDocument disk_backend_file::serialize()
 {
 	JsonDocument j;
@@ -58,6 +59,7 @@ disk_backend_file *disk_backend_file::deserialize(const JsonVariantConst j)
 
 	return out;
 }
+#endif
 
 bool disk_backend_file::begin(const bool snapshots)
 {

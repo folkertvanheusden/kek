@@ -390,6 +390,7 @@ void dz11::write_word(const uint16_t addr, const uint16_t v)
 	registers[reg] = v_set;
 }
 
+#if IS_POSIX
 JsonDocument dz11::serialize() const
 {
 	JsonDocument j;
@@ -413,6 +414,7 @@ dz11 * dz11::deserialize(const JsonVariantConst j, bus *const b)
 
 	return r;
 }
+#endif
 
 #if defined(UNIT_TEST)
 #include <stdexcept>

@@ -5,7 +5,9 @@
 #pragma once
 
 #include "gen.h"
+#if IS_POSIX
 #include <ArduinoJson.h>
+#endif
 #include <stdint.h>
 #include <stdio.h>
 #include <string>
@@ -59,8 +61,10 @@ public:
 
 	void show_state(console *const cnsl) const override;
 
+#if IS_POSIX
 	JsonDocument serialize() const;
 	static rp06 *deserialize(const JsonVariantConst j, bus *const b);
+#endif
 
 	uint8_t  read_byte(const uint16_t addr) override;
 	uint16_t read_word(const uint16_t addr) override;

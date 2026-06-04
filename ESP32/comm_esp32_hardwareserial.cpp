@@ -96,6 +96,7 @@ void comm_esp32_hardwareserial::send_data(const uint8_t *const in, const size_t 
 	uart_write_bytes(uart_nr, in, n);  // error checking?
 }
 
+#if IS_POSIX
 JsonDocument comm_esp32_hardwareserial::serialize() const
 {
 	JsonDocument j;
@@ -117,4 +118,5 @@ comm_esp32_hardwareserial *comm_esp32_hardwareserial::deserialize(const JsonVari
 
 	return r;
 }
+#endif
 #endif

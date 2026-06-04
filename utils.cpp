@@ -21,7 +21,9 @@
 #include <lwip/sockets.h>
 #endif
 
+#if !defined(_WIN32)
 #include <ArduinoJson.h>
+#endif
 #include <errno.h>
 #include <optional>
 #include <pthread.h>
@@ -262,6 +264,7 @@ std::string get_endpoint_name(const int fd)
 }
 #endif
 
+#if !defined(_WIN32)
 std::optional<JsonDocument> deserialize_file(const std::string & filename)
 {
 #if defined(ESP32)
@@ -296,6 +299,7 @@ std::optional<JsonDocument> deserialize_file(const std::string & filename)
 	return j;
 #endif
 }
+#endif
 
 std::string file_in_user_home(const std::string & file)
 {

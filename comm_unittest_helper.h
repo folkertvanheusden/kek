@@ -1,7 +1,9 @@
 #pragma once
 
 #include "gen.h"
+#if IS_POSIX
 #include "ArduinoJson.h"
+#endif
 #include "comm.h"
 
 
@@ -23,8 +25,10 @@ public:
 
 	virtual bool    begin() override { return true; }
 
+#if IS_POSIX
 	virtual JsonDocument serialize() const override { 
 	}
+#endif
 
 	virtual std::string get_identifier() const override { return "unittest helper"; }
 

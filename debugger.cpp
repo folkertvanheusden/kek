@@ -651,6 +651,7 @@ struct state_writer {
 	}
 };
 
+#if IS_POSIX
 void serialize_state(console *const cnsl, const bus *const b, const std::string & filename)
 {
 	JsonDocument j = b->serialize();
@@ -670,6 +671,7 @@ void serialize_state(console *const cnsl, const bus *const b, const std::string 
 
 	cnsl->put_string_lf(format("Serialize to %s: %s", filename.c_str(), ok ? "OK" : "failed"));
 }
+#endif
 
 void tm11_load_tape(console *const cnsl, bus *const b, const std::optional<std::string> & file)
 {
@@ -690,58 +692,6 @@ void tm11_unload_tape(bus *const b)
 #if !defined(TEENSY4_1)
 	b->getTM11()->unload();
 #endif
-}
-
-void serdz11(console *const cnsl, bus *const b)
-{
-	dz11         *d = b->getDZ11();
-	if (!d) {
-		cnsl->put_string_lf("No DZ11 configured");
-		return;
-	}
-
-	JsonDocument j = d->serialize();
-
-	bool ok = false;
-#if IS_POSIX
-	FILE *fh = fopen(DZ11_CFG_FILE, "w");
-	if (fh) {
-		state_writer ws { fh };
-		serializeJsonPretty(j, ws);
-		fclose(fh);
-
-		ok = true;
-	}
-#elif defined(ESP32)
-	File data_file = LittleFS.open("/" DZ11_CFG_FILE, "w");
-	if (data_file) {
-		serializeJsonPretty(j, data_file);
-		data_file.close();
-
-		ok = true;
-	}
-#endif
-
-	cnsl->put_string_lf(format("Serialize to " DZ11_CFG_FILE ": %s", ok ? "OK" : "failed"));
-}
-
-void deserdz11(console *const cnsl, bus *const b)
-{
-#if defined(ESP32)
-	auto rc = deserialize_file("/" DZ11_CFG_FILE);
-#else
-	auto rc = deserialize_file(DZ11_CFG_FILE);
-#endif
-	if (rc.has_value() == false) {
-		cnsl->put_string_lf("Failed to deserialize " DZ11_CFG_FILE);
-		return;
-	}
-
-	b->del_DZ11();
-
-	b->add_DZ11(dz11::deserialize(rc.value(), b));
-
-	cnsl->put_string_lf(format("Deserialized " DZ11_CFG_FILE));
 }
 
 void set_kw11_l_interrupt_freq(console *const cnsl, bus *const b, const int freq)
@@ -1428,18 +1378,6 @@ cmd_rc cmd_cdz11(console *const cnsl, const std::vector<std::string> & parts, bu
 	return debugger_continue;
 }
 
-cmd_rc cmd_serdz11(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
-{
-	serdz11(cnsl, b);
-	return debugger_continue;
-}
-
-cmd_rc cmd_dserdz11(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
-{
-	deserdz11(cnsl, b);
-	return debugger_continue;
-}
-
 cmd_rc cmd_setinthz(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
 {
 	set_kw11_l_interrupt_freq(cnsl, b, std::stoi(parts.at(1)));
@@ -1649,8 +1587,6 @@ constexpr const help_pair help_pairs[] {
 	{ "mdeqna", "mode", "set DEQNA monitor mode: none, filtered, everything", cmd_mdeqna, help_pair::par_yes },
 	{ "cfgdisk", "", "configure disk", cmd_cfgdisk, help_pair::par_no },
 	{ "cdz11", "", "configure DZ11 device", cmd_cdz11, help_pair::par_no },
-	{ "serdz11", "", "store DZ11 device settings", cmd_serdz11, help_pair::par_no },
-	{ "dserdz11", "", "load DZ11 device settings", cmd_dserdz11, help_pair::par_no },
 	{ "setinthz", "freq", "set KW11-L interrupt frequency (Hz)", cmd_setinthz, help_pair::par_yes },
 	{ "getinthz", "", "get KW11-L interrupt frequency (Hz)", cmd_getinthz, help_pair::par_no },
 #if !defined(TEENSY4_1)

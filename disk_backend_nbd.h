@@ -32,8 +32,10 @@ public:
 	disk_backend_nbd(const std::string & host, const unsigned port);
 	virtual ~disk_backend_nbd();
 
+#if IS_POSIX
 	JsonDocument serialize() override;
 	static disk_backend_nbd *deserialize(const JsonVariantConst j);
+#endif
 
 	std::string get_identifier() const override { return format("NBD:%s:%d", host.c_str(), port); }
 	void show_state(console *const cnsl) const override;

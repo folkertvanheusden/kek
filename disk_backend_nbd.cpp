@@ -59,6 +59,7 @@ void disk_backend_nbd::show_state(console *const cnsl) const
 	cnsl->put_string_lf("identifier: " + get_identifier());
 }
 
+#if IS_POSIX
 JsonDocument disk_backend_nbd::serialize()
 {
 	JsonDocument j;
@@ -92,6 +93,7 @@ disk_backend_nbd *disk_backend_nbd::deserialize(const JsonVariantConst j)
 
 	return out;
 }
+#endif
 
 bool disk_backend_nbd::begin(const bool snapshots)
 {

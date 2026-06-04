@@ -4,7 +4,9 @@
 #pragma once
 
 #include "gen.h"
+#if IS_POSIX
 #include <ArduinoJson.h>
+#endif
 #include <map>
 #include <optional>
 #include <stdint.h>
@@ -27,16 +29,20 @@ protected:
 	std::optional<std::vector<uint8_t> > get_object_from_overlay(const off_t id);
 	std::optional<std::vector<uint8_t> > get_from_overlay(const off_t offset, const size_t sector_size);
 
+#if IS_POSIX
 	JsonDocument serialize_overlay() const;
 	void         deserialize_overlay(const JsonVariantConst j);
+#endif
 	std::optional<uint32_t> crc_over_data();
 
 public:
 	disk_backend();
 	virtual ~disk_backend();
 
+#if IS_POSIX
 	virtual JsonDocument serialize() = 0;
 	static disk_backend *deserialize(const JsonVariantConst j);
+#endif
 
 	virtual std::string get_identifier() const = 0;
 	virtual void show_state(console *const cnsl) const = 0;

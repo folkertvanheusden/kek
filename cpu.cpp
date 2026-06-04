@@ -2723,6 +2723,7 @@ bool cpu::step()
 	return true;
 }
 
+#if IS_POSIX
 JsonDocument cpu::serialize()
 {
 	JsonDocument j;
@@ -2795,3 +2796,4 @@ cpu *cpu::deserialize(const JsonVariantConst j, bus *const b, kek_event_t *const
 
 	return c;
 }
+#endif

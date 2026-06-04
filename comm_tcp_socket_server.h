@@ -38,8 +38,10 @@ public:
 
 	bool    begin() override;
 
+#if IS_POSIX
 	JsonDocument serialize() const override;
 	static comm_tcp_socket_server *deserialize(const JsonVariantConst j);
+#endif
 
 	std::string get_identifier() const override { return format(":%d", port) + " (server" + (setup_telnet ? ", telnet setup": "") + ")"; }
 

@@ -246,6 +246,7 @@ uint8_t kw11_l::get_lf_crs()
 	return lf_csr;
 }
 
+#if IS_POSIX
 JsonDocument kw11_l::serialize()
 {
 	JsonDocument j;
@@ -266,3 +267,4 @@ kw11_l *kw11_l::deserialize(const JsonVariantConst j, bus *const b, console *con
 
 	return out;
 }
+#endif

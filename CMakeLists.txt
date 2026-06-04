@@ -159,8 +159,9 @@ endif ()
 
 add_subdirectory(arduinojson)
 if (NOT WIN32)
-target_link_libraries(kek ArduinoJson)
-target_link_libraries(kek-native PUBLIC ArduinoJson)
+	MESSAGE("With serialazation")
+	target_link_libraries(kek ArduinoJson)
+	target_link_libraries(kek-native PUBLIC ArduinoJson)
 endif ()
 
 if (SDL3_FOUND)

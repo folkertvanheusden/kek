@@ -61,6 +61,7 @@ void rp06::show_state(console *const cnsl) const
 	show_disk_backends(cnsl);
 }
 
+#if IS_POSIX
 JsonDocument rp06::serialize() const
 {
 	JsonDocument j;
@@ -72,9 +73,9 @@ rp06 *rp06::deserialize(const JsonVariantConst j, bus *const b)
 {
 	rp06 *r = new rp06(b, nullptr, nullptr,  j["is-rp07"].as<bool>());
 	r->begin();
-
 	return r;
 }
+#endif
 
 uint8_t rp06::read_byte(const uint16_t addr)
 {

@@ -49,6 +49,7 @@ void comm_arduino::send_data(const uint8_t *const in, const size_t n)
 	s->write(in, n);
 }
 
+#if IS_POSIX
 JsonDocument comm_arduino::serialize() const
 {
 	JsonDocument j;
@@ -63,4 +64,5 @@ comm_arduino *comm_arduino::deserialize(const JsonVariantConst j)
 	r->begin();  // TODO error-checking
 	return r;
 }
+#endif
 #endif

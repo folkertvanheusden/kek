@@ -20,8 +20,10 @@ public:
 
 	bool    begin() override;
 
+#if IS_POSIX
 	JsonDocument serialize() const override;
 	static comm_arduino *deserialize(const JsonVariantConst j);
+#endif
 
 	std::string get_identifier() const;
 
