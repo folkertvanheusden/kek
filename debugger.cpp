@@ -1618,18 +1618,62 @@ constexpr const cmd_pair cmd_pairs[] {
 	{ nullptr, nullptr, nullptr, nullptr, cmd_pair::par_no }
 };
 
+std::optional<std::string> explode(console *const cnsl, const std::string & in)
+{
+	if (in.empty())
+		return "";
+
+	auto last_space = in.rfind(' ');
+	if (last_space == std::string::npos)
+		last_space = 0;
+	else
+		last_space++;
+	std::string match_against     = in.substr(last_space);
+	size_t      match_against_len = match_against.size();
+	if (match_against_len == 0)
+		return "";
+
+	std::vector<const cmd_pair *> matches;
+
+	size_t n = 0;
+	do {
+		std::string cur = cmd_pairs[n].command;
+		if (cur.substr(0, match_against_len) == match_against)
+			matches.push_back(&cmd_pairs[n]);
+	} while(cmd_pairs[++n].command);
+
+	if (matches.empty())
+		return "";
+
+	if (matches.size() == 1)
+		return std::string(matches[0]->command).substr(match_against_len);
+
+	cnsl->put_string_lf("");
+	for(size_t i=0; i<matches.size(); i++) {
+		if (i < matches.size() - 1) {
+			cnsl->put_string(matches[i]->command);
+			cnsl->put_string(", ");
+		}
+		else {
+			cnsl->put_string_lf(matches[i]->command);
+		}
+	}
+
+	return { };
+}
+
 cmd_rc cmd_help(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
 {
 	size_t max_cmd_len   = 0;
 	size_t max_pars_len  = 0;
 	size_t max_descr_len = 0;
 	size_t n             = 0;
-	while(cmd_pairs[n].command) {
+	do {
 		max_cmd_len   = std::max(max_cmd_len,   strlen(cmd_pairs[n].command   ));
 		max_pars_len  = std::max(max_pars_len,  strlen(cmd_pairs[n].parameters));
 		max_descr_len = std::max(max_descr_len, strlen(cmd_pairs[n].descr     ));
-		n++;
 	}
+	while(cmd_pairs[++n].command);
 
 	for(size_t i=0; i<n; i++)
 		cnsl->put_string_lf(format("%-*s - %-*s - %s", max_cmd_len, cmd_pairs[n].command, max_pars_len, cmd_pairs[n].parameters, cmd_pairs[i].descr));
@@ -1815,7 +1859,7 @@ void debugger(console *const cnsl, bus *const b, kek_event_t *const stop_event, 
 			if (state.marker)
 				cnsl->put_string_lf("---");
 
-			std::string cmd = cnsl->read_line(std::to_string(int(*stop_event)));
+			std::string cmd = cnsl->read_line(std::to_string(int(*stop_event)), explode);
 
 			if (debugger_do(&state, cnsl, b, stop_event, cmd) == false)
 				break;

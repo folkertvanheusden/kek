@@ -22,7 +22,10 @@
 
 class blinkenlights;
 class bus;
+class console;
 class tty;
+
+using explode_func_t = std::optional<std::string> (*)(console *const cnsl, const std::string & current_in);
 
 class console
 {
@@ -82,7 +85,7 @@ public:
 	int          get_char();
 	void         unget_char(const char c);
 	std::optional<int> wait_char(const int timeout_ms);
-	std::string  read_line(const std::string & prompt);
+	std::string  read_line(const std::string & prompt, const explode_func_t & ef = nullptr);
 	void         flush_input();
 	void         set_data_cb_notifier(auto notifier) { have_data_cb_notifier = notifier; }
 

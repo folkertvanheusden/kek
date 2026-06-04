@@ -112,10 +112,9 @@ void console::emit_backspace()
 	put_char(8);
 }
 
-std::string console::read_line(const std::string & prompt)
+std::string console::read_line(const std::string & prompt, const explode_func_t & ef)
 {
-	put_string(prompt);
-	put_string(">");
+	put_string(prompt + ">");
 
 	while(edit_lines_hist.size() >= n_edit_lines_hist)
 		edit_lines_hist.erase(edit_lines_hist.begin());
@@ -165,6 +164,20 @@ std::string console::read_line(const std::string & prompt)
 			for(size_t i=0; i<edit_lines_hist.at(line_nr).size(); i++)
 				put_char(edit_lines_hist.at(line_nr).at(i));
 
+			continue;
+		}
+
+		if (c.value() == 9 && ef != nullptr) {
+			auto exploded = ef(this, edit_lines_hist.at(line_nr));
+			if (exploded.has_value()) {
+				auto & to_add = exploded.value();
+				edit_lines_hist.at(line_nr) += to_add;
+				put_string(to_add);
+			}
+			else {
+				put_string(prompt + ">");
+				put_string(edit_lines_hist.at(line_nr));
+			}
 			continue;
 		}
 
