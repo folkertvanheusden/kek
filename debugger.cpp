@@ -242,8 +242,8 @@ std::optional<disk_backend *> select_disk_file(console *const cnsl)
 
 int wait_for_key(const std::string & title, console *const cnsl, const std::vector<char> & allowed)
 {
-	cnsl->put_string_lf(title);
-	cnsl->put_string(")> ");
+	cnsl->put_string(title);
+	cnsl->put_string(" > ");
 
 	int ch = -1;
 	while(ch == -1) {
@@ -608,12 +608,17 @@ void show_cpu_state(console *const cnsl, cpu *const c)
 void show_run_statistics(console *const cnsl, cpu *const c)
 {
 #if defined(ESP32)
+	cnsl->put_string_lf("ESP32");
 	cnsl->put_string_lf(format("Free RAM (decimal bytes): %d", ESP.getFreeHeap()));
 	cnsl->put_string_lf(format("Free SPI-RAM: %d", heap_caps_get_free_size(MALLOC_CAP_SPIRAM)));
 #elif defined(BUILD_FOR_PICO2W)
+	cnsl->put_string_lf("Pico(2)W");
 	cnsl->put_string_lf(format("Free RAM (decimal bytes): %d", rp2040.getFreeHeap()));
 	cnsl->put_string_lf(format("Clock frequency: %d", rp2040.f_cpu()));
 #elif defined(TEENSY4_1)
+	cnsl->put_string_lf("Teensy 4.1");
+	// TODO
+#else
 	// TODO
 #endif
 }
@@ -783,806 +788,921 @@ struct debugger_state {
 	bool     marker             { false };
 	bool     single_step        { false };
 	bool     pc_monitor_enabled { false };
+	bool     go_verbose         { false };
 	unsigned pc_monitor_count   { 0 };
 	unsigned pc_monitor_counter { 0 };
 	std::unordered_map<uint16_t, std::pair<uint32_t, int> > pc_monitor;
 };
 
-bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b, kek_event_t *const stop_event, const std::string & cmd)
+enum cmd_rc { debugger_continue, debugger_stop, start_emulation };
+
+using help_func_t = cmd_rc (*)(console *const, const std::vector<std::string>&, bus *const, cpu *const, debugger_state *const, kek_event_t *const);
+
+struct help_pair {
+	const char       *const command;
+	const char       *const parameters;
+	const char       *const descr;
+	const help_func_t func;
+	enum { par_yes, par_no, par_optional } par_t;
+};
+
+cmd_rc cmd_reset(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
 {
-	cpu  *const c   = b->getCpu();
-	auto parts      = split(cmd,   " ");
-	auto kv         = split(parts, "=");
-	bool go_verbose = false;
+	*stop_event = EVENT_NONE;
+	bool hard = parts.size() == 2 && parts[1] == "hard";
+	b->reset(hard);
+	b->getRAM()->reset(hard);
+	if (hard)
+		b->getCpu()->reset();
+	cnsl->put_string_lf("resetted");
+	return debugger_continue;
+}
 
-	if (parts.empty())
-		return true;
+cmd_rc cmd_disassemble(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	auto     kv = split(parts, "=");
+	uint16_t pc = kv.find("pc") != kv.end() ? std::stoi(kv.find("pc")->second, nullptr, 8)  : c->getPC();
+	int      n  = kv.find("n")  != kv.end() ? std::stoi(kv.find("n") ->second, nullptr, 10) : 1;
 
-	if (parts[0] == "go" || parts[0] == "fg") {
-		state->single_step = false;
-		*stop_event = EVENT_NONE;
-		go_verbose = parts.size() == 2 && parts[1] == "-v";
+	cnsl->put_string_lf(format("Disassemble %d instructions starting at %o", n, pc));
+
+	bool show_registers = kv.find("pc") == kv.end();
+
+	for(int i=0; i<n; i++) {
+		pc += std::get<0>(disassemble(c, cnsl, pc, !show_registers));
+		show_registers = false;
 	}
-	else if (parts[0] == "benchmark") {
-		bool verbose  = false;
-		bool with_mmu = false;
 
-		for(size_t i=1; i<parts.size(); i++) {
-			verbose  |= parts[i] == "-v";
-			with_mmu |= parts[i] == "-m";
+	return debugger_continue;
+}
+
+cmd_rc cmd_go(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	state->single_step = false;
+	state->go_verbose  = parts.size() == 2 && parts[1] == "-v";
+	*stop_event        = EVENT_NONE;
+	return start_emulation;
+}
+
+cmd_rc cmd_benchmark(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	bool verbose  = false;
+	bool with_mmu = false;
+
+	for(size_t i=1; i<parts.size(); i++) {
+		verbose  |= parts[i] == "-v";
+		with_mmu |= parts[i] == "-m";
+	}
+
+	cnsl->put_string_lf("Stopping panel first");
+	cnsl->stop_panel_thread();
+
+	cnsl->put_string_lf("Proceeding with enabling KW11-L interrupt");
+	*cnsl->get_running_flag() = true;  // enable the KW11-L interrupt
+	benchmark(cnsl, b, stop_event, verbose, with_mmu);
+	cnsl->put_string_lf("Disabling KW11-L interrupt");
+	*cnsl->get_running_flag() = false;
+
+	return debugger_continue;
+}
+
+cmd_rc cmd_quit(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	bool yes = (parts.size() == 2 && parts[1] == "-y") || wait_for_key("y/n", cnsl, { 'y', 'n' }) == 'y';
+	if (yes) {
+#if defined(ESP32)
+		ESP.restart();
+#elif defined(BUILD_FOR_PICO2W)
+		rp2040.reboot();
+#elif defined(TEENSY4_1)
+		SRC_GPR5 = 0x0BAD00F1;
+		SCB_AIRCR = 0x05FA0004;
+#endif
+		return debugger_stop;
+	}
+	return debugger_continue;
+}
+
+#if defined(BUILD_FOR_PICO2W)
+cmd_rc cmd_flash(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	int ch_opt = wait_for_key("y/n", cnsl, { 'y', 'n' });
+	if (ch_opt == 'y') {
+		rp2040.rebootToBootloader();
+		return debugger_stop;
+	}
+	return debugger_continue;
+}
+#endif
+
+cmd_rc cmd_examine(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	if (parts.size() < 3)
+		cnsl->put_string_lf("Parameter(s) missing");
+	else {
+		uint32_t addr = std::stoi(parts[1], nullptr, 8);
+		int      n    = parts.size() == 4 ? std::stoi(parts[3]) : 1;
+
+		if (parts[2] != "p" && parts[2] != "v") {
+			cnsl->put_string_lf("expected p (physical address) or v (virtual address)");
+			return debugger_continue;
 		}
 
-		cnsl->put_string_lf("Stopping panel first");
-		cnsl->stop_panel_thread();
-
-		cnsl->put_string_lf("Proceeding with enabling KW11-L interrupt");
-		*cnsl->get_running_flag() = true;  // enable the KW11-L interrupt
-		benchmark(cnsl, b, stop_event, verbose, with_mmu);
-		cnsl->put_string_lf("Disabling KW11-L interrupt");
-		*cnsl->get_running_flag() = false;
-		return true;
-	}
-	else if (cmd == "marker")
-		state->marker = !state->marker;
-	else if (parts[0] == "single" || parts[0] == "s" || parts[0] == "step") {
-		state->single_step = true;
-
-		if (parts.size() == 2)
-			state->n_single_step = std::stoi(parts[1]);
-		else
-			state->n_single_step = 1;
-
-		*stop_event = EVENT_NONE;
-	}
-	else if ((parts[0] == "sbp" || parts[0] == "cbp") && parts.size() >= 3){
-		if (parts[0] == "sbp") {
-			std::size_t space1 = cmd.find(" ");
-			std::size_t space2 = cmd.find(" ", space1 + 1);
-
-			breakpoint::bp_action action     = breakpoint::invalid;
-			std::string           action_str = cmd.substr(space1 + 1, space2 - (space1 + 1));
-			if (action_str == "break" || action_str == "stop")
-				action = breakpoint::stop_running;
-			else if (action_str == "trace")
-				action = breakpoint::start_tracing;
-			else if (action_str == "log")
-				action = breakpoint::only_log_entry;
-			else
-				cnsl->put_string_lf(format("\"%s\" is an unknown breakpoint action", action_str.c_str()));
-
-			if (action != breakpoint::invalid) {
-				std::pair<breakpoint *, std::optional<std::string> > rc = parse_breakpoint(b, cmd.substr(space2 + 1), action);
-
-				if (rc.first == nullptr) {
-					if (rc.second.has_value())
-						cnsl->put_string_lf(rc.second.value());
-					else
-						cnsl->put_string_lf("not set");
-				}
-				else {
-					int id = c->set_breakpoint(rc.first);
-
-					cnsl->put_string_lf(format("Breakpoint has id: %d", id));
-				}
-			}
-		}
-		else {
-			if (c->remove_breakpoint(std::stoi(parts[1])))
-				cnsl->put_string_lf("Breakpoint cleared");
-			else
-				cnsl->put_string_lf("Breakpoint not found");
-		}
-
-		return true;
-	}
-	else if (cmd == "lbp") {
-		auto bps = c->list_breakpoints();
-
-		cnsl->put_string_lf("Breakpoints:");
-
-		for(auto & a : bps)
-			cnsl->put_string_lf(format("%d: %s", a.first, a.second->emit().c_str()));
-
-		if (bps.empty())
-			cnsl->put_string_lf("(none)");
-
-		return true;
-	}
-	else if (parts[0] == "disassemble" || parts[0] == "dis") {
-		uint16_t pc = kv.find("pc") != kv.end() ? std::stoi(kv.find("pc")->second, nullptr, 8)  : c->getPC();
-		int      n  = kv.find("n")  != kv.end() ? std::stoi(kv.find("n") ->second, nullptr, 10) : 1;
-
-		cnsl->put_string_lf(format("Disassemble %d instructions starting at %o", n, pc));
-
-		bool show_registers = kv.find("pc") == kv.end();
+		std::string out;
 
 		for(int i=0; i<n; i++) {
-			pc += std::get<0>(disassemble(c, cnsl, pc, !show_registers));
-			show_registers = false;
-		}
+			uint32_t cur_addr = addr + i * 2;
+			uint16_t val      = 0;
 
-		return true;
-	}
-	else if (parts[0] == "setpc") {
-		if (parts.size() == 2) {
-			uint16_t new_pc = std::stoi(parts.at(1), nullptr, 8);
-			c->setPC(new_pc);
+			if (parts[2] == "v") {
+				auto v = b->peek_word(c->getPSW_runmode(), cur_addr);
 
-			cnsl->put_string_lf(format("Set PC to %06o", new_pc));
-		}
-		else {
-			cnsl->put_string_lf("setpc requires an (octal address as) parameter");
-		}
+				if (v.has_value() == false) {
+					cnsl->put_string_lf(format("Can't read from %06o\n", cur_addr));
+					break;
+				}
 
-		return true;
-	}
-	else if (parts[0] == "setreg") {
-		if (parts.size() == 3) {
-			int      reg = std::stoi(parts.at(1));
-			uint16_t val = std::stoi(parts.at(2), nullptr, 8);
-			c->set_register(reg, val);
-
-			cnsl->put_string_lf(format("Set register %d to %06o", reg, val));
-		}
-		else {
-			cnsl->put_string_lf("setreg requires a register and an octal value");
-		}
-
-		return true;
-	}
-	else if (parts[0] == "setstack") {
-		if (parts.size() == 3) {
-			int      reg = std::stoi(parts.at(1));
-			uint16_t val = std::stoi(parts.at(2), nullptr, 8);
-			if (reg < 4) {
-				c->set_stackpointer(reg, val);
-				cnsl->put_string_lf(format("Set stack register %d to %06o", reg, val));
-			}
-		}
-		else {
-			cnsl->put_string_lf("setstack requires a register and an octal value");
-		}
-
-		return true;
-	}
-	else if (parts[0] == "setpsw") {
-		if (parts.size() == 2) {
-			uint16_t val = std::stoi(parts.at(1), nullptr, 8);
-			c->lowlevel_psw_set(val);
-
-			cnsl->put_string_lf(format("Set PSW to %06o", val));
-		}
-		else {
-			cnsl->put_string_lf("setpsw requires an octal value");
-		}
-
-		return true;
-	}
-	else if (parts[0] == "getmem") {
-		auto a_it = kv.find("a");
-
-		if (a_it == kv.end())
-			cnsl->put_string_lf("Parameter(s) missing");
-		else {
-			uint16_t a = std::stoi(a_it->second, nullptr, 8);
-			cnsl->put_string_lf(format("MEM %06o = %03o", a, c->getBus()->read_byte(a)));
-		}
-
-		return true;
-	}
-	else if (parts[0] == "d" || parts[0] == "deposit") {
-		if (parts.size() != 3)
-			cnsl->put_string_lf("Parameter(s) missing");
-		else {
-			uint16_t v = std::stoi(parts[2], nullptr, 8);
-			if (parts[1] == "pc" || parts[1] == "PC") {
-				c->setPC(v);
-				cnsl->put_string_lf(format("Set PC to %06o", v));
+				val = v.value();
 			}
 			else {
-				uint16_t a = std::stoi(parts[1], nullptr, 8);
-				c->getBus()->write_word(a, v);
-				cnsl->put_string_lf(format("Set %06o to %06o", a, v));
+				val = b->read_physical(cur_addr);
+			}
+
+			if (n == 1)
+				cnsl->put_string_lf(format("value at %06o, octal: %o, hex: %x, dec: %d\n", cur_addr, val, val, val));
+
+			if (n > 1) {
+				if (i > 0)
+					out += " ";
+
+				out += format("%06o=%06o", cur_addr, val);
 			}
 		}
-		return true;
+
+		if (n > 1)
+			cnsl->put_string_lf(out);
 	}
-	else if (parts[0] == "setmem") {
-		auto a_it = kv.find("a");
-		auto v_it = kv.find("v");
 
-		if (a_it == kv.end() || v_it == kv.end())
-			cnsl->put_string_lf("Parameter(s) missing");
-		else {
-			uint16_t a = std::stoi(a_it->second, nullptr, 8);
-			uint8_t  v = std::stoi(v_it->second, nullptr, 8);
+	return debugger_continue;
+}
 
-			c->getBus()->write_byte(a, v);
+cmd_rc cmd_sbp(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	breakpoint::bp_action action     = breakpoint::invalid;
+	const std::string   & action_str = parts[1];
+	if (action_str == "break" || action_str == "stop")
+		action = breakpoint::stop_running;
+	else if (action_str == "trace")
+		action = breakpoint::start_tracing;
+	else if (action_str == "log")
+		action = breakpoint::only_log_entry;
+	else
+		cnsl->put_string_lf(format("\"%s\" is an unknown breakpoint action", action_str.c_str()));
 
-			cnsl->put_string_lf(format("Set %06o to %03o", a, v));
+	if (action != breakpoint::invalid) {
+		std::string bp_def;
+		for(size_t i=2; i<parts.size(); i++) {
+			if (i != 2)
+				bp_def += " ";
+			bp_def += parts[i];
 		}
 
-		return true;
-	}
-	else if (parts[0] == "toggle") {
-		auto s_it = kv.find("s");
-		auto t_it = kv.find("t");
+		std::pair<breakpoint *, std::optional<std::string> > rc = parse_breakpoint(b, bp_def, action);
 
-		if (s_it == kv.end() || t_it == kv.end())
-			cnsl->put_string_lf(format("toggle: parameter missing? current switches states: 0o%06o", c->getBus()->get_console_switches()));
-		else {
-			int s = std::stoi(s_it->second, nullptr, 8);
-			int t = std::stoi(t_it->second, nullptr, 8);
-
-			c->getBus()->set_console_switch(s, t);
-
-			cnsl->put_string_lf(format("Set switch %d to %d", s, t));
+		if (rc.first == nullptr) {
+			if (rc.second.has_value())
+				cnsl->put_string_lf(rc.second.value());
+			else
+				cnsl->put_string_lf("not set");
 		}
+		else {
+			int id = c->set_breakpoint(rc.first);
 
-		return true;
+			cnsl->put_string_lf(format("Breakpoint has id: %d", id));
+		}
 	}
-	else if ((parts[0] == "trace" || parts[0] == "t") && parts.size() >= 2) {
+	return debugger_continue;
+}
+
+cmd_rc cmd_cbp(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	if (c->remove_breakpoint(std::stoi(parts[1])))
+		cnsl->put_string_lf("Breakpoint cleared");
+	else
+		cnsl->put_string_lf("Breakpoint not found");
+	return debugger_continue;
+}
+
+cmd_rc cmd_lbp(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	cnsl->put_string_lf("Breakpoints:");
+
+	auto bps = c->list_breakpoints();
+	for(auto & a : bps)
+		cnsl->put_string_lf(format("%d: %s", a.first, a.second->emit().c_str()));
+	if (bps.empty())
+		cnsl->put_string_lf("(none)");
+
+	return debugger_continue;
+}
+
+cmd_rc cmd_help(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event);
+
+cmd_rc cmd_single(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	state->single_step = true;
+	if (parts.size() == 2)
+		state->n_single_step = std::stoi(parts[1]);
+	else
+		state->n_single_step = 1;
+
+	*stop_event = EVENT_NONE;
+	return start_emulation;
+}
+
+cmd_rc cmd_trace(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	bool is_console = parts[1] == "console" || parts[1] == "con";
+	if (parts.size() == 3)
+		set_ss_log(is_console, parts[2] == "on" || parts[2] == "ON" ? log_ss::LS_TRACE : log_ss(0));
+
+	cnsl->put_string_lf(format("Tracing set to %s", get_log_ss_masks(is_console) & log_ss_type(log_ss::LS_TRACE) ? "ON" : "OFF"));
+	return debugger_continue;
+}
+
+cmd_rc cmd_getlss(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	bool is_console = parts[1] == "console" || parts[1] == "con";
+	cnsl->put_string_lf("Enabled subsystems logging: " + get_ss_mask(is_console));
+	return debugger_continue;
+}
+
+cmd_rc cmd_list_ss(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	cnsl->put_string_lf("Available subsystems: " + get_all_available_log_ss_masks());
+	return debugger_continue;
+}
+
+cmd_rc cmd_clss(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	if (parts.size() == 2) {
 		bool is_console = parts[1] == "console" || parts[1] == "con";
-		if (parts.size() == 3)
-			set_ss_log(is_console, parts[2] == "on" || parts[2] == "ON" ? log_ss::LS_TRACE : log_ss(0));
-
-		cnsl->put_string_lf(format("Tracing set to %s", get_log_ss_masks(is_console) & log_ss_type(log_ss::LS_TRACE) ? "ON" : "OFF"));
-		return true;
+		disable_all_log_ss(is_console);
+		cnsl->put_string_lf("OK");
 	}
-	else if (parts[0] == "state" || parts[0] == "show") {
-		if (parts.size() == 1)
-			cnsl->put_string_lf("Parameter(s) missing");
-		else if (parts[1] == "reset") {
-			if (parts.size() < 3)
-				cnsl->put_string_lf("Parameter(s) missing");
-			else {
-				bool        hard = false;
-				std::string name;
-
-				if (parts.size() == 4) {
-					name = parts[3];
-					hard = parts[2] == "hard";
-				}
-				else {
-					name = parts[2];
-				}
-
-				if (name == "cpu")
-					show_cpu_state(cnsl, c);
-				else {
-					device *dev = name_to_dev(b, name);
-					if (dev == nullptr)
-						cnsl->put_string_lf(format("Device \"%s\" is not known", name.c_str()));
-					else
-						dev->reset(hard);
-				}
-			}
-		}
-		else {
-			if (parts[1] == "cpu")
-				show_cpu_state(cnsl, c);
-			else {
-				device *dev = name_to_dev(b, parts[1]);
-				if (dev == nullptr)
-					cnsl->put_string_lf(format("Device \"%s\" is not known", parts[1].c_str()));
-				else
-					dev->show_state(cnsl);
-			}
-		}
-
-		return true;
+	else if (parts.size() == 1) {
+		disable_all_log_ss(true );
+		disable_all_log_ss(false);
+		cnsl->put_string_lf("OK");
 	}
-	else if (parts[0] == "mmures") {
-		if (parts.size() == 2)
-			mmu_resolve(cnsl, b, std::stoi(parts[1], nullptr, 8));
+	else {
+		cnsl->put_string_lf("?");
+	}
+	return debugger_continue;
+}
+
+cmd_rc cmd_toggle_ss(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	bool is_console = parts[1] == "console" || parts[1] == "con";
+	for(size_t i=2; i<parts.size(); i++) {
+		if (toggle_ss_log(is_console, parts[i]))
+			cnsl->put_string_lf(parts[i] + " toggled");
 		else
-			cnsl->put_string_lf("Parameter(s) missing");
-
-		return true;
+			cnsl->put_string_lf(parts[i] + " not known");
 	}
-	else if (parts[0] == "examine" || parts[0] == "e") {
+	return debugger_continue;
+}
+
+cmd_rc cmd_setsl(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	setloghost(parts[1].c_str());
+	return debugger_continue;
+}
+
+cmd_rc cmd_pts(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	cnsl->enable_timestamp(std::stoi(parts[1]));
+	return debugger_continue;
+}
+
+cmd_rc cmd_turbo(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	state->turbo = !state->turbo;
+	cnsl->put_string_lf(format("Turbo set to %s", state->turbo ? "ON" : "OFF"));
+	return debugger_continue;
+}
+
+cmd_rc cmd_state(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	if (parts.size() == 1)
+		cnsl->put_string_lf("Parameter(s) missing");
+	else if (parts[1] == "reset") {
 		if (parts.size() < 3)
 			cnsl->put_string_lf("Parameter(s) missing");
 		else {
-			uint32_t addr = std::stoi(parts[1], nullptr, 8);
-			int      n    = parts.size() == 4 ? std::stoi(parts[3]) : 1;
+			bool        hard = false;
+			std::string name;
 
-			if (parts[2] != "p" && parts[2] != "v") {
-				cnsl->put_string_lf("expected p (physical address) or v (virtual address)");
-				return true;
-			}
-
-			std::string out;
-
-			for(int i=0; i<n; i++) {
-				uint32_t cur_addr = addr + i * 2;
-				uint16_t val      = 0;
-
-				if (parts[2] == "v") {
-					auto v = b->peek_word(c->getPSW_runmode(), cur_addr);
-
-					if (v.has_value() == false) {
-						cnsl->put_string_lf(format("Can't read from %06o\n", cur_addr));
-						break;
-					}
-
-					val = v.value();
-				}
-				else {
-					val = b->read_physical(cur_addr);
-				}
-
-				if (n == 1)
-					cnsl->put_string_lf(format("value at %06o, octal: %o, hex: %x, dec: %d\n", cur_addr, val, val, val));
-
-				if (n > 1) {
-					if (i > 0)
-						out += " ";
-
-					out += format("%06o=%06o", cur_addr, val);
-				}
-			}
-
-			if (n > 1)
-				cnsl->put_string_lf(out);
-		}
-
-		return true;
-	}
-	else if (parts[0] == "reset" || parts[0] == "r") {
-		bool hard = parts.size() == 2 && parts[1] == "hard";
-		*stop_event = EVENT_NONE;
-		b->reset(hard);
-		b->getRAM()->reset(hard);
-		if (hard)
-			b->getCpu()->reset();
-		cnsl->put_string_lf("resetted");
-		return true;
-	}
-	else if (cmd == "cfgdisk") {
-		configure_disk(b, cnsl);
-
-		return true;
-	}
-#if defined(ESP32) || defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
-	else if (parts[0] == "cfgnet") {
-		network_configured = true;
-		if (parts.size() == 2)
-			configure_network(cnsl, parts[1]);
-		else
-			configure_network(cnsl, { });
-		return true;
-	}
-	else if (cmd == "chknet") {
-		check_network(cnsl);
-
-		return true;
-	}
-	else if (cmd == "startnet") {
-		start_network(cnsl);
-		network_configured = true;
-		return true;
-	}
-#endif
-#if defined(ESP32)
-	else if (parts[0] == "pm" && parts.size() == 2) {
-		reinterpret_cast<console_esp32 *>(cnsl)->set_panel_mode(parts[1] == "bits" ? console_esp32::PM_BITS : console_esp32::PM_POINTER);
-
-		return true;
-	}
-#endif
-	else if (cmd == "stats") {
-		show_run_statistics(cnsl, c);
-
-		return true;
-	}
-	else if (parts[0] == "ramsize") {
-		if (parts.size() == 2)
-			b->set_memory_size(std::stoi(parts.at(1)));
-		else {
-			int n_pages = b->getRAM()->get_memory_size() / 8192;
-
-			cnsl->put_string_lf(format("Memory size: %u pages or %u kB (decimal)", n_pages, n_pages * 8192 / 1024));
-		}
-
-		return true;
-	}
-	else if (cmd == "cls") {
-		const char cls[] = { 27, '[', '2', 'J', 27, '[', 'H', 12, 0 };
-		cnsl->put_string_lf(cls);
-		return true;
-	}
-	else if (cmd == "turbo") {
-		state->turbo = !state->turbo;
-
-		cnsl->put_string_lf(format("Turbo set to %s", state->turbo ? "ON" : "OFF"));
-
-		return true;
-	}
-#if IS_POSIX
-	else if (parts[0] == "ser" && parts.size() == 2) {
-		serialize_state(cnsl, b, parts.at(1));
-		return true;
-	}
-#endif
-	else if (parts[0] == "getinthz") {
-		cnsl->put_string_lf(format("kw11 Hz: %d", b->getKW11_L()->get_interrupt_frequency()));
-		return true;
-	}
-	else if (parts[0] == "setinthz" && parts.size() == 2) {
-		set_kw11_l_interrupt_freq(cnsl, b, std::stoi(parts.at(1)));
-		return true;
-	}
-	else if (parts[0] == "pts" && parts.size() == 2) {
-		cnsl->enable_timestamp(std::stoi(parts[1]));
-
-		return true;
-	}
-	else if (cmd == "qi") {
-		show_queued_interrupts(cnsl, c);
-
-		return true;
-	}
-#if !defined(TEENSY4_1)
-	else if (parts[0] == "blights") {
-		if (network_configured == false)
-			cnsl->put_string_lf("Please configure network first (cfgnet)");
-		else if (parts.size() == 2) {
-			bl.set_target(parts[1]);
-			put_configuration_string(BLINKENLIGHTS_CFG_FILE, parts[1]);
-			cnsl->set_blinkenlights_panel(&bl);
-		}
-		else {
-			put_configuration_string(BLINKENLIGHTS_CFG_FILE, "");
-			cnsl->set_blinkenlights_panel(nullptr);
-			cnsl->put_string_lf("PiDP11 blinkenlights panel disabled");
-		}
-		return true;
-	}
-#endif
-	else if (parts[0] == "log") {
-		DOLOG(log_ss::LS_GENERIC, cmd.c_str());
-
-		return true;
-	}
-	else if (parts[0] == "bic") {
-		if (parts.size() != 2)
-			cnsl->put_string_lf("Parameter(s) missing");
-		else {
-			auto rc = load_tape(b, parts[1].c_str());
-			if (rc.has_value()) {
-				c->setPC(rc.value());
-
-				cnsl->put_string_lf("BIC/LDA file loaded");
+			if (parts.size() == 4) {
+				name = parts[3];
+				hard = parts[2] == "hard";
 			}
 			else {
-				cnsl->put_string_lf("BIC/LDA failed to load");
+				name = parts[2];
+			}
+
+			if (name == "cpu")
+				show_cpu_state(cnsl, c);
+			else {
+				device *dev = name_to_dev(b, name);
+				if (dev == nullptr)
+					cnsl->put_string_lf(format("Device \"%s\" is not known", name.c_str()));
+				else
+					dev->reset(hard);
 			}
 		}
-
-		return true;
 	}
-	else if (parts[0] == "lt") {
-		if (parts.size() == 2)
-			tm11_load_tape(cnsl, b, parts[1]);
-		else
-			tm11_load_tape(cnsl, b, { });
-
-		return true;
-	}
-	else if (cmd == "dir" || cmd == "ls") {
-		ls_l(cnsl);
-
-		return true;
-	}
-	else if (cmd == "refr") {
-		if (parts.size() == 2) {
-			int rate = std::stoi(parts[1]);
-			if (rate > 0)
-				cnsl->set_refreshrate(rate);
+	else {
+		if (parts[1] == "cpu")
+			show_cpu_state(cnsl, c);
+		else {
+			device *dev = name_to_dev(b, parts[1]);
+			if (dev == nullptr)
+				cnsl->put_string_lf(format("Device \"%s\" is not known", parts[1].c_str()));
+			else
+				dev->show_state(cnsl);
 		}
-		cnsl->put_string_lf(format("Panel refresh rate: %d fps", cnsl->get_refreshrate()));
 	}
-	else if (cmd == "ult") {
-		tm11_unload_tape(b);
-		return true;
+
+	return debugger_continue;
+}
+
+cmd_rc cmd_mmures(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	if (parts.size() != 2)
+		mmu_resolve(cnsl, b, std::stoi(parts[1], nullptr, 8));
+	else
+		cnsl->put_string_lf("Parameter count invalid");
+	return debugger_continue;
+}
+
+cmd_rc cmd_qi(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	show_queued_interrupts(cnsl, c);
+	return debugger_continue;
+}
+
+cmd_rc cmd_setreg(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	if (parts.size() == 3) {
+		int      reg = std::stoi(parts.at(1));
+		uint16_t val = std::stoi(parts.at(2), nullptr, 8);
+		c->set_register(reg, val);
+
+		cnsl->put_string_lf(format("Set register %d to %06o", reg, val));
 	}
-	else if (cmd == "dp") {
-		cnsl->stop_panel_thread();
-		cnsl->put_string_lf("OK");
-		return true;
+	else {
+		cnsl->put_string_lf("setreg requires a register and an octal value");
 	}
-	else if (parts[0] == "clss") {
-		if (parts.size() == 2) {
-			bool is_console = parts[1] == "console" || parts[1] == "con";
-			disable_all_log_ss(is_console);
-			cnsl->put_string_lf("OK");
+	return debugger_continue;
+}
+
+cmd_rc cmd_setpc(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	if (parts.size() == 2) {
+		uint16_t new_pc = std::stoi(parts.at(1), nullptr, 8);
+		c->setPC(new_pc);
+
+		cnsl->put_string_lf(format("Set PC to %06o", new_pc));
+	}
+	else {
+		cnsl->put_string_lf("setpc requires an (octal address as) parameter");
+	}
+
+	return debugger_continue;
+}
+
+cmd_rc cmd_setstack(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	if (parts.size() == 3) {
+		int      reg = std::stoi(parts.at(1));
+		uint16_t val = std::stoi(parts.at(2), nullptr, 8);
+		if (reg < 4) {
+			c->set_stackpointer(reg, val);
+			cnsl->put_string_lf(format("Set stack register %d to %06o", reg, val));
 		}
-		else if (parts.size() == 1) {
-			disable_all_log_ss(true );
-			disable_all_log_ss(false);
-			cnsl->put_string_lf("OK");
+	}
+	else {
+		cnsl->put_string_lf("setstack requires a register and an octal value");
+	}
+	return debugger_continue;
+}
+
+cmd_rc cmd_setpsw(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	if (parts.size() == 2) {
+		uint16_t val = std::stoi(parts.at(1), nullptr, 8);
+		c->lowlevel_psw_set(val);
+
+		cnsl->put_string_lf(format("Set PSW to %06o", val));
+	}
+	else {
+		cnsl->put_string_lf("setpsw requires an octal value");
+	}
+	return debugger_continue;
+}
+
+cmd_rc cmd_deposit(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	if (parts.size() != 3)
+		cnsl->put_string_lf("Parameter count invalid");
+	else {
+		uint16_t v = std::stoi(parts[2], nullptr, 8);
+		if (parts[1] == "pc" || parts[1] == "PC") {
+			c->setPC(v);
+			cnsl->put_string_lf(format("Set PC to %06o", v));
 		}
 		else {
-			cnsl->put_string_lf("?");
+			uint16_t a = std::stoi(parts[1], nullptr, 8);
+			c->getBus()->write_word(a, v);
+			cnsl->put_string_lf(format("Set %06o to %06o", a, v));
 		}
-		return true;
 	}
-	else if (parts[0] == "getlss" && parts.size() == 2) {
-		bool is_console = parts[1] == "console" || parts[1] == "con";
-		cnsl->put_string_lf("Enabled subsystems logging: " + get_ss_mask(is_console));
-		return true;
+	return debugger_continue;
+}
+
+cmd_rc cmd_setmem(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	auto kv   = split(parts, "=");
+	auto a_it = kv.find("a");
+	auto v_it = kv.find("v");
+
+	if (a_it == kv.end() || v_it == kv.end())
+		cnsl->put_string_lf("Parameter(s) missing");
+	else {
+		uint16_t a = std::stoi(a_it->second, nullptr, 8);
+		uint8_t  v = std::stoi(v_it->second, nullptr, 8);
+
+		c->getBus()->write_byte(a, v);
+
+		cnsl->put_string_lf(format("Set %06o to %03o", a, v));
 	}
-	else if (cmd == "list_ss") {
-		cnsl->put_string_lf("Available subsystems: " + get_all_available_log_ss_masks());
-		return true;
+
+	return debugger_continue;
+}
+
+cmd_rc cmd_getmem(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	auto kv   = split(parts, "=");
+	auto a_it = kv.find("a");
+
+	if (a_it == kv.end())
+		cnsl->put_string_lf("Parameter(s) missing");
+	else {
+		uint16_t a = std::stoi(a_it->second, nullptr, 8);
+		cnsl->put_string_lf(format("MEM %06o = %03o", a, c->getBus()->read_byte(a)));
 	}
-	else if (parts[0] == "toggle_ss") {
-		bool is_console = parts[1] == "console" || parts[1] == "con";
-		for(size_t i=2; i<parts.size(); i++) {
-			if (toggle_ss_log(is_console, parts[i]))
-				cnsl->put_string_lf(parts[i] + " toggled");
-			else
-				cnsl->put_string_lf(parts[i] + " not known");
+
+	return debugger_continue;
+}
+
+cmd_rc cmd_toggle(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	auto kv   = split(parts, "=");
+	auto s_it = kv.find("s");
+	auto t_it = kv.find("t");
+
+	if (s_it == kv.end() || t_it == kv.end())
+		cnsl->put_string_lf(format("toggle: parameter missing? current switches states: 0o%06o", c->getBus()->get_console_switches()));
+	else {
+		int s = std::stoi(s_it->second, nullptr, 8);
+		int t = std::stoi(t_it->second, nullptr, 8);
+
+		c->getBus()->set_console_switch(s, t);
+
+		cnsl->put_string_lf(format("Set switch %d to %d", s, t));
+	}
+
+	return debugger_continue;
+}
+
+cmd_rc cmd_pcmon(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	state->pc_monitor_enabled = true;
+	state->pc_monitor_count   = std::stoi(parts.at(1));
+	state->pc_monitor_counter = 0;
+	return debugger_continue;
+}
+
+cmd_rc cmd_deqna(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	b->add_DEQNA(nullptr);  // disable & remove any existing
+
+	uint8_t mac[6] { };
+	get_deqna_mac(mac);
+
+	eth_transport *dev  = nullptr;
+	auto           pars = split(parts[1], ",");
+	if (false) {
+	}
+#if defined(linux)
+	else if (pars[0] == "linux") {
+		if (pars.size() != 2)
+			cnsl->put_string_lf("Invalid parameter count");
+		else
+			dev = new eth_transport_linux(pars[1]);
+	}
+#elif defined(ESP32)
+	else if (pars[0] == "esp32") {
+		dev = new eth_transport_esp32(mac);
+	}
+#elif defined(TEENSY4_1)
+	else if (pars[0] == "teensy4.1") {
+		dev = new eth_transport_teensy4_1(mac);
+	}
+#endif
+	else if (pars[0] == "vxlan") {
+		if (pars.size() == 3)
+			dev = new eth_transport_vxlan(pars[1], std::stoi(pars[2]));
+		else if (pars.size() == 4)
+			dev = new eth_transport_vxlan(pars[1], std::stoi(pars[2]), std::stoi(pars[3]));
+		else
+			cnsl->put_string_lf("Invalid parameter count");
+	}
+	else {
+		cnsl->put_string_lf(format("\"%s\" is not understood or parameters missing", pars[0].c_str()));
+	}
+
+	if (dev) {
+		if (false) {
 		}
-		return true;
+#if !defined(WAVESHARE_S3_ETH)
+		else if (!network_configured)
+			cnsl->put_string_lf("Please configure network first (cfgnet)");
+#endif
+		else if (dev->begin()) {
+			auto d = new deqna(b, mac, dev, cnsl->get_network_activity_flag());
+			if (d->begin()) {
+				cnsl->put_string_lf("DEQNA emulation initialized");
+				b->add_DEQNA(d);
+			}
+			else {
+				cnsl->put_string_lf("DEQNA emulation initialization failed");
+				delete d;
+				delete dev;
+			}
+		}
+		else {
+			delete dev;
+			cnsl->put_string_lf("DEQNA emulation initialization failed");
+		}
 	}
-	else if (parts[0] == "mdeqna" && parts.size() == 2) {
+
+	return debugger_continue;
+}
+
+cmd_rc cmd_test(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	if (parts[1] == "deqna") {
 		auto deqna = b->getDEQNA();
 		if (deqna) {
-			deqna::monitor_mode_t mode = deqna::nothing;
-
-			if (parts[1] == "filtered")
-				mode = deqna::filtered;
-			else if (parts[1] == "everything")
-				mode = deqna::everything;
-			else if (parts[1] == "none") {
-			}
+			if (deqna->test(cnsl))
+				cnsl->put_string_lf("DEQNA test succeeded!");
 			else
-				cnsl->put_string_lf("?");
-
-			deqna->set_monitor_mode(mode, cnsl);
+				cnsl->put_string_lf("DEQNA test failed");
 		}
 		else {
 			cnsl->put_string_lf("DEQNA emulation is not configured yet");
 		}
-		return true;
 	}
-	else if (parts[0] == "test" && parts.size() == 2) {
-		if (parts[1] == "deqna") {
-			auto deqna = b->getDEQNA();
-			if (deqna) {
-				if (deqna->test(cnsl))
-					cnsl->put_string_lf("DEQNA test succeeded!");
-				else
-					cnsl->put_string_lf("DEQNA test failed");
-			}
-			else {
-				cnsl->put_string_lf("DEQNA emulation is not configured yet");
-			}
-		}
-		else if (parts[1] =="dz11") {
-			if (b->getDZ11())
-				b->getDZ11()->test_ports(parts.size() == 3 ? std::stoi(parts[2]) : 1);
-			else
-				cnsl->put_string_lf("DZ11 not started yet, first invoke \"startnet\"");
-		}
-		else if (parts[1] =="panel") {
-			cnsl->test_panel();
-		}
-		else {
-			cnsl->put_string_lf("?");
-		}
-		return true;
-	}
-	else if (parts[0] == "deqna" && parts.size() >= 2) {
-		b->add_DEQNA(nullptr);  // disable & remove any existing
-
-		uint8_t mac[6] { };
-		get_deqna_mac(mac);
-
-		eth_transport *dev  = nullptr;
-		auto           pars = split(parts[1], ",");
-		if (false) {
-		}
-#if defined(linux)
-		else if (pars[0] == "linux") {
-			if (pars.size() != 2)
-				cnsl->put_string_lf("Invalid parameter count");
-			else
-				dev = new eth_transport_linux(pars[1]);
-		}
-#elif defined(ESP32)
-		else if (pars[0] == "esp32") {
-			dev = new eth_transport_esp32(mac);
-		}
-#elif defined(TEENSY4_1)
-		else if (pars[0] == "teensy4.1") {
-			dev = new eth_transport_teensy4_1(mac);
-		}
-#endif
-		else if (pars[0] == "vxlan") {
-			if (pars.size() == 3)
-				dev = new eth_transport_vxlan(pars[1], std::stoi(pars[2]));
-			else if (pars.size() == 4)
-				dev = new eth_transport_vxlan(pars[1], std::stoi(pars[2]), std::stoi(pars[3]));
-			else
-				cnsl->put_string_lf("Invalid parameter count");
-		}
-		else {
-			cnsl->put_string_lf(format("\"%s\" is not understood or parameters missing", pars[0].c_str()));
-		}
-
-		if (dev) {
-			if (false) {
-			}
-#if !defined(WAVESHARE_S3_ETH)
-			else if (!network_configured)
-				cnsl->put_string_lf("Please configure network first (cfgnet)");
-#endif
-			else if (dev->begin()) {
-				auto d = new deqna(b, mac, dev, cnsl->get_network_activity_flag());
-				if (d->begin()) {
-					cnsl->put_string_lf("DEQNA emulation initialized");
-					b->add_DEQNA(d);
-				}
-				else {
-					cnsl->put_string_lf("DEQNA emulation initialization failed");
-					delete d;
-					delete dev;
-				}
-			}
-			else {
-				delete dev;
-				cnsl->put_string_lf("DEQNA emulation initialization failed");
-			}
-		}
-
-		return true;
-	}
-	else if (parts[0] == "pcmon" && parts.size() == 2) {
-		state->pc_monitor_enabled = true;
-		state->pc_monitor_count   = std::stoi(parts.at(1));
-		state->pc_monitor_counter = 0;
-		return true;
-	}
-	else if (cmd == "cdz11") {
+	else if (parts[1] =="dz11") {
 		if (b->getDZ11())
-			configure_comm(cnsl, b->getDZ11()->get_comm_interfaces());
+			b->getDZ11()->test_ports(parts.size() == 3 ? std::stoi(parts[2]) : 1);
 		else
 			cnsl->put_string_lf("DZ11 not started yet, first invoke \"startnet\"");
-
-		return true;
 	}
-	else if (cmd == "serdz11") {
-		serdz11(cnsl, b);
-
-		return true;
-	}
-	else if (cmd == "dserdz11") {
-		deserdz11(cnsl, b);
-
-		return true;
-	}
-#if defined(BUILD_FOR_PICO2W)
-	else if (cmd == "flash") {
-		int ch_opt = wait_for_key("y/n", cnsl, { 'y', 'n' });
-		if (ch_opt == 'y') {
-			rp2040.rebootToBootloader();
-			return false;
-		}
-		return true;
-	}
-#endif
-	else if (parts[0] == "quit" || parts[0] == "q") {
-		bool yes = (parts.size() == 2 && parts[1] == "-y") || wait_for_key("y/n", cnsl, { 'y', 'n' }) == 'y';
-		if (yes) {
-#if defined(ESP32)
-			ESP.restart();
-#elif defined(BUILD_FOR_PICO2W)
-			rp2040.reboot();
-#elif defined(TEENSY4_1)
-			SRC_GPR5 = 0x0BAD00F1;
-			SCB_AIRCR = 0x05FA0004;
-#endif
-			return false;
-		}
-		return true;
-	}
-	else if (cmd == "help" || cmd == "h" || cmd == "?") {
-		struct help_pair {
-			const char *const command;
-			const char *const descr;
-		};
-
-		constexpr const help_pair help_pairs[] {
-			{ "dis[assemble]", "show current instruction (pc=/n=)" },
-			{ "go", "run until trap or ^e" },
-			{ "benchmark [-v][-m]", "v=verbose, -m=with mmu" },
-#if !defined(ESP32) || defined(BUILD_FOR_PICO2W)
-			{ "quit/q", "stop emulator" },
-#endif
-#if defined(BUILD_FOR_RP204o)
-			{ "flash", "jump to the bootloader to allow flashing new firmware" },
-#endif
-			{ "examine/e", "show memory address (<octal address> <p|v> [<n>])" },
-			{ "reset/r", "reset cpu/bus/etc" },
-			{ "single/s [x]", "run 1 (or x-) instruction (implicit 'disassemble' command)" },
-			{ "sbp/cbp/lbp", "set/clear/list breakpoint(s), e.g.: action (pc=0123 and memwv[04000]=0200,0300 and (r4=07,05 or r5=0456) and instr[]=1), values seperated by ',', char after mem is w/b (word/byte), then follows v/p (virtual/physical), all octal values, mmr0-3 and psw are registers. \"action\" can be stop, trace or log. instr can have a mask between the [] and on the right an instruction-opcode to compare against." },
-			{ "trace con/fil", "toggle tracing for console/file logging" },
-			{ "getlss con/fil", "show what subystems logging is enabled for" },
-			{ "clss", "stop logging for all subsystems (use tlss to re-enable)" },
-			{ "toggle_ss con/fil x,[...]", "toggle logging for on or more subsystems" },
-			{ "list_ss", "list subsystems" },
-			{ "setsl hst", "set syslog target: requires a hostname" },
-			{ "pts x", "enable (1) / disable (0) timestamps" },
-			{ "turbo", "toggle turbo mode (cannot be interrupted)" },
-			{ "strace x", "start tracing from address, invoke without address to disable" },
-			{ "state [reset [hard]] x", "dump state of (or reset) a device: rl02, rk05, rp06, rp07, mmu, tm11, kw11l, cpu, dc11, dz11 or deqna" },
-			{ "mmures x", "resolve a virtual address" },
-			{ "qi", "show queued interrupts" },
-			{ "setpc x", "set PC to value (octal)" },
-			{ "setreg x y", "set register x to value y (octal)" },
-			{ "setstack x y", "set stack register x to value y (octal)" },
-			{ "setpsw x", "set PSW value y (octal)" },
-			{ "d[eposit] x y", "set memory x to value y, octal word" },
-			{ "setmem ...", "set memory (a=) to value (v=), both in octal, one byte" },
-			{ "getmem ...", "get memory (a=), in octal, one byte" },
-			{ "toggle ...", "set switch (s=, 0...15 (decimal)) of the front panel to state (t=, 0 or 1)" },
-			{ "pcmon x", "track for x cycles what memory addresses were read an instruction from" },
-			{ "setinthz x", "set KW11-L interrupt frequency (Hz)" },
-			{ "cls", "clear screen" },
-			{ "dir", "list files" },
-			{ "bic x", "run BIC/LDA file" },
-			{ "lt x", "load tape (parameter is filename)" },
-			{ "ult", "unload tape" },
-			{ "stats", "show run statistics" },
-			{ "ramsize x", "set ram size (page (8 kB) count, decimal)" },
-			{ "cdz11", "configure DZ11 device" },
-			{ "serdz11", "store DZ11 device settings" },
-			{ "dserdz11", "load DZ11 device settings" },
-#if IS_POSIX
-			{ "ser x", "serialize state to a file (deserialize with -D commandline parameter)" },
-			// { "dser", "deserialize state from a file",         ^^^^ },
-#endif
-			{ "dp", "disable panel" },
-			{ "refr [x]", "set panel refreshrate (fps)" },
-#if defined(ESP32) || defined(BUILD_FOR_PICO2W)
-			{ "cfgnet", "configure network (e.g. WiFi)" },
-			{ "startnet", "start network" },
-			{ "chknet", "check network status" },
-			{ "pm x", "panel mode (bits or address)" },
-#endif
-			{ "blights x", "enable blinkenlights on IP address x" },
-			{ "cfgdisk", "configure disk" },
-			{ "deqna x[,y,z]", "set deqna emulation to use (x): \"linux\" (tap), \"teensy4.1\", \"esp32\" or \"vxlan\" (with host (y) & port (z))" },
-			{ "test x", "test the dz11/DEQNA/panel emulation" },
-			{ "mdeqna x", "set DEQNA monitor mode: none, filtered, everything" },
-			{ "log ...", "log a message to the logfile" },
-			{ nullptr, nullptr }
-		};
-
-		size_t max_cmd_len   = 0;
-		size_t max_descr_len = 0;
-		size_t n             = 0;
-		while(help_pairs[n].command) {
-			max_cmd_len   = std::max(max_cmd_len,   strlen(help_pairs[n].command));
-			max_descr_len = std::max(max_descr_len, strlen(help_pairs[n].descr  ));
-			n++;
-		}
-
-		for(size_t i=0; i<n; i++) {
-			cnsl->put_string(format("%-*s - ", max_cmd_len, help_pairs[i].command));
-			cnsl->put_string_lf(help_pairs[i].descr);
-		}
-
-		return true;
+	else if (parts[1] =="panel") {
+		cnsl->test_panel();
 	}
 	else {
-		cnsl->put_string_lf(format("? (%s)", parts[0].c_str()));
-		return true;
+		cnsl->put_string_lf("?");
+	}
+	return debugger_continue;
+}
+
+cmd_rc cmd_mdeqna(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	auto deqna = b->getDEQNA();
+	if (deqna) {
+		deqna::monitor_mode_t mode = deqna::nothing;
+
+		if (parts[1] == "filtered")
+			mode = deqna::filtered;
+		else if (parts[1] == "everything")
+			mode = deqna::everything;
+		else if (parts[1] == "none") {
+		}
+		else
+			cnsl->put_string_lf("?");
+
+		deqna->set_monitor_mode(mode, cnsl);
+	}
+	else {
+		cnsl->put_string_lf("DEQNA emulation is not configured yet");
+	}
+	return debugger_continue;
+}
+
+cmd_rc cmd_cfgdisk(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	configure_disk(b, cnsl);
+	return debugger_continue;
+}
+
+cmd_rc cmd_cdz11(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	if (b->getDZ11())
+		configure_comm(cnsl, b->getDZ11()->get_comm_interfaces());
+	else
+		cnsl->put_string_lf("DZ11 not started yet, first invoke \"startnet\"");
+	return debugger_continue;
+}
+
+cmd_rc cmd_serdz11(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	serdz11(cnsl, b);
+	return debugger_continue;
+}
+
+cmd_rc cmd_dserdz11(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	deserdz11(cnsl, b);
+	return debugger_continue;
+}
+
+cmd_rc cmd_setinthz(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	set_kw11_l_interrupt_freq(cnsl, b, std::stoi(parts.at(1)));
+	return debugger_continue;
+}
+
+cmd_rc cmd_getinthz(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	cnsl->put_string_lf(format("kw11 Hz: %d", b->getKW11_L()->get_interrupt_frequency()));
+	return debugger_continue;
+}
+
+#if !defined(TEENSY4_1)
+cmd_rc cmd_blights(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	if (network_configured == false)
+		cnsl->put_string_lf("Please configure network first (cfgnet)");
+	else if (parts.size() == 2) {
+		bl.set_target(parts[1]);
+		put_configuration_string(BLINKENLIGHTS_CFG_FILE, parts[1]);
+		cnsl->set_blinkenlights_panel(&bl);
+	}
+	else {
+		put_configuration_string(BLINKENLIGHTS_CFG_FILE, "");
+		cnsl->set_blinkenlights_panel(nullptr);
+		cnsl->put_string_lf("PiDP11 blinkenlights panel disabled");
+	}
+	return debugger_continue;
+}
+#endif
+
+cmd_rc cmd_ramsize(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	if (parts.size() == 2)
+		b->set_memory_size(std::stoi(parts.at(1)));
+	else {
+		int n_pages = b->getRAM()->get_memory_size() / 8192;
+		cnsl->put_string_lf(format("Memory size: %u pages or %u kB (decimal)", n_pages, n_pages * 8192 / 1024));
+	}
+	return debugger_continue;
+}
+
+cmd_rc cmd_cls(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	const char cls[] = { 27, '[', '2', 'J', 27, '[', 'H', 12, 0 };
+	cnsl->put_string_lf(cls);
+	return debugger_continue;
+}
+
+cmd_rc cmd_stats(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	show_run_statistics(cnsl, c);
+	return debugger_continue;
+}
+
+cmd_rc cmd_dir(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	ls_l(cnsl);
+	return debugger_continue;
+}
+
+cmd_rc cmd_bic(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	auto rc = load_tape(b, parts[1].c_str());
+	if (rc.has_value()) {
+		c->setPC(rc.value());
+
+		cnsl->put_string_lf("BIC/LDA file loaded");
+	}
+	else {
+		cnsl->put_string_lf("BIC/LDA failed to load");
+	}
+	return debugger_continue;
+}
+
+cmd_rc cmd_lt(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	if (parts.size() == 2)
+		tm11_load_tape(cnsl, b, parts[1]);
+	else
+		tm11_load_tape(cnsl, b, { });
+	return debugger_continue;
+}
+
+cmd_rc cmd_ult(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	tm11_unload_tape(b);
+	return debugger_continue;
+}
+
+cmd_rc cmd_dp(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	cnsl->stop_panel_thread();
+	cnsl->put_string_lf("OK");
+	return debugger_continue;
+}
+
+#if defined(ESP32) || defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
+cmd_rc cmd_pm(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	reinterpret_cast<console_esp32 *>(cnsl)->set_panel_mode(parts[1] == "bits" ? console_esp32::PM_BITS : console_esp32::PM_POINTER);
+	return debugger_continue;
+}
+#endif
+
+cmd_rc cmd_refr(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	if (parts.size() == 2) {
+		int rate = std::stoi(parts[1]);
+		if (rate > 0)
+			cnsl->set_refreshrate(rate);
+	}
+	cnsl->put_string_lf(format("Panel refresh rate: %d fps", cnsl->get_refreshrate()));
+	return debugger_continue;
+}
+
+#if defined(ESP32) || defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
+cmd_rc cmd_cfgnet(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	network_configured = true;
+	if (parts.size() == 2)
+		configure_network(cnsl, parts[1]);
+	else
+		configure_network(cnsl, { });
+	return debugger_continue;
+}
+
+cmd_rc cmd_chknet(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	check_network(cnsl);
+	return debugger_continue;
+}
+
+cmd_rc cmd_startnet(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	start_network(cnsl);
+	network_configured = true;
+	return debugger_continue;
+}
+#endif
+
+cmd_rc cmd_marker(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	state->marker = !state->marker;
+	return debugger_continue;
+}
+
+cmd_rc cmd_log(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	std::string line;
+	for(size_t i=1; i<parts.size(); i++) {
+		if (i != 1)
+			line += " ";
+		line += parts[i];
+	}
+	DOLOG(log_ss::LS_GENERIC, line.c_str());
+	return debugger_continue;
+}
+
+#if IS_POSIX
+cmd_rc cmd_ser(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	serialize_state(cnsl, b, parts.at(1));
+	return debugger_continue;
+}
+#endif
+
+constexpr const help_pair help_pairs[] {
+	{ "help", "", "this help", cmd_help, help_pair::par_no },
+	{ "disassemble", "pc=/n=", "show current instruction", cmd_disassemble, help_pair::par_yes },
+	{ "go", "", "run until trap or ^e", cmd_go, help_pair::par_no },
+	{ "benchmark", "-v=verbose, -m=with mmu", "determine the speed of the emulation", cmd_benchmark, help_pair::par_optional },
+#if !defined(ESP32) || defined(BUILD_FOR_PICO2W)
+	{ "quit", "", "stop emulator", cmd_quit, help_pair::par_no },
+#endif
+#if defined(BUILD_FOR_RP204o)
+	{ "flash", "", "jump to the bootloader to allow flashing new firmware", cmd_flash, help_pair::par_no },
+#endif
+	{ "examine", "<octal address> <p|v> [<n>]", "show memory address", cmd_examine, help_pair::par_yes },
+	{ "reset", "which", "reset cpu/bus/etc", cmd_reset, help_pair::par_yes },
+	{ "sbp", "", "set breakpoint(s), e.g.: action (pc=0123 and memwv[04000]=0200,0300 and (r4=07,05 or r5=0456) and instr[]=1), values seperated by ',', char after mem is w/b (word/byte), then follows v/p (virtual/physical), all octal values, mmr0-3 and psw are registers. \"action\" can be stop, trace or log. instr can have a mask between the [] and on the right an instruction-opcode to compare against.", cmd_sbp, help_pair::par_yes },
+	{ "cbp", "", "clear breakpoints", cmd_cbp, help_pair::par_yes },
+	{ "lbp", "", "list breakpoints", cmd_lbp, help_pair::par_no },
+	{ "single", "[n]", "run 1 (or n-) instruction (implicit 'disassemble' command)", cmd_single, help_pair::par_optional },
+	{ "trace", "con/fil", "toggle tracing for [con]sole/[fil]e logging", cmd_trace, help_pair::par_yes },
+	{ "getlss", "con/fil", "show what subystems logging is enabled for", cmd_getlss, help_pair::par_yes },
+	{ "list_ss", "", "list subsystems", cmd_list_ss, help_pair::par_no },
+	{ "clss", "", "stop logging for all subsystems (use toggle_ss to re-enable)", cmd_clss, help_pair::par_optional },
+	{ "toggle_ss", "con/fil x,[...]", "toggle logging for on or more subsystems", cmd_toggle_ss, help_pair::par_yes },
+	{ "setsl", "hostname", "set syslog target", cmd_setsl, help_pair::par_yes },
+	{ "pts", "setting", "enable (1) / disable (0) timestamps", cmd_pts, help_pair::par_yes },
+	{ "turbo", "", "toggle turbo mode (cannot be interrupted)", cmd_turbo, help_pair::par_no },
+	{ "state", "[reset [hard]] x", "dump state of (or reset) a device: rl02, rk05, rp06, rp07, mmu, tm11, kw11l, cpu, dc11, dz11 or deqna", cmd_state, help_pair::par_yes },
+	{ "mmures", "x", "resolve a virtual address", cmd_mmures, help_pair::par_yes },
+	{ "qi", "", "show queued interrupts", cmd_qi, help_pair::par_no },
+	{ "setreg", "x y", "set register x to value y (octal)", cmd_setreg, help_pair::par_yes },
+	{ "setpc", "pc", "set PC to value (octal)", cmd_setpc, help_pair::par_yes },
+	{ "setstack", "x y", "set stack register x to value y (octal)", cmd_setstack, help_pair::par_yes },
+	{ "setpsw", "y", "set PSW value y (octal)", cmd_setpsw, help_pair::par_yes },
+	{ "deposit", "x y", "set memory x to value y, octal word", cmd_deposit, help_pair::par_yes },
+	{ "setmem", "a v", "set memory (a=) to value (v=), both in octal, one byte", cmd_setmem, help_pair::par_yes },
+	{ "getmem", "a", "get memory (a=), in octal, one byte", cmd_getmem, help_pair::par_yes },
+	{ "toggle", "s t", "set switch (s=, 0...15 (decimal)) of the front panel to state (t=, 0 or 1)", cmd_toggle, help_pair::par_yes },
+	{ "pcmon", "x", "track for x cycles what memory addresses were read an instruction from", cmd_pcmon, help_pair::par_yes },
+	{ "deqna", "x[,y,z]", "set deqna emulation to use (x): \"linux\" (tap), \"teensy4.1\", \"esp32\" or \"vxlan\" (with host (y) & port (z))", cmd_deqna, help_pair::par_yes },
+	{ "test", "x", "test the dz11/DEQNA/panel emulation", cmd_test, help_pair::par_yes },
+	{ "mdeqna", "mode", "set DEQNA monitor mode: none, filtered, everything", cmd_mdeqna, help_pair::par_yes },
+	{ "cfgdisk", "", "configure disk", cmd_cfgdisk, help_pair::par_no },
+	{ "cdz11", "", "configure DZ11 device", cmd_cdz11, help_pair::par_no },
+	{ "serdz11", "", "store DZ11 device settings", cmd_serdz11, help_pair::par_no },
+	{ "dserdz11", "", "load DZ11 device settings", cmd_dserdz11, help_pair::par_no },
+	{ "setinthz", "freq", "set KW11-L interrupt frequency (Hz)", cmd_setinthz, help_pair::par_yes },
+	{ "getinthz", "", "get KW11-L interrupt frequency (Hz)", cmd_getinthz, help_pair::par_no },
+#if !defined(TEENSY4_1)
+	{ "blights", "ip addr", "enable blinkenlights on selected IP address", cmd_blights, help_pair::par_yes },
+#endif
+	{ "ramsize", "pages", "set ram size (page (8 kB) count, decimal)", cmd_ramsize, help_pair::par_yes },
+	{ "cls", "", "clear screen", cmd_cls, help_pair::par_no },
+	{ "stats", "", "show run statistics", cmd_stats, help_pair::par_no },
+	{ "dir", "", "list files", cmd_dir, help_pair::par_no },
+	{ "bic", "filename", "run BIC/LDA file", cmd_bic, help_pair::par_yes },
+	{ "lt", "filename", "load tape", cmd_lt, help_pair::par_yes },
+	{ "ult", "", "unload tape", cmd_ult, help_pair::par_no },
+	{ "dp", "", "disable panel", cmd_dp, help_pair::par_no },
+#if defined(ESP32) || defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
+	{ "pm", "mode", "panel mode (bits or address)", cmd_pm, help_pair::par_yes },
+#endif
+	{ "refr", "fps", "set panel refreshrate", cmd_refr, help_pair::par_yes },
+#if defined(ESP32) || defined(BUILD_FOR_PICO2W)
+	{ "cfgnet", "", "configure network (e.g. WiFi)", cmd_cfgnet, help_pair::par_no },
+	{ "startnet", "", "start network", cmd_startnet, help_pair::par_no },
+	{ "chknet", "", "check network status", cmd_chknet, help_pair::par_no },
+#endif
+	{ "marker", "", "toggle marker line in logging", cmd_marker, help_pair::par_no },
+	{ "log", "", "log a message to the logfile", cmd_log, help_pair::par_optional },
+#if IS_POSIX
+	{ "ser", "filename", "serialize state to a file (deserialize with -D commandline parameter)", cmd_ser, help_pair::par_yes },
+	// { "dser", "deserialize state from a file",         ^^^^ },
+#endif
+	{ nullptr, nullptr, nullptr, nullptr, help_pair::par_no }
+};
+
+cmd_rc cmd_help(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
+	size_t max_cmd_len   = 0;
+	size_t max_pars_len  = 0;
+	size_t max_descr_len = 0;
+	size_t n             = 0;
+	while(help_pairs[n].command) {
+		max_cmd_len   = std::max(max_cmd_len,   strlen(help_pairs[n].command   ));
+		max_pars_len  = std::max(max_pars_len,  strlen(help_pairs[n].parameters));
+		max_descr_len = std::max(max_descr_len, strlen(help_pairs[n].descr     ));
+		n++;
 	}
 
+	for(size_t i=0; i<n; i++)
+		cnsl->put_string_lf(format("%-*s - %-*s - %s", max_cmd_len, help_pairs[n].command, max_pars_len, help_pairs[n].parameters, help_pairs[i].descr));
+
+	return debugger_continue;
+}
+
+bool emulation_do(console *const cnsl, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+{
 	*cnsl->get_running_flag() = true;
 
 	bool reset_cpu = true;
@@ -1678,7 +1798,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			cnsl->put_string_lf(format("%" PRIzu " counters in %u instructions", ordered.size(), state->pc_monitor_count));
 		}
 
-		if (trace_enabled() || go_verbose || state->pc_monitor_enabled) {
+		if (trace_enabled() || state->go_verbose || state->pc_monitor_enabled) {
 			cnsl->put_string_lf(format("Took %.3f emulated ms, %.3f s wall clock time, avg. wait duration: %.3f us, traps: %" PRIzu "",
 						took / 1000000.,  // took is nanoseconds
 						(get_us() - since) / 1000000.,
@@ -1698,9 +1818,38 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 
 	*cnsl->get_running_flag() = false;
 
-	if (reset_cpu)
-		c->reset();
+	return true;
+}
 
+bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b, kek_event_t *const stop_event, const std::string & cmd)
+{
+	cpu  *const c = b->getCpu();
+	auto parts    = split(cmd, " ");
+	if (parts.empty())
+		return true;
+
+	size_t i = 0;
+	do {
+		auto & item = help_pairs[i];
+		if (std::string(item.command) == parts[0]) {
+			if ((parts.size() == 1 && item.par_t == help_pair::par_no ) ||
+			    (parts.size() >  1 && item.par_t == help_pair::par_yes) ||
+			    item.par_t == help_pair::par_optional) {
+				auto rc = item.func(cnsl, parts, b, c, state, stop_event);
+				if (rc == debugger_continue)
+					return true;
+				if (rc == debugger_stop)
+					return false;
+				return emulation_do(cnsl, b, c, state, stop_event);
+			}
+
+			cnsl->put_string_lf("Invalid number of parameters");
+			return true;
+		}
+	}
+	while(help_pairs[++i].command);
+
+	cnsl->put_string_lf(format("Command %s is unknown", parts[0].c_str()));
 	return true;
 }
 
@@ -1742,7 +1891,7 @@ void debugger(console *const cnsl, bus *const b, kek_event_t *const stop_event, 
 			cnsl->put_string_lf(format("Problem: %d", ei));
 		}
 		catch(...) {
-			cnsl->put_string_lf("Unspecified exception caught");
+			cnsl->put_string_lf("Unknown exception caught");
 		}
 	}
 }
