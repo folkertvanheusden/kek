@@ -746,13 +746,13 @@ struct debugger_state {
 
 enum cmd_rc { debugger_continue, debugger_stop, start_emulation };
 
-using help_func_t = cmd_rc (*)(console *const, const std::vector<std::string>&, bus *const, cpu *const, debugger_state *const, kek_event_t *const);
+using cmd_func_t = cmd_rc (*)(console *const, const std::vector<std::string>&, bus *const, cpu *const, debugger_state *const, kek_event_t *const);
 
-struct help_pair {
+struct cmd_pair {
 	const char       *const command;
 	const char       *const parameters;
 	const char       *const descr;
-	const help_func_t func;
+	const cmd_func_t func;
 	enum { par_yes, par_no, par_optional } par_t;
 };
 
@@ -1545,77 +1545,77 @@ cmd_rc cmd_ser(console *const cnsl, const std::vector<std::string> & parts, bus 
 }
 #endif
 
-constexpr const help_pair help_pairs[] {
-	{ "help", "", "this help", cmd_help, help_pair::par_no },
-	{ "disassemble", "pc=/n=", "show current instruction", cmd_disassemble, help_pair::par_yes },
-	{ "go", "", "run until trap or ^e", cmd_go, help_pair::par_no },
-	{ "benchmark", "-v=verbose, -m=with mmu", "determine the speed of the emulation", cmd_benchmark, help_pair::par_optional },
+constexpr const cmd_pair cmd_pairs[] {
+	{ "help", "", "this help", cmd_help, cmd_pair::par_no },
+	{ "disassemble", "pc=/n=", "show current instruction", cmd_disassemble, cmd_pair::par_yes },
+	{ "go", "", "run until trap or ^e", cmd_go, cmd_pair::par_no },
+	{ "benchmark", "-v=verbose, -m=with mmu", "determine the speed of the emulation", cmd_benchmark, cmd_pair::par_optional },
 #if !defined(ESP32) || defined(BUILD_FOR_PICO2W)
-	{ "quit", "", "stop emulator", cmd_quit, help_pair::par_no },
+	{ "quit", "", "stop emulator", cmd_quit, cmd_pair::par_no },
 #endif
 #if defined(BUILD_FOR_RP204o)
-	{ "flash", "", "jump to the bootloader to allow flashing new firmware", cmd_flash, help_pair::par_no },
+	{ "flash", "", "jump to the bootloader to allow flashing new firmware", cmd_flash, cmd_pair::par_no },
 #endif
-	{ "examine", "<octal address> <p|v> [<n>]", "show memory address", cmd_examine, help_pair::par_yes },
-	{ "reset", "which", "reset cpu/bus/etc", cmd_reset, help_pair::par_yes },
-	{ "sbp", "", "set breakpoint(s), e.g.: action (pc=0123 and memwv[04000]=0200,0300 and (r4=07,05 or r5=0456) and instr[]=1), values seperated by ',', char after mem is w/b (word/byte), then follows v/p (virtual/physical), all octal values, mmr0-3 and psw are registers. \"action\" can be stop, trace or log. instr can have a mask between the [] and on the right an instruction-opcode to compare against.", cmd_sbp, help_pair::par_yes },
-	{ "cbp", "", "clear breakpoints", cmd_cbp, help_pair::par_yes },
-	{ "lbp", "", "list breakpoints", cmd_lbp, help_pair::par_no },
-	{ "single", "[n]", "run 1 (or n-) instruction (implicit 'disassemble' command)", cmd_single, help_pair::par_optional },
-	{ "trace", "con/fil", "toggle tracing for [con]sole/[fil]e logging", cmd_trace, help_pair::par_yes },
-	{ "getlss", "con/fil", "show what subystems logging is enabled for", cmd_getlss, help_pair::par_yes },
-	{ "list_ss", "", "list subsystems", cmd_list_ss, help_pair::par_no },
-	{ "clss", "", "stop logging for all subsystems (use toggle_ss to re-enable)", cmd_clss, help_pair::par_optional },
-	{ "toggle_ss", "con/fil x,[...]", "toggle logging for on or more subsystems", cmd_toggle_ss, help_pair::par_yes },
-	{ "setsl", "hostname", "set syslog target", cmd_setsl, help_pair::par_yes },
-	{ "pts", "setting", "enable (1) / disable (0) timestamps", cmd_pts, help_pair::par_yes },
-	{ "turbo", "", "toggle turbo mode (cannot be interrupted)", cmd_turbo, help_pair::par_no },
-	{ "state", "[reset [hard]] x", "dump state of (or reset) a device: rl02, rk05, rp06, rp07, mmu, tm11, kw11l, cpu, dc11, dz11 or deqna", cmd_state, help_pair::par_yes },
-	{ "mmures", "x", "resolve a virtual address", cmd_mmures, help_pair::par_yes },
-	{ "qi", "", "show queued interrupts", cmd_qi, help_pair::par_no },
-	{ "setreg", "x y", "set register x to value y (octal)", cmd_setreg, help_pair::par_yes },
-	{ "setpc", "pc", "set PC to value (octal)", cmd_setpc, help_pair::par_yes },
-	{ "setstack", "x y", "set stack register x to value y (octal)", cmd_setstack, help_pair::par_yes },
-	{ "setpsw", "y", "set PSW value y (octal)", cmd_setpsw, help_pair::par_yes },
-	{ "deposit", "x y", "set memory x to value y, octal word", cmd_deposit, help_pair::par_yes },
-	{ "setmem", "a v", "set memory (a=) to value (v=), both in octal, one byte", cmd_setmem, help_pair::par_yes },
-	{ "getmem", "a", "get memory (a=), in octal, one byte", cmd_getmem, help_pair::par_yes },
-	{ "toggle", "s t", "set switch (s=, 0...15 (decimal)) of the front panel to state (t=, 0 or 1)", cmd_toggle, help_pair::par_yes },
-	{ "pcmon", "x", "track for x cycles what memory addresses were read an instruction from", cmd_pcmon, help_pair::par_yes },
-	{ "deqna", "x[,y,z]", "set deqna emulation to use (x): \"linux\" (tap), \"teensy4.1\", \"esp32\" or \"vxlan\" (with host (y) & port (z))", cmd_deqna, help_pair::par_yes },
-	{ "test", "x", "test the dz11/DEQNA/panel emulation", cmd_test, help_pair::par_yes },
-	{ "mdeqna", "mode", "set DEQNA monitor mode: none, filtered, everything", cmd_mdeqna, help_pair::par_yes },
-	{ "cfgdisk", "", "configure disk", cmd_cfgdisk, help_pair::par_no },
-	{ "cdz11", "", "configure DZ11 device", cmd_cdz11, help_pair::par_no },
-	{ "setinthz", "freq", "set KW11-L interrupt frequency (Hz)", cmd_setinthz, help_pair::par_yes },
-	{ "getinthz", "", "get KW11-L interrupt frequency (Hz)", cmd_getinthz, help_pair::par_no },
+	{ "examine", "<octal address> <p|v> [<n>]", "show memory address", cmd_examine, cmd_pair::par_yes },
+	{ "reset", "which", "reset cpu/bus/etc", cmd_reset, cmd_pair::par_yes },
+	{ "sbp", "", "set breakpoint(s), e.g.: action (pc=0123 and memwv[04000]=0200,0300 and (r4=07,05 or r5=0456) and instr[]=1), values seperated by ',', char after mem is w/b (word/byte), then follows v/p (virtual/physical), all octal values, mmr0-3 and psw are registers. \"action\" can be stop, trace or log. instr can have a mask between the [] and on the right an instruction-opcode to compare against.", cmd_sbp, cmd_pair::par_yes },
+	{ "cbp", "", "clear breakpoints", cmd_cbp, cmd_pair::par_yes },
+	{ "lbp", "", "list breakpoints", cmd_lbp, cmd_pair::par_no },
+	{ "single", "[n]", "run 1 (or n-) instruction (implicit 'disassemble' command)", cmd_single, cmd_pair::par_optional },
+	{ "trace", "con/fil", "toggle tracing for [con]sole/[fil]e logging", cmd_trace, cmd_pair::par_yes },
+	{ "getlss", "con/fil", "show what subystems logging is enabled for", cmd_getlss, cmd_pair::par_yes },
+	{ "list_ss", "", "list subsystems", cmd_list_ss, cmd_pair::par_no },
+	{ "clss", "", "stop logging for all subsystems (use toggle_ss to re-enable)", cmd_clss, cmd_pair::par_optional },
+	{ "toggle_ss", "con/fil x,[...]", "toggle logging for on or more subsystems", cmd_toggle_ss, cmd_pair::par_yes },
+	{ "setsl", "hostname", "set syslog target", cmd_setsl, cmd_pair::par_yes },
+	{ "pts", "setting", "enable (1) / disable (0) timestamps", cmd_pts, cmd_pair::par_yes },
+	{ "turbo", "", "toggle turbo mode (cannot be interrupted)", cmd_turbo, cmd_pair::par_no },
+	{ "state", "[reset [hard]] x", "dump state of (or reset) a device: rl02, rk05, rp06, rp07, mmu, tm11, kw11l, cpu, dc11, dz11 or deqna", cmd_state, cmd_pair::par_yes },
+	{ "mmures", "x", "resolve a virtual address", cmd_mmures, cmd_pair::par_yes },
+	{ "qi", "", "show queued interrupts", cmd_qi, cmd_pair::par_no },
+	{ "setreg", "x y", "set register x to value y (octal)", cmd_setreg, cmd_pair::par_yes },
+	{ "setpc", "pc", "set PC to value (octal)", cmd_setpc, cmd_pair::par_yes },
+	{ "setstack", "x y", "set stack register x to value y (octal)", cmd_setstack, cmd_pair::par_yes },
+	{ "setpsw", "y", "set PSW value y (octal)", cmd_setpsw, cmd_pair::par_yes },
+	{ "deposit", "x y", "set memory x to value y, octal word", cmd_deposit, cmd_pair::par_yes },
+	{ "setmem", "a v", "set memory (a=) to value (v=), both in octal, one byte", cmd_setmem, cmd_pair::par_yes },
+	{ "getmem", "a", "get memory (a=), in octal, one byte", cmd_getmem, cmd_pair::par_yes },
+	{ "toggle", "s t", "set switch (s=, 0...15 (decimal)) of the front panel to state (t=, 0 or 1)", cmd_toggle, cmd_pair::par_yes },
+	{ "pcmon", "x", "track for x cycles what memory addresses were read an instruction from", cmd_pcmon, cmd_pair::par_yes },
+	{ "deqna", "x[,y,z]", "set deqna emulation to use (x): \"linux\" (tap), \"teensy4.1\", \"esp32\" or \"vxlan\" (with host (y) & port (z))", cmd_deqna, cmd_pair::par_yes },
+	{ "test", "x", "test the dz11/DEQNA/panel emulation", cmd_test, cmd_pair::par_yes },
+	{ "mdeqna", "mode", "set DEQNA monitor mode: none, filtered, everything", cmd_mdeqna, cmd_pair::par_yes },
+	{ "cfgdisk", "", "configure disk", cmd_cfgdisk, cmd_pair::par_no },
+	{ "cdz11", "", "configure DZ11 device", cmd_cdz11, cmd_pair::par_no },
+	{ "setinthz", "freq", "set KW11-L interrupt frequency (Hz)", cmd_setinthz, cmd_pair::par_yes },
+	{ "getinthz", "", "get KW11-L interrupt frequency (Hz)", cmd_getinthz, cmd_pair::par_no },
 #if !defined(TEENSY4_1)
-	{ "blights", "ip addr", "enable blinkenlights on selected IP address", cmd_blights, help_pair::par_yes },
+	{ "blights", "ip addr", "enable blinkenlights on selected IP address", cmd_blights, cmd_pair::par_yes },
 #endif
-	{ "ramsize", "pages", "set ram size (page (8 kB) count, decimal)", cmd_ramsize, help_pair::par_yes },
-	{ "cls", "", "clear screen", cmd_cls, help_pair::par_no },
-	{ "stats", "", "show run statistics", cmd_stats, help_pair::par_no },
-	{ "dir", "", "list files", cmd_dir, help_pair::par_no },
-	{ "bic", "filename", "run BIC/LDA file", cmd_bic, help_pair::par_yes },
-	{ "lt", "filename", "load tape", cmd_lt, help_pair::par_yes },
-	{ "ult", "", "unload tape", cmd_ult, help_pair::par_no },
-	{ "dp", "", "disable panel", cmd_dp, help_pair::par_no },
+	{ "ramsize", "pages", "set ram size (page (8 kB) count, decimal)", cmd_ramsize, cmd_pair::par_yes },
+	{ "cls", "", "clear screen", cmd_cls, cmd_pair::par_no },
+	{ "stats", "", "show run statistics", cmd_stats, cmd_pair::par_no },
+	{ "dir", "", "list files", cmd_dir, cmd_pair::par_no },
+	{ "bic", "filename", "run BIC/LDA file", cmd_bic, cmd_pair::par_yes },
+	{ "lt", "filename", "load tape", cmd_lt, cmd_pair::par_yes },
+	{ "ult", "", "unload tape", cmd_ult, cmd_pair::par_no },
+	{ "dp", "", "disable panel", cmd_dp, cmd_pair::par_no },
 #if defined(ESP32) || defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
-	{ "pm", "mode", "panel mode (bits or address)", cmd_pm, help_pair::par_yes },
+	{ "pm", "mode", "panel mode (bits or address)", cmd_pm, cmd_pair::par_yes },
 #endif
-	{ "refr", "fps", "set panel refreshrate", cmd_refr, help_pair::par_yes },
+	{ "refr", "fps", "set panel refreshrate", cmd_refr, cmd_pair::par_yes },
 #if defined(ESP32) || defined(BUILD_FOR_PICO2W)
-	{ "cfgnet", "", "configure network (e.g. WiFi)", cmd_cfgnet, help_pair::par_no },
-	{ "startnet", "", "start network", cmd_startnet, help_pair::par_no },
-	{ "chknet", "", "check network status", cmd_chknet, help_pair::par_no },
+	{ "cfgnet", "", "configure network (e.g. WiFi)", cmd_cfgnet, cmd_pair::par_no },
+	{ "startnet", "", "start network", cmd_startnet, cmd_pair::par_no },
+	{ "chknet", "", "check network status", cmd_chknet, cmd_pair::par_no },
 #endif
-	{ "marker", "", "toggle marker line in logging", cmd_marker, help_pair::par_no },
-	{ "log", "", "log a message to the logfile", cmd_log, help_pair::par_optional },
+	{ "marker", "", "toggle marker line in logging", cmd_marker, cmd_pair::par_no },
+	{ "log", "", "log a message to the logfile", cmd_log, cmd_pair::par_optional },
 #if IS_POSIX
-	{ "ser", "filename", "serialize state to a file (deserialize with -D commandline parameter)", cmd_ser, help_pair::par_yes },
+	{ "ser", "filename", "serialize state to a file (deserialize with -D commandline parameter)", cmd_ser, cmd_pair::par_yes },
 	// { "dser", "deserialize state from a file",         ^^^^ },
 #endif
-	{ nullptr, nullptr, nullptr, nullptr, help_pair::par_no }
+	{ nullptr, nullptr, nullptr, nullptr, cmd_pair::par_no }
 };
 
 cmd_rc cmd_help(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
@@ -1624,15 +1624,15 @@ cmd_rc cmd_help(console *const cnsl, const std::vector<std::string> & parts, bus
 	size_t max_pars_len  = 0;
 	size_t max_descr_len = 0;
 	size_t n             = 0;
-	while(help_pairs[n].command) {
-		max_cmd_len   = std::max(max_cmd_len,   strlen(help_pairs[n].command   ));
-		max_pars_len  = std::max(max_pars_len,  strlen(help_pairs[n].parameters));
-		max_descr_len = std::max(max_descr_len, strlen(help_pairs[n].descr     ));
+	while(cmd_pairs[n].command) {
+		max_cmd_len   = std::max(max_cmd_len,   strlen(cmd_pairs[n].command   ));
+		max_pars_len  = std::max(max_pars_len,  strlen(cmd_pairs[n].parameters));
+		max_descr_len = std::max(max_descr_len, strlen(cmd_pairs[n].descr     ));
 		n++;
 	}
 
 	for(size_t i=0; i<n; i++)
-		cnsl->put_string_lf(format("%-*s - %-*s - %s", max_cmd_len, help_pairs[n].command, max_pars_len, help_pairs[n].parameters, help_pairs[i].descr));
+		cnsl->put_string_lf(format("%-*s - %-*s - %s", max_cmd_len, cmd_pairs[n].command, max_pars_len, cmd_pairs[n].parameters, cmd_pairs[i].descr));
 
 	return debugger_continue;
 }
@@ -1766,11 +1766,11 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 
 	size_t i = 0;
 	do {
-		auto & item = help_pairs[i];
+		auto & item = cmd_pairs[i];
 		if (std::string(item.command) == parts[0]) {
-			if ((parts.size() == 1 && item.par_t == help_pair::par_no ) ||
-			    (parts.size() >  1 && item.par_t == help_pair::par_yes) ||
-			    item.par_t == help_pair::par_optional) {
+			if ((parts.size() == 1 && item.par_t == cmd_pair::par_no ) ||
+			    (parts.size() >  1 && item.par_t == cmd_pair::par_yes) ||
+			    item.par_t == cmd_pair::par_optional) {
 				auto rc = item.func(cnsl, parts, b, c, state, stop_event);
 				if (rc == debugger_continue)
 					return true;
@@ -1783,7 +1783,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 			return true;
 		}
 	}
-	while(help_pairs[++i].command);
+	while(cmd_pairs[++i].command);
 
 	cnsl->put_string_lf(format("Command %s is unknown", parts[0].c_str()));
 	return true;
