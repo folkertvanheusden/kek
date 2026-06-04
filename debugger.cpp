@@ -28,7 +28,7 @@
 #endif
 #include "console.h"
 #include "cpu.h"
-#if defined(ESP32)
+#if defined(ESP32) 
 #include "comm_esp32_hardwareserial.h"
 #include "comm_esp32_SC16IS752.h"
 #endif
@@ -64,11 +64,11 @@ extern blinkenlights bl;
 bool network_configured = false;
 #if defined(ESP32)
 #include "esp32.h"
-#include "console_esp32.h"
-
 extern comm_esp32_SC16IS752 *SC16IS752_com_a[2];
 extern comm_esp32_SC16IS752 *SC16IS752_com_b[2];
 #endif
+
+#include "console_esp32.h"
 
 bool init_sd();
 
