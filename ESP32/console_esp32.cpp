@@ -76,20 +76,24 @@ void console_esp32::refresh_virtual_terminal()
 }
 
 #if defined(NEOPIXELS_PIN)
-void test_leds(Adafruit_NeoPixel & pixels, const int n_leds)
+void test_leds(Adafruit_NeoPixel *const pixels, const int n_leds)
 {
 	// initial animation
 	for(int i=0; i<n_leds; i++) {
-		pixels.setPixelColor(i, brightness, brightness, brightness);
+		pixels->setPixelColor(i, brightness, brightness, brightness);
 		int p = i - 10;
 		if (p < 0)
 			p += n_leds;
-		pixels.setPixelColor(p, 0, 0, 0);
-		pixels.show();
+		pixels->setPixelColor(p, 0, 0, 0);
+		pixels->show();
 
 		delay(10);
 	}
 }
+#endif
+
+#if defined(NEOPIXELS_PIN)
+Adafruit_NeoPixel *pixels = nullptr;
 #endif
 
 void console_esp32::panel_update_thread()
@@ -100,22 +104,22 @@ void console_esp32::panel_update_thread()
 #if defined(NEOPIXELS_PIN)
 	constexpr const uint8_t n_leds = 64;
 #if defined(GRBW_PIXELS)
-	Adafruit_NeoPixel pixels(n_leds, NEOPIXELS_PIN, NEO_GRBW + NEO_KHZ800);
+	pixels = new Adafruit_NeoPixel(n_leds, NEOPIXELS_PIN, NEO_GRBW + NEO_KHZ800);
 #elif defined(RGBW_PIXELS)
-	Adafruit_NeoPixel pixels(n_leds, NEOPIXELS_PIN, NEO_RGBW + NEO_KHZ800);
+	pixels = new Adafruit_NeoPixel(n_leds, NEOPIXELS_PIN, NEO_RGBW + NEO_KHZ800);
 #else
-	Adafruit_NeoPixel pixels(n_leds, NEOPIXELS_PIN, NEO_RGB  + NEO_KHZ800);
+	pixels = new Adafruit_NeoPixel(n_leds, NEOPIXELS_PIN, NEO_RGB  + NEO_KHZ800);
 #endif
-	pixels.begin();
-	pixels.clear();
-	pixels.show();
+	pixels->begin();
+	pixels->clear();
+	pixels->show();
 
-	const uint32_t magenta = pixels.Color(brightness, 0,          brightness);
-	const uint32_t red     = pixels.Color(brightness, 0,          0);
-	const uint32_t green   = pixels.Color(0,          brightness, 0);
-	const uint32_t blue    = pixels.Color(0,          0,          brightness);
-	const uint32_t yellow  = pixels.Color(brightness, brightness, 0);
-	const uint32_t white   = pixels.Color(brightness, brightness, brightness, brightness);
+	const uint32_t magenta = pixels->Color(brightness, 0,          brightness);
+	const uint32_t red     = pixels->Color(brightness, 0,          0);
+	const uint32_t green   = pixels->Color(0,          brightness, 0);
+	const uint32_t blue    = pixels->Color(0,          0,          brightness);
+	const uint32_t yellow  = pixels->Color(brightness, brightness, 0);
+	const uint32_t white   = pixels->Color(brightness, brightness, brightness, brightness);
 
 	const uint32_t run_mode_led_color[4] = { red, yellow, blue, green };
 
@@ -123,8 +127,8 @@ void console_esp32::panel_update_thread()
 	test_leds(pixels, n_leds);
 #endif
 
-	pixels.clear();
-	pixels.show();
+	pixels->clear();
+	pixels->show();
 
 	while(!stop_panel) {
 		vTaskDelay(1000 / (portTICK_PERIOD_MS * refreshrate));
@@ -155,46 +159,46 @@ void console_esp32::panel_update_thread()
 				int                pixel_offset  = 0;
 
 				for(uint8_t b=0; b<22; b++)
-					pixels.setPixelColor(pixel_offset++, rc.physical_instruction & (1 << b) ? led_color : 0);
+					pixels->setPixelColor(pixel_offset++, rc.physical_instruction & (1 << b) ? led_color : 0);
 
 				for(uint8_t b=0; b<3; b++)
-					pixels.setPixelColor(pixel_offset++, rc.apf ? yellow : 0);
+					pixels->setPixelColor(pixel_offset++, rc.apf ? yellow : 0);
 
-				pixels.setPixelColor(pixel_offset++, rc.physical_instruction_is_psw | rc.physical_data_is_psw ? blue : 0);
+				pixels->setPixelColor(pixel_offset++, rc.physical_instruction_is_psw | rc.physical_data_is_psw ? blue : 0);
 
-				pixels.setPixelColor(pixel_offset++, b->getMMU()->is_enabled() ? white : 0);
+				pixels->setPixelColor(pixel_offset++, b->getMMU()->is_enabled() ? white : 0);
 
-				pixels.setPixelColor(pixel_offset++, b->getMMU()->getMMR3() & 7 ? white : 0);
+				pixels->setPixelColor(pixel_offset++, b->getMMU()->getMMR3() & 7 ? white : 0);
 
 				for(uint8_t b=0; b<16; b++)
-					pixels.setPixelColor(pixel_offset++, current_PSW   & (1l << b) ? magenta : 0);
+					pixels->setPixelColor(pixel_offset++, current_PSW   & (1l << b) ? magenta : 0);
 
 				if (current_instr.has_value()) {
 					for(uint8_t b=0; b<16; b++)
-						pixels.setPixelColor(pixel_offset++, current_instr.value() & (1l << b) ? red     : 0);
+						pixels->setPixelColor(pixel_offset++, current_instr.value() & (1l << b) ? red     : 0);
 				}
 				else {
 					for(uint8_t b=0; b<16; b++)
-						pixels.setPixelColor(pixel_offset++, 0);
+						pixels->setPixelColor(pixel_offset++, 0);
 				}
 
-				pixels.setPixelColor(pixel_offset++, running_flag             ? white : 0);
+				pixels->setPixelColor(pixel_offset++, running_flag             ? white : 0);
 
-				pixels.setPixelColor(pixel_offset++, disk_read_activity_flag  ? blue  : 0);
+				pixels->setPixelColor(pixel_offset++, disk_read_activity_flag  ? blue  : 0);
 				disk_read_activity_flag  = false;
-				pixels.setPixelColor(pixel_offset++, disk_write_activity_flag ? blue  : 0);
+				pixels->setPixelColor(pixel_offset++, disk_write_activity_flag ? blue  : 0);
 				disk_write_activity_flag = false;
 
-				pixels.setPixelColor(pixel_offset++, network_activity_flag    ? yellow: 0);
+				pixels->setPixelColor(pixel_offset++, network_activity_flag    ? yellow: 0);
 				network_activity_flag    = false;
 			}
 			else {
-				pixels.clear();
+				pixels->clear();
 
-				pixels.setPixelColor(current_PC * n_leds / 65536, led_color);
+				pixels->setPixelColor(current_PC * n_leds / 65536, led_color);
 			}
 
-			pixels.show();
+			pixels->show();
 		}
 		catch(const std::exception & e) {
 			put_string_lf(format("Exception in panel thread: %s", e.what()));
@@ -207,8 +211,9 @@ void console_esp32::panel_update_thread()
 		}
 	}
 
-	pixels.clear();
-	pixels.show();
+	pixels->clear();
+	pixels->show();
+	delete pixels;
 #endif
 
 	DOLOG(log_ss::LS_COMM, "panel task terminating");
