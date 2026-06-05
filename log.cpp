@@ -262,9 +262,9 @@ void dolog(const log_ss ls, const char *fmt, ...)
 	va_start(ap, fmt);
 	ssize_t needed_length = vsnprintf(dummy_buffer, 1, fmt, ap);
 	va_end(ap);
-	std::vector<char> log_buffer(needed_length + 1);
+	char *const log_buffer = new char[needed_length + 1];
 	va_start(ap, fmt);
-	vsnprintf(log_buffer.data(), log_buffer.size(), fmt, ap);
+	vsnprintf(log_buffer, needed_length + 1, fmt, ap);
 	va_end(ap);
 
 	if (l_timestamp) {
@@ -296,35 +296,37 @@ void dolog(const log_ss ls, const char *fmt, ...)
 				ls_name, get_thread_name().c_str());
 
 		if (is_syslog)
-			send_syslog(log_buffer.data());
+			send_syslog(log_buffer);
 #if !defined(ESP32)
 		if (log_fh != nullptr && log_file)
-			fprintf(log_fh, "%s%s\n", ts_str, log_buffer.data());
+			fprintf(log_fh, "%s%s\n", ts_str, log_buffer);
 #endif
 
 		if (log_console) {
 			if (log_cnsl) {
 				log_cnsl->put_string(ts_str);
-				log_cnsl->put_string_lf(log_buffer.data());
+				log_cnsl->put_string_lf(log_buffer);
 			}
 			else {
-				printf("%s%s\r\n", ts_str, log_buffer.data());
+				printf("%s%s\r\n", ts_str, log_buffer);
 			}
 		}
 	}
 	else {
 		if (is_syslog)
-			send_syslog(log_buffer.data());
+			send_syslog(log_buffer);
 #if !defined(ESP32)
 		if (log_fh != nullptr && log_file)
-			fprintf(log_fh, "%s\n", log_buffer.data());
+			fprintf(log_fh, "%s\n", log_buffer);
 #endif
 
 		if (log_console) {
 			if (log_cnsl)
-				log_cnsl->put_string_lf(log_buffer.data());
+				log_cnsl->put_string_lf(log_buffer);
 			else
-				printf("%s\r\n", log_buffer.data());
+				printf("%s\r\n", log_buffer);
 		}
 	}
+
+	delete [] log_buffer;
 }
