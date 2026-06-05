@@ -24,6 +24,7 @@ eth_transport_teensy4_1::~eth_transport_teensy4_1()
 
 bool eth_transport_teensy4_1::begin()
 {
+	qn::Ethernet.setMACAddressAllowed(mac_me, true);
 	return true;
 }
 
@@ -40,11 +41,8 @@ bool eth_transport_teensy4_1::transmit(const uint8_t *const data, const size_t n
 std::pair<uint8_t *, size_t> eth_transport_teensy4_1::get(const int timeout)
 {
 	uint8_t *out = new uint8_t[max_pkt_size];
-
-	if (xQueueReceive(pkt_queue, out, timeout / portTICK_PERIOD_MS) == pdPASS) {
-	Serial.println("GET"); Serial.flush();
+	if (xQueueReceive(pkt_queue, out, timeout / portTICK_PERIOD_MS) == pdPASS)
 		return { out, max_pkt_size };
-	}
 
 	delete [] out;
 
@@ -52,14 +50,16 @@ std::pair<uint8_t *, size_t> eth_transport_teensy4_1::get(const int timeout)
 }
 
 extern "C" {
-#include <stdbool.h>
 bool qnethernet_raw_frame_filter(struct pbuf *p, struct netif *netif)
 {
-	if (p->len > 14 && p->len <= max_pkt_size && (memcmp(p->payload, mac_me, 6) == 0 || memcmp(p->payload, bc_addr, 6) == 0)) {
-		Serial.println("PUSH"); Serial.flush();
-		memcpy(pkt_temp, p->payload, p->len);  // xQueueSend assumes always max_pkt_size
+	const eth_hdr *const eh = reinterpret_cast<const eth_hdr *>(p->payload);
+	const uint8_t *const pl = reinterpret_cast<const uint8_t *>(&eh->dest );
+	const int   len         = p->len - (reinterpret_cast<const uint8_t *>(&eh->dest) - reinterpret_cast<const uint8_t *>(p->payload));
+
+	if (len > 14 && len <= max_pkt_size && (memcmp(pl, mac_me, 6) == 0 || memcmp(pl, bc_addr, 6) == 0)) {
+		memcpy(pkt_temp, pl, len);  // xQueueSend assumes always max_pkt_size
 		xQueueSend(pkt_queue, pkt_temp, 0);
-		return memcmp(p->payload, bc_addr, 6) != 0;  // both should process broadcastst (arp!)
+		return memcmp(pl, bc_addr, 6) != 0;  // both should process broadcastst (arp!)
 	}
 
 	return false;
