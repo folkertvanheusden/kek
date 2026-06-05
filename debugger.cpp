@@ -1676,7 +1676,7 @@ cmd_rc cmd_help(console *const cnsl, const std::vector<std::string> & parts, bus
 	while(cmd_pairs[++n].command);
 
 	for(size_t i=0; i<n; i++)
-		cnsl->put_string_lf(format("%-*s - %-*s - %s", max_cmd_len, cmd_pairs[n].command, max_pars_len, cmd_pairs[n].parameters, cmd_pairs[i].descr));
+		cnsl->put_string_lf(format("%-*s - %-*s - %s", max_cmd_len, cmd_pairs[i].command, max_pars_len, cmd_pairs[i].parameters, cmd_pairs[i].descr));
 
 	return debugger_continue;
 }
