@@ -1250,6 +1250,8 @@ cmd_rc cmd_deqna(console *const cnsl, const std::vector<std::string> & parts, bu
 
 	uint8_t mac[6] { };
 	get_deqna_mac(mac);
+	cnsl->put_string_lf(format("MAC address: %02x:%02x:%02x:%02x:%02x:%02x",
+			mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]));
 
 	eth_transport *dev  = nullptr;
 	auto           pars = split(parts[1], ",");
@@ -1286,7 +1288,7 @@ cmd_rc cmd_deqna(console *const cnsl, const std::vector<std::string> & parts, bu
 	if (dev) {
 		if (false) {
 		}
-#if !defined(WAVESHARE_S3_ETH)
+#if !defined(WAVESHARE_S3_ETH) && !defined(TEENSY4_1)
 		else if (!network_configured)
 			cnsl->put_string_lf("Please configure network first (cfgnet)");
 #endif
@@ -1604,7 +1606,7 @@ constexpr const cmd_pair cmd_pairs[] {
 	{ "pm", "mode", "panel mode (bits or address)", cmd_pm, cmd_pair::par_yes },
 #endif
 	{ "refr", "fps", "set panel refreshrate", cmd_refr, cmd_pair::par_yes },
-#if defined(ESP32) || defined(BUILD_FOR_PICO2W)
+#if defined(ESP32) || defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 	{ "cfgnet", "", "configure network (e.g. WiFi)", cmd_cfgnet, cmd_pair::par_no },
 	{ "startnet", "", "start network", cmd_startnet, cmd_pair::par_no },
 	{ "chknet", "", "check network status", cmd_chknet, cmd_pair::par_no },
