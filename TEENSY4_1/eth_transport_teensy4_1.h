@@ -7,9 +7,6 @@
 
 class eth_transport_teensy4_1: public eth_transport
 {
-private:
-	uint8_t mac_address[6];
-
 public:
 	eth_transport_teensy4_1(const uint8_t mac[6]);
 	virtual ~eth_transport_teensy4_1();

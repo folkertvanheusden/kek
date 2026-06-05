@@ -5,11 +5,17 @@
 #include "utils.h"
 
 
-constexpr const int max_pkt_size = 1512;
+constexpr const int     max_pkt_size = 1512;
+constexpr const uint8_t bc_addr[] { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
+uint8_t                *pkt_temp         { new uint8_t[max_pkt_size] };
+uint8_t                *pkt_queue_buffer { new uint8_t[max_pkt_size] };  // 1 entry!
+StaticQueue_t          *pkt_queue_meta   { new StaticQueue_t()       };
+QueueHandle_t           pkt_queue { xQueueCreateStatic(1, max_pkt_size, pkt_queue_buffer, pkt_queue_meta) };
+uint8_t                 mac_me[6] { };
 
 eth_transport_teensy4_1::eth_transport_teensy4_1(const uint8_t mac[6])
 {
-	memcpy(mac_address, mac, 6);
+	memcpy(mac_me, mac, 6);
 }
 
 eth_transport_teensy4_1::~eth_transport_teensy4_1()
@@ -18,7 +24,6 @@ eth_transport_teensy4_1::~eth_transport_teensy4_1()
 
 bool eth_transport_teensy4_1::begin()
 {
-	qn::Ethernet.setMACAddressAllowed(mac_address, true);
 	return true;
 }
 
@@ -34,22 +39,29 @@ bool eth_transport_teensy4_1::transmit(const uint8_t *const data, const size_t n
 
 std::pair<uint8_t *, size_t> eth_transport_teensy4_1::get(const int timeout)
 {
-	auto start = millis();
+	uint8_t *out = new uint8_t[max_pkt_size];
 
-	do {
-		if (auto rc = qn::EthernetFrame.parseFrame(); rc > 0) {
-			size_t size = qn::EthernetFrame.size();
-			if (size <= 14)
-				continue;
-
-			uint8_t *out = new uint8_t[size];
-			memcpy(out, qn::EthernetFrame.data(), size);
-			return { out, size };
-		}
-
-		vTaskDelay(10 / portTICK_PERIOD_MS);  // TODO
+	if (xQueueReceive(pkt_queue, out, timeout / portTICK_PERIOD_MS) == pdPASS) {
+	Serial.println("GET"); Serial.flush();
+		return { out, max_pkt_size };
 	}
-	while(millis() < start + timeout);
+
+	delete [] out;
 
 	return { nullptr, 0 };
+}
+
+extern "C" {
+#include <stdbool.h>
+bool qnethernet_raw_frame_filter(struct pbuf *p, struct netif *netif)
+{
+	if (p->len > 14 && p->len <= max_pkt_size && (memcmp(p->payload, mac_me, 6) == 0 || memcmp(p->payload, bc_addr, 6) == 0)) {
+		Serial.println("PUSH"); Serial.flush();
+		memcpy(pkt_temp, p->payload, p->len);  // xQueueSend assumes always max_pkt_size
+		xQueueSend(pkt_queue, pkt_temp, 0);
+		return memcmp(p->payload, bc_addr, 6) != 0;  // both should process broadcastst (arp!)
+	}
+
+	return false;
+}
 }
