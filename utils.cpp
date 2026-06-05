@@ -326,6 +326,7 @@ std::string get_configuration_string(const std::string & file, const std::string
 
 	return rc.c_str();
 #elif defined(TEENSY4_1)
+	return "";
 #else
 	FILE *fh = fopen(file_in_user_home(file).c_str(), "r");
 	if (!fh)
