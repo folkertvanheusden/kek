@@ -60,6 +60,7 @@ static int open_tun(const std::string & dev_name)
 			break;
 		}
 
+		// set if name
 		ifreq ifr_tap { };
 		ifr_tap.ifr_flags = IFF_TAP | IFF_NO_PI;
 		set_ifr_name(&ifr_tap, dev_name);
@@ -69,7 +70,7 @@ static int open_tun(const std::string & dev_name)
 			break;
 		}
 
-		//
+		// set running
 		ifr_tap.ifr_flags = IFF_UP | IFF_RUNNING | IFF_BROADCAST;
 		if (invoke_if_ioctl(dev_name, SIOCSIFFLAGS, &ifr_tap) == false)
 			break;
