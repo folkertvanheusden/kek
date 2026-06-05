@@ -14,16 +14,16 @@ constexpr const uint8_t bc_addr[] { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 #if defined(FREERTOS)
 static void thread_wrapper_receiver_low(void *p)
 {
-       deqna *const deqna_ = reinterpret_cast<deqna *>(p);
-       deqna_->receiver_low();
-       vTaskDelete(nullptr);
+	deqna *const deqna_ = reinterpret_cast<deqna *>(p);
+	deqna_->receiver_low();
+	vTaskDelete(nullptr);
 }
 
 static void thread_wrapper_receiver_high(void *p)
 {
-       deqna *const deqna_ = reinterpret_cast<deqna *>(p);
-       deqna_->receiver_high();
-       vTaskDelete(nullptr);
+	deqna *const deqna_ = reinterpret_cast<deqna *>(p);
+	deqna_->receiver_high();
+	vTaskDelete(nullptr);
 }
 #endif
 
@@ -39,8 +39,8 @@ deqna::deqna(bus *const b, const uint8_t mac_address[6], eth_transport *const et
 bool deqna::begin()
 {
 #if defined(FREERTOS)
-	xTaskCreate(&thread_wrapper_receiver_low,  "deqna-rl", 3072, this, 1, nullptr);
-	xTaskCreate(&thread_wrapper_receiver_high, "deqna-rh", 3072, this, 1, nullptr);
+	xTaskCreate(&thread_wrapper_receiver_low,  "deqna-rl", 1024, this, 1, nullptr);
+	xTaskCreate(&thread_wrapper_receiver_high, "deqna-rh", 1024, this, 1, nullptr);
 #else
 	th_rx_low  = new std::thread(&deqna::receiver_low,  this);
 	th_rx_high = new std::thread(&deqna::receiver_high, this);
@@ -512,8 +512,9 @@ bool deqna::test(console *const cnsl)
 
 		// any data? usually there are at least ARP msgs broadcasted
 		auto data = eth_dev->get(1000);
-		if (data.first)
+		if (data.first) {
 			delete [] data.first;
+		}
 		else {
 			cnsl->put_string_lf("No data?");
 			return false;
@@ -530,7 +531,11 @@ void get_deqna_mac(uint8_t *const to)
 {
 	const std::string mac_file = ".deqna_mac.dat";
 	uint8_t mac_address[] { 0x08, 0x00, 0x2b, 0, 0, 0 };
+#if defined(TEENSY4_1)
+	std::string mac_str;
+#else
 	std::string mac_str = get_configuration_string(mac_file, "");
+#endif
 	if (mac_str.empty()) {
 		for(int i=3; i<6; i++)
 			mac_address[i] = rand();
