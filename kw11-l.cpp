@@ -64,7 +64,7 @@ kw11_l::~kw11_l()
 #endif
 }
 
-void kw11_l::show_state(console *const cnsl) const
+FLASHMEM void kw11_l::show_state(console *const cnsl) const
 {
 	cnsl->put_string_lf(format("CSR: %06o", lf_csr));
 	cnsl->put_string_lf(format("%" PRIu64 " total ticks, %" PRIu64 " while enabled, %" PRIu64 " interrupts", total_ticks, enabled_ticks, int_triggered));

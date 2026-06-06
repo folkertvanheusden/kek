@@ -20,7 +20,7 @@
 #include "utils.h"
 
 
-const char *const dc11_register_names[] { "RCSR", "RBUF", "TSCR", "TBUF" };
+constexpr const char *const dc11_register_names[] { "RCSR", "RBUF", "TSCR", "TBUF" };
 
 #if defined(ESP32) || defined(FREERTOS)
 static void thread_wrapper_dc11(void *p)
@@ -52,7 +52,7 @@ dc11::~dc11()
 	delete io_channels;
 }
 
-void dc11::show_state(console *const cnsl) const
+FLASHMEM void dc11::show_state(console *const cnsl) const
 {
 	for(size_t i=0; i<dc11_n_lines; i++) {
 		cnsl->put_string_lf(format("* LINE %" PRIzu "", i + 1));

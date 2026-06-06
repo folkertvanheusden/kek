@@ -58,7 +58,7 @@ void mmu::dump_par_pdr(console *const cnsl, const int run_mode, const d_i_space_
 	}
 }
 
-void mmu::show_state(console *const cnsl) const
+FLASHMEM void mmu::show_state(console *const cnsl) const
 {
 	cnsl->put_string_lf(MMR0 & 1 ? "MMU enabled" : "MMU NOT enabled");
 

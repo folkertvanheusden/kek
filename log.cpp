@@ -39,10 +39,10 @@
 
 static const char  *logfile           = strdup("/tmp/kek.log");
 #if defined(BUILD_FOR_PICO2W)
-static WiFiUDP      udp;
+static WiFiUDP      *udp              = new WiFiUDP;
 static std::string  syslog_host;
 #elif defined(TEENSY4_1)
-static qn::EthernetUDP udp;
+static qn::EthernetUDP *udp           = new qn::EthernetUDP;
 static std::string  syslog_host;
 #else
 static sockaddr_in  syslog_ip_addr    = { };
@@ -218,9 +218,9 @@ void send_syslog(const std::string & what)
 	std::string msg = format("<%d>PDP11 %s", 16 * 8 + 6 /* info */, what.c_str());
 
 #if defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
-        udp.beginPacket(syslog_host.c_str(), 514);
-        udp.write(msg.c_str(), msg.size());
-        udp.endPacket();
+        udp->beginPacket(syslog_host.c_str(), 514);
+        udp->write(msg.c_str(), msg.size());
+        udp->endPacket();
 #else
 	int s = socket(AF_INET, SOCK_DGRAM, 0);
 	if (s != -1) {

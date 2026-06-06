@@ -69,12 +69,12 @@ uint16_t exec_addr = 0;
 SdFs SDinstance;
 #endif
 
-kek_event_t   stop_event         { EVENT_NONE };
-abool        *running            { nullptr    };
-bool          trace_output       { false      };
-comm         *cs                 { nullptr    };  // Console Serial
+kek_event_t    stop_event   { EVENT_NONE        };
+abool         *running      { nullptr           };
+bool           trace_output { false             };
+comm          *cs           { nullptr           };  // Console Serial
 #if !defined(TEENSY4_1)
-blinkenlights bl;
+blinkenlights *bl           { new blinkenlights };
 #endif
 
 static void console_thread_wrapper_panel(void *const c)
@@ -86,7 +86,7 @@ static void console_thread_wrapper_panel(void *const c)
 	vTaskSuspend(nullptr);
 }
 
-bool init_sd()
+FLASHMEM bool init_sd()
 {
   bool disk_started = false;
 #if defined(TEENSY4_1)
@@ -134,13 +134,7 @@ bool init_sd()
   return disk_started;
 }
 
-const char *mac_to_string(uint8_t mac[6]) {
-  static char s[20];
-  sprintf(s, "%02x:%02x:%02x:%02x:%02x:%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-  return s;
-}
-
-const char *enc_to_string(uint8_t enc) {
+FLASHMEM const char *enc_to_string(uint8_t enc) {
 #if defined(BUILD_FOR_PICO2W) && !defined(TEENSY4_1)
   switch (enc) {
     case ENC_TYPE_NONE: return "NONE";
@@ -168,7 +162,7 @@ const char *enc_to_string(uint8_t enc) {
   return "UNKN";
 }
 
-bool wait_network(console *const c)
+FLASHMEM bool wait_network(console *const c)
 {
 #if !defined(TEENSY4_1)
 	constexpr const int timeout = 10 * 3;
@@ -189,7 +183,7 @@ bool wait_network(console *const c)
   return true;
 }
 
-void finish_start_network(console *const c)
+FLASHMEM void finish_start_network(console *const c)
 {
   if (wait_network(c)) {
     c->put_string_lf("");
@@ -201,11 +195,11 @@ void finish_start_network(console *const c)
 #endif
 
 #if !defined(TEENSY4_1)
-    bl.begin();
+    bl->begin();
     auto bl_ip = get_configuration_string(BLINKENLIGHTS_CFG_FILE, "");
     if (bl_ip.empty() == false) {
       cnsl->put_string_lf(format("Using PiDP11 blinkenlights on IP address %s", bl_ip.c_str()));
-      bl.set_target(bl_ip);
+      bl->set_target(bl_ip);
     }
 #endif
 
@@ -248,7 +242,7 @@ void finish_start_network(console *const c)
   }
 }
 
-void configure_network(console *const c, const std::optional<std::string> & pars)
+FLASHMEM void configure_network(console *const c, const std::optional<std::string> & pars)
 {
 #if !defined(TEENSY4_1)
 	WiFi.disconnect();
@@ -276,10 +270,11 @@ void configure_network(console *const c, const std::optional<std::string> & pars
       for(auto i = 0; i < cnt; i++) {
         uint8_t bssid[6];
         WiFi.BSSID(i, bssid);
+        std::string mac_str = format("%02x:%02x:%02x:%02x:%02x:%02x", bssid[0], bssid[1], bssid[2], bssid[3], bssid[4], bssid[5]);
 #if defined(ESP32)
-        c->put_string_lf(format("%29s %11s %17s %2d %4ld", WiFi.SSID(i).c_str(), enc_to_string(WiFi.encryptionType(i)), mac_to_string(bssid), WiFi.channel(i), WiFi.RSSI(i)));
+        c->put_string_lf(format("%29s %11s %17s %2d %4ld", WiFi.SSID(i).c_str(), enc_to_string(WiFi.encryptionType(i)), mac_str.c_str(), WiFi.channel(i), WiFi.RSSI(i)));
 #else
-        c->put_string_lf(format("%32s %5s %17s %2d %4ld", WiFi.SSID(i), enc_to_string(WiFi.encryptionType(i)), mac_to_string(bssid), WiFi.channel(i), WiFi.RSSI(i)));
+        c->put_string_lf(format("%32s %5s %17s %2d %4ld", WiFi.SSID(i), enc_to_string(WiFi.encryptionType(i)), mac_str.c_str(), WiFi.channel(i), WiFi.RSSI(i)));
 #endif
       }
     }
@@ -317,7 +312,7 @@ void configure_network(console *const c, const std::optional<std::string> & pars
 }
 
 #if defined(ESP32)
-void set_hostname()
+FLASHMEM void set_hostname()
 {
   uint64_t mac    = ESP.getEfuseMac();
   uint8_t *chipid = reinterpret_cast<uint8_t *>(&mac);
@@ -328,13 +323,13 @@ void set_hostname()
   WiFi.setHostname(name);
 }
 #elif defined(BUILD_FOR_PICO2W)
-void set_hostname()
+FLASHMEM void set_hostname()
 {
   // TODO (serial number)
   WiFi.setHostname("PDP11");
 }
 #elif defined(TEENSY4_1)
-void set_hostname()
+FLASHMEM void set_hostname()
 {
   uint8_t mac[6] { };
   qn::Ethernet.macAddress(mac);
@@ -344,7 +339,7 @@ void set_hostname()
 }
 #endif
 
-void check_network(console *const c)
+FLASHMEM void check_network(console *const c)
 {
 	wait_network(c);
 
@@ -357,7 +352,7 @@ void check_network(console *const c)
 #endif
 }
 
-void start_network(console *const c)
+FLASHMEM void start_network(console *const c)
 {
 #if defined(TEENSY4_1)
   c->put_string_lf("Start Ethernet");
@@ -377,7 +372,7 @@ void start_network(console *const c)
   finish_start_network(c);
 }
 
-void recall_configuration(console *const cnsl)
+FLASHMEM void recall_configuration(console *const cnsl)
 {
 	cnsl->put_string_lf("Starting network...");
 	start_network(cnsl);
@@ -395,12 +390,12 @@ void heap_caps_alloc_failed_hook(size_t requested_size, uint32_t caps, const cha
 #if defined(TEENSY4_1)
 // from https://forum.pjrc.com/index.php?threads/how-to-display-free-ram.33443/
 extern char _heap_end[], *__brkval;
-int freeram()
+FLASHMEM int freeram()
 {
   return (char *)&_heap_end - __brkval;
 }
 
-void debugger_task(void *)
+FLASHMEM void debugger_task(void *)
 {
   for(;;)
     debugger(cnsl, b, &stop_event, { });
@@ -424,7 +419,7 @@ void stack_poller(void *)
   }
 }
 
-void emit_reset_reason() {
+FLASHMEM void emit_reset_reason() {
 #if defined(TEENSY4_1)
   if (CrashReport) {
     Serial.print(CrashReport);
@@ -505,7 +500,7 @@ void emit_reset_reason() {
 #endif
 }
 
-void setup() {
+FLASHMEM void setup() {
 	Serial.begin(115200);
 	while(!Serial)
 		delay(100);
@@ -675,7 +670,7 @@ void setup() {
 #endif
 }
 
-void loop() {
+FLASHMEM void loop() {
 #if !defined(TEENSY4_1)
   try {
     debugger(cnsl, b, &stop_event, { });

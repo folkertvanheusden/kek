@@ -25,7 +25,7 @@
 #define DEQNA_IRQ_LEVEL    4
 #define DEQNA_MAX_N_QUEUED 1
 
-class deqna : public device
+FLASHMEM class deqna : public device
 {
 public:
 	enum monitor_mode_t { nothing, ll_trace, filtered, everything };

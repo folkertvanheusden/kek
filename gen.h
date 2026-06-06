@@ -67,3 +67,10 @@ typedef enum { wm_word = 0, wm_byte = 1 } word_mode_t;
 #define PRIlu        "lu"
 #define load_relaxed_p(x) ((x)->load(std::memory_order_relaxed))
 #endif
+
+#ifndef FLASHMEM
+#define FLASHMEM
+#endif
+#ifndef DMAMEM
+#define DMAMEM
+#endif

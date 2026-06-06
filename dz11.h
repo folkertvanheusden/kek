@@ -36,7 +36,7 @@ constexpr const int n_dz11_registers = 6;
 #define DZ11_TDR  (DZ11_BASE + 3 * 2)
 #define DZ11_END  (DZ11_BASE + 4 * 2)  // 4 register slots
 
-class dz11: public device
+FLASHMEM class dz11: public device
 {
 private:
 	bus              *const b      { nullptr };

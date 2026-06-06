@@ -48,11 +48,11 @@
 #include "utils.h"
 
 
-std::atomic_uint32_t event     { 0 };
-std::atomic_bool    *running   { nullptr };
-blinkenlights        bl;
+std::atomic_uint32_t event   { 0                 };
+std::atomic_bool    *running { nullptr           };
+blinkenlights       *bl      { new blinkenlights };
 
-std::atomic_bool  sigw_event   { false };
+std::atomic_bool  sigw_event { false             };
 
 constexpr const uint16_t validation_psw_mask = 0174037;  // ignore unused bits & priority(!)
 constexpr const int      default_port_offset = 1100;
@@ -646,10 +646,10 @@ int main(int argc, char *argv[])
 	cnsl->set_bus(b);
 	cnsl->begin();
 
-	if (bl.begin()) {
-		cnsl->set_blinkenlights_panel(&bl);
+	if (bl->begin()) {
+		cnsl->set_blinkenlights_panel(bl);
 		if (blinkenlights_ip.empty() == false)
-			bl.set_target(blinkenlights_ip);
+			bl->set_target(blinkenlights_ip);
 	}
 	else {
 		DOLOG(log_ss::LS_GENERIC, "Cannot initialize blinkenlights");

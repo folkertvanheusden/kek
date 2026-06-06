@@ -41,10 +41,10 @@
 
 #if defined(BUILD_FOR_PICO2W)
 constexpr const int local_port = 2000;
-WiFiUDP udp;
+WiFiUDP         *udp = new WiFiUDP;
 #elif defined(TEENSY4_1)
 constexpr const int local_port = 2000;
-qn::EthernetUDP udp;
+qn::EthernetUDP *udp = new qn::EthernetUDP;
 #endif
 
 // this code does not check all the data returned by the server
@@ -191,21 +191,21 @@ static const std::pair<const rpc_msg_reply *, int> exchange_message(const std::s
 	int                 packet_size    = 0;
 
 #if defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
-	udp.begin(local_port);
-	udp.beginPacket(server.c_str(), port);
-	udp.write(msg.data(), msg.size());
-	udp.endPacket();
+	udp->begin(local_port);
+	udp->beginPacket(server.c_str(), port);
+	udp->write(msg.data(), msg.size());
+	udp->endPacket();
 
 	auto start = millis();
 	while(millis() - start < 1000) {
-		int packet_size = udp.parsePacket();
+		int packet_size = udp->parsePacket();
 		if (packet_size > 0) {
 			reply = new uint8_t[packet_size];
 			if (!reply) {
 				DOLOG(log_ss::LS_BLINKEN, "malloc issue");
 				return { nullptr, 0 };
 			}
-			udp.read(reply, packet_size);
+			udp->read(reply, packet_size);
 			break;
 		}
 	}
@@ -739,7 +739,7 @@ void blinkenlights::push(bus *const b, const bool running_flag)
 	}
 }
 
-void blinkenlights::test()
+FLASHMEM void blinkenlights::test()
 {
 	my_unique_lock lck(&controls_lock);
 	if (!valid)

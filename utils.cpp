@@ -414,3 +414,10 @@ bool put_configuration_string(const std::string & file, const std::string & valu
 #endif
 	return true;
 }
+
+#if IS_POSIX
+bool file_exists(const std::string & file)
+{
+	return access(file.c_str(), F_OK) == 0;
+}
+#endif

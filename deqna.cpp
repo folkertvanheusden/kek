@@ -101,7 +101,7 @@ std::string to_hex(const uint8_t *const data, const size_t n_bytes)
 	return out;
 }
 
-void dump_packet(console *const cnsl, const uint8_t *const data, const size_t n_bytes, const bool full)
+FLASHMEM void dump_packet(console *const cnsl, const uint8_t *const data, const size_t n_bytes, const bool full)
 {
 	std::string out;
 
@@ -369,7 +369,7 @@ void deqna::transmitter()
 	*activity_flag = false;
 }
 
-void deqna::reset(const bool hard)
+FLASHMEM void deqna::reset(const bool hard)
 {
 	DOLOG(log_ss::LS_DEQNA, "deqna %s reset", hard ? "hard" : "soft");
 
@@ -387,7 +387,7 @@ void deqna::reset(const bool hard)
 	purge_buffers();
 }
 
-void deqna::show_state(console *const cnsl) const
+FLASHMEM void deqna::show_state(console *const cnsl) const
 {
 	cnsl->put_string_lf(format("MAC: %02x:%02x:%02x:%02x:%02x:%02x", mac_address[0], mac_address[1], mac_address[2], mac_address[3], mac_address[4], mac_address[5]));
 	cnsl->put_string_lf(format("%" PRIzu " packets queued", received.aprox_size()));
@@ -478,7 +478,7 @@ void deqna::write_word(const uint16_t addr, const uint16_t v)
 	}
 }
 
-bool deqna::test(console *const cnsl)
+FLASHMEM bool deqna::test(console *const cnsl)
 {
 	constexpr const uint64_t duration = 2500000;
 	cnsl->put_string(format("Please wait %.3f seconds...", duration / 1'000'000.));
@@ -550,7 +550,7 @@ bool deqna::test(console *const cnsl)
 	return false;
 }
 
-void deqna::set_monitor_mode(const monitor_mode_t mode, console *const cnsl)
+FLASHMEM void deqna::set_monitor_mode(const monitor_mode_t mode, console *const cnsl)
 {
 	monitor_mode = mode;
 	this->cnsl = cnsl;
@@ -558,7 +558,7 @@ void deqna::set_monitor_mode(const monitor_mode_t mode, console *const cnsl)
 		eth_dev->set_trace(mode == ll_trace);
 }
 
-void get_deqna_mac(uint8_t *const to)
+FLASHMEM void get_deqna_mac(uint8_t *const to)
 {
 	const std::string mac_file = ".deqna_mac.dat";
 	uint8_t mac_address[] { 0x08, 0x00, 0x2b, 0, 0, 0 };

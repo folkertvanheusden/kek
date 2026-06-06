@@ -20,7 +20,7 @@
 #include "utils.h"
 
 
-const char *const dz11_register_names[] { "R0_CSR", "R2_RBUF_LPR", "R4_TCR", "R6_MSR_TDR" };
+constexpr const char *const dz11_register_names[] { "R0_CSR", "R2_RBUF_LPR", "R4_TCR", "R6_MSR_TDR" };
 
 #if defined(ESP32) || defined(FREERTOS)
 static void thread_wrapper_dz11(void *p)
@@ -56,7 +56,7 @@ dz11::~dz11()
 	delete io_channels;
 }
 
-void dz11::show_state(console *const cnsl) const
+FLASHMEM void dz11::show_state(console *const cnsl) const
 {
 	for(size_t i=0; i<dz11_n_lines; i++) {
 		my_unique_lock lck(&input_lock);
