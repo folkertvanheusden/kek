@@ -56,7 +56,7 @@ dz11::~dz11()
 	delete io_channels;
 }
 
-void dz11::show_state(console *const cnsl) const
+FLASHMEM void dz11::show_state(console *const cnsl) const
 {
 	for(size_t i=0; i<dz11_n_lines; i++) {
 		my_unique_lock lck(&input_lock);

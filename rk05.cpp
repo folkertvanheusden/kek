@@ -47,7 +47,7 @@ void rk05::reset(const bool hard)
 		memset(registers, 0x00, sizeof registers);
 }
 
-void rk05::show_state(console *const cnsl) const
+FLASHMEM void rk05::show_state(console *const cnsl) const
 {
 	cnsl->put_string_lf(format("DS     : %06o", registers[0]));
 	cnsl->put_string_lf(format("ERROR  : %06o", registers[1]));

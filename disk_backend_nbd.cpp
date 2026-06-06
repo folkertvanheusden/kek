@@ -54,7 +54,7 @@ disk_backend_nbd::~disk_backend_nbd()
 #endif
 }
 
-void disk_backend_nbd::show_state(console *const cnsl) const
+FLASHMEM void disk_backend_nbd::show_state(console *const cnsl) const
 {
 	cnsl->put_string_lf("identifier: " + get_identifier());
 }

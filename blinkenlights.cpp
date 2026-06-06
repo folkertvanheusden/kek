@@ -739,7 +739,7 @@ void blinkenlights::push(bus *const b, const bool running_flag)
 	}
 }
 
-void blinkenlights::test()
+FLASHMEM void blinkenlights::test()
 {
 	my_unique_lock lck(&controls_lock);
 	if (!valid)

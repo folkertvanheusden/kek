@@ -50,7 +50,7 @@ void rp06::reset(const bool hard)
 	}
 }
 
-void rp06::show_state(console *const cnsl) const
+FLASHMEM void rp06::show_state(console *const cnsl) const
 {
 	cnsl->put_string_lf(format("mode: %s", is_rp07 ? "rp07": "rp06"));
 	for(int i=0; i<32; i += 4)

@@ -62,7 +62,7 @@ void rl02::reset(const bool hard)
 	sector = 0;
 }
 
-void rl02::show_state(console *const cnsl) const
+FLASHMEM void rl02::show_state(console *const cnsl) const
 {
 	cnsl->put_string_lf(format("CSR: %06o", registers[0]));
 	cnsl->put_string_lf(format("BAR: %06o", registers[1]));
