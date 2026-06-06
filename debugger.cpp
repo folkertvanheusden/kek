@@ -85,7 +85,7 @@ extern SdFs SDinstance;
 
 #define DZ11_CFG_FILE "dz11.json"
 
-std::optional<disk_backend *> select_nbd_server(console *const cnsl)
+FLASHMEM std::optional<disk_backend *> select_nbd_server(console *const cnsl)
 {
 	cnsl->flush_input();
 
@@ -107,7 +107,7 @@ std::optional<disk_backend *> select_nbd_server(console *const cnsl)
 	return d;
 }
 
-void start_disk(console *const)
+FLASHMEM void start_disk(console *const)
 {
 #if IS_POSIX || defined(_WIN32)
 	return;
@@ -120,7 +120,7 @@ void start_disk(console *const)
 #endif
 }
 
-void ls_l(console *const cnsl)
+FLASHMEM void ls_l(console *const cnsl)
 {
 	start_disk(cnsl);
 
@@ -172,7 +172,7 @@ void ls_l(console *const cnsl)
 #endif
 }
 
-std::optional<std::string> select_host_file(console *const cnsl)
+FLASHMEM std::optional<std::string> select_host_file(console *const cnsl)
 {
 	for(;;) {
 		cnsl->flush_input();
@@ -209,7 +209,7 @@ std::optional<std::string> select_host_file(console *const cnsl)
 }
 
 // disk image files
-std::optional<disk_backend *> select_disk_file(console *const cnsl)
+FLASHMEM std::optional<disk_backend *> select_disk_file(console *const cnsl)
 {
 	start_disk(cnsl);
 
@@ -240,7 +240,7 @@ std::optional<disk_backend *> select_disk_file(console *const cnsl)
 	return { };
 }
 
-int wait_for_key(const std::string & title, console *const cnsl, const std::vector<char> & allowed)
+FLASHMEM int wait_for_key(const std::string & title, console *const cnsl, const std::vector<char> & allowed)
 {
 	cnsl->put_string(title);
 	cnsl->put_string(" > ");
@@ -264,7 +264,7 @@ int wait_for_key(const std::string & title, console *const cnsl, const std::vect
 	return ch;
 }
 
-void configure_comm(console *const cnsl, comm_io *const device_list)
+FLASHMEM void configure_comm(console *const cnsl, comm_io *const device_list)
 {
 	for(;;) {
 		std::vector<char> keys_allowed { '9' };
@@ -343,7 +343,7 @@ void configure_comm(console *const cnsl, comm_io *const device_list)
 	}
 }
 
-std::optional<disk_backend *> select_disk_backend(console *const cnsl)
+FLASHMEM std::optional<disk_backend *> select_disk_backend(console *const cnsl)
 {
 	int ch = wait_for_key("1. local disk, 2. network disk (NBD), 9. abort", cnsl, { '1', '2', '9' });
 	if (ch == '9')
@@ -361,7 +361,7 @@ std::optional<disk_backend *> select_disk_backend(console *const cnsl)
 	return { };
 }
 
-void configure_disk(bus *const b, console *const cnsl)
+FLASHMEM void configure_disk(bus *const b, console *const cnsl)
 {
 	int type_ch = wait_for_key("1. RK05, 2. RL02, 3. RP06, 9. abort", cnsl, { '1', '2', '3', '9' });
 
@@ -447,7 +447,7 @@ void configure_disk(bus *const b, console *const cnsl)
 }
 
 // returns size of instruction (in bytes), duration and if it was accessing something different from RAM/ROM
-std::tuple<int, uint32_t, bool, std::string> disassemble(cpu *const c, console *const cnsl, const uint16_t pc, const bool instruction_only)
+FLASHMEM std::tuple<int, uint32_t, bool, std::string> disassemble(cpu *const c, console *const cnsl, const uint16_t pc, const bool instruction_only)
 {
 	auto data      = c->disassemble(pc);
 	if (data.empty())
@@ -503,7 +503,7 @@ std::tuple<int, uint32_t, bool, std::string> disassemble(cpu *const c, console *
 	return { data["instruction-values"].size() * 2, duration, std::stoi(data["works-on-io"][0]), result };
 }
 
-std::map<std::string, std::string> split(const std::vector<std::string> & kv_array, const std::string & splitter)
+FLASHMEM std::map<std::string, std::string> split(const std::vector<std::string> & kv_array, const std::string & splitter)
 {
 	std::map<std::string, std::string> out;
 
@@ -519,7 +519,7 @@ std::map<std::string, std::string> split(const std::vector<std::string> & kv_arr
 	return out;
 }
 
-const char *trap_action_to_str(const trap_action_t ta)
+FLASHMEM const char *trap_action_to_str(const trap_action_t ta)
 {
 	if (ta == T_PROCEED)
 		return "proceed";
@@ -531,7 +531,7 @@ const char *trap_action_to_str(const trap_action_t ta)
 	return "?";
 }
 
-void mmu_resolve(console *const cnsl, bus *const b, const uint16_t va)
+FLASHMEM void mmu_resolve(console *const cnsl, bus *const b, const uint16_t va)
 {
 	int  run_mode = b->getCpu()->getPSW_runmode();
 	cnsl->put_string_lf(format("Run mode: %d, use data space: %d", run_mode, b->getMMU()->get_use_data_space(run_mode)));
@@ -569,7 +569,7 @@ void mmu_resolve(console *const cnsl, bus *const b, const uint16_t va)
 	}
 }
 
-void show_cpu_state(console *const cnsl, cpu *const c)
+FLASHMEM void show_cpu_state(console *const cnsl, cpu *const c)
 {
 	for(int set=0; set<2; set++) {
 		cnsl->put_string_lf(format("Set %d, R0: %06o, R1: %06o, R2: %06o, R3: %06o, R4: %06o, R5: %06o",
@@ -605,7 +605,7 @@ void show_cpu_state(console *const cnsl, cpu *const c)
 	cnsl->put_string_lf(format("stack limit register: %06o", c->get_stack_limit_register()));
 }
 
-void show_queued_interrupts(console *const cnsl, cpu *const c)
+FLASHMEM void show_queued_interrupts(console *const cnsl, cpu *const c)
 {
 	cnsl->put_string_lf(format("Current level: %d", c->getPSW_spl()));
 
@@ -676,7 +676,7 @@ void tm11_unload_tape(bus *const b)
 #endif
 }
 
-void set_kw11_l_interrupt_freq(console *const cnsl, bus *const b, const int freq)
+FLASHMEM void set_kw11_l_interrupt_freq(console *const cnsl, bus *const b, const int freq)
 {
 	if (freq >= 1 && freq < 1000)
 		b->getKW11_L()->set_interrupt_frequency(freq);
@@ -684,7 +684,7 @@ void set_kw11_l_interrupt_freq(console *const cnsl, bus *const b, const int freq
 		cnsl->put_string_lf("Frequency out of range");
 }
 
-device *name_to_dev(bus *const b, const std::string & name)
+FLASHMEM device *name_to_dev(bus *const b, const std::string & name)
 {
 	if (name == "rl02")
 		return b->getRL02();
@@ -709,7 +709,7 @@ device *name_to_dev(bus *const b, const std::string & name)
 	return nullptr;
 }
 
-bool trace_enabled()
+FLASHMEM bool trace_enabled()
 {
 	return (get_log_ss_masks(true) | get_log_ss_masks(false)) & log_ss_type(log_ss::LS_TRACE);
 }
@@ -1558,7 +1558,7 @@ constexpr const cmd_pair cmd_pairs[] {
 	{ "flash", "", "jump to the bootloader to allow flashing new firmware", cmd_flash, cmd_pair::par_no },
 #endif
 	{ "examine", "<octal address> <p|v> [<n>]", "show memory address", cmd_examine, cmd_pair::par_yes },
-	{ "reset", "which", "reset cpu/bus/etc", cmd_reset, cmd_pair::par_yes },
+	{ "reset", "which", "reset cpu/bus/etc", cmd_reset, cmd_pair::par_optional },
 	{ "sbp", "", "set breakpoint(s), e.g.: action (pc=0123 and memwv[04000]=0200,0300 and (r4=07,05 or r5=0456) and instr[]=1), values seperated by ',', char after mem is w/b (word/byte), then follows v/p (virtual/physical), all octal values, mmr0-3 and psw are registers. \"action\" can be stop, trace or log. instr can have a mask between the [] and on the right an instruction-opcode to compare against.", cmd_sbp, cmd_pair::par_yes },
 	{ "cbp", "", "clear breakpoints", cmd_cbp, cmd_pair::par_yes },
 	{ "lbp", "", "list breakpoints", cmd_lbp, cmd_pair::par_no },
@@ -1798,7 +1798,7 @@ bool emulation_do(console *const cnsl, bus *const b, cpu *const c, debugger_stat
 	return true;
 }
 
-bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b, kek_event_t *const stop_event, const std::string & cmd)
+FLASHMEM bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b, kek_event_t *const stop_event, const std::string & cmd)
 {
 	cpu  *const c = b->getCpu();
 	auto parts    = split(cmd, " ");
@@ -1830,7 +1830,7 @@ bool debugger_do(debugger_state *const state, console *const cnsl, bus *const b,
 	return true;
 }
 
-void debugger(console *const cnsl, bus *const b, kek_event_t *const stop_event, const std::optional<std::string> & init)
+FLASHMEM void debugger(console *const cnsl, bus *const b, kek_event_t *const stop_event, const std::optional<std::string> & init)
 {
 	debugger_state state;
 
@@ -1872,7 +1872,7 @@ void debugger(console *const cnsl, bus *const b, kek_event_t *const stop_event, 
 	}
 }
 
-void simple_run(console *const cnsl, bus *const b, kek_event_t *const stop_event)
+FLASHMEM void simple_run(console *const cnsl, bus *const b, kek_event_t *const stop_event)
 {
 	cpu  *const c = b->getCpu();
 	bool        t = trace_enabled();
