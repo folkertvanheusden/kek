@@ -38,12 +38,6 @@ deqna::deqna(bus *const b, const uint8_t mac_address[6], eth_transport *const et
 
 bool deqna::begin()
 {
-	for(int i=0; i<128; i++) {
-		Serial.print(i);
-		Serial.print(' ');
-		test(nullptr);
-	}
-	Serial.println("");
 #if defined(FREERTOS)
 	xTaskCreate(&thread_wrapper_receiver_low,  "deqna-rl", 1024, this, 1, nullptr);
 	xTaskCreate(&thread_wrapper_receiver_high, "deqna-rh", 1024, this, 1, nullptr);
