@@ -41,3 +41,5 @@ std::string get_configuration_string(const std::string & file, const std::string
 uint32_t    get_configuration_uint32(const std::string & file, const uint32_t default_value);
 bool put_configuration_uint32(const std::string & file, const uint32_t value);
 bool put_configuration_string(const std::string & file, const std::string & value);
+
+bool file_exists(const std::string & file);

@@ -1,5 +1,7 @@
 #include "gen.h"
 #if defined(linux)
+#include <cstring>
+#include <errno.h>
 #include <fcntl.h>
 #include <poll.h>
 #include <unistd.h>
@@ -8,6 +10,7 @@
 #include <linux/if_tun.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
+#include <sys/wait.h>
 
 #include "eth_transport_linux.h"
 #include "log.h"
@@ -103,8 +106,27 @@ eth_transport_linux::~eth_transport_linux()
 
 bool eth_transport_linux::begin()
 {
+	const std::string script = "./kek-if-up.sh";
 	fd = open_tun(dev_name);
-	return fd != -1;
+	if (fd != -1) {
+		if (file_exists(script)) {
+			int rc = fork();
+			if (rc == 0) {
+				execl("/bin/bash", "-c", script.c_str(), dev_name.c_str(), nullptr);
+				exit(1);
+			}
+			else if (rc == -1) {
+				close(fd);
+				DOLOG(log_ss::LS_ETH, "cannot fork (%s)", strerror(errno));
+				return false;
+			}
+
+			wait(nullptr);
+		}
+
+		return true;
+	}
+	return false;
 }
 
 std::string eth_transport_linux::identifier() const
