@@ -1442,14 +1442,10 @@ FLASHMEM cmd_rc cmd_dir(console *const cnsl, const std::vector<std::string> &, b
 
 FLASHMEM cmd_rc cmd_bic(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const, kek_event_t *const)
 {
-	auto rc = load_tape(b, parts[1].c_str());
+	auto rc = load_tape(b, parts[1].c_str(), cnsl);
 	if (rc.has_value()) {
 		c->setPC(rc.value());
-
 		cnsl->put_string_lf("BIC/LDA file loaded");
-	}
-	else {
-		cnsl->put_string_lf("BIC/LDA failed to load");
 	}
 	return debugger_continue;
 }

@@ -10,6 +10,7 @@
 #include <string>
 
 #include "bus.h"
+#include "console.h"
 #include "cpu.h"
 #include "error.h"
 #include "gen.h"
@@ -18,7 +19,7 @@
 #include "utils.h"
 
 
-void loadbin(bus *const b, uint16_t base, const char *const file)
+FLASHMEM void loadbin(bus *const b, uint16_t base, const char *const file)
 {
 #if !defined(TEENSY4_1)
 	FILE *fh = fopen(file, "rb");
@@ -28,7 +29,7 @@ void loadbin(bus *const b, uint16_t base, const char *const file)
 #endif
 }
 
-std::optional<uint16_t> set_boot_loader(bus *const b, const bootloader_t which)
+FLASHMEM std::optional<uint16_t> set_boot_loader(bus *const b, const bootloader_t which)
 {
 	cpu              *const c      = b->getCpu();
 	uint16_t                offset = 0;
@@ -113,16 +114,15 @@ std::optional<uint16_t> set_boot_loader(bus *const b, const bootloader_t which)
 	return start;
 }
 
-std::optional<uint16_t> load_tape(bus *const b, const std::string & file)
+FLASHMEM std::optional<uint16_t> load_tape(bus *const b, const std::string & file, console *const cnsl)
 {
-#if defined(ESP32)
+#if defined(ESP32) || defined(TEENSY4_1)
 	File32 fh;
 	if (!fh.open(file.c_str(), O_RDONLY)) {
 		DOLOG(log_ss::LS_GENERIC, "Cannot open %s", file.c_str());
+		cnsl->put_string_lf(format("Cannot open %s: %x", file.c_str(), fh.getError()));
 		return { };
 	}
-#elif defined(TEENSY4_1)
-	return { };
 #else
 	FILE *fh = fopen(file.c_str(), "rb");
 	if (!fh) {
@@ -131,18 +131,21 @@ std::optional<uint16_t> load_tape(bus *const b, const std::string & file)
 	}
 #endif
 
-#if !defined(TEENSY4_1)
 	std::optional<uint16_t> start;
 	uint8_t                 buffer[6];
+	uint16_t                n_read = 0;
 
 	for(;;) {
-#if defined(ESP32)
-		if (fh.read(buffer, 6) != 6)
+#if defined(ESP32) || defined(TEENSY4_1)
+		if (auto rc = fh.read(buffer, 6); rc != 6) {
+			cnsl->put_string_lf(format("read %d\n", int(rc)));
 			break;
+		}
 #else
 		if (fread(buffer, 1, 6, fh) != 6)
 			break;
 #endif
+		n_read += 6;
 
 		int count = (buffer[3] << 8) | buffer[2];
 		int p     = (buffer[5] << 8) | buffer[4];
@@ -157,19 +160,21 @@ std::optional<uint16_t> load_tape(bus *const b, const std::string & file)
 		if (count == 6) { // eg no data
 			if (p != 1) {
 				DOLOG(log_ss::LS_GENERIC, "Setting start address to %o", p);
+				cnsl->put_string_lf(format("Setting start address to %o", p));
 				start = p;
 			}
 		}
 
-#if !defined(ESP32)
+#if IS_POSIX
 		DOLOG(log_ss::LS_GENERIC, "reading %d (dec) bytes to %o (oct)", ftell(fh), count - 6, p);
 #endif
 
 		for(int i=0; i<count - 6; i++) {
-#if defined(ESP32)
+#if defined(ESP32) || defined(TEENSY4_1)
 			uint8_t c = 0;
 			if (fh.read(&c, 1) != 1) {
 				DOLOG(log_ss::LS_GENERIC, "short read");
+				cnsl->put_string_lf("short read");
 				break;
 			}
 #else
@@ -179,35 +184,35 @@ std::optional<uint16_t> load_tape(bus *const b, const std::string & file)
 				break;
 			}
 #endif
+			n_read++;
 
 			csum += c;
 			b->write_byte(p++, c);
 		}
 
-#if defined(ESP32)
+#if defined(ESP32) || defined(TEENSY4_1)
 		uint8_t fcs = 0;
 		fh.read(&fcs, 1);
 		csum += fcs;
 #else
 		csum += fgetc(fh);
 #endif
+		n_read++;
 		if (csum != 255)
 			DOLOG(log_ss::LS_GENERIC, "checksum error %d", csum);
 	}
 
-#if defined(ESP32)
+	cnsl->put_string_lf(format("Read %u bytes", n_read));
+
+#if defined(ESP32) || defined(TEENSY4_1)
 	fh.close();
 #else
 	fclose(fh);
 #endif
-
 	return start;
-#else
-	return { };
-#endif
 }
 
-void load_p11_x11(bus *const b, const std::string & file)
+FLASHMEM void load_p11_x11(bus *const b, const std::string & file)
 {
 #if !defined(TEENSY4_1)
 	FILE *fh = fopen(file.c_str(), "rb");
