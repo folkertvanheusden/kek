@@ -1861,8 +1861,7 @@ void debugger(console *const cnsl, bus *const b, kek_event_t *const stop_event, 
 			if (state.marker)
 				cnsl->put_string_lf("---");
 
-			std::string cmd = cnsl->read_line(std::to_string(int(*stop_event)), explode);
-
+			std::string cmd = cnsl->read_line(std::to_string(int(load_relaxed_p(stop_event))), explode);
 			if (debugger_do(&state, cnsl, b, stop_event, cmd) == false)
 				break;
 		}
