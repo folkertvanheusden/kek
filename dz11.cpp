@@ -20,7 +20,7 @@
 #include "utils.h"
 
 
-const char *const dz11_register_names[] { "R0_CSR", "R2_RBUF_LPR", "R4_TCR", "R6_MSR_TDR" };
+constexpr const char *const dz11_register_names[] { "R0_CSR", "R2_RBUF_LPR", "R4_TCR", "R6_MSR_TDR" };
 
 #if defined(ESP32) || defined(FREERTOS)
 static void thread_wrapper_dz11(void *p)

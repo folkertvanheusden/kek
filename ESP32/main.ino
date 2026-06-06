@@ -69,12 +69,12 @@ uint16_t exec_addr = 0;
 SdFs SDinstance;
 #endif
 
-kek_event_t   stop_event         { EVENT_NONE };
-abool        *running            { nullptr    };
-bool          trace_output       { false      };
-comm         *cs                 { nullptr    };  // Console Serial
+kek_event_t    stop_event   { EVENT_NONE        };
+abool         *running      { nullptr           };
+bool           trace_output { false             };
+comm          *cs           { nullptr           };  // Console Serial
 #if !defined(TEENSY4_1)
-blinkenlights bl;
+blinkenlights *bl           { new blinkenlights };
 #endif
 
 static void console_thread_wrapper_panel(void *const c)
@@ -132,12 +132,6 @@ bool init_sd()
 			DOLOG(log_ss::LS_GENERIC, "Failed to initialize SD card");
 #endif
   return disk_started;
-}
-
-const char *mac_to_string(uint8_t mac[6]) {
-  static char s[20];
-  sprintf(s, "%02x:%02x:%02x:%02x:%02x:%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-  return s;
 }
 
 const char *enc_to_string(uint8_t enc) {
@@ -201,11 +195,11 @@ void finish_start_network(console *const c)
 #endif
 
 #if !defined(TEENSY4_1)
-    bl.begin();
+    bl->begin();
     auto bl_ip = get_configuration_string(BLINKENLIGHTS_CFG_FILE, "");
     if (bl_ip.empty() == false) {
       cnsl->put_string_lf(format("Using PiDP11 blinkenlights on IP address %s", bl_ip.c_str()));
-      bl.set_target(bl_ip);
+      bl->set_target(bl_ip);
     }
 #endif
 
@@ -276,10 +270,11 @@ void configure_network(console *const c, const std::optional<std::string> & pars
       for(auto i = 0; i < cnt; i++) {
         uint8_t bssid[6];
         WiFi.BSSID(i, bssid);
+        std::string mac_str = format("%02x:%02x:%02x:%02x:%02x:%02x", bssid[0], bssid[1], bssid[2], bssid[3], bssid[4], bssid[5]);
 #if defined(ESP32)
-        c->put_string_lf(format("%29s %11s %17s %2d %4ld", WiFi.SSID(i).c_str(), enc_to_string(WiFi.encryptionType(i)), mac_to_string(bssid), WiFi.channel(i), WiFi.RSSI(i)));
+        c->put_string_lf(format("%29s %11s %17s %2d %4ld", WiFi.SSID(i).c_str(), enc_to_string(WiFi.encryptionType(i)), mac_str.c_str(), WiFi.channel(i), WiFi.RSSI(i)));
 #else
-        c->put_string_lf(format("%32s %5s %17s %2d %4ld", WiFi.SSID(i), enc_to_string(WiFi.encryptionType(i)), mac_to_string(bssid), WiFi.channel(i), WiFi.RSSI(i)));
+        c->put_string_lf(format("%32s %5s %17s %2d %4ld", WiFi.SSID(i), enc_to_string(WiFi.encryptionType(i)), mac_str.c_str(), WiFi.channel(i), WiFi.RSSI(i)));
 #endif
       }
     }

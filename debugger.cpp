@@ -57,7 +57,7 @@
 
 
 #if !defined(TEENSY4_1)
-extern blinkenlights bl;
+extern blinkenlights *bl;
 #endif
 
 #if defined(ESP32) || defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
@@ -1379,9 +1379,9 @@ cmd_rc cmd_blights(console *const cnsl, const std::vector<std::string> & parts, 
 	if (network_configured == false)
 		cnsl->put_string_lf("Please configure network first (cfgnet)");
 	else if (parts.size() == 2) {
-		bl.set_target(parts[1]);
+		bl->set_target(parts[1]);
 		put_configuration_string(BLINKENLIGHTS_CFG_FILE, parts[1]);
-		cnsl->set_blinkenlights_panel(&bl);
+		cnsl->set_blinkenlights_panel(bl);
 	}
 	else {
 		put_configuration_string(BLINKENLIGHTS_CFG_FILE, "");

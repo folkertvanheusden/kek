@@ -13,14 +13,14 @@
 #include "utils.h"
 
 
-static const char * const regnames[] = { 
+constexpr const char * const regnames[] = {
 	"control status",
 	"bus address",
 	"disk address",
 	"multipurpose"
 	};
 
-static const char * const commands[] = {
+constexpr const char * const commands[] = {
 	"no-op",
 	"write check",
 	"get status",
