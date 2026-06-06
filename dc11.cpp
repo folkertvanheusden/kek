@@ -149,7 +149,7 @@ void dc11::operator()()
 	DOLOG(log_ss::LS_COMM, "DC11 thread terminating");
 }
 
-void dc11::reset(const bool reset)
+void dc11::reset(const bool)
 {
 }
 

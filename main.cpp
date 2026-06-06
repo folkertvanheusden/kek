@@ -97,7 +97,7 @@ std::vector<std::pair<uint32_t, uint8_t> > get_memory_settings(const json_t *con
 	return out;
 }
 
-bool compare_values(console *const cnsl, uint32_t v, uint32_t should_be, const std::string & name)
+bool compare_values(console *const, uint32_t v, uint32_t should_be, const std::string & name)
 {
 	if (v == should_be)
 		return true;
