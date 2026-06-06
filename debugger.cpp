@@ -107,7 +107,7 @@ std::optional<disk_backend *> select_nbd_server(console *const cnsl)
 	return d;
 }
 
-void start_disk(console *const cnsl)
+void start_disk(console *const)
 {
 #if IS_POSIX || defined(_WIN32)
 	return;
@@ -605,24 +605,6 @@ void show_cpu_state(console *const cnsl, cpu *const c)
 	cnsl->put_string_lf(format("stack limit register: %06o", c->get_stack_limit_register()));
 }
 
-void show_run_statistics(console *const cnsl, cpu *const c)
-{
-#if defined(ESP32)
-	cnsl->put_string_lf("ESP32");
-	cnsl->put_string_lf(format("Free RAM (decimal bytes): %d", ESP.getFreeHeap()));
-	cnsl->put_string_lf(format("Free SPI-RAM: %d", heap_caps_get_free_size(MALLOC_CAP_SPIRAM)));
-#elif defined(BUILD_FOR_PICO2W)
-	cnsl->put_string_lf("Pico(2)W");
-	cnsl->put_string_lf(format("Free RAM (decimal bytes): %d", rp2040.getFreeHeap()));
-	cnsl->put_string_lf(format("Clock frequency: %d", rp2040.f_cpu()));
-#elif defined(TEENSY4_1)
-	cnsl->put_string_lf("Teensy 4.1");
-	// TODO
-#else
-	// TODO
-#endif
-}
-
 void show_queued_interrupts(console *const cnsl, cpu *const c)
 {
 	cnsl->put_string_lf(format("Current level: %d", c->getPSW_spl()));
@@ -756,19 +738,19 @@ struct cmd_pair {
 	enum { par_yes, par_no, par_optional } par_t;
 };
 
-cmd_rc cmd_reset(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_reset(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const, kek_event_t *const stop_event)
 {
 	*stop_event = EVENT_NONE;
 	bool hard = parts.size() == 2 && parts[1] == "hard";
 	b->reset(hard);
 	b->getRAM()->reset(hard);
 	if (hard)
-		b->getCpu()->reset();
+		c->reset();
 	cnsl->put_string_lf("resetted");
 	return debugger_continue;
 }
 
-cmd_rc cmd_disassemble(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_disassemble(console *const cnsl, const std::vector<std::string> & parts, bus *const, cpu *const c, debugger_state *const, kek_event_t *const)
 {
 	auto     kv = split(parts, "=");
 	uint16_t pc = kv.find("pc") != kv.end() ? std::stoi(kv.find("pc")->second, nullptr, 8)  : c->getPC();
@@ -786,7 +768,7 @@ cmd_rc cmd_disassemble(console *const cnsl, const std::vector<std::string> & par
 	return debugger_continue;
 }
 
-cmd_rc cmd_go(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_go(console *const, const std::vector<std::string> & parts, bus *const, cpu *const, debugger_state *const state, kek_event_t *const stop_event)
 {
 	state->single_step = false;
 	state->go_verbose  = parts.size() == 2 && parts[1] == "-v";
@@ -794,7 +776,7 @@ cmd_rc cmd_go(console *const cnsl, const std::vector<std::string> & parts, bus *
 	return start_emulation;
 }
 
-cmd_rc cmd_benchmark(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_benchmark(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const, debugger_state *const, kek_event_t *const stop_event)
 {
 	bool verbose  = false;
 	bool with_mmu = false;
@@ -816,7 +798,7 @@ cmd_rc cmd_benchmark(console *const cnsl, const std::vector<std::string> & parts
 	return debugger_continue;
 }
 
-cmd_rc cmd_quit(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_quit(console *const cnsl, const std::vector<std::string> & parts, bus *const, cpu *const, debugger_state *const, kek_event_t *const)
 {
 	bool yes = (parts.size() == 2 && parts[1] == "-y") || wait_for_key("y/n", cnsl, { 'y', 'n' }) == 'y';
 	if (yes) {
@@ -834,7 +816,7 @@ cmd_rc cmd_quit(console *const cnsl, const std::vector<std::string> & parts, bus
 }
 
 #if defined(BUILD_FOR_PICO2W)
-cmd_rc cmd_flash(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_flash(console *const cnsl, const std::vector<std::string> &, bus *const, cpu *const, debugger_state *const, kek_event_t *const)
 {
 	int ch_opt = wait_for_key("y/n", cnsl, { 'y', 'n' });
 	if (ch_opt == 'y') {
@@ -845,7 +827,7 @@ cmd_rc cmd_flash(console *const cnsl, const std::vector<std::string> & parts, bu
 }
 #endif
 
-cmd_rc cmd_examine(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_examine(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const, kek_event_t *const)
 {
 	if (parts.size() < 3)
 		cnsl->put_string_lf("Parameter(s) missing");
@@ -896,7 +878,7 @@ cmd_rc cmd_examine(console *const cnsl, const std::vector<std::string> & parts, 
 	return debugger_continue;
 }
 
-cmd_rc cmd_sbp(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_sbp(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const, kek_event_t *const)
 {
 	breakpoint::bp_action action     = breakpoint::invalid;
 	const std::string   & action_str = parts[1];
@@ -934,7 +916,7 @@ cmd_rc cmd_sbp(console *const cnsl, const std::vector<std::string> & parts, bus 
 	return debugger_continue;
 }
 
-cmd_rc cmd_cbp(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_cbp(console *const cnsl, const std::vector<std::string> & parts, bus *const, cpu *const c, debugger_state *const, kek_event_t *const)
 {
 	if (c->remove_breakpoint(std::stoi(parts[1])))
 		cnsl->put_string_lf("Breakpoint cleared");
@@ -943,7 +925,7 @@ cmd_rc cmd_cbp(console *const cnsl, const std::vector<std::string> & parts, bus 
 	return debugger_continue;
 }
 
-cmd_rc cmd_lbp(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_lbp(console *const cnsl, const std::vector<std::string> &, bus *const, cpu *const c, debugger_state *const, kek_event_t *const)
 {
 	cnsl->put_string_lf("Breakpoints:");
 
@@ -958,7 +940,7 @@ cmd_rc cmd_lbp(console *const cnsl, const std::vector<std::string> & parts, bus 
 
 cmd_rc cmd_help(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event);
 
-cmd_rc cmd_single(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_single(console *const, const std::vector<std::string> & parts, bus *const, cpu *const, debugger_state *const state, kek_event_t *const stop_event)
 {
 	state->single_step = true;
 	if (parts.size() == 2)
@@ -970,7 +952,7 @@ cmd_rc cmd_single(console *const cnsl, const std::vector<std::string> & parts, b
 	return start_emulation;
 }
 
-cmd_rc cmd_trace(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_trace(console *const cnsl, const std::vector<std::string> & parts, bus *const, cpu *const, debugger_state *const, kek_event_t *const)
 {
 	bool is_console = parts[1] == "console" || parts[1] == "con";
 	if (parts.size() == 3)
@@ -980,20 +962,20 @@ cmd_rc cmd_trace(console *const cnsl, const std::vector<std::string> & parts, bu
 	return debugger_continue;
 }
 
-cmd_rc cmd_getlss(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_getlss(console *const cnsl, const std::vector<std::string> & parts, bus *const, cpu *const, debugger_state *const, kek_event_t *const)
 {
 	bool is_console = parts[1] == "console" || parts[1] == "con";
 	cnsl->put_string_lf("Enabled subsystems logging: " + get_ss_mask(is_console));
 	return debugger_continue;
 }
 
-cmd_rc cmd_list_ss(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_list_ss(console *const cnsl, const std::vector<std::string> &, bus *const, cpu *const, debugger_state *const, kek_event_t *const)
 {
 	cnsl->put_string_lf("Available subsystems: " + get_all_available_log_ss_masks());
 	return debugger_continue;
 }
 
-cmd_rc cmd_clss(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_clss(console *const cnsl, const std::vector<std::string> & parts, bus *const, cpu *const, debugger_state *const, kek_event_t *const)
 {
 	if (parts.size() == 2) {
 		bool is_console = parts[1] == "console" || parts[1] == "con";
@@ -1011,7 +993,7 @@ cmd_rc cmd_clss(console *const cnsl, const std::vector<std::string> & parts, bus
 	return debugger_continue;
 }
 
-cmd_rc cmd_toggle_ss(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_toggle_ss(console *const cnsl, const std::vector<std::string> & parts, bus *const, cpu *const, debugger_state *const, kek_event_t *const)
 {
 	bool is_console = parts[1] == "console" || parts[1] == "con";
 	for(size_t i=2; i<parts.size(); i++) {
@@ -1023,26 +1005,26 @@ cmd_rc cmd_toggle_ss(console *const cnsl, const std::vector<std::string> & parts
 	return debugger_continue;
 }
 
-cmd_rc cmd_setsl(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_setsl(console *const, const std::vector<std::string> & parts, bus *const, cpu *const, debugger_state *const, kek_event_t *const)
 {
 	setloghost(parts[1].c_str());
 	return debugger_continue;
 }
 
-cmd_rc cmd_pts(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_pts(console *const cnsl, const std::vector<std::string> & parts, bus *const, cpu *const, debugger_state *const, kek_event_t *const)
 {
 	cnsl->enable_timestamp(std::stoi(parts[1]));
 	return debugger_continue;
 }
 
-cmd_rc cmd_turbo(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_turbo(console *const cnsl, const std::vector<std::string> &, bus *const, cpu *const, debugger_state *const state, kek_event_t *const)
 {
 	state->turbo = !state->turbo;
 	cnsl->put_string_lf(format("Turbo set to %s", state->turbo ? "ON" : "OFF"));
 	return debugger_continue;
 }
 
-cmd_rc cmd_state(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_state(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const, kek_event_t *const)
 {
 	if (parts.size() == 1)
 		cnsl->put_string_lf("Parameter(s) missing");
@@ -1087,7 +1069,7 @@ cmd_rc cmd_state(console *const cnsl, const std::vector<std::string> & parts, bu
 	return debugger_continue;
 }
 
-cmd_rc cmd_mmures(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_mmures(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const, debugger_state *const, kek_event_t *const)
 {
 	if (parts.size() != 2)
 		mmu_resolve(cnsl, b, std::stoi(parts[1], nullptr, 8));
@@ -1096,13 +1078,13 @@ cmd_rc cmd_mmures(console *const cnsl, const std::vector<std::string> & parts, b
 	return debugger_continue;
 }
 
-cmd_rc cmd_qi(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_qi(console *const cnsl, const std::vector<std::string> &, bus *const, cpu *const c, debugger_state *const, kek_event_t *const)
 {
 	show_queued_interrupts(cnsl, c);
 	return debugger_continue;
 }
 
-cmd_rc cmd_setreg(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_setreg(console *const cnsl, const std::vector<std::string> & parts, bus *const, cpu *const c, debugger_state *const, kek_event_t *const)
 {
 	if (parts.size() == 3) {
 		int      reg = std::stoi(parts.at(1));
@@ -1117,12 +1099,11 @@ cmd_rc cmd_setreg(console *const cnsl, const std::vector<std::string> & parts, b
 	return debugger_continue;
 }
 
-cmd_rc cmd_setpc(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_setpc(console *const cnsl, const std::vector<std::string> & parts, bus *const, cpu *const c, debugger_state *const, kek_event_t *const)
 {
 	if (parts.size() == 2) {
 		uint16_t new_pc = std::stoi(parts.at(1), nullptr, 8);
 		c->setPC(new_pc);
-
 		cnsl->put_string_lf(format("Set PC to %06o", new_pc));
 	}
 	else {
@@ -1132,7 +1113,7 @@ cmd_rc cmd_setpc(console *const cnsl, const std::vector<std::string> & parts, bu
 	return debugger_continue;
 }
 
-cmd_rc cmd_setstack(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_setstack(console *const cnsl, const std::vector<std::string> & parts, bus *const, cpu *const c, debugger_state *const, kek_event_t *const)
 {
 	if (parts.size() == 3) {
 		int      reg = std::stoi(parts.at(1));
@@ -1148,7 +1129,7 @@ cmd_rc cmd_setstack(console *const cnsl, const std::vector<std::string> & parts,
 	return debugger_continue;
 }
 
-cmd_rc cmd_setpsw(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_setpsw(console *const cnsl, const std::vector<std::string> & parts, bus *const, cpu *const c, debugger_state *const, kek_event_t *const)
 {
 	if (parts.size() == 2) {
 		uint16_t val = std::stoi(parts.at(1), nullptr, 8);
@@ -1162,7 +1143,7 @@ cmd_rc cmd_setpsw(console *const cnsl, const std::vector<std::string> & parts, b
 	return debugger_continue;
 }
 
-cmd_rc cmd_deposit(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_deposit(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const, kek_event_t *const)
 {
 	if (parts.size() != 3)
 		cnsl->put_string_lf("Parameter count invalid");
@@ -1174,14 +1155,14 @@ cmd_rc cmd_deposit(console *const cnsl, const std::vector<std::string> & parts, 
 		}
 		else {
 			uint16_t a = std::stoi(parts[1], nullptr, 8);
-			c->getBus()->write_word(a, v);
+			b->write_word(a, v);
 			cnsl->put_string_lf(format("Set %06o to %06o", a, v));
 		}
 	}
 	return debugger_continue;
 }
 
-cmd_rc cmd_setmem(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_setmem(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const, debugger_state *const, kek_event_t *const)
 {
 	auto kv   = split(parts, "=");
 	auto a_it = kv.find("a");
@@ -1193,7 +1174,7 @@ cmd_rc cmd_setmem(console *const cnsl, const std::vector<std::string> & parts, b
 		uint16_t a = std::stoi(a_it->second, nullptr, 8);
 		uint8_t  v = std::stoi(v_it->second, nullptr, 8);
 
-		c->getBus()->write_byte(a, v);
+		b->write_byte(a, v);
 
 		cnsl->put_string_lf(format("Set %06o to %03o", a, v));
 	}
@@ -1201,7 +1182,7 @@ cmd_rc cmd_setmem(console *const cnsl, const std::vector<std::string> & parts, b
 	return debugger_continue;
 }
 
-cmd_rc cmd_getmem(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_getmem(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const, debugger_state *const, kek_event_t *const)
 {
 	auto kv   = split(parts, "=");
 	auto a_it = kv.find("a");
@@ -1210,25 +1191,25 @@ cmd_rc cmd_getmem(console *const cnsl, const std::vector<std::string> & parts, b
 		cnsl->put_string_lf("Parameter(s) missing");
 	else {
 		uint16_t a = std::stoi(a_it->second, nullptr, 8);
-		cnsl->put_string_lf(format("MEM %06o = %03o", a, c->getBus()->read_byte(a)));
+		cnsl->put_string_lf(format("MEM %06o = %03o", a, b->read_byte(a)));
 	}
 
 	return debugger_continue;
 }
 
-cmd_rc cmd_toggle(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_toggle(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const, debugger_state *const, kek_event_t *const)
 {
 	auto kv   = split(parts, "=");
 	auto s_it = kv.find("s");
 	auto t_it = kv.find("t");
 
 	if (s_it == kv.end() || t_it == kv.end())
-		cnsl->put_string_lf(format("toggle: parameter missing? current switches states: 0o%06o", c->getBus()->get_console_switches()));
+		cnsl->put_string_lf(format("toggle: parameter missing? current switches states: 0o%06o", b->get_console_switches()));
 	else {
 		int s = std::stoi(s_it->second, nullptr, 8);
 		int t = std::stoi(t_it->second, nullptr, 8);
 
-		c->getBus()->set_console_switch(s, t);
+		b->set_console_switch(s, t);
 
 		cnsl->put_string_lf(format("Set switch %d to %d", s, t));
 	}
@@ -1236,7 +1217,7 @@ cmd_rc cmd_toggle(console *const cnsl, const std::vector<std::string> & parts, b
 	return debugger_continue;
 }
 
-cmd_rc cmd_pcmon(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_pcmon(console *const, const std::vector<std::string> & parts, bus *const, cpu *const, debugger_state *const state, kek_event_t *const)
 {
 	state->pc_monitor_enabled = true;
 	state->pc_monitor_count   = std::stoi(parts.at(1));
@@ -1244,7 +1225,7 @@ cmd_rc cmd_pcmon(console *const cnsl, const std::vector<std::string> & parts, bu
 	return debugger_continue;
 }
 
-cmd_rc cmd_deqna(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_deqna(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const, debugger_state *const, kek_event_t *const)
 {
 	b->add_DEQNA(nullptr);  // disable & remove any existing
 
@@ -1313,7 +1294,7 @@ cmd_rc cmd_deqna(console *const cnsl, const std::vector<std::string> & parts, bu
 	return debugger_continue;
 }
 
-cmd_rc cmd_test(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_test(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const, debugger_state *const, kek_event_t *const)
 {
 	if (parts[1] == "deqna") {
 		auto deqna = b->getDEQNA();
@@ -1342,7 +1323,7 @@ cmd_rc cmd_test(console *const cnsl, const std::vector<std::string> & parts, bus
 	return debugger_continue;
 }
 
-cmd_rc cmd_mdeqna(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_mdeqna(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const, debugger_state *const, kek_event_t *const)
 {
 	auto deqna = b->getDEQNA();
 	if (deqna) {
@@ -1365,13 +1346,13 @@ cmd_rc cmd_mdeqna(console *const cnsl, const std::vector<std::string> & parts, b
 	return debugger_continue;
 }
 
-cmd_rc cmd_cfgdisk(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_cfgdisk(console *const cnsl, const std::vector<std::string> &, bus *const b, cpu *const, debugger_state *const, kek_event_t *const)
 {
 	configure_disk(b, cnsl);
 	return debugger_continue;
 }
 
-cmd_rc cmd_cdz11(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_cdz11(console *const cnsl, const std::vector<std::string> &, bus *const b, cpu *const, debugger_state *const, kek_event_t *const)
 {
 	if (b->getDZ11())
 		configure_comm(cnsl, b->getDZ11()->get_comm_interfaces());
@@ -1380,20 +1361,20 @@ cmd_rc cmd_cdz11(console *const cnsl, const std::vector<std::string> & parts, bu
 	return debugger_continue;
 }
 
-cmd_rc cmd_setinthz(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_setinthz(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const, debugger_state *const, kek_event_t *const)
 {
 	set_kw11_l_interrupt_freq(cnsl, b, std::stoi(parts.at(1)));
 	return debugger_continue;
 }
 
-cmd_rc cmd_getinthz(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_getinthz(console *const cnsl, const std::vector<std::string> &, bus *const b, cpu *const, debugger_state *const, kek_event_t *const)
 {
 	cnsl->put_string_lf(format("kw11 Hz: %d", b->getKW11_L()->get_interrupt_frequency()));
 	return debugger_continue;
 }
 
 #if !defined(TEENSY4_1)
-cmd_rc cmd_blights(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_blights(console *const cnsl, const std::vector<std::string> & parts, bus *const, cpu *const, debugger_state *const, kek_event_t *const)
 {
 	if (network_configured == false)
 		cnsl->put_string_lf("Please configure network first (cfgnet)");
@@ -1411,7 +1392,7 @@ cmd_rc cmd_blights(console *const cnsl, const std::vector<std::string> & parts, 
 }
 #endif
 
-cmd_rc cmd_ramsize(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_ramsize(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const, debugger_state *const, kek_event_t *const)
 {
 	if (parts.size() == 2)
 		b->set_memory_size(std::stoi(parts.at(1)));
@@ -1422,26 +1403,44 @@ cmd_rc cmd_ramsize(console *const cnsl, const std::vector<std::string> & parts, 
 	return debugger_continue;
 }
 
-cmd_rc cmd_cls(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_cls(console *const cnsl, const std::vector<std::string> &, bus *const, cpu *const, debugger_state *const, kek_event_t *const)
 {
 	const char cls[] = { 27, '[', '2', 'J', 27, '[', 'H', 12, 0 };
 	cnsl->put_string_lf(cls);
 	return debugger_continue;
 }
 
-cmd_rc cmd_stats(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_stats(console *const cnsl, const std::vector<std::string> &, bus *const, cpu *const, debugger_state *const, kek_event_t *const)
 {
-	show_run_statistics(cnsl, c);
+#if defined(ESP32)
+	cnsl->put_string_lf("ESP32");
+	cnsl->put_string_lf(format("Free RAM (decimal bytes): %d", ESP.getFreeHeap()));
+	cnsl->put_string_lf(format("Free SPI-RAM: %d", heap_caps_get_free_size(MALLOC_CAP_SPIRAM)));
+#elif defined(BUILD_FOR_PICO2W)
+	cnsl->put_string_lf("Pico(2)W");
+	cnsl->put_string_lf(format("Free RAM (decimal bytes): %d", rp2040.getFreeHeap()));
+	cnsl->put_string_lf(format("Clock frequency: %d", rp2040.f_cpu()));
+#elif defined(TEENSY4_1)
+	cnsl->put_string_lf("Teensy 4.1");
+	// TODO
+#elif IS_POSIX
+	cnsl->put_string_lf("POSIX system");
+	// TODO
+#elif defined(_WIN32)
+	cnsl->put_string_lf("WIN32 system");
+#else
+	cnsl->put_string_lf("?");
+#endif
 	return debugger_continue;
 }
 
-cmd_rc cmd_dir(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_dir(console *const cnsl, const std::vector<std::string> &, bus *const, cpu *const, debugger_state *const, kek_event_t *const)
 {
 	ls_l(cnsl);
 	return debugger_continue;
 }
 
-cmd_rc cmd_bic(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_bic(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const, kek_event_t *const)
 {
 	auto rc = load_tape(b, parts[1].c_str());
 	if (rc.has_value()) {
@@ -1455,7 +1454,7 @@ cmd_rc cmd_bic(console *const cnsl, const std::vector<std::string> & parts, bus 
 	return debugger_continue;
 }
 
-cmd_rc cmd_lt(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_lt(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const, debugger_state *const, kek_event_t *const)
 {
 	if (parts.size() == 2)
 		tm11_load_tape(cnsl, b, parts[1]);
@@ -1464,13 +1463,13 @@ cmd_rc cmd_lt(console *const cnsl, const std::vector<std::string> & parts, bus *
 	return debugger_continue;
 }
 
-cmd_rc cmd_ult(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_ult(console *const, const std::vector<std::string> &, bus *const b, cpu *const, debugger_state *const, kek_event_t *const)
 {
 	tm11_unload_tape(b);
 	return debugger_continue;
 }
 
-cmd_rc cmd_dp(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_dp(console *const cnsl, const std::vector<std::string> &, bus *const, cpu *const, debugger_state *const, kek_event_t *const)
 {
 	cnsl->stop_panel_thread();
 	cnsl->put_string_lf("OK");
@@ -1478,14 +1477,14 @@ cmd_rc cmd_dp(console *const cnsl, const std::vector<std::string> & parts, bus *
 }
 
 #if defined(ESP32) || defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
-cmd_rc cmd_pm(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_pm(console *const cnsl, const std::vector<std::string> & parts, bus *const, cpu *const, debugger_state *const, kek_event_t *const)
 {
 	reinterpret_cast<console_esp32 *>(cnsl)->set_panel_mode(parts[1] == "bits" ? console_esp32::PM_BITS : console_esp32::PM_POINTER);
 	return debugger_continue;
 }
 #endif
 
-cmd_rc cmd_refr(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_refr(console *const cnsl, const std::vector<std::string> & parts, bus *const, cpu *const, debugger_state *const, kek_event_t *const)
 {
 	if (parts.size() == 2) {
 		int rate = std::stoi(parts[1]);
@@ -1497,7 +1496,7 @@ cmd_rc cmd_refr(console *const cnsl, const std::vector<std::string> & parts, bus
 }
 
 #if defined(ESP32) || defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
-cmd_rc cmd_cfgnet(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_cfgnet(console *const cnsl, const std::vector<std::string> & parts, bus *const, cpu *const, debugger_state *const, kek_event_t *const)
 {
 	network_configured = true;
 	if (parts.size() == 2)
@@ -1507,13 +1506,13 @@ cmd_rc cmd_cfgnet(console *const cnsl, const std::vector<std::string> & parts, b
 	return debugger_continue;
 }
 
-cmd_rc cmd_chknet(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_chknet(console *const cnsl, const std::vector<std::string> &, bus *const, cpu *const, debugger_state *const, kek_event_t *const)
 {
 	check_network(cnsl);
 	return debugger_continue;
 }
 
-cmd_rc cmd_startnet(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_startnet(console *const cnsl, const std::vector<std::string> &, bus *const, cpu *const, debugger_state *const, kek_event_t *const)
 {
 	start_network(cnsl);
 	network_configured = true;
@@ -1521,13 +1520,13 @@ cmd_rc cmd_startnet(console *const cnsl, const std::vector<std::string> & parts,
 }
 #endif
 
-cmd_rc cmd_marker(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_marker(console *const, const std::vector<std::string> &, bus *const, cpu *const, debugger_state *const state, kek_event_t *const)
 {
 	state->marker = !state->marker;
 	return debugger_continue;
 }
 
-cmd_rc cmd_log(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_log(console *const, const std::vector<std::string> & parts, bus *const, cpu *const, debugger_state *const, kek_event_t *const)
 {
 	std::string line;
 	for(size_t i=1; i<parts.size(); i++) {
@@ -1540,7 +1539,7 @@ cmd_rc cmd_log(console *const cnsl, const std::vector<std::string> & parts, bus 
 }
 
 #if IS_POSIX
-cmd_rc cmd_ser(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_ser(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const, debugger_state *const, kek_event_t *const)
 {
 	serialize_state(cnsl, b, parts.at(1));
 	return debugger_continue;
@@ -1664,7 +1663,7 @@ std::optional<std::string> explode(console *const cnsl, const std::string & in)
 	return { };
 }
 
-cmd_rc cmd_help(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const c, debugger_state *const state, kek_event_t *const stop_event)
+cmd_rc cmd_help(console *const cnsl, const std::vector<std::string> &, bus *const, cpu *const, debugger_state *const, kek_event_t *const)
 {
 	size_t max_cmd_len   = 0;
 	size_t max_pars_len  = 0;
@@ -1687,15 +1686,11 @@ bool emulation_do(console *const cnsl, bus *const b, cpu *const c, debugger_stat
 {
 	*cnsl->get_running_flag() = true;
 
-	bool reset_cpu = true;
-
 	if (state->turbo) {
 		while(load_relaxed_p(stop_event) == EVENT_NONE)
 			c->step();
 	}
 	else {
-		reset_cpu = false;
-
 		uint64_t total_wait_duration = 0;
 		uint64_t wait_count          = 0;
 		uint16_t last_pc             = 0;
