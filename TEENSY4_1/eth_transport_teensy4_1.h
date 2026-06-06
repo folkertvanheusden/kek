@@ -3,6 +3,7 @@
 #include <string>
 
 #include "eth_transport.h"
+#include "my_lock.h"
 
 
 class eth_transport_teensy4_1: public eth_transport
@@ -12,6 +13,8 @@ public:
 	virtual ~eth_transport_teensy4_1();
 
 	bool begin() override;
+
+	void set_trace(const bool state) override;
 
 	std::string identifier() const override;
 

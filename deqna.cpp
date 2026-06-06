@@ -38,6 +38,12 @@ deqna::deqna(bus *const b, const uint8_t mac_address[6], eth_transport *const et
 
 bool deqna::begin()
 {
+	for(int i=0; i<128; i++) {
+		Serial.print(i);
+		Serial.print(' ');
+		test(nullptr);
+	}
+	Serial.println("");
 #if defined(FREERTOS)
 	xTaskCreate(&thread_wrapper_receiver_low,  "deqna-rl", 1024, this, 1, nullptr);
 	xTaskCreate(&thread_wrapper_receiver_high, "deqna-rh", 1024, this, 1, nullptr);
@@ -481,7 +487,7 @@ void deqna::write_word(const uint16_t addr, const uint16_t v)
 bool deqna::test(console *const cnsl)
 {
 	if (eth_dev) {
-		uint8_t buffer[14 + 44] { };
+		uint8_t buffer[14 + 46] { };
 		memset(&buffer[0], 0xff, 6);
 		memcpy(&buffer[6], mac_address, 6);
 		buffer[12] = 0x08;  // ARP packet
@@ -516,15 +522,24 @@ bool deqna::test(console *const cnsl)
 			delete [] data.first;
 		}
 		else {
-			cnsl->put_string_lf("No data?");
+			if (cnsl)
+				cnsl->put_string_lf("No data?");
 			return false;
 		}
-
 		return true;
 	}
 
-	cnsl->put_string_lf("No transport medium configured");
+	if (cnsl)
+		cnsl->put_string_lf("No transport medium configured");
 	return false;
+}
+
+void deqna::set_monitor_mode(const monitor_mode_t mode, console *const cnsl)
+{
+	monitor_mode = mode;
+	this->cnsl = cnsl;
+	if (eth_dev)
+		eth_dev->set_trace(mode == ll_trace);
 }
 
 void get_deqna_mac(uint8_t *const to)

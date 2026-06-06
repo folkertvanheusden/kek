@@ -135,6 +135,10 @@ std::pair<uint8_t *, size_t> eth_transport_linux::get(const int timeout)
 		rc2 = 0;
 	}
 
+	if (trace)
+		printf("Pkt to %02x:%02x:%02x:%02x:%02x:%02x processed\n",
+				pkt[0], pkt[1], pkt[2], pkt[3], pkt[4], pkt[5]);
+
 	return { pkt, rc2 };
 }
 #endif
