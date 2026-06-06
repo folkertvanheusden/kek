@@ -70,7 +70,7 @@ std::string format(const char *const fmt, ...)
 	return result;
 }
 
-unsigned long get_ms()
+uint64_t get_ms()
 {
 #if defined(ESP32) || defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 	return millis();

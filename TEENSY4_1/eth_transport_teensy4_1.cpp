@@ -34,7 +34,7 @@ bool eth_transport_teensy4_1::transmit(const uint8_t *const data, const size_t n
 
 std::pair<uint8_t *, size_t> eth_transport_teensy4_1::get(const int timeout)
 {
-	auto start = millis();
+	auto end = millis() + timeout;
 
 	do {
 		if (auto rc = qn::EthernetFrame.parseFrame(); rc > 0) {
@@ -49,7 +49,7 @@ std::pair<uint8_t *, size_t> eth_transport_teensy4_1::get(const int timeout)
 
 		vTaskDelay(10 / portTICK_PERIOD_MS);  // TODO
 	}
-	while(millis() < start + timeout);
+	while(millis() < end);
 
 	return { nullptr, 0 };
 }
