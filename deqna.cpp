@@ -480,9 +480,12 @@ void deqna::write_word(const uint16_t addr, const uint16_t v)
 
 bool deqna::test(console *const cnsl)
 {
+	constexpr const uint64_t duration = 2500000;
+	cnsl->put_string(format("Please wait %.3f seconds...", duration / 1'000'000.));
+
 	if (eth_dev) {
 		uint8_t buffer[14 + 46] { };
-		memset(&buffer[0], 0xff, 6);
+		memcpy(&buffer[0], bc_addr,     6);
 		memcpy(&buffer[6], mac_address, 6);
 		buffer[12] = 0x08;  // ARP packet
 		buffer[13] = 0x06;
@@ -511,15 +514,34 @@ bool deqna::test(console *const cnsl)
 		}
 
 		// any data? usually there are at least ARP msgs broadcasted
-		auto data = eth_dev->get(1000);
-		if (data.first) {
-			delete [] data.first;
+		uint32_t for_me    = 0;
+		uint32_t bc        = 0;
+		uint32_t pkt_total = 0;
+		uint64_t until     = get_us() + duration;
+		for(;;) {
+			uint64_t time_left = until - get_us();
+			if (time_left < 1000 || time_left > duration)
+				break;
+			auto data = eth_dev->get(time_left / 1000);
+			if (data.first) {
+				cnsl->put_char('.');
+				if (data.second >= 14) {
+					for_me += memcmp(data.first, mac_address, 6) == 0;
+					bc     += memcmp(data.first, bc_addr,     6) == 0;
+					pkt_total++;
+				}
+				delete [] data.first;
+			}
 		}
-		else {
-			if (cnsl)
-				cnsl->put_string_lf("No data?");
+		cnsl->put_string_lf("");
+
+		if (pkt_total == 0) {
+			cnsl->put_string_lf("No data?");
 			return false;
 		}
+
+		cnsl->put_string_lf(format("%u packets for me, %u broadcasts, %u packets in total", for_me, bc, pkt_total));
+
 		return true;
 	}
 

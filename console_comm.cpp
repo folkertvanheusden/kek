@@ -32,7 +32,7 @@ console_comm::~console_comm()
 	delete io_port;
 }
 
-void console_comm::set_panel_mode(const panel_mode_t pm)
+void console_comm::set_panel_mode(const panel_mode_t)
 {
 }
 

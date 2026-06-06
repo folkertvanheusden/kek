@@ -70,7 +70,7 @@ std::string format(const char *const fmt, ...)
 	return result;
 }
 
-unsigned long get_ms()
+uint64_t get_ms()
 {
 #if defined(ESP32) || defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 	return millis();
@@ -283,13 +283,22 @@ std::optional<JsonDocument> deserialize_file(const std::string & filename)
 	if (!fh)
 		return { };
 
-	fseek(fh, 0, SEEK_END);
+	bool ok = true;
+	if (fseek(fh, 0, SEEK_END) != 0)
+		ok = false;
 	long size = ftell(fh);
-	fseek(fh, 0, SEEK_SET);
+	if (size < 0)
+		ok = false;
+	if (fseek(fh, 0, SEEK_SET) != 0)
+		ok = false;
 	std::vector<char> j_in(size + 1);
 	JsonDocument j;
-	fread(j_in.data(), 1, size, fh);
+	if (fread(j_in.data(), 1, size, fh) < size_t(size))
+		ok = false;
 	fclose(fh);
+
+	if (!ok)
+		return { };
 
 	DeserializationError error = deserializeJson(j, reinterpret_cast<const char *>(j_in.data()));
 	if (error) {
@@ -332,7 +341,7 @@ std::string get_configuration_string(const std::string & file, const std::string
 	if (!fh)
 		return default_value;
 	char buffer[64];
-	fgets(buffer, sizeof buffer, fh);
+	(void)fgets(buffer, sizeof buffer, fh);
 	fclose(fh);
 
 	return buffer;
@@ -360,7 +369,7 @@ uint32_t get_configuration_uint32(const std::string & file, const uint32_t defau
 	FILE *fh = fopen(file_in_user_home(file).c_str(), "rb");
 	if (!fh)
 		return default_value;
-	fread(buffer, 1, 4, fh);
+	(void)fread(buffer, 1, 4, fh);
 	fclose(fh);
 #endif
 

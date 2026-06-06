@@ -316,7 +316,7 @@ void console::set_blinkenlights_panel(blinkenlights *const p_blinkenlights)
 	this->p_blinkenlights = p_blinkenlights;
 }
 
-void console::set_LED_state(const bool state)
+void console::set_LED_state(const bool)
 {
 }
 
