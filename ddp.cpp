@@ -81,10 +81,11 @@ FLASHMEM bool ddp::begin()
 	return true;
 }
 
-FLASHMEM bool ddp::set_target(const std::string & ip)
+FLASHMEM bool ddp::set_target(const std::string & ip, const int n_pixels)
 {
 	my_unique_lock lck(&lock);
-	server = ip;
+	server         = ip;
+	this->n_pixels = n_pixels;
 	return true;
 }
 
@@ -97,15 +98,12 @@ FLASHMEM void ddp::push(bus *const b, const bool running_flag)
 	}
 
 	try {
-		cpu *const c           = b->getCpu();
+		cpu     *const c    = b->getCpu();
+		int      run_mode   = c->getPSW_runmode();
+		uint16_t current_PC = c->getPC();
 
-		uint16_t current_PSW   = c->getPSW();
-		int      run_mode      = current_PSW >> 14;
-		uint16_t current_PC    = c->getPC();
-		memory_addresses_t rc  = b->getMMU()->calculate_physical_address(run_mode, current_PC);
-		auto     current_instr = b->peek_word(run_mode, current_PC);
-
-		uint8_t message[10 + 64 * 3] { };
+		size_t   msg_len = 10 + n_pixels * 3;
+		uint8_t *message = new uint8_t[msg_len]();
 		message[0] = (1 << 6) |  // version
 				1;  // push
 		message[2] = (1 << 3) |  // RGB
@@ -113,59 +111,24 @@ FLASHMEM void ddp::push(bus *const b, const bool running_flag)
 		message[3] = 1;  // default output device
 		message[8] = (64 * 3) >> 8;  // data length
 		message[9] = (64 * 3) & 255;
-		int o = 10;
 
-		// address
-		for(int i=0; i<22; i++) {
-			bool c = rc.physical_instruction & (1 << i);
-			message[o++] = c ? 255: 0;
-			message[o++] = 0;
-			message[o++] = 0;
-		}
+		int o = 10 + (current_PC * n_pixels / 65536) * 3;
 
-		// run mode
-		if (run_mode == 0) {
-			message[o++] = 255;
-			message[o++] = 0;
-			message[o++] = 0;
-			message[o++] = 255;
-			message[o++] = 0;
-			message[o++] = 0;
+		if (run_mode == 0)
+			message[o + 0] = 255;  // red
+		else if (run_mode == 1)
+			message[o + 2] = 255;  // blue
+		else if (run_mode == 2) {  // theoretically
+			message[o + 0] = 255;
+			message[o + 1] = 255;
 		}
-		else if (run_mode == 1) {
-			message[o++] = 255;
-			message[o++] = 255;
-			message[o++] = 0;
-			message[o++] = 255;
-			message[o++] = 255;
-			message[o++] = 0;
-		}
-		else if (run_mode == 3) {
-			message[o++] = 0;
-			message[o++] = 255;
-			message[o++] = 0;
-			message[o++] = 0;
-			message[o++] = 255;
-			message[o++] = 0;
-		}
-		else {
-			o += 3 * 2;
+		else if (run_mode == 3) {  // green
+			message[o + 1] = 255;
 		}
 
-		// instruction
-		if (current_instr.has_value()) {
-			for(int i=0; i<16; i++) {
-				bool c = current_instr.value() & (1 << i);
-				message[o++] = 0;
-				message[o++] = 0;
-				message[o++] = c ? 255: 0;
-			}
-		}
-		else {
-			o += 16 * 3;
-		}
+		send_message(ip, 4048, message, msg_len);
 
-		send_message(ip, 4048, message, sizeof message);
+		free(message);
 	}
 	catch(int trap_nr) {
 		DOLOG(log_ss::LS_GENERIC, "Trap %d caught in ddp::push", trap_nr);

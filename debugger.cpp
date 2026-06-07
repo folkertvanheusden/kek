@@ -1394,13 +1394,13 @@ FLASHMEM cmd_rc cmd_ddp(console *const cnsl, const std::vector<std::string> & pa
 {
 	if (network_configured == false)
 		cnsl->put_string_lf("Please configure network first (cfgnet)");
-	else if (parts.size() == 2) {
-		ddp_->set_target(parts[1]);
+	else if (parts.size() == 3) {
+		ddp_->set_target(parts[1], std::stoi(parts[2]));
 		cnsl->set_ddp_panel(ddp_);
 	}
 	else {
 		cnsl->set_ddp_panel(nullptr);
-		cnsl->put_string_lf("DDP panel disabled");
+		cnsl->put_string_lf("DDP panel disabled (IP address and/or LED count missing)");
 	}
 	return debugger_continue;
 }
@@ -1599,8 +1599,8 @@ constexpr const cmd_pair cmd_pairs[] {
 	{ "cdz11", "", "configure DZ11 device", cmd_cdz11, cmd_pair::par_no },
 	{ "setinthz", "freq", "set KW11-L interrupt frequency (Hz)", cmd_setinthz, cmd_pair::par_yes },
 	{ "getinthz", "", "get KW11-L interrupt frequency (Hz)", cmd_getinthz, cmd_pair::par_no },
-	{ "blights", "ip addr", "enable blinkenlights panel on selected IP address", cmd_blights, cmd_pair::par_yes },
-	{ "ddp", "ip addr", "enable ddp panel on selected IP address", cmd_ddp, cmd_pair::par_yes },
+	{ "blights", "ip-addr", "enable blinkenlights panel on selected IP address", cmd_blights, cmd_pair::par_yes },
+	{ "ddp", "ip-addr LED_count", "enable ddp panel on selected IP address fro LED_count LEDs", cmd_ddp, cmd_pair::par_yes },
 	{ "ramsize", "pages", "set ram size (page (8 kB) count, decimal)", cmd_ramsize, cmd_pair::par_yes },
 	{ "cls", "", "clear screen", cmd_cls, cmd_pair::par_no },
 	{ "stats", "", "show run statistics", cmd_stats, cmd_pair::par_no },
