@@ -316,6 +316,11 @@ void console::set_blinkenlights_panel(blinkenlights *const p_blinkenlights)
 	this->p_blinkenlights = p_blinkenlights;
 }
 
+void console::set_ddp_panel(ddp *const p_ddp)
+{
+	this->p_ddp = p_ddp;
+}
+
 void console::set_LED_state(const bool)
 {
 }

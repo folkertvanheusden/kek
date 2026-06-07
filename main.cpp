@@ -26,6 +26,7 @@
 #include "console_comm.h"
 #include "console_posix.h"
 #include "cpu.h"
+#include "ddp.h"
 #include "debugger.h"
 #include "deqna.h"
 #include "disk_backend.h"
@@ -51,6 +52,7 @@
 std::atomic_uint32_t event   { 0                 };
 std::atomic_bool    *running { nullptr           };
 blinkenlights       *bl      { new blinkenlights };
+ddp                 *ddp_    { new ddp           };
 
 std::atomic_bool  sigw_event { false             };
 
@@ -303,6 +305,7 @@ int main(int argc, char *argv[])
 
 	uint16_t     console_switches = 0;
 	std::string  blinkenlights_ip;
+	std::string  ddp_ip;
 	std::optional<int> console_port;
 
 	bool         disk_snapshots = false;
@@ -322,7 +325,7 @@ int main(int argc, char *argv[])
 	std::string  deqna_type;
 
 	int  opt = -1;
-	while((opt = getopt(argc, argv, "u:hC:L:D:T:B:r:R:p:df:tb:l:s:Q:N:J:XS:P1:m:Q:28:I:c:")) != -1)
+	while((opt = getopt(argc, argv, "u:hC:L:D:T:B:r:R:p:df:tb:l:s:Q:N:J:XS:P1:m:Q:28:9:I:c:")) != -1)
 	{
 		switch(opt) {
 			case 'h':
@@ -468,6 +471,10 @@ int main(int argc, char *argv[])
 
 			case '8':
 				blinkenlights_ip = optarg;
+				break;
+
+			case '9':
+				ddp_ip = optarg;
 				break;
 
 			case 'I':
@@ -653,6 +660,15 @@ int main(int argc, char *argv[])
 	}
 	else {
 		DOLOG(log_ss::LS_GENERIC, "Cannot initialize blinkenlights");
+	}
+
+	if (ddp_->begin()) {
+		cnsl->set_ddp_panel(ddp_);
+		if (ddp_ip.empty() == false)
+			ddp_->set_target(ddp_ip);
+	}
+	else {
+		DOLOG(log_ss::LS_GENERIC, "Cannot initialize ddp");
 	}
 
 	//// DZ11

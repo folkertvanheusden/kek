@@ -12,6 +12,7 @@
 
 #include "blinkenlights.h"
 #include "console_posix.h"
+#include "ddp.h"
 #include "error.h"
 #include "gen.h"
 
@@ -139,12 +140,17 @@ void console_posix::panel_update_thread()
 
 		if (p_blinkenlights) {
 			p_blinkenlights->push(b, running_flag);
-
-			if (do_test_panel) {
-				do_test_panel = false;
+			if (do_test_panel)
 				p_blinkenlights->test();
-			}
 		}
+
+		if (p_ddp) {
+			p_ddp->push(b, running_flag);
+			if (do_test_panel)
+				p_ddp->test();
+		}
+
+		do_test_panel = false;
 	}
 }
 

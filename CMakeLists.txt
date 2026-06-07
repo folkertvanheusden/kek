@@ -56,6 +56,7 @@ set(APP_SOURCES
   console_posix.cpp
   cpu.cpp
   dc11.cpp
+  ddp.cpp
   debugger.cpp
   deqna.cpp
   device.cpp
