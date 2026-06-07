@@ -191,8 +191,8 @@ FLASHMEM void ddp::test()
 		message[2] = (1 << 3) |  // RGB
 			3;  // 8 bits per pixel element
 		message[3] = 1;  // default output device
-		message[8] = 64 >> 8;  // data length
-		message[9] = 64 & 255;
+		message[8] = (64 * 3) >> 8;  // data length
+		message[9] = (64 * 3) & 255;
 
 		for(int i=0; i<64; i++) {
 			message[10 + i * 3 + 1] = 255;
