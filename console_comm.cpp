@@ -72,8 +72,8 @@ void console_comm::refresh_virtual_terminal()
 
 void console_comm::panel_update_thread()
 {
-	while(!stop_panel) {
-		myusleep(1000000 / refreshrate);
+	while(*stop_event != EVENT_TERMINATE && !stop_panel) {
+		myusleep(1'000'000 / refreshrate);
 		if (p_blinkenlights)
 			p_blinkenlights->push(b, running_flag);
 		if (p_ddp)

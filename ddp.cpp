@@ -109,8 +109,8 @@ FLASHMEM void ddp::push(bus *const b, const bool running_flag)
 		message[2] = (1 << 3) |  // RGB
 			3;  // 8 bits per pixel element
 		message[3] = 1;  // default output device
-		message[8] = (64 * 3) >> 8;  // data length
-		message[9] = (64 * 3) & 255;
+		message[8] = (n_pixels * 3) >> 8;  // data length
+		message[9] = (n_pixels * 3) & 255;
 
 		int o = 10 + (current_PC * n_pixels / 65536) * 3;
 
@@ -128,7 +128,7 @@ FLASHMEM void ddp::push(bus *const b, const bool running_flag)
 
 		send_message(ip, 4048, message, msg_len);
 
-		free(message);
+		delete [] message;
 	}
 	catch(int trap_nr) {
 		DOLOG(log_ss::LS_GENERIC, "Trap %d caught in ddp::push", trap_nr);
@@ -148,23 +148,26 @@ FLASHMEM void ddp::test()
 	}
 
 	try {
-		uint8_t message[10 + 64 * 3] { };
+		size_t   msg_len = 10 + n_pixels * 3;
+		uint8_t *message = new uint8_t[msg_len]();
 		message[0] = (1 << 6) |  // version
 				1;  // push
 		message[2] = (1 << 3) |  // RGB
 			3;  // 8 bits per pixel element
 		message[3] = 1;  // default output device
-		message[8] = (64 * 3) >> 8;  // data length
-		message[9] = (64 * 3) & 255;
+		message[8] = (n_pixels * 3) >> 8;  // data length
+		message[9] = (n_pixels * 3) & 255;
 
-		for(int i=0; i<64; i++) {
+		for(int i=0; i<n_pixels; i++) {
 			message[10 + i * 3 + 1] = 255;
 			send_message(ip, 4048, message, sizeof message);
 			myusleep(10000);
 		}
 
-		memset(&message[10], 0, 64 * 3);
+		memset(&message[10], 0, n_pixels * 3);
 		send_message(ip, 4048, message, sizeof message);
+
+		delete [] message;
 	}
 	catch(...) {
 		// most likely a find() that failed
