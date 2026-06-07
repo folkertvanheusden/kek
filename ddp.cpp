@@ -20,12 +20,12 @@
 #include "log.h"
 
 #if defined(BUILD_FOR_PICO2W)
-WiFiUDP         *udp = new WiFiUDP;
+static WiFiUDP         *udp = new WiFiUDP;
 #elif defined(TEENSY4_1)
-qn::EthernetUDP *udp = new qn::EthernetUDP;
+static qn::EthernetUDP *udp = new qn::EthernetUDP;
 #endif
 
-void send_message(const std::string & ip, const int port, const uint8_t *const data, const size_t n_bytes)
+FLASHMEM void send_message(const std::string & ip, const int port, const uint8_t *const data, const size_t n_bytes)
 {
 #if defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 	udp->begin(4048);
@@ -68,27 +68,27 @@ void send_message(const std::string & ip, const int port, const uint8_t *const d
 #endif
 }
 
-ddp::ddp()
+FLASHMEM ddp::ddp()
 {
 }
 
-ddp::~ddp()
+FLASHMEM ddp::~ddp()
 {
 }
 
-bool ddp::begin()
+FLASHMEM bool ddp::begin()
 {
 	return true;
 }
 
-bool ddp::set_target(const std::string & ip)
+FLASHMEM bool ddp::set_target(const std::string & ip)
 {
 	my_unique_lock lck(&lock);
 	server = ip;
 	return true;
 }
 
-void ddp::push(bus *const b, const bool running_flag)
+FLASHMEM void ddp::push(bus *const b, const bool running_flag)
 {
 	std::string ip;
 	{

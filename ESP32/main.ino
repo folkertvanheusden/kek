@@ -42,6 +42,7 @@
 #endif
 #include "console_esp32.h"
 #include "cpu.h"
+#include "ddp.h"
 #include "debugger.h"
 #include "disk_backend.h"
 #include "disk_backend_esp32.h"
@@ -74,6 +75,7 @@ abool         *running      { nullptr           };
 bool           trace_output { false             };
 comm          *cs           { nullptr           };  // Console Serial
 blinkenlights *bl           { new blinkenlights };
+ddp           *ddp_         { new ddp           };
 
 static void console_thread_wrapper_panel(void *const c)
 {
@@ -198,6 +200,8 @@ FLASHMEM void finish_start_network(console *const c)
       cnsl->put_string_lf(format("Using PiDP11 blinkenlights on IP address %s", bl_ip.c_str()));
       bl->set_target(bl_ip);
     }
+
+    ddp_->begin();
 
     static bool dz11_loaded = false;
     if (!dz11_loaded) {

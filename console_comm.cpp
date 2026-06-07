@@ -16,6 +16,7 @@
 #else
 #include "comm.h"
 #endif
+#include "ddp.h"
 #include "error.h"
 #include "utils.h"
 
@@ -71,15 +72,19 @@ void console_comm::refresh_virtual_terminal()
 
 void console_comm::panel_update_thread()
 {
-	if (p_blinkenlights) {
-		while(!stop_panel) {
-			myusleep(1000000 / refreshrate);
+	while(!stop_panel) {
+		myusleep(1000000 / refreshrate);
+		if (p_blinkenlights)
 			p_blinkenlights->push(b, running_flag);
-			// teensy 4.1 does not have atomics, so exchange() won't compile
-			if (do_test_panel) {
-				do_test_panel = false;
+		if (p_ddp)
+			p_ddp->push(b, running_flag);
+		// teensy 4.1 does not have atomics, so exchange() won't compile
+		if (do_test_panel) {
+			do_test_panel = false;
+			if (p_blinkenlights)
 				p_blinkenlights->test();
-			}
+			if (p_ddp)
+				p_ddp->test();
 		}
 	}
 }
