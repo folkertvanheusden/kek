@@ -35,6 +35,7 @@ set(APP_IMGUI_SOURCES
 )
 
 if (EXISTS "/usr/include/sys/timepps.h")
+	MESSAGE("PPS enabled")
 	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWITH_PPS=1")
 else ()
 	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWITH_PPS=0")

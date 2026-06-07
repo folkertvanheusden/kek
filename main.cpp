@@ -14,6 +14,7 @@
 #include "error.h"
 #include "comm.h"
 #include "comm_posix_tty.h"
+#include "comm_pst.h"
 #include "comm_tcp_socket_server.h"
 #if defined(USE_IMGUI)
 #include "console_imgui.h"
@@ -269,6 +270,7 @@ void help()
 #endif
 	printf("-1 x     use x as device for DZ-11 (instead of 8 tcp-sockets starting at port %d)\n", default_port_offset);
 	printf("-2       set DZ-11 tcp-socket sessions to initialize as a telnet session\n");
+	printf("-6 x     set port 1 of the DZ-11 emulation to a PSTI time source via PPS-source x\n");
 	printf("-8 x     setup a blinkenlights/PiDP11 connection on IP-address x\n");
 	printf("-9 x|n   setup a DDP (e.g. WLED) connection on IP-address x for n LEDs\n");
 	printf("-Q x     use x as port offset instead of %d\n", default_port_offset);
@@ -321,13 +323,14 @@ int main(int argc, char *argv[])
 	std::optional<std::string> dz11_device;
 	bool         dz11_setup_telnet = false;
 	bool         dc11_setup_telnet = false;
+	std::string  psti_device;
 
 	int          tcp_port_offset = default_port_offset;
 
 	std::string  deqna_type;
 
 	int  opt = -1;
-	while((opt = getopt(argc, argv, "u:hC:L:D:T:B:r:R:p:df:tb:l:s:Q:N:J:XS:P1:m:Q:28:9:I:c:")) != -1)
+	while((opt = getopt(argc, argv, "u:hC:L:D:T:B:r:R:p:df:tb:l:s:Q:N:J:XS:P1:m:Q:28:9:6:I:c:")) != -1)
 	{
 		switch(opt) {
 			case 'h':
@@ -469,6 +472,10 @@ int main(int argc, char *argv[])
 
 			case 'P':
 				disk_snapshots = true;
+				break;
+
+			case '6':
+				psti_device = optarg;
 				break;
 
 			case '8':
@@ -683,10 +690,17 @@ int main(int argc, char *argv[])
 	constexpr const int bitrate = 38400;
 
 #if !defined(_WIN32)
+	size_t dz11_offset = 0;
+	if (psti_device.empty() == false) {
+		DOLOG(log_ss::LS_COMM, "Configuring DZ11 port r1 for PSTI");
+		if (io_channels->set_device(dz11_offset++, new comm_pst(psti_device)) == false)
+			DOLOG(log_ss::LS_COMM, "Failed to configure PSTI device");
+	}
+
 	if (dz11_device.has_value()) {
-		DOLOG(log_ss::LS_GENERIC, "Configuring DZ11 device for TTY on %s (%d bps)", dz11_device.value().c_str(), bitrate);
-		if (io_channels->set_device(0, new comm_posix_tty(dz11_device.value(), bitrate)) == false)
-			DOLOG(log_ss::LS_GENERIC, "Failed to configure device");
+		DOLOG(log_ss::LS_COMM, "Configuring DZ11 device for TTY on %s (%d bps)", dz11_device.value().c_str(), bitrate);
+		if (io_channels->set_device(dz11_offset++, new comm_posix_tty(dz11_device.value(), bitrate)) == false)
+			DOLOG(log_ss::LS_COMM, "Failed to configure TTY device");
 	}
 #endif
 
@@ -694,9 +708,9 @@ int main(int argc, char *argv[])
 		if (io_channels->is_defined(i))
 			continue;
 		int port = tcp_port_offset + i;
-		DOLOG(log_ss::LS_GENERIC, "Configuring DZ11 device for TCP socket on port %d", port);
+		DOLOG(log_ss::LS_COMM, "Configuring DZ11 device for TCP socket on port %d", port);
 		if (io_channels->set_device(i, new comm_tcp_socket_server(port, dz11_setup_telnet)) == false)
-			DOLOG(log_ss::LS_GENERIC, "Failed to configure device");
+			DOLOG(log_ss::LS_COMM, "Failed to configure device");
 	}
 
 	dz11 *dz11_ = new dz11(b, io_channels);
