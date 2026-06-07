@@ -26,6 +26,7 @@
 #include "comm_tcp_socket_client.h"
 #include "comm_tcp_socket_server.h"
 #endif
+#include "comm_pst.h"
 #include "console.h"
 #include "cpu.h"
 #if defined(ESP32) 
@@ -281,7 +282,7 @@ FLASHMEM void configure_comm(console *const cnsl, comm_io *const device_list)
 
 		size_t device_nr = ch_dev - 'A';
 
-		int  ch_opt = wait_for_key("1. TCP client, 2. TCP server, 3. serial device, 4. SC16IS752, 9. to abort", cnsl, { '1', '2', '3', '4', '9' });
+		int  ch_opt = wait_for_key("1. TCP client, 2. TCP server, 3. serial device, 4. SC16IS752, 5. PST emulation, 9. to abort", cnsl, { '1', '2', '3', '4', '5', '9' });
 		bool rc     = false;
 
 		if (false) {
@@ -336,6 +337,11 @@ FLASHMEM void configure_comm(console *const cnsl, comm_io *const device_list)
 #else
 			cnsl->put_string_lf("Only on microcontrollers");
 #endif
+		}
+		else if (ch_opt == '5') {
+			std::string pps_dev = cnsl->read_line("PPS device name: ");
+			if (pps_dev.empty() == false)
+				rc = device_list->set_device(device_nr, new comm_pst(pps_dev));
 		}
 
 		if (ch_opt != 9 && rc == false)

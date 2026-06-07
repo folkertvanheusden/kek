@@ -34,6 +34,12 @@ set(APP_IMGUI_SOURCES
 	${CMAKE_SOURCE_DIR}/imgui/backends/imgui_impl_sdlrenderer3.cpp
 )
 
+if (EXISTS "/usr/include/sys/timepps.h")
+	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWITH_PPS=1")
+else ()
+	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWITH_PPS=0")
+endif ()
+
 set(APP_SOURCES
   benchmark.cpp
   blinkenlights.cpp
@@ -47,6 +53,7 @@ set(APP_SOURCES
   bus.cpp
   comm.cpp
   comm_posix_tty.cpp
+  comm_pst.cpp
   comm_tcp_socket_client.cpp
   comm_tcp_socket_server.cpp
   console.cpp
