@@ -711,7 +711,7 @@ int main(int argc, char *argv[])
 
 	if (tape.empty() == false) {
 		if (tape_mode == load_and_run_bic) {
-			auto tape_start = load_tape(b, tape);
+			auto tape_start = load_tape(b, tape, cnsl);
 			if (tape_start.has_value())
 				start_addr = tape_start;
 			else
