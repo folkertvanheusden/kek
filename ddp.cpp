@@ -81,15 +81,16 @@ FLASHMEM bool ddp::begin()
 	return true;
 }
 
-FLASHMEM bool ddp::set_target(const std::string & ip, const int n_pixels)
+FLASHMEM bool ddp::set_target(const std::string & server, const int n_pixels, const uint8_t brightness)
 {
 	my_unique_lock lck(&lock);
-	server         = ip;
-	this->n_pixels = n_pixels;
+	this->server     = server;
+	this->n_pixels   = n_pixels;
+	this->brightness = brightness;
 	return true;
 }
 
-FLASHMEM void ddp::push(bus *const b, const bool running_flag)
+FLASHMEM void ddp::push(console *cnsl, bus *const b)
 {
 	std::string ip;
 	{
@@ -98,32 +99,24 @@ FLASHMEM void ddp::push(bus *const b, const bool running_flag)
 	}
 
 	try {
-		cpu     *const c    = b->getCpu();
-		int      run_mode   = c->getPSW_runmode();
-		uint16_t current_PC = c->getPC();
+		std::vector<std::tuple<uint8_t, uint8_t, uint8_t> > pixels;
+		cnsl->generate_panel_colors(pixels, n_pixels, b, b->getCpu(), brightness);
 
-		size_t   msg_len = 10 + n_pixels * 3;
+		size_t   pixels_allocated = pixels.size();
+		size_t   msg_len = 10 + pixels_allocated * 3;
 		uint8_t *message = new uint8_t[msg_len]();
 		message[0] = (1 << 6) |  // version
 				1;  // push
 		message[2] = (1 << 3) |  // RGB
 			3;  // 8 bits per pixel element
 		message[3] = 1;  // default output device
-		message[8] = (n_pixels * 3) >> 8;  // data length
-		message[9] = (n_pixels * 3) & 255;
-
-		int o = 10 + (current_PC * n_pixels / 65536) * 3;
-
-		if (run_mode == 0)
-			message[o + 0] = 255;  // red
-		else if (run_mode == 1)
-			message[o + 2] = 255;  // blue
-		else if (run_mode == 2) {  // theoretically
-			message[o + 0] = 255;
-			message[o + 1] = 255;
-		}
-		else if (run_mode == 3) {  // green
-			message[o + 1] = 255;
+		message[8] = (pixels_allocated * 3) >> 8;  // data length
+		message[9] = (pixels_allocated * 3) & 255;
+		size_t offset = 10;
+		for(auto pixel: pixels) {
+			message[offset++] = std::get<0>(pixel);
+			message[offset++] = std::get<1>(pixel);
+			message[offset++] = std::get<2>(pixel);
 		}
 
 		send_message(ip, 4048, message, msg_len);

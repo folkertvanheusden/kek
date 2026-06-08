@@ -33,10 +33,6 @@ console_comm::~console_comm()
 	delete io_port;
 }
 
-void console_comm::set_panel_mode(const panel_mode_t)
-{
-}
-
 int console_comm::wait_for_char_ll(const int timeout)
 {
 	for(int i=0; i<timeout / 10 && !stop_panel; i++) {
@@ -77,7 +73,7 @@ void console_comm::panel_update_thread()
 		if (p_blinkenlights)
 			p_blinkenlights->push(b, running_flag);
 		if (p_ddp)
-			p_ddp->push(b, running_flag);
+			p_ddp->push(this, b);
 		// teensy 4.1 does not have atomics, so exchange() won't compile
 		if (do_test_panel) {
 			do_test_panel = false;
