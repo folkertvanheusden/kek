@@ -81,16 +81,15 @@ FLASHMEM bool ddp::begin()
 	return true;
 }
 
-FLASHMEM bool ddp::set_target(const std::string & server, const int n_pixels, const uint8_t brightness)
+FLASHMEM bool ddp::set_target(const std::string & server, const int n_pixels)
 {
 	my_unique_lock lck(&lock);
-	this->server     = server;
-	this->n_pixels   = n_pixels;
-	this->brightness = brightness;
+	this->server   = server;
+	this->n_pixels = n_pixels;
 	return true;
 }
 
-FLASHMEM void ddp::push(console *cnsl, bus *const b)
+FLASHMEM void ddp::push(console *cnsl, bus *const b, const uint8_t brightness)
 {
 	std::string ip;
 	{

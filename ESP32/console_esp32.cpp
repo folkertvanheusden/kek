@@ -70,7 +70,7 @@ void console_esp32::refresh_virtual_terminal()
 }
 
 #if defined(NEOPIXELS_PIN)
-void test_leds(Adafruit_NeoPixel *const pixels, const int n_leds)
+void test_leds(Adafruit_NeoPixel *const pixels, const int n_leds, const uint8_t brightness)
 {
 	// initial animation
 	for(int i=0; i<n_leds; i++) {
@@ -109,7 +109,7 @@ void console_esp32::panel_update_thread()
 	pixels->show();
 
 #if defined(NEOPIXELS_PIN)
-	test_leds(pixels, n_leds);
+	test_leds(pixels, n_leds, brightness);
 #endif
 
 	pixels->clear();
@@ -125,21 +125,21 @@ void console_esp32::panel_update_thread()
 			if (p_ddp)
 				p_ddp->test();
 #if defined(NEOPIXELS_PIN)
-			test_leds(pixels, n_leds);
+			test_leds(pixels, n_leds, brightness);
 #endif
 		}
 
 		if (p_blinkenlights)
-			p_blinkenlights->push(this);
+			p_blinkenlights->push(b, running_flag);
 
 		if (p_ddp)
-			p_ddp->push(this);
+			p_ddp->push(this, b, brightness);
 
-		std::vector<std::tuple<uint8_t, uint8_t, uint8_t> > pixels;
-		cnsl->generate_panel_colors(pixels, n_leds, b, b->getCpu());
+		std::vector<std::tuple<uint8_t, uint8_t, uint8_t> > pixel_vec;
+		generate_panel_colors(pixel_vec, n_leds, b, b->getCpu(), brightness);
 
-		for(size_t i=0; i<pixels.size(); i++) {
-			auto & pixel = pixels.at(i);
+		for(size_t i=0; i<pixel_vec.size(); i++) {
+			auto & pixel = pixel_vec.at(i);
 			pixels->setPixelColor(i, std::get<0>(pixel), std::get<1>(pixel), std::get<2>(pixel));
 		}
 		pixels->show();

@@ -1390,13 +1390,18 @@ FLASHMEM cmd_rc cmd_blights(console *const cnsl, const std::vector<std::string> 
 	return debugger_continue;
 }
 
+FLASHMEM cmd_rc cmd_panel_brightness(console *const cnsl, const std::vector<std::string> & parts, bus *const, cpu *const, debugger_state *const, kek_event_t *const)
+{
+	cnsl->set_panel_brightness(std::stoi(parts[1]));
+	return debugger_continue;
+}
+
 FLASHMEM cmd_rc cmd_ddp(console *const cnsl, const std::vector<std::string> & parts, bus *const, cpu *const, debugger_state *const, kek_event_t *const)
 {
 	if (network_configured == false)
 		cnsl->put_string_lf("Please configure network first (cfgnet)");
-	else if (parts.size() == 3 || parts.size() == 4) {
-		uint8_t brightness = parts.size() == 4 ? std::stoi(parts[3]) : 16;
-		ddp_->set_target(parts[1], std::stoi(parts[2]), brightness);
+	else if (parts.size() == 3) {
+		ddp_->set_target(parts[1], std::stoi(parts[2]));
 		cnsl->set_ddp_panel(ddp_);
 	}
 	else {
@@ -1608,6 +1613,7 @@ constexpr const cmd_pair cmd_pairs[] {
 	{ "getinthz", "", "get KW11-L interrupt frequency (Hz)", cmd_getinthz, cmd_pair::par_no },
 	{ "blights", "ip-addr", "enable blinkenlights panel on selected IP address", cmd_blights, cmd_pair::par_yes },
 	{ "ddp", "ip-addr LED_count", "enable ddp panel on selected IP address fro LED_count LEDs", cmd_ddp, cmd_pair::par_yes },
+	{ "pbright", "brightness", "set panel brightness (1-127)", cmd_panel_brightness, cmd_pair::par_yes },
 	{ "ramsize", "pages", "set ram size (page (8 kB) count, decimal)", cmd_ramsize, cmd_pair::par_yes },
 	{ "cls", "", "clear screen", cmd_cls, cmd_pair::par_no },
 	{ "stats", "", "show run statistics", cmd_stats, cmd_pair::par_no },

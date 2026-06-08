@@ -138,7 +138,7 @@ void console_ncurses::panel_update_thread()
 		if (p_blinkenlights)
 			p_blinkenlights->push(b, running_flag);
 		if (p_ddp)
-			p_ddp->push(this, b);
+			p_ddp->push(this, b, brightness);
 
 		if (do_test_panel) {
 			do_test_panel = false;
