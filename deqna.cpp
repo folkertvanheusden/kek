@@ -93,7 +93,7 @@ void deqna::queue_rx_packet(const uint8_t *const in, const size_t n)
 std::string to_hex(const uint8_t *const data, const size_t n_bytes)
 {
 	std::string out;
-	for(auto i=0; i<n_bytes; i++) {
+	for(size_t i=0; i<n_bytes; i++) {
 		if (i)
 			out += " ";
 		out += format("%02x", data[i]);

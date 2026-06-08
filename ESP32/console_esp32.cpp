@@ -19,6 +19,7 @@
 #else
 #include "esp32.h"
 #endif
+#include "ddp.h"
 #include "error.h"
 #include "utils.h"
 
@@ -137,6 +138,8 @@ void console_esp32::panel_update_thread()
 			do_test_panel = false;
 			if (p_blinkenlights)
 				p_blinkenlights->test();
+			if (p_ddp)
+				p_ddp->test();
 #if defined(NEOPIXELS_PIN)
 			test_leds(pixels, n_leds);
 #endif
@@ -144,6 +147,8 @@ void console_esp32::panel_update_thread()
 
 		if (p_blinkenlights)
 			p_blinkenlights->push(b, running_flag);
+		if (p_ddp)
+			p_ddp->push(b, running_flag);
 
 		try {
 			// note that these are approximately as there's no mutex on the emulation

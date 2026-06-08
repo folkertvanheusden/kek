@@ -12,6 +12,7 @@
 
 #include "blinkenlights.h"
 #include "console_posix.h"
+#include "ddp.h"
 #include "error.h"
 #include "gen.h"
 
@@ -134,17 +135,31 @@ void console_posix::panel_update_thread()
 {
 	set_thread_name("kek:c-panel");
 
+	timespec next { };
+	clock_gettime(CLOCK_MONOTONIC, &next);
+
+	uint64_t add = 1'000'000'000 / refreshrate;
 	while(*stop_event != EVENT_TERMINATE && stop_panel == false) {
-		myusleep(1000000 / refreshrate);
+		next.tv_nsec += add;
+		while (next.tv_nsec >= 1'000'000'000) {
+			next.tv_nsec -= 1'000'000'000;
+			next.tv_sec++;
+		}
+		clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next, nullptr);
 
 		if (p_blinkenlights) {
 			p_blinkenlights->push(b, running_flag);
-
-			if (do_test_panel) {
-				do_test_panel = false;
+			if (do_test_panel)
 				p_blinkenlights->test();
-			}
 		}
+
+		if (p_ddp) {
+			p_ddp->push(b, running_flag);
+			if (do_test_panel)
+				p_ddp->test();
+		}
+
+		do_test_panel = false;
 	}
 }
 

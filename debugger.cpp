@@ -32,6 +32,7 @@
 #include "comm_esp32_hardwareserial.h"
 #include "comm_esp32_SC16IS752.h"
 #endif
+#include "ddp.h"
 #include "deqna.h"
 #include "disk_backend.h"
 #if IS_POSIX || defined(_WIN32)
@@ -56,9 +57,8 @@
 #include "utils.h"
 
 
-#if !defined(TEENSY4_1)
 extern blinkenlights *bl;
-#endif
+extern ddp           *ddp_;
 
 #if defined(ESP32) || defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 bool network_configured = false;
@@ -1395,7 +1395,6 @@ FLASHMEM cmd_rc cmd_getinthz(console *const cnsl, const std::vector<std::string>
 	return debugger_continue;
 }
 
-#if !defined(TEENSY4_1)
 FLASHMEM cmd_rc cmd_blights(console *const cnsl, const std::vector<std::string> & parts, bus *const, cpu *const, debugger_state *const, kek_event_t *const)
 {
 	if (network_configured == false)
@@ -1412,7 +1411,21 @@ FLASHMEM cmd_rc cmd_blights(console *const cnsl, const std::vector<std::string> 
 	}
 	return debugger_continue;
 }
-#endif
+
+FLASHMEM cmd_rc cmd_ddp(console *const cnsl, const std::vector<std::string> & parts, bus *const, cpu *const, debugger_state *const, kek_event_t *const)
+{
+	if (network_configured == false)
+		cnsl->put_string_lf("Please configure network first (cfgnet)");
+	else if (parts.size() == 3) {
+		ddp_->set_target(parts[1], std::stoi(parts[2]));
+		cnsl->set_ddp_panel(ddp_);
+	}
+	else {
+		cnsl->set_ddp_panel(nullptr);
+		cnsl->put_string_lf("DDP panel disabled (IP address and/or LED count missing)");
+	}
+	return debugger_continue;
+}
 
 FLASHMEM cmd_rc cmd_ramsize(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const, debugger_state *const, kek_event_t *const)
 {
@@ -1608,9 +1621,8 @@ constexpr const cmd_pair cmd_pairs[] {
 	{ "cdz11", "", "configure DZ11 device", cmd_cdz11, cmd_pair::par_no },
 	{ "setinthz", "freq", "set KW11-L interrupt frequency (Hz)", cmd_setinthz, cmd_pair::par_yes },
 	{ "getinthz", "", "get KW11-L interrupt frequency (Hz)", cmd_getinthz, cmd_pair::par_no },
-#if !defined(TEENSY4_1)
-	{ "blights", "ip addr", "enable blinkenlights on selected IP address", cmd_blights, cmd_pair::par_yes },
-#endif
+	{ "blights", "ip-addr", "enable blinkenlights panel on selected IP address", cmd_blights, cmd_pair::par_yes },
+	{ "ddp", "ip-addr LED_count", "enable ddp panel on selected IP address fro LED_count LEDs", cmd_ddp, cmd_pair::par_yes },
 	{ "ramsize", "pages", "set ram size (page (8 kB) count, decimal)", cmd_ramsize, cmd_pair::par_yes },
 	{ "cls", "", "clear screen", cmd_cls, cmd_pair::par_no },
 	{ "stats", "", "show run statistics", cmd_stats, cmd_pair::par_no },

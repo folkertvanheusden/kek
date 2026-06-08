@@ -42,6 +42,7 @@
 #endif
 #include "console_esp32.h"
 #include "cpu.h"
+#include "ddp.h"
 #include "debugger.h"
 #include "disk_backend.h"
 #include "disk_backend_esp32.h"
@@ -73,9 +74,8 @@ kek_event_t    stop_event   { EVENT_NONE        };
 abool         *running      { nullptr           };
 bool           trace_output { false             };
 comm          *cs           { nullptr           };  // Console Serial
-#if !defined(TEENSY4_1)
 blinkenlights *bl           { new blinkenlights };
-#endif
+ddp           *ddp_         { new ddp           };
 
 static void console_thread_wrapper_panel(void *const c)
 {
@@ -194,14 +194,14 @@ FLASHMEM void finish_start_network(console *const c)
     c->put_string_lf(format("Local IP address: %s", WiFi.localIP().toString().c_str()));
 #endif
 
-#if !defined(TEENSY4_1)
     bl->begin();
     auto bl_ip = get_configuration_string(BLINKENLIGHTS_CFG_FILE, "");
     if (bl_ip.empty() == false) {
       cnsl->put_string_lf(format("Using PiDP11 blinkenlights on IP address %s", bl_ip.c_str()));
       bl->set_target(bl_ip);
     }
-#endif
+
+    ddp_->begin();
 
     static bool dz11_loaded = false;
     if (!dz11_loaded) {

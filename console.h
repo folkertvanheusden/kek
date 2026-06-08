@@ -23,6 +23,7 @@
 class blinkenlights;
 class bus;
 class console;
+class ddp;
 class tty;
 
 using explode_func_t = std::optional<std::string> (*)(console *const cnsl, const std::string & current_in);
@@ -37,6 +38,7 @@ protected:
 	kek_event_t            *const stop_event { nullptr };
 	abool                   stop_panel       { false   };
 	blinkenlights          *p_blinkenlights  { nullptr };
+	ddp                    *p_ddp            { nullptr };
 
 	bus                    *b                { nullptr };
 #if !defined(BUILD_FOR_PICO2W) && !defined(TEENSY4_1)
@@ -108,6 +110,7 @@ public:
 	abool * get_network_activity_flag()    { return &network_activity_flag;    }
 
 	void         set_blinkenlights_panel(blinkenlights *const p_blinkenlights);
+	void         set_ddp_panel(ddp *const p_ddp);
 	void         stop_panel_thread() { stop_panel = true; }
 	virtual void panel_update_thread() = 0;
 	int          get_refreshrate(              ) const { return refreshrate; }
