@@ -679,7 +679,7 @@ int main(int argc, char *argv[])
 	if (ddp_->begin()) {
 		cnsl->set_ddp_panel(ddp_);
 		if (ddp_ip.empty() == false && ddp_n_pixels > 0)
-			ddp_->set_target(ddp_ip, ddp_n_pixels);
+			ddp_->set_target(ddp_ip, ddp_n_pixels, 64);
 	}
 	else {
 		DOLOG(log_ss::LS_GENERIC, "Cannot initialize ddp");
