@@ -1392,7 +1392,7 @@ FLASHMEM cmd_rc cmd_blights(console *const cnsl, const std::vector<std::string> 
 
 FLASHMEM cmd_rc cmd_panel_brightness(console *const cnsl, const std::vector<std::string> & parts, bus *const, cpu *const, debugger_state *const, kek_event_t *const)
 {
-	cnsl->set_panel_brightness(std::stoi(parts[1]));
+	cnsl->set_panel_brightness(std::min(127, std::stoi(parts[1])));
 	return debugger_continue;
 }
 
