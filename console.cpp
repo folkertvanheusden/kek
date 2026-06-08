@@ -336,6 +336,11 @@ void console::set_panel_mode(const panel_mode_t pm)
 	panel_mode = pm;
 }
 
+void console::set_panel_brightness(const uint8_t b)
+{
+	brightness = b;
+}
+
 static void add_pixel(std::vector<std::tuple<uint8_t, uint8_t, uint8_t> > & to, const uint8_t color[])
 {
 	to.push_back({ color[0], color[1], color[2] });

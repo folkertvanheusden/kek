@@ -56,6 +56,7 @@ protected:
 	abool                   network_activity_flag    { false };
 	abool                   running_flag     { false };
 	abool                   do_test_panel    { false };
+	uint8_t                 brightness       { 16    };
 
 	bool                    stop_thread_flag { false };
 
@@ -117,6 +118,7 @@ public:
 	void generate_panel_colors(std::vector<std::tuple<uint8_t, uint8_t, uint8_t> > & to, const size_t n_leds, bus *const b, cpu *const c, const uint8_t brightness);
 
 	void         set_panel_mode(const panel_mode_t pm);
+	void         set_panel_brightness(const uint8_t b);
 	void         set_blinkenlights_panel(blinkenlights *const p_blinkenlights);
 	void         set_ddp_panel(ddp *const p_ddp);
 	void         stop_panel_thread() { stop_panel = true; }
