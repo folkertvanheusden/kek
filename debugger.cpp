@@ -1394,8 +1394,9 @@ FLASHMEM cmd_rc cmd_ddp(console *const cnsl, const std::vector<std::string> & pa
 {
 	if (network_configured == false)
 		cnsl->put_string_lf("Please configure network first (cfgnet)");
-	else if (parts.size() == 3) {
-		ddp_->set_target(parts[1], std::stoi(parts[2]));
+	else if (parts.size() == 3 || parts.size() == 4) {
+		uint8_t brightness = parts.size() == 4 ? std::stoi(parts[3]) : 16;
+		ddp_->set_target(parts[1], std::stoi(parts[2]), brightness);
 		cnsl->set_ddp_panel(ddp_);
 	}
 	else {
@@ -1485,13 +1486,19 @@ FLASHMEM cmd_rc cmd_dp(console *const cnsl, const std::vector<std::string> &, bu
 	return debugger_continue;
 }
 
-#if defined(ESP32) || defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 FLASHMEM cmd_rc cmd_pm(console *const cnsl, const std::vector<std::string> & parts, bus *const, cpu *const, debugger_state *const, kek_event_t *const)
 {
-	reinterpret_cast<console_esp32 *>(cnsl)->set_panel_mode(parts[1] == "bits" ? console_esp32::PM_BITS : console_esp32::PM_POINTER);
+	console::panel_mode_t mode = console::PM_BITS;
+	if (parts[1] == "bits") {
+	}
+	else if (parts[1] == "address1")
+		mode = console::PM_ADDRESS1;
+	else if (parts[1] == "address2") {
+		mode = console::PM_ADDRESS2;
+	}
+	cnsl->set_panel_mode(mode);
 	return debugger_continue;
 }
-#endif
 
 FLASHMEM cmd_rc cmd_refr(console *const cnsl, const std::vector<std::string> & parts, bus *const, cpu *const, debugger_state *const, kek_event_t *const)
 {
@@ -1609,9 +1616,7 @@ constexpr const cmd_pair cmd_pairs[] {
 	{ "lt", "filename", "load tape", cmd_lt, cmd_pair::par_yes },
 	{ "ult", "", "unload tape", cmd_ult, cmd_pair::par_no },
 	{ "dp", "", "disable panel", cmd_dp, cmd_pair::par_no },
-#if defined(ESP32) || defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
-	{ "pm", "mode", "panel mode (bits or address)", cmd_pm, cmd_pair::par_yes },
-#endif
+	{ "pm", "mode", "panel mode (bits, address1 or address2)", cmd_pm, cmd_pair::par_yes },
 	{ "refr", "fps", "set panel refreshrate", cmd_refr, cmd_pair::par_yes },
 #if defined(ESP32) || defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 	{ "cfgnet", "", "configure network (e.g. WiFi)", cmd_cfgnet, cmd_pair::par_no },

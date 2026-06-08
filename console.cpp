@@ -11,7 +11,9 @@
 #include <string>
 #include <string.h>
 
+#include "bus.h"
 #include "console.h"
+#include "cpu.h"
 #include "log.h"
 #include "tty.h"
 #include "utils.h"
@@ -327,4 +329,95 @@ void console::set_LED_state(const bool)
 
 void console::pulse_LED()
 {
+}
+
+void console::set_panel_mode(const panel_mode_t pm)
+{
+	panel_mode = pm;
+}
+
+static void add_pixel(std::vector<std::tuple<uint8_t, uint8_t, uint8_t> > & to, const uint8_t color[])
+{
+	to.push_back({ color[0], color[1], color[2] });
+}
+
+void console::generate_panel_colors(std::vector<std::tuple<uint8_t, uint8_t, uint8_t> > & to, const size_t n_leds, bus *const b, cpu *const c, const uint8_t brightness)
+{
+	const uint8_t black  [] = { 0,          0,          0          };
+	const uint8_t magenta[] = { brightness, 0,          brightness };
+	const uint8_t red    [] = { brightness, 0,          0          };
+	const uint8_t green  [] = { 0,          brightness, 0          };
+	const uint8_t blue   [] = { 0,          0,          brightness };
+	const uint8_t yellow [] = { brightness, brightness, 0          };
+	const uint8_t white  [] = { brightness, brightness, brightness };
+	const uint8_t *const run_mode_led_color[4] = { red, yellow, blue, green };
+
+	try {
+		// note that these are approximately as there's no mutex on the emulation
+		uint16_t       current_PSW   = c->getPSW();
+		int            run_mode      = current_PSW >> 14;
+		const uint8_t *led_color     = run_mode_led_color[run_mode];
+		uint16_t       current_PC    = c->getPC();
+
+		switch(panel_mode) {
+			case PM_BITS: {
+					      memory_addresses_t rc            = b->getMMU()->calculate_physical_address(run_mode, current_PC);
+					      auto               current_instr = b->peek_word(run_mode, current_PC);
+
+					      for(uint8_t b=0; b<22; b++)
+						      add_pixel(to, rc.physical_instruction & (1 << b) ? led_color : black);
+
+					      for(uint8_t b=0; b<3; b++)
+						      add_pixel(to, rc.apf ? yellow : black);
+
+					      add_pixel(to, rc.physical_instruction_is_psw | rc.physical_data_is_psw ? blue : black);
+
+					      add_pixel(to, b->getMMU()->is_enabled() ? white : black);
+
+					      add_pixel(to, b->getMMU()->getMMR3() & 7 ? white : black);
+
+					      for(uint8_t b=0; b<16; b++)
+						      add_pixel(to, current_PSW & (1l << b) ? magenta : black);
+
+					      if (current_instr.has_value()) {
+						      for(uint8_t b=0; b<16; b++)
+							      add_pixel(to, current_instr.value() & (1l << b) ? red : black);
+					      }
+					      else {
+						      for(uint8_t b=0; b<16; b++)
+							      add_pixel(to, black);
+					      }
+
+					      add_pixel(to, running_flag             ? white : black);
+
+					      add_pixel(to, disk_read_activity_flag  ? blue  : black);
+					      disk_read_activity_flag  = false;
+					      add_pixel(to, disk_write_activity_flag ? blue  : black);
+					      disk_write_activity_flag = false;
+
+					      add_pixel(to, network_activity_flag    ? yellow: black);
+					      network_activity_flag    = false;
+				      }
+				      break;
+
+			case PM_ADDRESS1:
+				to.resize(n_leds);
+				to[current_PC * to.size() / 65536] = { led_color[0], led_color[1], led_color[2] };
+				break;
+
+			case PM_ADDRESS2:
+				to.resize(n_leds);
+				to[current_PC % to.size()] = { led_color[0], led_color[1], led_color[2] };
+				break;
+		}
+	}
+	catch(const std::exception & e) {
+		put_string_lf(format("Exception in generate_panel_colors: %s", e.what()));
+	}
+	catch(const int e) {
+		put_string_lf(format("Exception in generate_panel_colors: %d", e));
+	}
+	catch(...) {
+		put_string_lf("Unknown exception in generate_panel_colors");
+	}
 }

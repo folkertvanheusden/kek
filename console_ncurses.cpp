@@ -11,6 +11,7 @@
 #include "bus.h"
 #include "console_ncurses.h"
 #include "cpu.h"
+#include "ddp.h"
 #include "error.h"
 #include "gen.h"
 #include "utils.h"
@@ -134,13 +135,17 @@ void console_ncurses::panel_update_thread()
 	while(*stop_event != EVENT_TERMINATE && stop_panel == false) {
 		myusleep(1000000 / refreshrate);
 
-		if (p_blinkenlights) {
+		if (p_blinkenlights)
 			p_blinkenlights->push(b, running_flag);
+		if (p_ddp)
+			p_ddp->push(this, b);
 
-			if (do_test_panel) {
-				do_test_panel = false;
+		if (do_test_panel) {
+			do_test_panel = false;
+			if (p_blinkenlights)
 				p_blinkenlights->test();
-			}
+			if (p_ddp)
+				p_ddp->test();
 		}
 
 		// note that these are approximately as there's no mutex on the emulation
