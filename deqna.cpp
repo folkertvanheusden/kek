@@ -484,7 +484,7 @@ FLASHMEM bool deqna::test(console *const cnsl)
 	cnsl->put_string(format("Please wait %.3f seconds...", duration / 1'000'000.));
 
 	if (eth_dev) {
-		uint8_t buffer[14 + 44] { };
+		uint8_t buffer[14 + 46] { };
 		memcpy(&buffer[0], bc_addr,     6);
 		memcpy(&buffer[6], mac_address, 6);
 		buffer[12] = 0x08;  // ARP packet
@@ -545,8 +545,17 @@ FLASHMEM bool deqna::test(console *const cnsl)
 		return true;
 	}
 
-	cnsl->put_string_lf("No transport medium configured");
+	if (cnsl)
+		cnsl->put_string_lf("No transport medium configured");
 	return false;
+}
+
+FLASHMEM void deqna::set_monitor_mode(const monitor_mode_t mode, console *const cnsl)
+{
+	monitor_mode = mode;
+	this->cnsl = cnsl;
+	if (eth_dev)
+		eth_dev->set_trace(mode == ll_trace);
 }
 
 FLASHMEM void get_deqna_mac(uint8_t *const to)

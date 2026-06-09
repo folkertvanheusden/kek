@@ -73,7 +73,7 @@ void console_comm::panel_update_thread()
 		if (p_blinkenlights)
 			p_blinkenlights->push(b, running_flag);
 		if (p_ddp)
-			p_ddp->push(this, b);
+			p_ddp->push(this, b, brightness);
 		// teensy 4.1 does not have atomics, so exchange() won't compile
 		if (do_test_panel) {
 			do_test_panel = false;

@@ -3,18 +3,18 @@
 #include <string>
 
 #include "eth_transport.h"
+#include "my_lock.h"
 
 
 class eth_transport_teensy4_1: public eth_transport
 {
-private:
-	uint8_t mac_address[6];
-
 public:
 	eth_transport_teensy4_1(const uint8_t mac[6]);
 	virtual ~eth_transport_teensy4_1();
 
 	bool begin() override;
+
+	void set_trace(const bool state) override;
 
 	std::string identifier() const override;
 

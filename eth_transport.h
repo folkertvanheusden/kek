@@ -11,14 +11,17 @@ class console;
 class eth_transport
 {
 protected:
-	uint64_t    pkt_cnt_rx     { 0 };
-	uint64_t    pkt_cnt_tx     { 0 };
+	uint64_t    pkt_cnt_rx     { 0     };
+	uint64_t    pkt_cnt_tx     { 0     };
+	bool        trace          { false };
 
 public:
 	eth_transport();
 	virtual ~eth_transport();
 
 	virtual bool begin() = 0;
+
+	virtual void set_trace(const bool state) { trace = state; }
 
 	virtual std::string identifier() const = 0;
 	virtual void show_state(console *const cnsl) const;

@@ -18,7 +18,7 @@ public:
         ~ddp();
 
         bool begin();
-        bool set_target(const std::string & ip, const int n_pixels, const uint8_t brightness);
-        void push(console *cnsl, bus *const b);
+        bool set_target(const std::string & ip, const int n_pixels);
+	void push(console *cnsl, bus *const b, const uint8_t brightness);
         void test();
 };
