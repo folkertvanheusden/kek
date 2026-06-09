@@ -1294,32 +1294,52 @@ FLASHMEM cmd_rc cmd_deqna(console *const cnsl, const std::vector<std::string> & 
 	return debugger_continue;
 }
 
-FLASHMEM cmd_rc cmd_test(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const, debugger_state *const, kek_event_t *const)
+FLASHMEM cmd_rc cmd_test(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const, debugger_state *const, kek_event_t *const stop_event)
 {
-	if (parts[1] == "deqna") {
-		auto deqna = b->getDEQNA();
-		if (deqna) {
-			if (deqna->test(cnsl))
-				cnsl->put_string_lf("DEQNA test succeeded!");
+	std::string which;
+	bool        repeat = false;
+	int         delay  = 0;
+
+	for(size_t i=1; i<parts.size(); i++) {
+		if (parts[i] == "-r")
+			repeat = true;
+		else if (parts[i] == "-d")
+			delay = std::stoi(parts[++i]);
+		else
+			which = parts[i];
+	}
+
+	do {
+		if (which == "deqna") {
+			auto deqna = b->getDEQNA();
+			if (deqna) {
+				if (deqna->test(cnsl))
+					cnsl->put_string_lf("DEQNA test succeeded!");
+				else
+					cnsl->put_string_lf("DEQNA test failed");
+			}
+			else {
+				cnsl->put_string_lf("DEQNA emulation is not configured yet");
+			}
+		}
+		else if (which =="dz11") {
+			if (b->getDZ11())
+				b->getDZ11()->test_ports(parts.size() == 3 ? std::stoi(parts[2]) : 1);
 			else
-				cnsl->put_string_lf("DEQNA test failed");
+				cnsl->put_string_lf("DZ11 not started yet, first invoke \"startnet\"");
+		}
+		else if (which =="panel") {
+			cnsl->test_panel();
 		}
 		else {
-			cnsl->put_string_lf("DEQNA emulation is not configured yet");
+			cnsl->put_string_lf("?");
 		}
+
+		if (delay)
+			myusleep(delay * 1000);
 	}
-	else if (parts[1] =="dz11") {
-		if (b->getDZ11())
-			b->getDZ11()->test_ports(parts.size() == 3 ? std::stoi(parts[2]) : 1);
-		else
-			cnsl->put_string_lf("DZ11 not started yet, first invoke \"startnet\"");
-	}
-	else if (parts[1] =="panel") {
-		cnsl->test_panel();
-	}
-	else {
-		cnsl->put_string_lf("?");
-	}
+	while(repeat && load_relaxed_p(stop_event) == EVENT_NONE);
+
 	return debugger_continue;
 }
 
@@ -1333,6 +1353,8 @@ FLASHMEM cmd_rc cmd_mdeqna(console *const cnsl, const std::vector<std::string> &
 			mode = deqna::filtered;
 		else if (parts[1] == "everything")
 			mode = deqna::everything;
+		else if (parts[1] == "ll-trace")
+			mode = deqna::ll_trace;
 		else if (parts[1] == "none") {
 		}
 		else
@@ -1605,8 +1627,8 @@ constexpr const cmd_pair cmd_pairs[] {
 	{ "toggle", "s t", "set switch (s=, 0...15 (decimal)) of the front panel to state (t=, 0 or 1)", cmd_toggle, cmd_pair::par_yes },
 	{ "pcmon", "x", "track for x cycles what memory addresses were read an instruction from", cmd_pcmon, cmd_pair::par_yes },
 	{ "deqna", "x[,y,z]", "set deqna emulation to use (x): \"linux\" (tap), \"teensy4.1\", \"esp32\" or \"vxlan\" (with host (y) & port (z))", cmd_deqna, cmd_pair::par_yes },
-	{ "test", "x", "test the dz11/DEQNA/panel emulation", cmd_test, cmd_pair::par_yes },
-	{ "mdeqna", "mode", "set DEQNA monitor mode: none, filtered, everything", cmd_mdeqna, cmd_pair::par_yes },
+	{ "test", "x", "test the dz11/deqna/panel emulation, -r to continue until ^e is pressed, -d x: sleep x ms between each iteration", cmd_test, cmd_pair::par_yes },
+	{ "mdeqna", "mode", "set DEQNA monitor mode: none, filtered, ll-trace, everything", cmd_mdeqna, cmd_pair::par_yes },
 	{ "cfgdisk", "", "configure disk", cmd_cfgdisk, cmd_pair::par_no },
 	{ "cdz11", "", "configure DZ11 device", cmd_cdz11, cmd_pair::par_no },
 	{ "setinthz", "freq", "set KW11-L interrupt frequency (Hz)", cmd_setinthz, cmd_pair::par_yes },
