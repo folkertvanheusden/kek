@@ -35,6 +35,9 @@ private:
 	uint64_t           total_ticks   { 0       };
 	uint64_t           enabled_ticks { 0       };
 	uint64_t           int_triggered { 0       };
+	uint64_t           prev_instructions_executed { 0 };
+	uint64_t           max_instructions_count { 0 };
+	uint64_t           last_instructions_count { 0 };
 
 	abool              stop_flag  { false   };
 

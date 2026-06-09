@@ -74,3 +74,6 @@ typedef enum { wm_word = 0, wm_byte = 1 } word_mode_t;
 #ifndef DMAMEM
 #define DMAMEM
 #endif
+#ifndef EXTMEM
+#define EXTMEM
+#endif

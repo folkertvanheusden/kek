@@ -2,6 +2,9 @@
 // Released under MIT license
 
 #include "gen.h"
+#if defined(LOAD_GAUGE_PIN)
+#include <Arduino.h>
+#endif
 #include <cinttypes>
 #include <unistd.h>
 
@@ -68,11 +71,18 @@ FLASHMEM void kw11_l::show_state(console *const cnsl) const
 {
 	cnsl->put_string_lf(format("CSR: %06o", lf_csr));
 	cnsl->put_string_lf(format("%" PRIu64 " total ticks, %" PRIu64 " while enabled, %" PRIu64 " interrupts", total_ticks, enabled_ticks, int_triggered));
+	cnsl->put_string_lf(format("last instruction count (for load calculation): %" PRIu64 ", divider: %" PRIu64, last_instructions_count, max_instructions_count));
 }
 
 void kw11_l::begin(console *const cnsl)
 {
 	this->cnsl = cnsl;
+
+#if defined(LOAD_GAUGE_PIN)
+	pinMode(LOAD_GAUGE_PIN, OUTPUT);
+	analogWriteFrequency(2, 5000);
+	analogWriteResolution(2, 8);
+#endif
 
 #if defined(ESP32)
 	const esp_timer_create_args_t periodic_timer_args = {
@@ -132,8 +142,23 @@ void kw11_l::tick()
 	total_ticks++;
 
 	cnsl->set_LED_state(false);
-	if (*cnsl->get_running_flag())
+
+#if defined(LOAD_GAUGE_PIN)
+	uint64_t instr_exec_count = b->getCpu()->get_instructions_executed_count();
+	uint64_t count_last_interval = instr_exec_count < prev_instructions_executed ? 0 : instr_exec_count - prev_instructions_executed;
+	// can become negative when a CPU reset is invoked
+	max_instructions_count = std::max(max_instructions_count, count_last_interval);
+//#if defined(TEENSY4_1)
+	analogWrite(LOAD_GAUGE_PIN, count_last_interval * 255 / std::max(uint64_t(1), max_instructions_count));
+//#elif defined(ESP32)
+//#endif
+	prev_instructions_executed = instr_exec_count;
+#endif
+
+	if (*cnsl->get_running_flag()) {
 		do_interrupt();
+		last_instructions_count = count_last_interval;
+	}
 }
 
 #if !defined(TEENSY4_1) && !defined(BUILD_FOR_PICO2W)
