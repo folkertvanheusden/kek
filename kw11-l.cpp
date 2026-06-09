@@ -71,7 +71,9 @@ FLASHMEM void kw11_l::show_state(console *const cnsl) const
 {
 	cnsl->put_string_lf(format("CSR: %06o", lf_csr));
 	cnsl->put_string_lf(format("%" PRIu64 " total ticks, %" PRIu64 " while enabled, %" PRIu64 " interrupts", total_ticks, enabled_ticks, int_triggered));
+#if defined(LOAD_GAUGE_PIN)
 	cnsl->put_string_lf(format("last instruction count (for load calculation): %" PRIu64 ", divider: %" PRIu64, last_instructions_count, max_instructions_count));
+#endif
 }
 
 void kw11_l::begin(console *const cnsl)
@@ -157,7 +159,9 @@ void kw11_l::tick()
 
 	if (*cnsl->get_running_flag()) {
 		do_interrupt();
+#if defined(LOAD_GAUGE_PIN)
 		last_instructions_count = count_last_interval;
+#endif
 	}
 }
 
