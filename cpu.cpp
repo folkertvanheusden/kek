@@ -1238,7 +1238,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 
 		case 0b00110101: { // MFPD/MFPI
 					 // always words: word_mode-bit is to select between MFPI and MFPD
-					 uint16_t v = 0xffff;
+					 uint16_t v = 0;
 
 					 if (dst_mode == 0) {
 						 if (dst_reg == 6)
