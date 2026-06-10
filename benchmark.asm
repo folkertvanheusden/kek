@@ -79,7 +79,7 @@ start:
         MOV     #trap_isr, @#34
         MOV     #0300,     @#36
 
-        spl 0
+        spl 5
 
         mov #text_go,R2
         JSR PC,PRINT
@@ -106,7 +106,7 @@ loop_:
         add #123, R6
         sub #123, R6
         mov R1,R6
-        SPL 0
+        SPL 5
         ; PC
         ADD #2, R7
         NOP
