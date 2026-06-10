@@ -16,7 +16,7 @@ int parity(int v);
 
 std::string format(const char *const fmt, ...);
 
-std::vector<std::string> split(std::string in, std::string splitter);
+std::vector<std::string> split(std::string in, const std::string & splitter);
 
 uint64_t get_ms();
 uint64_t get_us();

@@ -129,7 +129,7 @@ void myusleep(uint64_t us)
 #endif
 }
 
-std::vector<std::string> split(std::string in, std::string splitter)
+std::vector<std::string> split(std::string in, const std::string & splitter)
 {
 	std::vector<std::string> out;
 	size_t splitter_size = splitter.size();
