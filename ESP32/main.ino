@@ -66,6 +66,10 @@ console *cnsl = nullptr;
 
 uint16_t exec_addr = 0;
 
+#if defined(TEENSY4_1)
+extern "C" uint8_t external_psram_size;
+#endif
+
 #if !defined(TEENSY4_1) && !defined(BUILD_FOR_PICO2W)
 SdFs SDinstance;
 #endif
@@ -583,7 +587,12 @@ FLASHMEM void setup() {
     if (auto rc = esp_pthread_set_cfg(&config); rc != ESP_OK)
       cs->println(format("esp_pthread_set_cfg(SPI_RAM) failed: %d", rc));
 	}
-#elif defined(ESP32)
+#elif defined(TEENSY4_1)
+  if (external_psram_size > 0) {
+			n_pages = min(external_psram_size * 1024 * 1024 / 8192, uint32_t(512));
+			cs->println(format("Free PSRAM: %d MB (or %d pages (see 'ramsize' in the debugger))", external_psram_size, n_pages));
+  }
+
 	cs->println(format("Free RAM after init (decimal bytes): %d", freeram()));
 #endif
 
