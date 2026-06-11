@@ -1589,7 +1589,7 @@ FLASHMEM cmd_rc cmd_ser(console *const cnsl, const std::vector<std::string> & pa
 }
 #endif
 
-EXTMEM constexpr const cmd_pair cmd_pairs[] {
+constexpr const cmd_pair cmd_pairs[] {
 	{ "help", "", "this help", cmd_help, cmd_pair::par_no },
 	{ "disassemble", "pc=/n=", "show current instruction", cmd_disassemble, cmd_pair::par_yes },
 	{ "go", "", "run until trap or ^e", cmd_go, cmd_pair::par_no },
