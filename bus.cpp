@@ -277,7 +277,7 @@ void bus::del_DZ11()
 	dz11_ = nullptr;
 }
 
-uint16_t bus::read_IO(const uint16_t a, const word_mode_t word_mode, const int run_mode, const d_i_space_t space, const int page)
+uint16_t bus::read_IO(const uint16_t a, const word_mode_t word_mode, const int run_mode, const d_i_space_t space, const int apf, const int page_index)
 {
 	//// REGISTERS ////
 	if (a >= ADDR_KERNEL_R && a <= ADDR_KERNEL_R + 5) { // kernel R0-R5
@@ -314,8 +314,7 @@ uint16_t bus::read_IO(const uint16_t a, const word_mode_t word_mode, const int r
 
 	if ((a & 1) && word_mode == wm_word) [[unlikely]] {
 		DOLOG(log_ss::LS_BUS, "READ-I/O odd address %06o UNHANDLED", a);
-		int page_index = mmu_->calc_par_pdr_index(run_mode, space, page);
-		mmu_->trap_if_odd(page_index);
+		mmu_->trap_if_odd(apf);
 		throw 0;
 		return 0;
 	}
@@ -573,7 +572,7 @@ void bus::verify_pointer_bounds(const uint32_t m_offset, const int page_index)
 uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const int run_mode, const d_i_space_t space_in)
 {
 	auto     space    = mmu_->get_use_data_space(run_mode) ? space_in : i_space;
-	uint32_t m_offset = mmu_->calculate_physical_address(run_mode, addr_in, false, space);
+	const auto [ m_offset, page_index ] = mmu_->calculate_physical_address(run_mode, addr_in, false, space);
 
 	uint32_t io_base  = mmu_->get_io_base();
 	bool     is_io    = m_offset >= io_base;
@@ -581,10 +580,8 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const in
 
 	if (is_io) {
 		uint16_t a = m_offset - io_base + 0160000;  // TODO
-		return read_IO(a, word_mode, run_mode, space, apf);
+		return read_IO(a, word_mode, run_mode, space, apf, page_index);
 	}
-
-	int page_index = mmu_->calc_par_pdr_index(run_mode, space, apf);
 
 	verify_pointer_bounds(m_offset, page_index);
 
@@ -852,8 +849,7 @@ bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, const uint1
 {
 	const uint8_t apf        = addr_in >> 13; // active page field
 	auto          space      = mmu_->get_use_data_space(run_mode) ? space_in : i_space;
-	int           page_index = mmu_->calc_par_pdr_index(run_mode, space, apf);
-	uint32_t      m_offset   = mmu_->calculate_physical_address(run_mode, addr_in, true, space);
+	const auto [ m_offset, page_index ] = mmu_->calculate_physical_address(run_mode, addr_in, false, space);
 
 	uint32_t      io_base    = mmu_->get_io_base();
 	bool          is_io      = m_offset >= io_base;
