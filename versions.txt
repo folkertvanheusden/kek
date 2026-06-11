@@ -1,3 +1,4 @@
+ce12814 0000002a7cee
 af29aa9 00000028b20f
 0ef9615 000000282631
 5b91ec9 000000277cb3
@@ -18,3 +19,4 @@ b8cb87f 000000215d56
 638c0b9 00000020de87
 e964b92 0000001f4c46
         -- older than 831a597 has unusable kw11-l emulation --
+        -- tested on AMD Ryzen 9 7950X3D 16-Core Processor --
