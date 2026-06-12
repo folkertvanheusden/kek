@@ -68,7 +68,8 @@ bool qnethernet_raw_frame_filter(struct pbuf *p, struct netif *netif)
 			Serial.println(format("Pkt to %02x:%02x:%02x:%02x:%02x:%02x processed", 
 						pl[0], pl[1], pl[2], pl[3], pl[4], pl[5]).c_str());
 		memcpy(pkt_temp, pl, len);  // xQueueSend assumes always max_pkt_size
-		xQueueSend(pkt_queue, pkt_temp, 0);
+		if (xQueueSend(pkt_queue, pkt_temp, 0) != pdPASS)
+			return false;
 		return memcmp(pl, bc_addr, 6) != 0;  // both should process broadcastst (arp!)
 	}
 
