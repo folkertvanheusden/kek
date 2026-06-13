@@ -67,6 +67,29 @@ std::optional<std::pair<pps_handle_t, int> > open_pps(const char *const filename
         return { { handle, fd } };
 }
 
+void comm_pst::put_ts(const timespec & tp)
+{
+	const tm *tm = gmtime(&tp.tv_sec);
+
+	uint8_t new_msg_buffer[32];
+	memset(new_msg_buffer, '0', sizeof new_msg_buffer);
+	new_msg_buffer[ 0] = '4';
+	new_msg_buffer[ 1] = '0';
+	int ms = tp.tv_nsec / 1'000'000;
+	new_msg_buffer[ 2] = '0' + ms / 64;
+	new_msg_buffer[ 3] = '0' + (ms & 63);
+	new_msg_buffer[ 4] = '0' + tm->tm_sec;
+	new_msg_buffer[ 5] = '0' + tm->tm_min;
+	new_msg_buffer[ 6] = '0' + tm->tm_hour;
+	new_msg_buffer[ 7] = '0' + tm->tm_yday / 64;
+	new_msg_buffer[ 8] = '0' + (tm->tm_yday & 63);
+	new_msg_buffer[ 9] = '0' + (tm->tm_year + 1900 - 1986);
+	new_msg_buffer[31] = '\n';
+
+	my_unique_lock lck(&msg_buffer_lock);
+	memcpy(msg_buffer, new_msg_buffer, 32);
+}
+
 void comm_pst::operator()()
 {
 	if (dev_name == "-") {
@@ -77,15 +100,8 @@ void comm_pst::operator()()
 
 			timespec tp { };
 			clock_gettime(CLOCK_REALTIME, &tp);
-
-			tm *tm = gmtime(&tp.tv_sec);
-			std::string new_msg_buffer =
-				format(" %02d:%02d:%02d.%03d\r", tm->tm_hour, tm->tm_min, tm->tm_sec, tp.tv_nsec / 1'000'000) +
-				format("%02d/%02d/%02d/%03d\r", (tm->tm_year + 1900) % 100, tm->tm_mon + 1, tm->tm_mday, tm->tm_yday) +
-				"O6@095281804C00000394\r";
-
-			my_unique_lock lck(&msg_buffer_lock);
-			msg_buffer = new_msg_buffer;
+			DOLOG(log_ss::LS_COMM, "fake PPS %ld.%09ld", tp.tv_sec, tp.tv_nsec);
+			put_ts(tp);
 		}
 	}
 	else {
@@ -102,16 +118,8 @@ void comm_pst::operator()()
 				break;
 			}
 
-			DOLOG(log_ss::LS_COMM, "PPS");
-
-			tm *tm = gmtime(&infobuf.assert_timestamp.tv_sec);
-			std::string new_msg_buffer =
-				format(" %02d:%02d:%02d.%03d\r", tm->tm_hour, tm->tm_min, tm->tm_sec, infobuf.assert_timestamp.tv_nsec / 1'000'000) +
-				format("%02d/%02d/%02d/%03d\r", (tm->tm_year + 1900) % 100, tm->tm_mon + 1, tm->tm_mday, tm->tm_yday) +
-				"O6@095281804C00000394\r";
-
-			my_unique_lock lck(&msg_buffer_lock);
-			msg_buffer = new_msg_buffer;
+			DOLOG(log_ss::LS_COMM, "PPS %ld.%09ld", infobuf.assert_timestamp.tv_sec, infobuf.assert_timestamp.tv_nsec);
+			put_ts(infobuf.assert_timestamp);
 		}
 
 		close(handles.value().second);
@@ -121,18 +129,16 @@ void comm_pst::operator()()
 bool comm_pst::has_data()
 {
 	my_unique_lock lck(&msg_buffer_lock);
-	return msg_buffer.empty() == false;
+	return mb_offset < 32;
 }
 
 uint8_t comm_pst::get_byte()
 {
 	my_unique_lock lck(&msg_buffer_lock);
-	if (msg_buffer.empty())
+	if (mb_offset >= 32)
 		return 0;
 
-	char c = msg_buffer[0];
-	msg_buffer = msg_buffer.substr(1);
-	return c;
+	return msg_buffer[mb_offset++];
 }
 
 void comm_pst::send_data(const uint8_t *const, const size_t)
@@ -145,6 +151,7 @@ JsonDocument comm_pst::serialize() const
 {
 	JsonDocument j;
 	j["dev-name"] = dev_name;
+	// msg_buffer & mb_offset FIXME
 	return j;
 }
 
