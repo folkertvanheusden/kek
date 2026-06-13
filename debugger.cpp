@@ -339,9 +339,13 @@ FLASHMEM void configure_comm(console *const cnsl, comm_io *const device_list)
 #endif
 		}
 		else if (ch_opt == '5') {
+#if WITH_PPS
 			std::string pps_dev = cnsl->read_line("PPS device name: ");
 			if (pps_dev.empty() == false)
 				rc = device_list->set_device(device_nr, new comm_pst(pps_dev));
+#elif !defined(BUILD_FOR_PICO2W)
+			rc = device_list->set_device(device_nr, new comm_pst("-"));
+#endif
 		}
 
 		if (ch_opt != 9 && rc == false)

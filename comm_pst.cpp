@@ -2,10 +2,12 @@
 // Released under MIT license
 
 #include "gen.h"
+#if !defined(BUILD_FOR_PICO2W)
+#include <optional>
 #if WITH_PPS
 #include <fcntl.h>
-#include <optional>
 #include <sys/timepps.h>
+#endif
 
 #include "comm_pst.h"
 #include "utils.h"
@@ -40,6 +42,7 @@ bool comm_pst::is_connected()
 	return true;
 }
 
+#if WITH_PPS
 std::optional<std::pair<pps_handle_t, int> > open_pps(const char *const filename)
 {
         int fd = open(filename, O_RDWR);
@@ -66,6 +69,7 @@ std::optional<std::pair<pps_handle_t, int> > open_pps(const char *const filename
 
         return { { handle, fd } };
 }
+#endif
 
 void comm_pst::put_ts(const timespec & tp)
 {
@@ -100,11 +104,19 @@ void comm_pst::operator()()
 			myusleep(1'000'000);
 
 			timespec tp { };
+#if defined(TEENSY4_1)
+			timeval tv { };
+			gettimeofday(&tv, nullptr);
+			tp.tv_sec  = tv.tv_sec;
+			tp.tv_nsec = tv.tv_usec * 1000;
+#else
 			clock_gettime(CLOCK_REALTIME, &tp);
+#endif
 			DOLOG(log_ss::LS_COMM, "fake PPS %ld.%09ld", tp.tv_sec, tp.tv_nsec);
 			put_ts(tp);
 		}
 	}
+#if WITH_PPS
 	else {
 		auto handles = open_pps(dev_name.c_str());
 		if (handles.has_value() == false) {
@@ -125,6 +137,7 @@ void comm_pst::operator()()
 
 		close(handles.value().second);
 	}
+#endif
 }
 
 bool comm_pst::has_data()

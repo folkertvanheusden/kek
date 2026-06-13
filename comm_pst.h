@@ -2,7 +2,7 @@
 // Released under MIT license
 
 #include "gen.h"
-#if WITH_PPS
+#if !defined(BUILD_FOR_PICO2W)
 #include <atomic>
 #include <thread>
 
