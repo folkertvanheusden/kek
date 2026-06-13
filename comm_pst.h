@@ -17,7 +17,8 @@ private:
 	std::atomic_bool  stop_flag { false   };
 	std::thread      *th        { nullptr };
 	my_lock           msg_buffer_lock;
-	std::string       msg_buffer;
+	char              msg_buffer[32];
+	int               mb_offset { 0       };
 
 public:
 	comm_pst(const std::string & dev_name);
