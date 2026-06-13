@@ -421,3 +421,14 @@ bool file_exists(const std::string & file)
 	return access(file.c_str(), F_OK) == 0;
 }
 #endif
+
+std::string to_hex(const uint8_t *const data, const size_t n_bytes)
+{
+	std::string out;
+	for(size_t i=0; i<n_bytes; i++) {
+		if (i)
+			out += " ";
+		out += format("%02x", data[i]);
+	}
+	return out;
+}
