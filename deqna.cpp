@@ -90,17 +90,6 @@ void deqna::queue_rx_packet(const uint8_t *const in, const size_t n)
 	}
 }
 
-std::string to_hex(const uint8_t *const data, const size_t n_bytes)
-{
-	std::string out;
-	for(size_t i=0; i<n_bytes; i++) {
-		if (i)
-			out += " ";
-		out += format("%02x", data[i]);
-	}
-	return out;
-}
-
 FLASHMEM void dump_packet(console *const cnsl, const uint8_t *const data, const size_t n_bytes, const bool full)
 {
 	std::string out;
@@ -109,7 +98,6 @@ FLASHMEM void dump_packet(console *const cnsl, const uint8_t *const data, const 
 		out = to_hex(data, n_bytes);
 	else {
 		out = to_hex(&data[0], 6) + " < " + to_hex(&data[6], 6) + "|" + to_hex(&data[12], 2);
-
 		if (full)
 			out += ": " + to_hex(&data[14], n_bytes - 14);
 	}
@@ -558,7 +546,7 @@ FLASHMEM void deqna::set_monitor_mode(const monitor_mode_t mode, console *const 
 		eth_dev->set_trace(mode == ll_trace);
 }
 
-FLASHMEM void get_deqna_mac(uint8_t *const to)
+void get_deqna_mac(uint8_t *const to)
 {
 	const std::string mac_file = ".deqna_mac.dat";
 	uint8_t mac_address[] { 0x08, 0x00, 0x2b, 0, 0, 0 };

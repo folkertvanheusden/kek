@@ -372,7 +372,7 @@ void mmu::verify_page_length(const uint16_t virt_addr, const int page_index)
 	bool     direction = get_pdr_direction(page_index);
 
 	if (direction == false ? pdr_cmp > pdr_len : pdr_cmp < pdr_len) [[unlikely]] {
-		DOLOG(log_ss::LS_MMU, "mmu::calculate_physical_address::p_offset %o versus %o direction %d", pdr_cmp, pdr_len, direction);
+		DOLOG(log_ss::LS_MMU, "mmu::verify_page_length::p_offset %o versus %o direction %d", pdr_cmp, pdr_len, direction);
 		DOLOG(log_ss::LS_MMU, "TRAP(0250) (throw 7) on address %06o", virt_addr);
 
 		if (is_locked() == false) {
@@ -402,7 +402,7 @@ void mmu::verify_page_length(const uint16_t virt_addr, const int page_index)
 	}
 }
 
-uint32_t mmu::calculate_physical_address(const int run_mode, const uint16_t a, const bool is_write, const d_i_space_t space)
+std::pair<uint32_t, int> mmu::calculate_physical_address(const int run_mode, const uint16_t a, const bool is_write, const d_i_space_t space)
 {
 	if (is_enabled() || (is_write && (getMMR0() & (1 << 8 /* maintenance check */)))) {
 		uint16_t p_offset   = a & 8191;  // page offset
@@ -419,10 +419,10 @@ uint32_t mmu::calculate_physical_address(const int run_mode, const uint16_t a, c
 
 		verify_page_length(a, page_index);
 
-		return m_offset;
+		return { m_offset, page_index };
 	}
 
-	return a;
+	return { a, a >> 13 };
 }
 
 #if IS_POSIX

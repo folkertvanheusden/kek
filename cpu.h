@@ -56,6 +56,7 @@ private:
 	bool     wait_stuck         { false };
 	uint64_t trap_counter       { 0     };
 	std::unordered_map<uint16_t, uint32_t> trap_counts;
+	uint64_t instructions_executed { 0  };
 
 	// vector, 8 levels
 	std::array<std::set<uint16_t>, 8> queued_interrupts;
@@ -83,7 +84,6 @@ private:
 	uint32_t shifter(uint32_t value, int shift, bool is32b);
 
 	uint16_t add_register(const int nr, const uint16_t value);
-
 	void     add_to_MMR1(const int reg, const int delta);
 
 	gam_rc_t getGAM(const uint8_t mode, const uint8_t reg, const word_mode_t word_mode, const bool read_value = true);
@@ -134,6 +134,7 @@ public:
 	void     reset();
 	bool     step ();
 
+	uint64_t get_instructions_executed_count() const { return instructions_executed; }
 	uint32_t calc_instruction_duration(const uint16_t pc) const;  // nanoseconds
 	uint64_t get_trap_counter() const { return trap_counter; }
 	auto     get_trap_counts() const { return trap_counts; }

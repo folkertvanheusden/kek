@@ -15,8 +15,9 @@ int parity(int v);
 #define sign(a) ( ( (a) < 0 )  ?  -1   : ( (a) > 0 ) )
 
 std::string format(const char *const fmt, ...);
+std::string to_hex(const uint8_t *const data, const size_t n_bytes);
 
-std::vector<std::string> split(std::string in, std::string splitter);
+std::vector<std::string> split(std::string in, const std::string & splitter);
 
 uint64_t get_ms();
 uint64_t get_us();

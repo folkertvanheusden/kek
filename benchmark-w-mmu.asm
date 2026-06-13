@@ -75,9 +75,15 @@ start:
 	mov     #0177546,R0
 	MOV     #0101,(R0)          ; enable KW11-L interrupts
 
-	; setup TRAP
-	MOV     #trap_isr, @#34
-        MOV     #0300,     @#36
+        ; setup TRAP vector
+        MOV     #trap_isr, @#034
+        MOV     #0300,     @#036
+        ; setup CPU errors vector
+        MOV     #trap_isr, @#004
+        MOV     #0300,     @#006
+        ; setup illegal & reserved instructions vector
+        MOV     #trap_isr, @#010
+        MOV     #0300,     @#012
 
 	spl 0
 
@@ -131,9 +137,9 @@ tests:  ; access to registers
 	; SP
 	mov R6, R1
 	SPL 7
-	mov #123, R6
-	add #123, R6
-	sub #123, R6
+	mov #224, R6
+	add #124, R6
+	sub #124, R6
 	mov R1,R6
 	SPL 0
 	; PC
