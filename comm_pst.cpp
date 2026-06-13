@@ -69,30 +69,53 @@ std::optional<std::pair<pps_handle_t, int> > open_pps(const char *const filename
 
 void comm_pst::operator()()
 {
-	auto handles = open_pps(dev_name.c_str());
-	if (handles.has_value() == false)
-		return;
+	if (dev_name == "-") {
+		DOLOG(log_ss::LS_COMM, "Faking PPS!", dev_name, strerror(errno));
 
-	while(!stop_flag) {
-                pps_info_t infobuf { };
-                if (time_pps_fetch(handles.value().first, PPS_TSFMT_TSPEC, &infobuf, nullptr) == -1) {
-                        DOLOG(log_ss::LS_COMM, "Cannot time_pps_fetch from %s: %s", dev_name, strerror(errno));
-                        break;
-                }
+		while(!stop_flag) {
+			myusleep(1'000'000);
 
-		DOLOG(log_ss::LS_COMM, "PPS");
+			timespec tp { };
+			clock_gettime(CLOCK_REALTIME, &tp);
 
-		tm *tm = gmtime(&infobuf.assert_timestamp.tv_sec);
-		std::string new_msg_buffer =
-			format(" %02d:%02d:%02d.%03d\r", tm->tm_hour, tm->tm_min, tm->tm_sec, infobuf.assert_timestamp.tv_nsec / 1'000'000) +
-			format("%02d/%02d/%02d/%03d\r", (tm->tm_year + 1900) % 100, tm->tm_mon + 1, tm->tm_mday, tm->tm_yday) +
-			"O6@095281804C00000394\r";
+			tm *tm = gmtime(&tp.tv_sec);
+			std::string new_msg_buffer =
+				format(" %02d:%02d:%02d.%03d\r", tm->tm_hour, tm->tm_min, tm->tm_sec, tp.tv_nsec / 1'000'000) +
+				format("%02d/%02d/%02d/%03d\r", (tm->tm_year + 1900) % 100, tm->tm_mon + 1, tm->tm_mday, tm->tm_yday) +
+				"O6@095281804C00000394\r";
 
-		my_unique_lock lck(&msg_buffer_lock);
-		msg_buffer = new_msg_buffer;
+			my_unique_lock lck(&msg_buffer_lock);
+			msg_buffer = new_msg_buffer;
+		}
 	}
+	else {
+		auto handles = open_pps(dev_name.c_str());
+		if (handles.has_value() == false) {
+			DOLOG(log_ss::LS_COMM, "Cannot time_pps_fetch from %s: %s, faking PPS!", dev_name, strerror(errno));
+			return;
+		}
 
-	close(handles.value().second);
+		while(!stop_flag) {
+			pps_info_t infobuf { };
+			if (time_pps_fetch(handles.value().first, PPS_TSFMT_TSPEC, &infobuf, nullptr) == -1) {
+				DOLOG(log_ss::LS_COMM, "Cannot time_pps_fetch from %s: %s", dev_name, strerror(errno));
+				break;
+			}
+
+			DOLOG(log_ss::LS_COMM, "PPS");
+
+			tm *tm = gmtime(&infobuf.assert_timestamp.tv_sec);
+			std::string new_msg_buffer =
+				format(" %02d:%02d:%02d.%03d\r", tm->tm_hour, tm->tm_min, tm->tm_sec, infobuf.assert_timestamp.tv_nsec / 1'000'000) +
+				format("%02d/%02d/%02d/%03d\r", (tm->tm_year + 1900) % 100, tm->tm_mon + 1, tm->tm_mday, tm->tm_yday) +
+				"O6@095281804C00000394\r";
+
+			my_unique_lock lck(&msg_buffer_lock);
+			msg_buffer = new_msg_buffer;
+		}
+
+		close(handles.value().second);
+	}
 }
 
 bool comm_pst::has_data()
