@@ -1634,7 +1634,7 @@ constexpr const cmd_pair cmd_pairs[] {
 	{ "setinthz", "freq", "set KW11-L interrupt frequency (Hz)", cmd_setinthz, cmd_pair::par_yes },
 	{ "getinthz", "", "get KW11-L interrupt frequency (Hz)", cmd_getinthz, cmd_pair::par_no },
 	{ "blights", "ip-addr", "enable blinkenlights panel on selected IP address", cmd_blights, cmd_pair::par_yes },
-	{ "ddp", "ip-addr LED_count", "enable ddp panel on selected IP address fro LED_count LEDs", cmd_ddp, cmd_pair::par_yes },
+	{ "ddp", "ip-addr LED_count", "enable ddp panel on selected IP address for LED_count LEDs", cmd_ddp, cmd_pair::par_yes },
 	{ "pbright", "brightness", "set panel brightness (1-127)", cmd_panel_brightness, cmd_pair::par_yes },
 	{ "ramsize", "pages", "set ram size (page (8 kB) count, decimal)", cmd_ramsize, cmd_pair::par_yes },
 	{ "cls", "", "clear screen", cmd_cls, cmd_pair::par_no },
@@ -1717,8 +1717,30 @@ FLASHMEM cmd_rc cmd_help(console *const cnsl, const std::vector<std::string> &, 
 	}
 	while(cmd_pairs[++n].command);
 
-	for(size_t i=0; i<n; i++)
-		cnsl->put_string_lf(format("%-*s - %-*s - %s", max_cmd_len, cmd_pairs[i].command, max_pars_len, cmd_pairs[i].parameters, cmd_pairs[i].descr));
+	for(size_t i=0; i<n; i++) {
+		cnsl->put_string(format("%-*s - %-*s - ", max_cmd_len, cmd_pairs[i].command, max_pars_len, cmd_pairs[i].parameters));
+		std::string descr = cmd_pairs[i].descr;
+		constexpr const size_t scr_width = 79;
+		          const size_t indent    = max_cmd_len + max_pars_len + 3 + 3;
+			  const size_t max_width = scr_width - indent;
+		size_t skip    = 0;
+		do {
+			auto        space  = descr.size() > max_width ? descr.rfind(' ', max_width) : 0;
+			std::string substr = format("%-*s", skip, "");
+			if (space != std::string::npos && space > 4) {
+				substr += descr.substr(0, space);
+				descr   = descr.substr(space + 1);
+			}
+			else {
+				auto left = std::min(max_width, descr.size());
+				substr += descr.substr(0, left);
+				descr   = descr.substr(left);
+			}
+			cnsl->put_string_lf(substr);
+			skip    = indent;
+		}
+		while(descr.empty() == false);
+	}
 
 	return debugger_continue;
 }
