@@ -88,6 +88,7 @@ void comm_pst::put_ts(const timespec & tp)
 
 	my_unique_lock lck(&msg_buffer_lock);
 	memcpy(msg_buffer, new_msg_buffer, 32);
+	mb_offset = 0;
 }
 
 void comm_pst::operator()()
