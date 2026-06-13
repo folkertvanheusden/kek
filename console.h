@@ -23,6 +23,7 @@
 class blinkenlights;
 class bus;
 class console;
+class cpu;
 class ddp;
 class tty;
 
@@ -30,6 +31,9 @@ using explode_func_t = std::optional<std::string> (*)(console *const cnsl, const
 
 class console
 {
+public:
+	enum panel_mode_t { PM_BITS, PM_ADDRESS1, PM_ADDRESS2 };
+
 private:
 	my_threadsafe_queue<char> input_buffer;
 	my_lock                 put_string_lock;
@@ -39,6 +43,7 @@ protected:
 	abool                   stop_panel       { false   };
 	blinkenlights          *p_blinkenlights  { nullptr };
 	ddp                    *p_ddp            { nullptr };
+	panel_mode_t            panel_mode       { PM_BITS };  // TODO: atomic_int or locking (altough int...)
 
 	bus                    *b                { nullptr };
 #if !defined(BUILD_FOR_PICO2W) && !defined(TEENSY4_1)
@@ -51,6 +56,7 @@ protected:
 	abool                   network_activity_flag    { false };
 	abool                   running_flag     { false };
 	abool                   do_test_panel    { false };
+	uint8_t                 brightness       { 16    };
 
 	bool                    stop_thread_flag { false };
 
@@ -109,6 +115,10 @@ public:
 	abool * get_disk_write_activity_flag() { return &disk_write_activity_flag; }
 	abool * get_network_activity_flag()    { return &network_activity_flag;    }
 
+	void generate_panel_colors(std::vector<std::tuple<uint8_t, uint8_t, uint8_t> > & to, const size_t n_leds, bus *const b, cpu *const c, const uint8_t brightness);
+
+	void         set_panel_mode(const panel_mode_t pm);
+	void         set_panel_brightness(const uint8_t b);
 	void         set_blinkenlights_panel(blinkenlights *const p_blinkenlights);
 	void         set_ddp_panel(ddp *const p_ddp);
 	void         stop_panel_thread() { stop_panel = true; }

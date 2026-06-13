@@ -685,6 +685,8 @@ int main(int argc, char *argv[])
 		DOLOG(log_ss::LS_GENERIC, "Cannot initialize ddp");
 	}
 
+	cnsl->set_panel_brightness(32);
+
 	//// DZ11
 	comm_io *io_channels = new comm_io(dz11_n_lines);
 	constexpr const int bitrate = 38400;

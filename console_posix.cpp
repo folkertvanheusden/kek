@@ -154,7 +154,7 @@ void console_posix::panel_update_thread()
 		}
 
 		if (p_ddp) {
-			p_ddp->push(b, running_flag);
+			p_ddp->push(this, b, brightness);
 			if (do_test_panel)
 				p_ddp->test();
 		}

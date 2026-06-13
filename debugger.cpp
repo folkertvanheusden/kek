@@ -1300,32 +1300,52 @@ FLASHMEM cmd_rc cmd_deqna(console *const cnsl, const std::vector<std::string> & 
 	return debugger_continue;
 }
 
-FLASHMEM cmd_rc cmd_test(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const, debugger_state *const, kek_event_t *const)
+FLASHMEM cmd_rc cmd_test(console *const cnsl, const std::vector<std::string> & parts, bus *const b, cpu *const, debugger_state *const, kek_event_t *const stop_event)
 {
-	if (parts[1] == "deqna") {
-		auto deqna = b->getDEQNA();
-		if (deqna) {
-			if (deqna->test(cnsl))
-				cnsl->put_string_lf("DEQNA test succeeded!");
+	std::string which;
+	bool        repeat = false;
+	int         delay  = 0;
+
+	for(size_t i=1; i<parts.size(); i++) {
+		if (parts[i] == "-r")
+			repeat = true;
+		else if (parts[i] == "-d")
+			delay = std::stoi(parts[++i]);
+		else
+			which = parts[i];
+	}
+
+	do {
+		if (which == "deqna") {
+			auto deqna = b->getDEQNA();
+			if (deqna) {
+				if (deqna->test(cnsl))
+					cnsl->put_string_lf("DEQNA test succeeded!");
+				else
+					cnsl->put_string_lf("DEQNA test failed");
+			}
+			else {
+				cnsl->put_string_lf("DEQNA emulation is not configured yet");
+			}
+		}
+		else if (which =="dz11") {
+			if (b->getDZ11())
+				b->getDZ11()->test_ports(parts.size() == 3 ? std::stoi(parts[2]) : 1);
 			else
-				cnsl->put_string_lf("DEQNA test failed");
+				cnsl->put_string_lf("DZ11 not started yet, first invoke \"startnet\"");
+		}
+		else if (which =="panel") {
+			cnsl->test_panel();
 		}
 		else {
-			cnsl->put_string_lf("DEQNA emulation is not configured yet");
+			cnsl->put_string_lf("?");
 		}
+
+		if (delay)
+			myusleep(delay * 1000);
 	}
-	else if (parts[1] =="dz11") {
-		if (b->getDZ11())
-			b->getDZ11()->test_ports(parts.size() == 3 ? std::stoi(parts[2]) : 1);
-		else
-			cnsl->put_string_lf("DZ11 not started yet, first invoke \"startnet\"");
-	}
-	else if (parts[1] =="panel") {
-		cnsl->test_panel();
-	}
-	else {
-		cnsl->put_string_lf("?");
-	}
+	while(repeat && load_relaxed_p(stop_event) == EVENT_NONE);
+
 	return debugger_continue;
 }
 
@@ -1339,6 +1359,8 @@ FLASHMEM cmd_rc cmd_mdeqna(console *const cnsl, const std::vector<std::string> &
 			mode = deqna::filtered;
 		else if (parts[1] == "everything")
 			mode = deqna::everything;
+		else if (parts[1] == "ll-trace")
+			mode = deqna::ll_trace;
 		else if (parts[1] == "none") {
 		}
 		else
@@ -1393,6 +1415,12 @@ FLASHMEM cmd_rc cmd_blights(console *const cnsl, const std::vector<std::string> 
 		cnsl->set_blinkenlights_panel(nullptr);
 		cnsl->put_string_lf("PiDP11 blinkenlights panel disabled");
 	}
+	return debugger_continue;
+}
+
+FLASHMEM cmd_rc cmd_panel_brightness(console *const cnsl, const std::vector<std::string> & parts, bus *const, cpu *const, debugger_state *const, kek_event_t *const)
+{
+	cnsl->set_panel_brightness(std::min(127, std::stoi(parts[1])));
 	return debugger_continue;
 }
 
@@ -1491,13 +1519,19 @@ FLASHMEM cmd_rc cmd_dp(console *const cnsl, const std::vector<std::string> &, bu
 	return debugger_continue;
 }
 
-#if defined(ESP32) || defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 FLASHMEM cmd_rc cmd_pm(console *const cnsl, const std::vector<std::string> & parts, bus *const, cpu *const, debugger_state *const, kek_event_t *const)
 {
-	reinterpret_cast<console_esp32 *>(cnsl)->set_panel_mode(parts[1] == "bits" ? console_esp32::PM_BITS : console_esp32::PM_POINTER);
+	console::panel_mode_t mode = console::PM_BITS;
+	if (parts[1] == "bits") {
+	}
+	else if (parts[1] == "address1")
+		mode = console::PM_ADDRESS1;
+	else if (parts[1] == "address2") {
+		mode = console::PM_ADDRESS2;
+	}
+	cnsl->set_panel_mode(mode);
 	return debugger_continue;
 }
-#endif
 
 FLASHMEM cmd_rc cmd_refr(console *const cnsl, const std::vector<std::string> & parts, bus *const, cpu *const, debugger_state *const, kek_event_t *const)
 {
@@ -1599,14 +1633,18 @@ constexpr const cmd_pair cmd_pairs[] {
 	{ "toggle", "s t", "set switch (s=, 0...15 (decimal)) of the front panel to state (t=, 0 or 1)", cmd_toggle, cmd_pair::par_yes },
 	{ "pcmon", "x", "track for x cycles what memory addresses were read an instruction from", cmd_pcmon, cmd_pair::par_yes },
 	{ "deqna", "x[,y,z]", "set deqna emulation to use (x): \"linux\" (tap), \"teensy4.1\", \"esp32\" or \"vxlan\" (with host (y) & port (z))", cmd_deqna, cmd_pair::par_yes },
-	{ "test", "x", "test the dz11/DEQNA/panel emulation", cmd_test, cmd_pair::par_yes },
-	{ "mdeqna", "mode", "set DEQNA monitor mode: none, filtered, everything", cmd_mdeqna, cmd_pair::par_yes },
+	{ "test", "x", "test the dz11/deqna/panel emulation, -r to continue until ^e is pressed, -d x: sleep x ms between each iteration", cmd_test, cmd_pair::par_yes },
+	{ "mdeqna", "mode", "set DEQNA monitor mode: none, filtered, ll-trace, everything", cmd_mdeqna, cmd_pair::par_yes },
 	{ "cfgdisk", "", "configure disk", cmd_cfgdisk, cmd_pair::par_no },
 	{ "cdz11", "", "configure DZ11 device", cmd_cdz11, cmd_pair::par_no },
 	{ "setinthz", "freq", "set KW11-L interrupt frequency (Hz)", cmd_setinthz, cmd_pair::par_yes },
 	{ "getinthz", "", "get KW11-L interrupt frequency (Hz)", cmd_getinthz, cmd_pair::par_no },
 	{ "blights", "ip-addr", "enable blinkenlights panel on selected IP address", cmd_blights, cmd_pair::par_yes },
-	{ "ddp", "ip-addr LED_count", "enable ddp panel on selected IP address fro LED_count LEDs", cmd_ddp, cmd_pair::par_yes },
+	{ "ddp", "ip-addr LED_count", "enable ddp panel on selected IP address for LED_count LEDs", cmd_ddp, cmd_pair::par_yes },
+	{ "pbright", "brightness", "set panel brightness (1-127)", cmd_panel_brightness, cmd_pair::par_yes },
+	{ "dp", "", "disable panel", cmd_dp, cmd_pair::par_no },
+	{ "pm", "mode", "panel mode (bits, address1 or address2)", cmd_pm, cmd_pair::par_yes },
+	{ "refr", "fps", "set panel refreshrate", cmd_refr, cmd_pair::par_yes },
 	{ "ramsize", "pages", "set ram size (page (8 kB) count, decimal)", cmd_ramsize, cmd_pair::par_yes },
 	{ "cls", "", "clear screen", cmd_cls, cmd_pair::par_no },
 	{ "stats", "", "show run statistics", cmd_stats, cmd_pair::par_no },
@@ -1614,11 +1652,6 @@ constexpr const cmd_pair cmd_pairs[] {
 	{ "bic", "filename", "run BIC/LDA file", cmd_bic, cmd_pair::par_yes },
 	{ "lt", "filename", "load tape", cmd_lt, cmd_pair::par_yes },
 	{ "ult", "", "unload tape", cmd_ult, cmd_pair::par_no },
-	{ "dp", "", "disable panel", cmd_dp, cmd_pair::par_no },
-#if defined(ESP32) || defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
-	{ "pm", "mode", "panel mode (bits or address)", cmd_pm, cmd_pair::par_yes },
-#endif
-	{ "refr", "fps", "set panel refreshrate", cmd_refr, cmd_pair::par_yes },
 #if defined(ESP32) || defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 	{ "cfgnet", "", "configure network (e.g. WiFi)", cmd_cfgnet, cmd_pair::par_no },
 	{ "startnet", "", "start network", cmd_startnet, cmd_pair::par_no },
@@ -1690,8 +1723,30 @@ FLASHMEM cmd_rc cmd_help(console *const cnsl, const std::vector<std::string> &, 
 	}
 	while(cmd_pairs[++n].command);
 
-	for(size_t i=0; i<n; i++)
-		cnsl->put_string_lf(format("%-*s - %-*s - %s", max_cmd_len, cmd_pairs[i].command, max_pars_len, cmd_pairs[i].parameters, cmd_pairs[i].descr));
+	for(size_t i=0; i<n; i++) {
+		cnsl->put_string(format("%-*s - %-*s - ", max_cmd_len, cmd_pairs[i].command, max_pars_len, cmd_pairs[i].parameters));
+		std::string descr = cmd_pairs[i].descr;
+		constexpr const size_t scr_width = 79;
+		          const size_t indent    = max_cmd_len + max_pars_len + 3 + 3;
+			  const size_t max_width = scr_width - indent;
+		size_t skip    = 0;
+		do {
+			auto        space  = descr.size() > max_width ? descr.rfind(' ', max_width) : 0;
+			std::string substr = format("%-*s", skip, "");
+			if (space != std::string::npos && space > 4) {
+				substr += descr.substr(0, space);
+				descr   = descr.substr(space + 1);
+			}
+			else {
+				auto left = std::min(max_width, descr.size());
+				substr += descr.substr(0, left);
+				descr   = descr.substr(left);
+			}
+			cnsl->put_string_lf(substr);
+			skip    = indent;
+		}
+		while(descr.empty() == false);
+	}
 
 	return debugger_continue;
 }

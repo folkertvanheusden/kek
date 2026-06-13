@@ -181,5 +181,12 @@ std::pair<uint8_t *, size_t> eth_transport_vxlan::get(const int timeout)
 
 	packet_size -= 8;
 	memmove(&pkt[0], &pkt[8], packet_size);
+
+#if !IS_POSIX && !defined(_WIN32)
+	if (trace)
+		Serial.println(format("Pkt to %02x:%02x:%02x:%02x:%02x:%02x processed",
+					pkt[0], pkt[1], pkt[2], pkt[3], pkt[4], pkt[5]).c_str());
+#endif
+
 	return { pkt, packet_size };
 }

@@ -28,7 +28,7 @@
 FLASHMEM class deqna : public device
 {
 public:
-	enum monitor_mode_t { nothing, filtered, everything };
+	enum monitor_mode_t { nothing, ll_trace, filtered, everything };
 
 private:
 	bus             *const b        { nullptr };
@@ -73,7 +73,7 @@ public:
 
 	void show_state(console *const cnsl) const override;
 	bool test(console *const cnsl);
-	void set_monitor_mode(const monitor_mode_t mode, console *const cnsl) { monitor_mode = mode; this->cnsl = cnsl; }
+	void set_monitor_mode(const monitor_mode_t mode, console *const cnsl);
 
 	uint8_t  read_byte(const uint16_t addr) override;
 	uint16_t read_word(const uint16_t addr) override;

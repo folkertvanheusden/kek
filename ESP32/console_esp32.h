@@ -33,7 +33,6 @@ public:
 	void resize_terminal() override;
 	void refresh_virtual_terminal() override;
 
-	void set_panel_mode(const panel_mode_t pm);
 	void panel_update_thread() override;
 	void set_LED_state(const bool state) override;
 	void pulse_LED    (                ) override;
