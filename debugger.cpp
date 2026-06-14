@@ -1,10 +1,10 @@
 // (C) 2018-2026 by Folkert van Heusden
 // Released under MIT license
 
+#include "gen.h"
 #include <fstream>
 #include <optional>
 #include <unordered_map>
-#include "gen.h"
 #if IS_POSIX || defined(_WIN32)
 #include <dirent.h>
 #include <sys/stat.h>
@@ -60,6 +60,8 @@
 
 extern blinkenlights *bl;
 extern ddp           *ddp_;
+extern aint           term_cols;
+extern aint           term_lines;
 
 #if defined(ESP32) || defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 bool network_configured = false;
@@ -1727,13 +1729,14 @@ FLASHMEM cmd_rc cmd_help(console *const cnsl, const std::vector<std::string> &, 
 	}
 	while(cmd_pairs[++n].command);
 
+	const size_t scr_width = term_cols;
+
 	for(size_t i=0; i<n; i++) {
 		cnsl->put_string(format("%-*s - %-*s - ", max_cmd_len, cmd_pairs[i].command, max_pars_len, cmd_pairs[i].parameters));
 		std::string descr = cmd_pairs[i].descr;
-		constexpr const size_t scr_width = 79;
-		          const size_t indent    = max_cmd_len + max_pars_len + 3 + 3;
-			  const size_t max_width = scr_width - indent;
-		size_t skip    = 0;
+		const size_t indent    = max_cmd_len + max_pars_len + 3 + 3;
+		const size_t max_width = scr_width - indent;
+		      size_t skip      = 0;
 		do {
 			auto        space  = descr.size() > max_width ? descr.rfind(' ', max_width) : 0;
 			std::string substr = format("%-*s", skip, "");

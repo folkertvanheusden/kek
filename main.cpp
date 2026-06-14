@@ -9,6 +9,9 @@
 #include <string>
 #include <string.h>
 #include <unistd.h>
+#if IS_POSIX
+#include <sys/ioctl.h>
+#endif
 
 #include "blinkenlights.h"
 #include "error.h"
@@ -50,15 +53,26 @@
 #include "utils.h"
 
 
-std::atomic_uint32_t event   { 0                 };
-std::atomic_bool    *running { nullptr           };
-blinkenlights       *bl      { new blinkenlights };
-ddp                 *ddp_    { new ddp           };
-
-std::atomic_bool  sigw_event { false             };
+std::atomic_uint32_t event      { 0                 };
+std::atomic_bool    *running    { nullptr           };
+blinkenlights       *bl         { new blinkenlights };
+ddp                 *ddp_       { new ddp           };
+aint                 term_cols  { 80                };
+aint                 term_lines { 25                };
 
 constexpr const uint16_t validation_psw_mask = 0174037;  // ignore unused bits & priority(!)
 constexpr const int      default_port_offset = 1100;
+
+void get_terminal_size()
+{
+#if IS_POSIX
+	winsize w { };
+	if (ioctl(0, TIOCGWINSZ, &w) == 0) {
+		term_cols  = w.ws_col;
+		term_lines = w.ws_row;
+	}
+#endif
+}
 
 void sw_handler(int s)
 {
@@ -67,7 +81,7 @@ void sw_handler(int s)
 	event = EVENT_TERMINATE;
 #else
 	if (s == SIGWINCH)
-		sigw_event = true;
+		get_terminal_size();
 	else {
 		fprintf(stderr, "Terminating...\n");
 
@@ -505,6 +519,8 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	get_terminal_size();
+
 	console *cnsl = nullptr;
 
 	setlogfile(logfile, timestamp);
@@ -774,11 +790,9 @@ int main(int argc, char *argv[])
 	sigemptyset(&sa.sa_mask);
 	sa.sa_flags = SA_RESTART;
 
-	if (with_ui == ui_ncurses)
-		sigaction(SIGWINCH, &sa, nullptr);
-
-	sigaction(SIGTERM, &sa, nullptr);
-	sigaction(SIGINT , &sa, nullptr);
+	sigaction(SIGWINCH, &sa, nullptr);
+	sigaction(SIGTERM,  &sa, nullptr);
+	sigaction(SIGINT ,  &sa, nullptr);
 #endif
 
 	cnsl->start_thread();

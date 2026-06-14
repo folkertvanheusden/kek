@@ -80,6 +80,8 @@ bool           trace_output { false             };
 comm          *cs           { nullptr           };  // Console Serial
 blinkenlights *bl           { new blinkenlights };
 ddp           *ddp_         { new ddp           };
+aint           term_cols    { 80                };
+aint           term_lines   { 25                };
 
 static void console_thread_wrapper_panel(void *const c)
 {
