@@ -569,7 +569,6 @@ int main(int argc, char *argv[])
 		else if (with_ui == ui_imgui) {
 			cnsl = new console_imgui(&event);
 			set_terminal(cnsl);
-			panel_th = new std::thread([&] { cnsl->panel_update_thread(); });
 		}
 #endif
 		else {
@@ -682,6 +681,11 @@ int main(int argc, char *argv[])
 
 	cnsl->set_bus(b);
 	cnsl->begin();
+
+#if defined(USE_IMGUI)
+	if (with_ui == ui_imgui)
+		panel_th = new std::thread([&] { cnsl->panel_update_thread(); });
+#endif
 
 	if (bl->begin()) {
 		cnsl->set_blinkenlights_panel(bl);

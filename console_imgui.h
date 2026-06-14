@@ -20,6 +20,8 @@ private:
 	int                           panel_h { 200     };
 	SDL_Surface                  *panel   { nullptr };
 	my_lock                       panel_lock;
+	std::vector<uint64_t>         loads;
+	my_lock                       loads_lock;
 
 protected:
 	int  wait_for_char_ll(const int  timeout) override;

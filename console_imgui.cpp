@@ -41,7 +41,7 @@ int console_imgui::wait_for_char_ll(const int timeout)
 	return rc.value();
 }
 
-void console_imgui::put_char_ll(const char c)
+void console_imgui::put_char_ll(const char)
 {
 	// TODO trigger refresh
 }
@@ -76,10 +76,24 @@ void console_imgui::panel_update_thread()
 	SDL_Surface *text_network     = TTF_RenderText_Blended(font, "network",    0, white);
 	SDL_Surface *text_mmu_ena     = TTF_RenderText_Blended(font, "mmu enabl.", 0, white);
 
+	uint64_t prev_instr_count = c->get_instructions_executed_count();
+
 	while(!stop && *stop_event != EVENT_TERMINATE) {
 		if (panel_w <= 0) {
 			SDL_Delay(100);
 			continue;
+		}
+
+		{
+			uint64_t cur_instr_count = c->get_instructions_executed_count();
+			uint64_t done_n_instr    = prev_instr_count <= cur_instr_count ? cur_instr_count - prev_instr_count : 0;
+
+			my_unique_lock lck(&loads_lock);
+			while(loads.size() >= 500)
+				loads.erase(loads.begin());
+			loads.push_back(done_n_instr);
+
+			prev_instr_count = cur_instr_count;
 		}
 
 		SDL_Surface *new_surface = nullptr;
@@ -270,6 +284,36 @@ void console_imgui::gui_event_loop()
 			ImGui::TextUnformatted(&buffer_copy[offset], &buffer_copy[offset + t_width]);
 		}
 		delete [] buffer_copy;
+		ImGui::End();
+
+		ImGui::Begin("System load");
+		ImVec2 pos = ImGui::GetCursorScreenPos();
+		ImVec2 dim = ImGui::GetWindowSize();
+
+		{
+			uint64_t max_count = 0;
+			my_unique_lock lck(&loads_lock);
+			for(auto element : loads)
+				max_count = std::max(max_count, element);
+
+			if (max_count > 0) {
+				auto  n_elem = loads.size();
+				float prev_x = 0;
+				float prev_y = pos.y + dim.y;
+				for(size_t i=0; i<n_elem; i++) {
+					float x = pos.x + dim.x * i / n_elem;
+					float y = pos.y + dim.y - dim.y * loads[i] / max_count;
+
+					ImGui::GetWindowDrawList()->AddLine(
+							{ prev_x, prev_y }, { x, y },
+							IM_COL32(255, 0, 0, 255),
+							2.f
+							);
+					prev_x = x;
+					prev_y = y;
+				}
+			}
+		}
 		ImGui::End();
 
 	        // Rendering
