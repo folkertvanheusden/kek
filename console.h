@@ -60,13 +60,15 @@ protected:
 
 	bool                    stop_thread_flag { false };
 
-	const int               t_width          { 0 };
-	const int               t_height         { 0 };
-	char                   *screen_buffer    { nullptr };
-	uint8_t                 tx               { 0 };
-	uint8_t                 ty               { 0 };
-	abool                   timestamps       { false };
+	const int               t_width          { 0        };
+	const int               t_height         { 0        };
+	char                   *screen_buffer    { nullptr  };
+	uint8_t                 tx               { 0        };
+	uint8_t                 ty               { 0        };
+	abool                   timestamps       { false    };
 	const uint64_t          start_ts         { get_us() };
+	bool                    escape           { false    };
+	std::string             escape_buffer;
 
 	const size_t            n_edit_lines_hist { 8 };  // maximum number of previous edit-lines
 	std::vector<std::string> edit_lines_hist;

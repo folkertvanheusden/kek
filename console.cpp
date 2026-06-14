@@ -230,6 +230,78 @@ void console::put_char(const char c)
 	if (c == 0) {
 		// ignore these
 	}
+	else if (escape) {
+		int cu = toupper(c);
+		if ((cu < 'A' || cu > 'Z') && escape_buffer.size() < 25) {
+			if (c != '[')
+				escape_buffer += c;
+		}
+		else {
+			// DOLOG(log_ss::LS_COMM, "escape code: %s%c", escape_buffer.c_str(), c);
+			if (c == 'J') {  // should check for '2' etc
+				memset(screen_buffer, ' ', t_width * t_height);
+				tx = 0;
+				ty = 0;
+			}
+			else if (c == 'A') {
+				if (ty > 0)
+					ty--;
+			}
+			else if (c == 'B') {
+				if (ty < t_height - 1)
+					ty++;
+			}
+			else if (c == 'C') {
+				if (tx < t_width - 1)
+					tx++;
+			}
+			else if (c == 'D') {
+				if (tx > 0)
+					tx--;
+			}
+			else if (c == 'H') {
+				auto parts = split(escape_buffer, ";");
+				try {
+					if (parts.size() == 1) {
+						ty = std::stoi(parts[0]) - 1;
+						tx = 0;
+					}
+					else if (parts.size() == 2) {
+						ty = std::stoi(parts[0]) - 1;
+						tx = std::stoi(parts[1]) - 1;
+					}
+					else {
+						tx = ty = 0;
+					}
+				}
+				catch(std::invalid_argument & ia) {
+					DOLOG(log_ss::LS_COMM, "TTY invalid coordinates for VT100 H command: %s", escape_buffer.c_str());
+				}
+			}
+			else if (c == 'K') {
+				if (escape_buffer.empty() || escape_buffer == "0") {
+					for(int x=tx; x<t_width; x++)
+						screen_buffer[ty * t_width + x] = ' ';
+				}
+				else if (escape_buffer == "1") {
+					for(int x=0; x<tx; x++)
+						screen_buffer[ty * t_width + x] = ' ';
+				}
+				else if (escape_buffer == "2") {
+					for(int x=0; x<t_width; x++)
+						screen_buffer[ty * t_width + x] = ' ';
+				}
+			}
+			else {
+				DOLOG(log_ss::LS_COMM, "TTY unhandled VT100 escape code: %s", escape_buffer.c_str());
+			}
+
+			escape_buffer.clear();
+			escape = false;
+		}
+	}
+	else if (c == 27)
+		escape = true;
 	else if (c == 13)
 		tx = 0;
 	else if (c == 10) {
