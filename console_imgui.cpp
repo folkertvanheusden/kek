@@ -15,6 +15,9 @@
 #include "cpu.h"
 
 
+extern aint term_cols;
+extern aint term_lines;
+
 console_imgui::console_imgui(std::atomic_uint32_t *const stop_event): console(stop_event)
 {
 }
@@ -306,6 +309,7 @@ void console_imgui::gui_event_loop()
 
 		ImGui::Begin("Terminal");
 		ImVec2 cpos = ImGui::GetCursorScreenPos();
+		ImVec2 cdim = ImGui::GetWindowSize();
 		char *buffer_copy = new char[t_width * t_height];
 		for(int i=0; i<t_width * t_height; i++)
 			buffer_copy[i] = screen_buffer[i] ? screen_buffer[i] : ' ';
@@ -322,6 +326,9 @@ void console_imgui::gui_event_loop()
 		float       y        = cpos.y + ty * char_h;
 		ImGui::GetWindowDrawList()->AddLine({ x, y + cursor_h }, { x + char_w, y + cursor_h }, IM_COL32(255, 255, 0, 127), 2.f);
 		ImGui::End();
+		// for help
+		term_cols  = cdim.x / (char_w + 1.);
+		term_lines = cdim.y / char_h;
 
 	        // Rendering
 		ImGui::Render();
