@@ -420,14 +420,14 @@ static void add_pixel(std::vector<std::tuple<uint8_t, uint8_t, uint8_t> > & to, 
 
 void console::generate_panel_colors(std::vector<std::tuple<uint8_t, uint8_t, uint8_t> > & to, const size_t n_leds, bus *const b, cpu *const c, const uint8_t brightness)
 {
-	const uint8_t black  [] = { 0,          0,          0          };
-	const uint8_t magenta[] = { brightness, 0,          brightness };
-	const uint8_t red    [] = { brightness, 0,          0          };
-	const uint8_t green  [] = { 0,          brightness, 0          };
-	const uint8_t blue   [] = { 0,          0,          brightness };
-	const uint8_t yellow [] = { brightness, brightness, 0          };
-	const uint8_t white  [] = { brightness, brightness, brightness };
-	const uint8_t *const run_mode_led_color[4] = { red, yellow, blue, green };
+	const uint8_t black  [] { 0,          0,          0          };
+	const uint8_t magenta[] { brightness, 0,          brightness };
+	const uint8_t red    [] { brightness, 0,          0          };
+	const uint8_t green  [] { 0,          brightness, 0          };
+	const uint8_t blue   [] { 0,          0,          brightness };
+	const uint8_t yellow [] { brightness, brightness, 0          };
+	const uint8_t white  [] { brightness, brightness, brightness };
+	const uint8_t *const run_mode_led_color[4] { red, yellow, blue, green };
 
 	try {
 		// note that these are approximately as there's no mutex on the emulation
