@@ -1603,14 +1603,14 @@ constexpr const cmd_pair cmd_pairs[] {
 	{ "help", "", "this help", cmd_help, cmd_pair::par_no },
 	{ "disassemble", "pc=/n=", "show current instruction", cmd_disassemble, cmd_pair::par_yes },
 	{ "go", "", "run until trap or ^e", cmd_go, cmd_pair::par_no },
-	{ "benchmark", "-v=verbose, -m=with mmu", "determine the speed of the emulation", cmd_benchmark, cmd_pair::par_optional },
+	{ "benchmark", "-v=verbose, -m=mmu", "determine the speed of the emulation", cmd_benchmark, cmd_pair::par_optional },
 #if !defined(ESP32) || defined(BUILD_FOR_PICO2W)
 	{ "quit", "", "stop emulator", cmd_quit, cmd_pair::par_no },
 #endif
 #if defined(BUILD_FOR_RP204o)
 	{ "flash", "", "jump to the bootloader to allow flashing new firmware", cmd_flash, cmd_pair::par_no },
 #endif
-	{ "examine", "<octal address> <p|v> [<n>]", "show memory address", cmd_examine, cmd_pair::par_yes },
+	{ "examine", "octal-address p|v [n]", "show memory address", cmd_examine, cmd_pair::par_yes },
 	{ "reset", "which", "reset cpu/bus/etc", cmd_reset, cmd_pair::par_optional },
 	{ "sbp", "", "set breakpoint(s), e.g.: action (pc=0123 and memwv[04000]=0200,0300 and (r4=07,05 or r5=0456) and instr[]=1), values seperated by ',', char after mem is w/b (word/byte), then follows v/p (virtual/physical), all octal values, mmr0-3 and psw are registers. \"action\" can be stop, trace or log. instr can have a mask between the [] and on the right an instruction-opcode to compare against.", cmd_sbp, cmd_pair::par_yes },
 	{ "cbp", "", "clear breakpoints", cmd_cbp, cmd_pair::par_yes },
