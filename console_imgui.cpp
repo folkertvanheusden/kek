@@ -275,25 +275,6 @@ void console_imgui::gui_event_loop()
 			ImGui::Image(ImTextureID(intptr_t(texture)), ImVec2(float(texture->w), float(texture->h)));
 		ImGui::End();
 
-		ImGui::Begin("Terminal");
-		ImVec2 cpos = ImGui::GetCursorScreenPos();
-		char *buffer_copy = new char[t_width * t_height];
-		for(int i=0; i<t_width * t_height; i++)
-			buffer_copy[i] = screen_buffer[i] ? screen_buffer[i] : ' ';
-		for(int y=0; y<t_height; y++) {
-			auto offset = y * t_width;
-			ImGui::TextUnformatted(&buffer_copy[offset], &buffer_copy[offset + t_width]);
-		}
-		delete [] buffer_copy;
-		// cursor
-		const float char_w   = ImGui::CalcTextSize("M").x;
-		const float char_h   = ImGui::GetTextLineHeightWithSpacing();
-		const float cursor_h = ImGui::GetTextLineHeight();
-		float       x        = cpos.x + tx * char_w;
-		float       y        = cpos.y + ty * char_h;
-		ImGui::GetWindowDrawList()->AddLine({ x, y + cursor_h }, { x + char_w, y + cursor_h }, IM_COL32(255, 255, 0, 127), 2.f);
-		ImGui::End();
-
 		ImGui::Begin("System load");
 		ImVec2 pos = ImGui::GetCursorScreenPos();
 		ImVec2 dim = ImGui::GetWindowSize();
@@ -321,6 +302,25 @@ void console_imgui::gui_event_loop()
 				}
 			}
 		}
+		ImGui::End();
+
+		ImGui::Begin("Terminal");
+		ImVec2 cpos = ImGui::GetCursorScreenPos();
+		char *buffer_copy = new char[t_width * t_height];
+		for(int i=0; i<t_width * t_height; i++)
+			buffer_copy[i] = screen_buffer[i] ? screen_buffer[i] : ' ';
+		for(int y=0; y<t_height; y++) {
+			auto offset = y * t_width;
+			ImGui::TextUnformatted(&buffer_copy[offset], &buffer_copy[offset + t_width]);
+		}
+		delete [] buffer_copy;
+		// cursor
+		const float char_w   = ImGui::CalcTextSize("M").x;
+		const float char_h   = ImGui::GetTextLineHeightWithSpacing();
+		const float cursor_h = ImGui::GetTextLineHeight();
+		float       x        = cpos.x + tx * char_w;
+		float       y        = cpos.y + ty * char_h;
+		ImGui::GetWindowDrawList()->AddLine({ x, y + cursor_h }, { x + char_w, y + cursor_h }, IM_COL32(255, 255, 0, 127), 2.f);
 		ImGui::End();
 
 	        // Rendering
