@@ -830,6 +830,9 @@ int main(int argc, char *argv[])
 		delete panel_th;
 	}
 
+	for(auto & d: disk_files)
+		delete d;
+
 	delete b;
 	delete cnsl;
 
