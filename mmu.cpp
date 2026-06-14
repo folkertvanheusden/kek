@@ -280,7 +280,8 @@ memory_addresses_t mmu::calculate_physical_address(const int run_mode, const uin
 
 	int      page_index           = calc_par_pdr_index(run_mode, d_space, apf);
 	uint32_t physical_instruction = get_physical_memory_offset(page_index + 0);
-	uint32_t physical_data        = get_physical_memory_offset(page_index + 8);
+	uint32_t physical_data        = get_use_data_space(run_mode) ?
+					get_physical_memory_offset(page_index + 8) : physical_instruction;
 
 	uint16_t p_offset = a & 8191;  // page offset
 
@@ -291,9 +292,6 @@ memory_addresses_t mmu::calculate_physical_address(const int run_mode, const uin
 		physical_instruction &= 0x3ffff;
 		physical_data        &= 0x3ffff;
 	}
-
-	if (get_use_data_space(run_mode) == false)
-		physical_data = physical_instruction;
 
 	bool     physical_instruction_is_psw = (physical_instruction - io_base + 0160000) == ADDR_PSW;
 	bool     physical_data_is_psw        = (physical_data        - io_base + 0160000) == ADDR_PSW;
