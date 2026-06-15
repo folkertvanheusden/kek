@@ -8,6 +8,10 @@
 #elif defined(TEENSY4_1)
 #include <QNEthernet.h>
 #else
+#include <cstring>
+#include <errno.h>
+#include <unistd.h>
+#include <vector>
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #if defined(__FreeBSD__)
