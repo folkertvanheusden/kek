@@ -81,10 +81,12 @@ void kw11_l::begin(console *const cnsl)
 	this->cnsl = cnsl;
 
 #if defined(LOAD_GAUGE_PIN)
-	pinMode(LOAD_GAUGE_PIN, arduino::OUTPUT);
 #if defined(ESP32)
+	pinMode(LOAD_GAUGE_PIN, OUTPUT);
 	analogWriteFrequency(2, 5000);
 	analogWriteResolution(2, 8);
+#else
+	pinMode(LOAD_GAUGE_PIN, arduino::OUTPUT);
 #endif
 #endif
 

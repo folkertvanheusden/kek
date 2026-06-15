@@ -16,7 +16,9 @@
 
 // #define NEOPIXELS_PIN 24
 
+#if defined(LED_BUILTIN)
 #define HEARTBEAT_PIN LED_BUILTIN
+#endif
 // #define HEARTBEAT_PIN 25
 
 // #define TTY_SERIAL_RX 16
