@@ -77,7 +77,11 @@ uint64_t get_ms()
 #else
 	timespec tp { };
 	// assuming 1ms resolution (true on linux)
+#if defined(__APPLE__)
+	clock_gettime(CLOCK_REALTIME, &tp);
+#else
 	clock_gettime(CLOCK_REALTIME_COARSE, &tp);
+#endif
 	return tp.tv_sec * 1000 + tp.tv_nsec / 1000000;
 #endif
 }
