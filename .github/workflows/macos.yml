@@ -18,8 +18,9 @@ jobs:
         git submodule init
         git submodule update
         brew install ncurses jansson
+        ls /opt/homebrew/opt/jansson
     - name: cmake
-      run: LDFLAGS="-L/opt/homebrew/opt/ncurses/lib" CPPFLAGS="-I/opt/homebrew/opt/ncurses/include" PKG_CONFIG_PATH="/opt/homebrew/opt/ncurses/lib/pkgconfig" cmake -S . -B build
+      run: LDFLAGS="-L/opt/homebrew/opt/ncurses/lib -L/opt/homebrew/opt/jansson/lib" CPPFLAGS="-I/opt/homebrew/opt/ncurses/include" PKG_CONFIG_PATH="/opt/homebrew/opt/ncurses/lib/pkgconfig:/opt/homebrew/opt/jansson/lib/pkgconfig" cmake -S . -B build
     - name: make
       run: make -C build kek
     - name: store artifact in GitHub
