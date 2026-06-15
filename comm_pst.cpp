@@ -98,7 +98,7 @@ void comm_pst::put_ts(const timespec & tp)
 void comm_pst::operator()()
 {
 	if (dev_name == "-") {
-		DOLOG(log_ss::LS_COMM, "Faking PPS!", dev_name, strerror(errno));
+		DOLOG(log_ss::LS_COMM, "Faking PPS!");
 
 		while(!stop_flag) {
 			myusleep(1'000'000);
@@ -120,7 +120,7 @@ void comm_pst::operator()()
 	else {
 		auto handles = open_pps(dev_name.c_str());
 		if (handles.has_value() == false) {
-			DOLOG(log_ss::LS_COMM, "Cannot time_pps_fetch from %s: %s, faking PPS!", dev_name, strerror(errno));
+			DOLOG(log_ss::LS_COMM, "Cannot time_pps_fetch from %s: %s, faking PPS!", dev_name.c_str(), strerror(errno));
 			return;
 		}
 
