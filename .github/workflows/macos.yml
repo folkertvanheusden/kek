@@ -1,6 +1,9 @@
 name: macos
 
 on:
+  push:
+    branches:
+      - macosx_fixes
   schedule:
     - cron: "50 8 * * 1"
 
