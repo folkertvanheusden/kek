@@ -19,6 +19,10 @@ typedef enum { wm_word = 0, wm_byte = 1 } word_mode_t;
 #include <task.h>
 #endif
 
+#if defined(__APPLE__)
+#include "macosx.h"
+#endif
+
 #if defined(ESP32) || defined(BUILD_FOR_PICO2W) || defined(TEENSY4_1)
 // ESP32 goes in a crash-loop when allocating 128kB
 // see also https://github.com/espressif/esp-idf/issues/1934
