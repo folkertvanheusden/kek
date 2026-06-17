@@ -103,6 +103,15 @@ if (SDL3_FOUND)
 	  ${APP_IMGUI_SOURCES}
 	  main.cpp
 	)
+	if (WIN32)
+	add_executable(
+	  kek-win32
+	  ${APP_SOURCES}
+	  ${APP_IMGUI_SOURCES}
+	  main.cpp
+	  win32.cpp
+	)
+	endif (WIN32)
 else ()
 	add_executable(
 	  kek-native
@@ -114,6 +123,14 @@ else ()
 	  ${APP_SOURCES}
 	  main.cpp
 	)
+	if (WIN32)
+	add_executable(
+	  kek-win32
+	  ${APP_SOURCES}
+	  main.cpp
+	  win32.cpp
+	)
+	endif (WIN32)
 endif ()
 
 target_compile_options(kek-native PRIVATE -march=native -Ofast -fomit-frame-pointer)
@@ -135,15 +152,6 @@ target_link_libraries(kek-native PUBLIC ${NCURSES_LIBRARIES})
 target_include_directories(kek-native PUBLIC ${NCURSES_INCLUDE_DIRS})
 target_compile_options(kek-native PUBLIC ${NCURSES_CFLAGS_OTHER})
 endif ()
-
-if (WIN32)
-add_executable(
-  kek-win32
-  ${APP_SOURCES}
-  main.cpp
-  win32.cpp
-)
-endif (WIN32)
 
 include(CheckIPOSupported)
 check_ipo_supported(RESULT supported)
