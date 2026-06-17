@@ -1,11 +1,14 @@
 // (C) 2018-2026 by Folkert van Heusden
 // Released under MIT license
 
-#if !defined(_WIN32)
 #include <cstdio>
-#include <poll.h>
-#include <ncurses.h>
 #include <unistd.h>
+#if defined(_WIN32)
+#include <ncurses/ncurses.h>
+#else
+#include <ncurses.h>
+#include <poll.h>
+#endif
 
 #include "blinkenlights.h"
 #include "bus.h"
@@ -21,6 +24,9 @@ console_ncurses::console_ncurses(std::atomic_uint32_t *const stop_event): consol
 {
 	init_ncurses(true);
 	resize_terminal();
+#if defined(_WIN32)
+	hStdInput = GetStdHandle(STD_INPUT_HANDLE);
+#endif
 }
 
 console_ncurses::~console_ncurses()
@@ -58,9 +64,8 @@ void console_ncurses::begin()
 
 int console_ncurses::wait_for_char_ll(const int timeout)
 {
-	pollfd fds[] = { { STDIN_FILENO, POLLIN, 0 } };
-
-	if (poll(fds, 1, timeout) == 1 && fds[0].revents) {
+#if defined(_WIN32)
+	if (WaitForSingleObject(hStdInput, timeout) == WAIT_OBJECT_0) {
 		std::unique_lock<std::mutex> lck(ncurses_mutex);
 
 		int c = getch();
@@ -68,6 +73,19 @@ int console_ncurses::wait_for_char_ll(const int timeout)
 			return -1;
 		return c;
 	}
+#else
+	pollfd fds[] = { { STDIN_FILENO, POLLIN, 0 } };
+	int rc = poll(fds, 1, timeout);
+
+	if (rc == 1 && fds[0].revents) {
+		std::unique_lock<std::mutex> lck(ncurses_mutex);
+
+		int c = getch();
+		if (c == ERR)
+			return -1;
+		return c;
+	}
+#endif
 
 	return -1;
 }
@@ -76,12 +94,9 @@ void console_ncurses::put_char_ll(const char c)
 {
 	if ((c >= 32 && c < 127) || c == 10) {
 		std::unique_lock<std::mutex> lck(ncurses_mutex);
-
 		wprintw(w_main->win, "%c", c);
-
 		getyx(w_main->win, ty, tx);
-
-		mydoupdate();
+		changes = true;
 	}
 }
 
@@ -123,7 +138,7 @@ void console_ncurses::resize_terminal()
 
 	scrollok(w_main -> win, TRUE);
 
-	mydoupdate();
+	changes = true;
 }
 
 void console_ncurses::panel_update_thread()
@@ -229,7 +244,7 @@ void console_ncurses::panel_update_thread()
 		{
 			std::unique_lock<std::mutex> lck(ncurses_mutex);
 			wmove(w_main->win, ty, tx);
-			mydoupdate();
+			changes = true;
 		}
 	}
 }
@@ -240,21 +255,23 @@ void console_ncurses::refresh_virtual_terminal()
 
 	wclear(w_main->win);
 
-	int offset = 0;
-
-	for(int row=0; row<t_height; row++) {
+	for(int row=0, offset = 0; row<t_height; row++) {
 		for(int col=0; col<t_width; col++, offset++) {
 			if (screen_buffer[offset])
 				mvwprintw(w_main->win, row + 1, col, "%c", screen_buffer[offset]);
 		}
 	}
 
-	mydoupdate();
+	changes = true;
 }
 
 void console_ncurses::ui_event_loop()
 {
-       while(*stop_event != EVENT_TERMINATE)
-               myusleep(1'000'000 / 10);
+       while(*stop_event != EVENT_TERMINATE) {
+               myusleep(1'000'000 / 15);
+	       if (changes.exchange(false)) {
+		       std::unique_lock<std::mutex> lck(ncurses_mutex);
+		       mydoupdate();
+	       }
+       }
 }
-#endif
