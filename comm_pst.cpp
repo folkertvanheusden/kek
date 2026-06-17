@@ -3,6 +3,7 @@
 
 #include "gen.h"
 #if !defined(BUILD_FOR_PICO2W)
+#include <cstring>
 #include <optional>
 #if WITH_PPS
 #include <fcntl.h>
