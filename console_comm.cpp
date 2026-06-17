@@ -84,3 +84,9 @@ void console_comm::panel_update_thread()
 		}
 	}
 }
+
+void console_comm::ui_event_loop()
+{
+	while(*stop_event != EVENT_TERMINATE)
+		myusleep(1'000'000 / refreshrate);
+}

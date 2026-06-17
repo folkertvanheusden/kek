@@ -251,4 +251,10 @@ void console_ncurses::refresh_virtual_terminal()
 
 	mydoupdate();
 }
+
+void console_ncurses::ui_event_loop()
+{
+       while(*stop_event != EVENT_TERMINATE)
+               myusleep(1'000'000 / refreshrate);
+}
 #endif

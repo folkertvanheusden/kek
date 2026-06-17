@@ -564,11 +564,13 @@ int main(int argc, char *argv[])
 		if (with_ui == ui_ncurses) {
 			cnsl = new console_ncurses(&event);
 			set_terminal(cnsl);
+			run_debugger = true;
 		}
 #if defined(USE_IMGUI)
 		else if (with_ui == ui_imgui) {
 			cnsl = new console_imgui(&event);
 			set_terminal(cnsl);
+			run_debugger = true;
 		}
 #endif
 		else {
@@ -803,27 +805,41 @@ int main(int argc, char *argv[])
 
 	b->getKW11_L()->begin(cnsl);
 
+	std::thread *th = nullptr;
+
 	if (tape_mode == load_and_run_bic || tape_mode == load_and_run)
 		simple_run(cnsl, b, &event);
-	else if (run_debugger || (bootloader == BL_NONE && tape.empty()))
-		debugger(cnsl, b, &event, debugger_init);
+	else if (run_debugger || (bootloader == BL_NONE && tape.empty())) {
+		th = new std::thread([&] {
+				debugger(cnsl, b, &event, debugger_init);
+				event = EVENT_TERMINATE;
+			});
+	}
 	else {
-		for(;;) {
-			*running = true;
+		th = new std::thread([&] {
+			for(;;) {
+				*running = true;
 
-			cpu *const c = b->getCpu();
-			while(event == EVENT_NONE)
-				c->step();
+				cpu *const c = b->getCpu();
+				while(event == EVENT_NONE)
+					c->step();
 
-			*running = false;
+				*running = false;
 
-			uint32_t stop_event = event.exchange(EVENT_NONE);
-			if (stop_event == EVENT_HALT || stop_event == EVENT_INTERRUPT || stop_event == EVENT_TERMINATE)
-				break;
-		}
+				uint32_t stop_event = event.exchange(EVENT_NONE);
+				if (stop_event == EVENT_HALT || stop_event == EVENT_INTERRUPT || stop_event == EVENT_TERMINATE)
+					break;
+			}
+			event = EVENT_TERMINATE;
+		});
 	}
 
-	event = EVENT_TERMINATE;
+	cnsl->ui_event_loop();
+
+	printf("Terminating...\n");
+
+	th->join();
+	delete th;
 
 	cnsl->stop_thread();
 	if (panel_th) {

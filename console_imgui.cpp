@@ -24,16 +24,10 @@ console_imgui::console_imgui(std::atomic_uint32_t *const stop_event): console(st
 
 console_imgui::~console_imgui()
 {
-	if (th) {
-		stop = true;
-		th->join();
-		delete th;
-	}
 }
 
 void console_imgui::begin()
 {
-	th = new std::thread(&console_imgui::gui_event_loop, this);
 }
 
 int console_imgui::wait_for_char_ll(const int timeout)
@@ -197,7 +191,7 @@ void console_imgui::refresh_virtual_terminal()
 {
 }
 
-void console_imgui::gui_event_loop()
+void console_imgui::ui_event_loop()
 {
 	set_thread_name("imgui");
 
