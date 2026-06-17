@@ -811,8 +811,9 @@ int main(int argc, char *argv[])
 		for(;;) {
 			*running = true;
 
+			cpu *const c = b->getCpu();
 			while(event == EVENT_NONE)
-				b->getCpu()->step();
+				c->step();
 
 			*running = false;
 
