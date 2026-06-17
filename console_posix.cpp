@@ -135,8 +135,10 @@ void console_posix::panel_update_thread()
 {
 	set_thread_name("kek:c-panel");
 
+#if !defined(__APPLE__)
 	timespec next { };
 	clock_gettime(CLOCK_MONOTONIC, &next);
+#endif
 
 	uint64_t add = 1'000'000'000 / refreshrate;
 	while(*stop_event != EVENT_TERMINATE && stop_panel == false) {
