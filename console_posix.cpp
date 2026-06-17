@@ -140,12 +140,16 @@ void console_posix::panel_update_thread()
 
 	uint64_t add = 1'000'000'000 / refreshrate;
 	while(*stop_event != EVENT_TERMINATE && stop_panel == false) {
+#if defined(__APPLE__)
+		myusleep(add / 1000);
+#else
 		next.tv_nsec += add;
 		while (next.tv_nsec >= 1'000'000'000) {
 			next.tv_nsec -= 1'000'000'000;
 			next.tv_sec++;
 		}
 		clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next, nullptr);
+#endif
 
 		if (p_blinkenlights) {
 			p_blinkenlights->push(b, running_flag);
