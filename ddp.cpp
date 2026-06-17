@@ -12,8 +12,10 @@
 #include <errno.h>
 #include <unistd.h>
 #include <vector>
+#if !defined(WIN32)
 #include <arpa/inet.h>
 #include <sys/socket.h>
+#endif
 #if defined(__FreeBSD__)
 #include <netinet/in.h>
 #endif

@@ -34,10 +34,11 @@ set(APP_IMGUI_SOURCES
 	${CMAKE_SOURCE_DIR}/imgui/backends/imgui_impl_sdlrenderer3.cpp
 )
 
-if (EXISTS "/usr/include/sys/timepps.h")
+if ((EXISTS "/usr/include/sys/timepps.h") AND (NOT WIN32))
 	MESSAGE("PPS enabled")
 	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWITH_PPS=1")
 else ()
+	MESSAGE("PPS disabled")
 	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWITH_PPS=0")
 endif ()
 
@@ -182,6 +183,8 @@ if (SDL3_FOUND)
 	target_link_libraries(kek-native PUBLIC ${SDL3_LIBRARIES})
 	target_include_directories(kek-native PUBLIC ${SDL3_INCLUDE_DIRS} ${CMAKE_SOURCE_DIR}/imgui)
 	target_compile_options(kek-native PUBLIC ${SDL3_CFLAGS_OTHER})
+else ()
+	MESSAGE("SDL3 NOT found")
 endif ()
 
 if (UNIX)
