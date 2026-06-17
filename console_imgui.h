@@ -39,6 +39,6 @@ public:
 
 	void panel_update_thread() override;
 
-	void gui_event_loop();
+	void ui_event_loop() override;
 };
 #endif

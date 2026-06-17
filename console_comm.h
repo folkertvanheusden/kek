@@ -25,4 +25,6 @@ public:
 
 	void resize_terminal() override;
 	void refresh_virtual_terminal() override;
+
+	void ui_event_loop() override;
 };

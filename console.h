@@ -131,4 +131,6 @@ public:
 
 	virtual void set_LED_state(const bool state);
 	virtual void pulse_LED    (                );
+
+	virtual void ui_event_loop() = 0;
 };

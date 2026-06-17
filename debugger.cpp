@@ -1946,6 +1946,8 @@ FLASHMEM void debugger(console *const cnsl, bus *const b, kek_event_t *const sto
 			cnsl->put_string_lf("Unknown exception caught");
 		}
 	}
+
+	*stop_event = EVENT_TERMINATE;
 }
 
 FLASHMEM void simple_run(console *const cnsl, bus *const b, kek_event_t *const stop_event)

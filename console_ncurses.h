@@ -34,9 +34,10 @@ public:
 	void put_string_lf(const std::string & what) override;
 
 	void resize_terminal() override;
-
 	void refresh_virtual_terminal() override;
 
 	void panel_update_thread() override;
+
+	void ui_event_loop() override;
 };
 #endif

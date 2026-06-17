@@ -170,3 +170,9 @@ void console_posix::refresh_virtual_terminal()
 	for(int row=0; row<t_height; row++)
 		printf("%s\n", std::string(screen_buffer[row], t_width).c_str());
 }
+
+void console_posix::ui_event_loop()
+{
+       while(*stop_event != EVENT_TERMINATE)
+               myusleep(1'000'000 / refreshrate);
+}
