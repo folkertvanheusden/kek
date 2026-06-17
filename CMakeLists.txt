@@ -1,8 +1,8 @@
-# (C) 2018-2024 by Folkert van Heusden
+# (C) 2018-2026 by Folkert van Heusden
 # Released under MIT license
 
 project(PDP-11)
-cmake_minimum_required(VERSION 3.9)
+cmake_minimum_required(VERSION 3.10)
 
 add_compile_options(-Wall -pedantic -Wextra)
 
@@ -14,9 +14,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 include(FindPkgConfig)
 
-if (NOT WIN32)
 pkg_check_modules(SDL3 sdl3 sdl3-ttf)
-endif ()
 
 if (TURBO EQUAL 1)
 	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DTURBO=1")
@@ -178,10 +176,12 @@ if (SDL3_FOUND)
 	MESSAGE("SDL3 found")
 	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_IMGUI=1")
 	target_link_libraries(kek ${SDL3_LIBRARIES})
-	target_include_directories(kek PUBLIC ${SDL3_INCLUDE_DIRS} ${CMAKE_SOURCE_DIR}/imgui)
+	target_include_directories(kek PRIVATE ${CMAKE_SOURCE_DIR}/imgui)
+	target_include_directories(kek PUBLIC ${SDL3_INCLUDE_DIRS})
 	target_compile_options(kek PUBLIC ${SDL3_CFLAGS_OTHER})
 	target_link_libraries(kek-native PUBLIC ${SDL3_LIBRARIES})
-	target_include_directories(kek-native PUBLIC ${SDL3_INCLUDE_DIRS} ${CMAKE_SOURCE_DIR}/imgui)
+	target_include_directories(kek-native PRIVATE ${CMAKE_SOURCE_DIR}/imgui)
+	target_include_directories(kek-native PUBLIC ${SDL3_INCLUDE_DIRS})
 	target_compile_options(kek-native PUBLIC ${SDL3_CFLAGS_OTHER})
 else ()
 	MESSAGE("SDL3 NOT found")
