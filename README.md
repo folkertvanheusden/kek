@@ -26,6 +26,10 @@ To build for e.g. windows:
     cmake -DCMAKE_TOOLCHAIN_FILE=../mingw64.cmake ..
     make
 
+or with
+
+    cmake -DCMAKE_TOOLCHAIN_FILE=../msys2.cmake ..
+
 
 To run an RK05 disk image:
 
