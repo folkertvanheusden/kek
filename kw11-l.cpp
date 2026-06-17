@@ -176,8 +176,10 @@ void kw11_l::operator()()
 
 	DOLOG(log_ss::LS_GENERIC, "Starting KW11-L thread");
 
+#if !defined(__APPLE__)
 	timespec next { };
 	clock_gettime(CLOCK_MONOTONIC, &next);
+#endif
 
 	while(!stop_flag) {
 		int f = std::max(1, int(int_frequency));
