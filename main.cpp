@@ -811,8 +811,9 @@ int main(int argc, char *argv[])
 		for(;;) {
 			*running = true;
 
+			cpu *const c = b->getCpu();
 			while(event == EVENT_NONE)
-				b->getCpu()->step();
+				c->step();
 
 			*running = false;
 
@@ -829,9 +830,6 @@ int main(int argc, char *argv[])
 		panel_th->join();
 		delete panel_th;
 	}
-
-	for(auto & d: disk_files)
-		delete d;
 
 	delete b;
 	delete cnsl;
