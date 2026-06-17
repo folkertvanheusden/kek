@@ -4,8 +4,13 @@
 #pragma once
 
 #include <string>
+#if defined(_WIN32)
+#include <ncurses/ncurses.h>
+#include <ncurses/panel.h>
+#else
 #include <ncurses.h>
 #include <panel.h>
+#endif
 
 typedef struct
 {

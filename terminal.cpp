@@ -1,27 +1,34 @@
 // (C) 2018-2026 by Folkert van Heusden
 // Released under MIT license
 
-#if !defined(_WIN32)
 #include <algorithm>
 #include <assert.h>
 #if defined(__FreeBSD__)
 #include <ncurses/curses.h>
+#elif defined(_WIN32)
+#include <ncurses/ncurses.h>
 #else
 #include <ncursesw/curses.h>
 #endif
 #include <stdlib.h>
 #include <string>
 #include <string.h>
+#if !defined(_WIN32)
 #include <sys/ioctl.h>
+#endif
 
 #include "terminal.h"
 #include "error.h"
 #include "utils.h"
+#if defined(_WIN32)
+#include "win32.h"
+#endif
 
 int max_x = 80, max_y = 25;
 
 void determine_terminal_size()
 {
+#if !defined(_WIN32)
 	struct winsize size;
 
 	if (ioctl(1, TIOCGWINSZ, &size) == 0)
@@ -39,6 +46,7 @@ void determine_terminal_size()
 		if (dummy)
 			max_x = atoi(dummy);
 	}
+#endif
 }
 
 void apply_mouse_setting(void)
@@ -306,4 +314,3 @@ bool right_mouse_button_clicked(void)
 
 	return getmouse(&event) == OK && (event.bstate & BUTTON3_CLICKED);
 }
-#endif

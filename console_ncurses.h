@@ -1,7 +1,6 @@
 // (C) 2018-2026 by Folkert van Heusden
 // Released under MIT license
 
-#if !defined(_WIN32)
 #include <mutex>
 
 #include "console.h"
@@ -20,6 +19,11 @@ private:
 
 	int          tx        { 0 };
 	int          ty        { 0 };
+
+#if defined(_WIN32)
+	HANDLE       hStdInput {   };
+#endif
+	abool        changes   { false };
 
 protected:
 	int  wait_for_char_ll(const int  timeout) override;
@@ -40,4 +44,3 @@ public:
 
 	void ui_event_loop() override;
 };
-#endif

@@ -25,9 +25,9 @@
 #if defined(_WIN32)
 #include "win32.h"
 #else
-#include "console_ncurses.h"
 #endif
 #include "console_comm.h"
+#include "console_ncurses.h"
 #include "console_posix.h"
 #include "cpu.h"
 #include "ddp.h"
@@ -558,9 +558,6 @@ int main(int argc, char *argv[])
 			error_exit(false, "Failed setting up TCP listener on port %d", console_port.value());
 	}
 	else {
-#if defined(_WIN32)
-		cnsl = new console_posix(&event);
-#else
 		if (with_ui == ui_ncurses) {
 			cnsl = new console_ncurses(&event);
 			set_terminal(cnsl);
@@ -576,7 +573,6 @@ int main(int argc, char *argv[])
 		else {
 			cnsl = new console_posix(&event);
 		}
-#endif
 	}
 
 #if !defined(_WIN32) && defined(JANSSON)

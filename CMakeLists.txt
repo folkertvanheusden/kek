@@ -135,8 +135,23 @@ endif ()
 
 target_compile_options(kek-native PRIVATE -march=native -Ofast -fomit-frame-pointer)
 
-if (NOT WIN32)
-pkg_check_modules(PANEL REQUIRED panel)
+if (WIN32)
+add_executable(
+  kek-win32
+  ${APP_SOURCES}
+  main.cpp
+  win32.cpp
+)
+endif (WIN32)
+
+if (WIN32)
+	pkg_check_modules(PANEL REQUIRED panelw)
+	target_link_libraries(kek-win32 ${PANEL_LIBRARIES})
+	target_include_directories(kek-win32 PUBLIC ${PANEL_INCLUDE_DIRS})
+	target_compile_options(kek-win32 PUBLIC ${PANEL_CFLAGS_OTHER})
+else()
+	pkg_check_modules(PANEL REQUIRED panel)
+endif ()
 target_link_libraries(kek ${PANEL_LIBRARIES})
 target_include_directories(kek PUBLIC ${PANEL_INCLUDE_DIRS})
 target_compile_options(kek PUBLIC ${PANEL_CFLAGS_OTHER})
@@ -144,14 +159,20 @@ target_link_libraries(kek-native PUBLIC ${PANEL_LIBRARIES})
 target_include_directories(kek-native PUBLIC ${PANEL_INCLUDE_DIRS})
 target_compile_options(kek-native PUBLIC ${PANEL_CFLAGS_OTHER})
 
-pkg_check_modules(NCURSES REQUIRED ncurses)
+if (WIN32)
+	pkg_check_modules(NCURSES REQUIRED ncursesw)
+	target_link_libraries(kek-win32 ${NCURSES_LIBRARIES})
+	target_include_directories(kek-win32 PUBLIC ${NCURSES_INCLUDE_DIRS})
+	target_compile_options(kek-win32 PUBLIC ${NCURSES_CFLAGS_OTHER})
+else()
+	pkg_check_modules(NCURSES REQUIRED ncurses)
+endif ()
 target_link_libraries(kek ${NCURSES_LIBRARIES})
 target_include_directories(kek PUBLIC ${NCURSES_INCLUDE_DIRS})
 target_compile_options(kek PUBLIC ${NCURSES_CFLAGS_OTHER})
 target_link_libraries(kek-native PUBLIC ${NCURSES_LIBRARIES})
 target_include_directories(kek-native PUBLIC ${NCURSES_INCLUDE_DIRS})
 target_compile_options(kek-native PUBLIC ${NCURSES_CFLAGS_OTHER})
-endif ()
 
 include(CheckIPOSupported)
 check_ipo_supported(RESULT supported)
