@@ -136,15 +136,6 @@ endif ()
 target_compile_options(kek-native PRIVATE -march=native -Ofast -fomit-frame-pointer)
 
 if (WIN32)
-add_executable(
-  kek-win32
-  ${APP_SOURCES}
-  main.cpp
-  win32.cpp
-)
-endif (WIN32)
-
-if (WIN32)
 	pkg_check_modules(PANEL REQUIRED panelw)
 	target_link_libraries(kek-win32 ${PANEL_LIBRARIES})
 	target_include_directories(kek-win32 PUBLIC ${PANEL_INCLUDE_DIRS})
@@ -204,6 +195,7 @@ endif ()
 if (SDL3_FOUND)
 	MESSAGE("SDL3 found")
 	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_IMGUI=1")
+	MESSAGE(${CMAKE_SOURCE_DIR}/imgui)
 	target_link_libraries(kek ${SDL3_LIBRARIES})
 	target_include_directories(kek PRIVATE ${CMAKE_SOURCE_DIR}/imgui)
 	target_include_directories(kek PUBLIC ${SDL3_INCLUDE_DIRS})
@@ -212,6 +204,10 @@ if (SDL3_FOUND)
 	target_include_directories(kek-native PRIVATE ${CMAKE_SOURCE_DIR}/imgui)
 	target_include_directories(kek-native PUBLIC ${SDL3_INCLUDE_DIRS})
 	target_compile_options(kek-native PUBLIC ${SDL3_CFLAGS_OTHER})
+	target_link_libraries(kek-win32 ${SDL3_LIBRARIES})
+	target_include_directories(kek-win32 PRIVATE ${CMAKE_SOURCE_DIR}/imgui)
+	target_include_directories(kek-win32 PUBLIC ${SDL3_INCLUDE_DIRS})
+	target_compile_options(kek-win32 PUBLIC ${SDL3_CFLAGS_OTHER})
 else ()
 	MESSAGE("SDL3 NOT found")
 endif ()
@@ -237,6 +233,8 @@ endif ()
 target_include_directories(kek-native PUBLIC ${JANSSON_INCLUDE_DIRS})
 target_compile_options(kek-native PUBLIC ${JANSSON_CFLAGS_OTHER} -DJANSSON)
 endif ()
+
+include_directories(kek-win32 ${CMAKE_SOURCE_DIR}/imgui)
 
 add_custom_target(coverage
     COMMAND ${CMAKE_COMMAND} -E remove_directory coverage
