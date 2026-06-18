@@ -271,6 +271,7 @@ void console_ncurses::ui_event_loop()
                myusleep(1'000'000 / 15);
 	       if (changes.exchange(false)) {
 		       std::unique_lock<std::mutex> lck(ncurses_mutex);
+		       wmove(w_main->win, ty + 1, tx + 1);
 		       mydoupdate();
 	       }
        }

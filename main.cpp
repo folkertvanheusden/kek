@@ -832,8 +832,6 @@ int main(int argc, char *argv[])
 
 	cnsl->ui_event_loop();
 
-	printf("Terminating...\n");
-
 	th->join();
 	delete th;
 
@@ -845,6 +843,8 @@ int main(int argc, char *argv[])
 
 	delete b;
 	delete cnsl;
+
+	printf("Terminating...\n");
 
 	return 0;
 }
