@@ -630,11 +630,6 @@ FLASHMEM void setup() {
 	tty_ = new tty(cnsl, b);
 	b->add_tty(tty_);
 
-#if !defined(TEENSY4_1)
-	cs->println("* Adding TM-11");
-	b->add_tm11(new tm_11(b));
-#endif
-
 	cs->println("* Starting KW11-L");
 	b->getKW11_L()->begin(cnsl);
 

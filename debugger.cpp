@@ -700,13 +700,20 @@ void serialize_state(console *const cnsl, const bus *const b, const std::string 
 void tm11_load_tape(console *const cnsl, bus *const b, const std::optional<std::string> & file)
 {
 #if !defined(TEENSY4_1)
+	auto *dev = b->getTM11();
+	if (dev == nullptr) {
+		cnsl->put_string_lf("Adding TM-11");
+		dev = new tm_11(b);
+		b->add_tm11(dev);
+	}
+
 	if (file.has_value())
-		b->getTM11()->load(file.value());
+		dev->load(file.value());
 	else {
 		auto sel_file = select_host_file(cnsl);
 
 		if (sel_file.has_value())
-			b->getTM11()->load(sel_file.value());
+			dev->load(sel_file.value());
 	}
 #endif
 }
@@ -714,7 +721,9 @@ void tm11_load_tape(console *const cnsl, bus *const b, const std::optional<std::
 void tm11_unload_tape(bus *const b)
 {
 #if !defined(TEENSY4_1)
-	b->getTM11()->unload();
+	auto *dev = b->getTM11();
+	if (dev)
+		dev->unload();
 #endif
 }
 
