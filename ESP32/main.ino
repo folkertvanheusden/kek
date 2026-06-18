@@ -396,9 +396,16 @@ void heap_caps_alloc_failed_hook(size_t requested_size, uint32_t caps, const cha
 #if defined(TEENSY4_1)
 // from https://forum.pjrc.com/index.php?threads/how-to-display-free-ram.33443/
 extern char _heap_end[], *__brkval;
-FLASHMEM int freeram()
+FLASHMEM int freeram2()
 {
   return (char *)&_heap_end - __brkval;
+}
+
+extern char _ebss[];
+FLASHMEM int freeram1()
+{
+  auto sp = (char*) __builtin_frame_address(0);
+  return sp - _ebss;
 }
 
 FLASHMEM void debugger_task(void *)
@@ -595,7 +602,8 @@ FLASHMEM void setup() {
 			cs->println(format("Free PSRAM: %d MB (or %d pages (see 'ramsize' in the debugger))", external_psram_size, n_pages));
   }
 
-	cs->println(format("Free RAM after init (decimal bytes): %d", freeram()));
+	cs->println(format("Free stack RAM after init (decimal bytes): %d", freeram1()));
+	cs->println(format("Free heap RAM after init (decimal bytes): %d", freeram2()));
 #endif
 
 #if defined(HEARTBEAT_PIN)
@@ -646,9 +654,9 @@ FLASHMEM void setup() {
 #elif defined(ESP32)
 	uint32_t free_heap = ESP.getFreeHeap();
 #elif defined(TEENSY4_1)
-	int free_heap = freeram();
+	int free_heap = freeram2();
 #endif
-	cs->println(format("Free RAM after init: %d decimal bytes", free_heap));
+	cs->println(format("Free heap RAM after init: %d decimal bytes", free_heap));
 
 #if defined(TEENSY4_1)
 	cnsl->put_string_lf("* Starting debugger task");
