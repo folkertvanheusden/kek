@@ -123,13 +123,13 @@ void myusleep(uint64_t us)
 #endif
 		}
 	}
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) || defined(_WIN32)
         timespec end { };
-        clock_gettime(CLOCK_REALTIME, &end);
 	us *= 1000;
-	end.tv_nsec += us % 1000'000'000;
-	end.tv_sec  += us / 1000'000'000;
-	nanosleep(&end, nullptr);  // hope for the best
+	end.tv_nsec = us % 1000'000'000;
+	end.tv_sec  = us / 1000'000'000;
+	if (nanosleep(&end, nullptr) == -1)  // hope for the best
+		printf("%s\n", strerror(errno));
 #else
         timespec end { };
         clock_gettime(CLOCK_MONOTONIC, &end);

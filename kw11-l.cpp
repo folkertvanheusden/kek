@@ -176,24 +176,28 @@ void kw11_l::operator()()
 
 	DOLOG(log_ss::LS_GENERIC, "Starting KW11-L thread");
 
-#if !defined(__APPLE__)
+#if !defined(__APPLE__) && !defined(_WIN32)
 	timespec next { };
 	clock_gettime(CLOCK_MONOTONIC, &next);
 #endif
 
 	while(!stop_flag) {
 		int f = std::max(1, int(int_frequency));
-#if defined(__APPLE__)
+#if defined(__APPLE__) || defined(_WIN32)
 		myusleep(1'000'000 / f);
 #else
-
 		next.tv_nsec += 1'000'000'000 / f;  // usually 50 or 60 Hz
 		while (next.tv_nsec >= 1'000'000'000) {
 			next.tv_nsec -= 1'000'000'000;
 			next.tv_sec++;
 		}
 
-		clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next, nullptr);
+		if (clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next, nullptr) == -1) {
+			if (errno == EINTR)
+				continue;
+			DOLOG(log_ss::LS_GENERIC, "clock_nanosleep failed: %s", strerror(errno));
+			break;
+		}
 #endif
 
 		tick();

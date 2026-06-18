@@ -19,12 +19,12 @@ To build for e.g. linux:
     Optional:
     * libsdl3-dev, libsdl3-ttf-dev
 
-To build for e.g. windows:
+To build for e.g. windows, use msys2 with only "ucrt" packages:
 
     mkdir build-win32
     cd build-win32
     cmake -DCMAKE_TOOLCHAIN_FILE=../msys2.cmake ..
-    make
+    ninja kek-win32
 
 Windows users are advised to run only the imgui output version (-u imgui) as the command.com-terminal versions (-u ncurses for example) is unbearable slow.
 
