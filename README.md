@@ -23,13 +23,10 @@ To build for e.g. windows:
 
     mkdir build-win32
     cd build-win32
-    cmake -DCMAKE_TOOLCHAIN_FILE=../mingw64.cmake ..
+    cmake -DCMAKE_TOOLCHAIN_FILE=../msys2.cmake ..
     make
 
-or with
-
-    cmake -DCMAKE_TOOLCHAIN_FILE=../msys2.cmake ..
-
+Windows users are advised to run only the imgui output version (-u imgui) as the command.com-terminal versions (-u ncurses for example) is unbearable slow.
 
 To run an RK05 disk image:
 
@@ -47,6 +44,15 @@ Note that UNIX 7 starts in single user mode first; press ctrl+d to switch to mul
 Also make sure to configure networking ('startnet') to be able to connect (using telnet) to the DC-11 ports (TCP port 1101 upto and including 1104).
 
 If using windows, run Kek with -c x where x is some portnumber. You can then telnet to that port to control the emulator/emulated system.
+
+
+Teensy4.1
+---------
+
+    cd TEENSY4_1
+    pio run -t upload
+
+That's it!
 
 
 ESP32
