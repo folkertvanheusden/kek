@@ -5,6 +5,7 @@
 #if !defined(BUILD_FOR_PICO2W)
 #include <cstring>
 #include <optional>
+#include <unistd.h>
 #if WITH_PPS
 #include <fcntl.h>
 #include <sys/timepps.h>
@@ -128,7 +129,7 @@ void comm_pst::operator()()
 		while(!stop_flag) {
 			pps_info_t infobuf { };
 			if (time_pps_fetch(handles.value().first, PPS_TSFMT_TSPEC, &infobuf, nullptr) == -1) {
-				DOLOG(log_ss::LS_COMM, "Cannot time_pps_fetch from %s: %s", dev_name, strerror(errno));
+				DOLOG(log_ss::LS_COMM, "Cannot time_pps_fetch from %s: %s", dev_name.c_str(), strerror(errno));
 				break;
 			}
 
