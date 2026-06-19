@@ -373,6 +373,33 @@ FLASHMEM std::optional<disk_backend *> select_disk_backend(console *const cnsl)
 	return { };
 }
 
+FLASHMEM void add_new_rk05(bus *const b, console *const cnsl)
+{
+	if (b->getRK05() == nullptr) {
+		auto rk05_dev = new rk05(b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag());
+		rk05_dev->begin();
+		b->add_rk05(rk05_dev);
+	}
+}
+
+FLASHMEM void add_new_rl02(bus *const b, console *const cnsl)
+{
+	if (b->getRL02() == nullptr) {
+		auto rl02_dev = new rl02(b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag());
+		rl02_dev->begin();
+		b->add_rl02(rl02_dev);
+	}
+}
+
+FLASHMEM void add_new_rp06(bus *const b, console *const cnsl)
+{
+	if (b->getRP06() == nullptr) {
+		auto rp06_dev = new rp06(b, cnsl->get_disk_read_activity_flag(), cnsl->get_disk_write_activity_flag(), false);
+		rp06_dev->begin();
+		b->add_RP06(rp06_dev);
+	}
+}
+
 FLASHMEM void configure_disk(bus *const b, console *const cnsl)
 {
 	int type_ch = wait_for_key("1. RK05, 2. RL02, 3. RP06, 9. abort", cnsl, { '1', '2', '3', '9' });
@@ -381,14 +408,17 @@ FLASHMEM void configure_disk(bus *const b, console *const cnsl)
 	disk_device *dd = nullptr;
 
 	if (type_ch == '1') {
+		add_new_rk05(b, cnsl);
 		dd = b->getRK05();
 		bl = BL_RK05;
 	}
 	else if (type_ch == '2') {
+		add_new_rl02(b, cnsl);
 		dd = b->getRL02();
 		bl = BL_RL02;
 	}
 	else if (type_ch == '3') {
+		add_new_rp06(b, cnsl);
 		dd = b->getRP06();
 		bl = BL_RP06;
 	}
@@ -670,13 +700,20 @@ void serialize_state(console *const cnsl, const bus *const b, const std::string 
 void tm11_load_tape(console *const cnsl, bus *const b, const std::optional<std::string> & file)
 {
 #if !defined(TEENSY4_1)
+	auto *dev = b->getTM11();
+	if (dev == nullptr) {
+		cnsl->put_string_lf("Adding TM-11");
+		dev = new tm_11(b);
+		b->add_tm11(dev);
+	}
+
 	if (file.has_value())
-		b->getTM11()->load(file.value());
+		dev->load(file.value());
 	else {
 		auto sel_file = select_host_file(cnsl);
 
 		if (sel_file.has_value())
-			b->getTM11()->load(sel_file.value());
+			dev->load(sel_file.value());
 	}
 #endif
 }
@@ -684,7 +721,9 @@ void tm11_load_tape(console *const cnsl, bus *const b, const std::optional<std::
 void tm11_unload_tape(bus *const b)
 {
 #if !defined(TEENSY4_1)
-	b->getTM11()->unload();
+	auto *dev = b->getTM11();
+	if (dev)
+		dev->unload();
 #endif
 }
 
