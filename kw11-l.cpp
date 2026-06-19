@@ -41,6 +41,12 @@ static void thread_wrapper_kw11(void *p)
 	kw11_l *const kw11l = reinterpret_cast<kw11_l *>(p);
 	kw11l->operator()();
 }
+#elif defined(_WIN32)
+kw11_l *p_kw11_l = nullptr;
+static void CALLBACK timer_wrapper_kw11(HWND hwnd, UINT message, UINT idTimer, DWORD dwTime)
+{
+	p_kw11_l->tick();
+}
 #endif
 
 kw11_l::kw11_l(bus *const b): b(b)
@@ -105,17 +111,19 @@ void kw11_l::begin(console *const cnsl)
 	add_repeating_timer_us(-1000000 / int_frequency, periodic_timer_callback, this, &timer);
 #elif defined(FREERTOS)
 	xTaskCreate(&thread_wrapper_kw11, "kw11-l", 1536, this, 2, nullptr);
+#elif defined(_WIN32)
+	p_kw11_l = this;
+	if (SetTimer(GetActiveWindow(), 0, 1000 / int_frequency, TIMERPROC(timer_wrapper_kw11)) == 0)
+		DOLOG(log_ss::LS_GENERIC, "Failed to start KW11-L timer");
 #else
 	th = new std::thread(std::ref(*this));
 
-#if !defined(_WIN32)
 	int         policy { };
 	sched_param param  { };
 	pthread_getschedparam(th->native_handle(), &policy, &param);
 	policy = SCHED_RR;
 	param.sched_priority = sched_get_priority_max(policy);
 	pthread_setschedparam(th->native_handle(), policy, &param);
-#endif
 #endif
 }
 
@@ -176,14 +184,14 @@ void kw11_l::operator()()
 
 	DOLOG(log_ss::LS_GENERIC, "Starting KW11-L thread");
 
-#if !defined(__APPLE__) && !defined(_WIN32)
+#if !defined(__APPLE__)
 	timespec next { };
 	clock_gettime(CLOCK_MONOTONIC, &next);
 #endif
 
 	while(!stop_flag) {
 		int f = std::max(1, int(int_frequency));
-#if defined(__APPLE__) || defined(_WIN32)
+#if defined(__APPLE__)
 		myusleep(1'000'000 / f);
 #else
 		next.tv_nsec += 1'000'000'000 / f;  // usually 50 or 60 Hz
