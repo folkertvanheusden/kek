@@ -50,48 +50,24 @@ template<typename T>
 class my_threadsafe_queue
 {
 private:
-	std::deque<T>             q;
 #if defined(FREERTOS)
-        QueueHandle_t             cv { xQueueCreate(16, 1)      };
-        mutable SemaphoreHandle_t l  { xSemaphoreCreateBinary() };
+        QueueHandle_t             q { xQueueCreate(4, sizeof(T)) };
 #else
+	std::deque<T>             q;
         std::condition_variable   cv;
         mutable std::mutex        l;
 #endif
 
 public:
 	my_threadsafe_queue() {
-#if defined(FREERTOS)
-		xSemaphoreGive(l);  // init
-#endif
 	}
 
 	~my_threadsafe_queue() {
 	}
 
-	void push_front(T value) {
-#if defined(FREERTOS)
-		xSemaphoreTake(l, portMAX_DELAY);
-		q.push_front(std::move(value));
-		xSemaphoreGive(l);
-		uint8_t v = 1;
-		if (xQueueSend(cv, &v, portMAX_DELAY) == pdFALSE)
-			DOLOG(log_ss::LS_GENERIC, "xQueueSend failed");
-#else
-		std::unique_lock<std::mutex> lck(l);
-		q.push_front(std::move(value));
-		lck.unlock();
-		cv.notify_one();
-#endif
-	}
-
 	void push(T value) {
 #if defined(FREERTOS)
-		xSemaphoreTake(l, portMAX_DELAY);
-		q.push_back(std::move(value));
-		xSemaphoreGive(l);
-		uint8_t v = 1;
-		if (xQueueSend(cv, &v, portMAX_DELAY) == pdFALSE)
+		if (xQueueSend(q, &value, portMAX_DELAY) != pdPASS)
 			DOLOG(log_ss::LS_GENERIC, "xQueueSend failed");
 #else
 		std::unique_lock<std::mutex> lck(l);
@@ -103,23 +79,9 @@ public:
 
 	std::optional<T> pop(const int timeout_ms) {
 #if defined(FREERTOS)
-		std::optional<T> c;
-
-		for(int i=0; i<2; i++) {
-			xSemaphoreTake(l, portMAX_DELAY);
-			if (q.empty() == false) {
-				c = std::move(q.front());
-				q.pop_front();
-			}
-			xSemaphoreGive(l);
-
-			if (c.has_value())
-				break;
-
-			uint8_t rc = 0;
-			if (xQueueReceive(cv, &rc, timeout_ms / portTICK_PERIOD_MS) == pdFALSE || rc == 0)
-				return { };
-		}
+		T c { };
+		if (xQueueReceive(q, &c, timeout_ms / portTICK_PERIOD_MS) != pdPASS)
+			return { };
 
 		return c;
 #else
@@ -136,10 +98,7 @@ public:
 
 	bool is_empty() {
 #if defined(FREERTOS)
-		xSemaphoreTake(l, portMAX_DELAY);
-		auto rc = q.empty();
-		xSemaphoreGive(l);
-		return rc;
+		return uxQueueMessagesWaiting(q) == 0;
 #else
 		std::unique_lock<std::mutex> lck(l);
 		return q.empty();
@@ -148,9 +107,7 @@ public:
 
 	void clear() {
 #if defined(FREERTOS)
-		xSemaphoreTake(l, portMAX_DELAY);
-		q.clear();
-		xSemaphoreGive(l);
+		xQueueReset(q);
 #else
 		std::unique_lock<std::mutex> lck(l);
 		q.clear();
@@ -159,10 +116,7 @@ public:
 
 	size_t aprox_size() const {
 #if defined(FREERTOS)
-		xSemaphoreTake(l, portMAX_DELAY);
-		auto rc = q.size();
-		xSemaphoreGive(l);
-		return rc;
+		return uxQueueMessagesWaiting(q);
 #else
 		std::unique_lock<std::mutex> lck(l);
 		return q.size();

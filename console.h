@@ -93,7 +93,6 @@ public:
 
 	bool         poll_char();
 	int          get_char();
-	void         unget_char(const char c);
 	std::optional<int> wait_char(const int timeout_ms);
 	std::string  read_line(const std::string & prompt, const explode_func_t & ef = nullptr);
 	void         flush_input();

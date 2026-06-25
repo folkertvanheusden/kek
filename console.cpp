@@ -97,11 +97,6 @@ std::optional<int> console::wait_char(const int timeout_ms)
 	return c.value();
 }
 
-void console::unget_char(const char c)
-{
-	input_buffer.push_front(c);
-}
-
 void console::flush_input()
 {
 	input_buffer.clear();
