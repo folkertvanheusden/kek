@@ -332,7 +332,7 @@ void cpu::execute_any_pending_interrupt()
 				}
 			}
 
-			DOLOG(log_ss::LS_CPU, "Invoking interrupt vector %o (IPL %d, current: %d)", v, i, current_level);
+			DOLOG(log_ss::LS_TRACE, "Invoking interrupt vector %o (IPL %d, current: %d)", v, i, current_level);
 			trap(v, i, true);
 
 #if defined(FREERTOS)
@@ -356,7 +356,7 @@ void cpu::queue_interrupt(const uint8_t level, const uint16_t vector)
 #endif
 
 	queued_interrupts[level].insert(vector);
-	DOLOG(log_ss::LS_CPU, "Queueing interrupt vector %o (IPL %d, current: %d), n: %" PRIzu, vector, level, getPSW_spl(), queued_interrupts[level].size());
+	DOLOG(log_ss::LS_TRACE, "Queueing interrupt vector %o (IPL %d, current: %d), n: %" PRIzu, vector, level, getPSW_spl(), queued_interrupts[level].size());
 
 #if defined(FREERTOS)
 	xSemaphoreGive(qi_lock);
@@ -393,7 +393,7 @@ void cpu::add_to_MMR1(const int reg, const int delta)
 	assert(delta >= -2 && delta <= 2);
 
 	if (mmu_->isMMR1Locked() == false) {
-		DOLOG(log_ss::LS_CPU, "MMR1: add %d to register R%d", delta, reg);
+		DOLOG(log_ss::LS_TRACE, "MMR1: add %d to register R%d", delta, reg);
 		mmu_->add_to_MMR1(delta, reg);
 	}
 }
@@ -647,7 +647,7 @@ uint32_t cpu::shifter(uint32_t value, int shift, bool is32b)
 	uint32_t mask        = is32b ? 0xffffffff : 0xffff;
 	bool     sign        = value & sign_mask;
 
-	DOLOG(log_ss::LS_CPU, "shift %012o with %d", value, shift);
+	DOLOG(log_ss::LS_TRACE, "shift %012o with %d", value, shift);
 
 	setPSW_v(false);
 
@@ -1523,7 +1523,7 @@ bool cpu::misc_operations(const uint16_t instr)
 				while(check_pending_interrupts() == false);
 			}
 
-			DOLOG(log_ss::LS_CPU, "WAIT returned");
+			DOLOG(log_ss::LS_TRACE, "WAIT returned");
 
 			return true;
 
@@ -1631,7 +1631,7 @@ bool cpu::misc_operations(const uint16_t instr)
 // 'is_interrupt' is not correct naming; it is true for mmu faults and interrupts
 void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 {
-	DOLOG(log_ss::LS_CPU, "*** CPU::TRAP %o, new-ipl: %d, is-interrupt: %d, run mode: %d ***", vector, new_ipl, is_interrupt, getPSW_runmode());
+	DOLOG(log_ss::LS_TRACE, "*** CPU::TRAP %o, new-ipl: %d, is-interrupt: %d, run mode: %d ***", vector, new_ipl, is_interrupt, getPSW_runmode());
 
 	auto it = trap_counts.find(vector);
 	if (it == trap_counts.end())
@@ -1650,7 +1650,7 @@ void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 			bool kernel_mode = !(psw >> 14);
 
 			if (processing_trap_depth >= 2) {
-				DOLOG(log_ss::LS_CPU, "Trap depth %d", processing_trap_depth);
+				DOLOG(log_ss::LS_TRACE, "Trap depth %d", processing_trap_depth);
 
 				if (processing_trap_depth >= 3) {
 					*event = EVENT_HALT;
@@ -1695,10 +1695,10 @@ void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 
 			// if we reach this point then the trap was processed without causing
 			// another trap
-			DOLOG(log_ss::LS_CPU, "Trapping to %06o with PSW %06o", pc, psw);
+			DOLOG(log_ss::LS_TRACE, "Trapping to %06o with PSW %06o", pc, psw);
 		}
 		catch(const int exception) {
-			DOLOG(log_ss::LS_CPU, "trap during execution of trap (%d)", exception);
+			DOLOG(log_ss::LS_TRACE, "trap during execution of trap (%d)", exception);
 
 			setPSW(before_psw, false);
 		}
@@ -2695,7 +2695,7 @@ bool cpu::step()
 	if (any_queued_interrupts.exchange(false, std::memory_order_relaxed)) {
 #endif
 		if (delayed_trap.has_value()) {
-			DOLOG(log_ss::LS_CPU, "delayed trap %06o", delayed_trap.value());
+			DOLOG(log_ss::LS_TRACE, "delayed trap %06o", delayed_trap.value());
 			trap(delayed_trap.value(), 7);
 			delayed_trap.reset();
 		}
@@ -2719,7 +2719,7 @@ bool cpu::step()
 		return false;
 	}
 	catch(const int exception_nr) {
-		DOLOG(log_ss::LS_CPU, "trap during execution of command (%d)", exception_nr);
+		DOLOG(log_ss::LS_TRACE, "trap during execution of command (%d)", exception_nr);
 	}
 
 	return true;
