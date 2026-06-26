@@ -110,7 +110,7 @@ FLASHMEM void ddp::push(console *cnsl, bus *const b, const uint8_t brightness)
 		cnsl->generate_panel_colors(pixels, n_pixels, b, b->getCpu(), brightness);
 
 		size_t   pixels_allocated = pixels.size();
-		size_t   msg_len = 10 + pixels_allocated * 3;
+		size_t   msg_len          = 10 + pixels_allocated * 3;
 		message = new uint8_t[msg_len]();
 		message[0] = (1 << 6) |  // version
 				1;  // push
