@@ -808,7 +808,6 @@ int main(int argc, char *argv[])
 	else if (run_debugger || (bootloader == BL_NONE && tape.empty())) {
 		th = new std::thread([&] {
 				debugger(cnsl, b, &event, debugger_init);
-				event = EVENT_TERMINATE;
 			});
 	}
 	else {
@@ -826,14 +825,17 @@ int main(int argc, char *argv[])
 				if (stop_event == EVENT_HALT || stop_event == EVENT_INTERRUPT || stop_event == EVENT_TERMINATE)
 					break;
 			}
-			event = EVENT_TERMINATE;
 		});
 	}
 
-	cnsl->ui_event_loop();
+	if (th) {
+		cnsl->ui_event_loop();
 
-	th->join();
-	delete th;
+		th->join();
+		delete th;
+	}
+
+	event = EVENT_TERMINATE;
 
 	cnsl->stop_thread();
 	if (panel_th) {

@@ -64,10 +64,10 @@ void console::start_thread()
 
 void console::stop_thread()
 {
+	stop_thread_flag = true;
+
 #if !defined(ESP32) && !defined(BUILD_FOR_PICO2W) && !defined(FREERTOS)
 	if (th_kb) {
-		stop_thread_flag = true;
-
 		th_kb->join();
 		delete th_kb;
 
