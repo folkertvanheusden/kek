@@ -261,6 +261,12 @@ void mmu::write_byte(const uint16_t a, const uint8_t value)
 		write_par(a, 3, value, wm_byte);
 }
 
+void mmu::setCPUERRBit(const int bit)
+{
+	DOLOG(log_ss::LS_MMU, "set CPUERR bit %d", bit);
+	CPUERR |= 1 << bit;
+}
+
 void mmu::trap_if_odd(const int page_index)
 {
 	MMR0 &= ~(7 << 1);

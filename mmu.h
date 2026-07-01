@@ -127,8 +127,8 @@ public:
 	void     trap_if_odd(const int page_index);
 
 	uint16_t getCPUERR() const { return CPUERR; }
-	void     setCPUERR(const uint16_t v) { CPUERR = v; }
-	void     setCPUERRBit(const int bit) { CPUERR |= 1 << bit; }
+	void     clrCPUERR() { CPUERR = 0; }
+	void     setCPUERRBit(const int bit);
 
 	uint16_t getPIR() const { return PIR; };
 	void     setPIR(const uint16_t v) { PIR = v; }

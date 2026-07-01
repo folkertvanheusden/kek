@@ -704,7 +704,7 @@ bool bus::write_IO(const uint16_t a, const word_mode_t word_mode, const int page
 
 	if (a == ADDR_CPU_ERR) { // cpu error register
 		DOLOG(log_ss::LS_BUS_IO, "WRITE-I/O CPUERR: %06o", value);
-		mmu_->setCPUERR(0);
+		mmu_->clrCPUERR();
 		return false;
 	}
 

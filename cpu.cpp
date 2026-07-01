@@ -1650,7 +1650,7 @@ const char *vector_name(const uint16_t vector)
 
 void cpu::trap(uint16_t vector, const int new_ipl)
 {
-	DOLOG(log_ss::LS_TRACE, "*** CPU::TRAP %o, new-ipl: %d, run mode: %d, name: %s ***", vector, new_ipl, getPSW_runmode(), vector_name(vector));
+	DOLOG(log_ss::LS_CPU, "*** CPU::TRAP %o, new-ipl: %d, run mode: %d, name: %s ***", vector, new_ipl, getPSW_runmode(), vector_name(vector));
 
 	auto insert_rc = trap_counts.insert({ vector, 1 });
 	if (insert_rc.second == false)
