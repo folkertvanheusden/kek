@@ -1292,7 +1292,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 					 psw &= 0xff00;  // only alter lower 8 bits
 					 psw |= getGAM(dst_mode, dst_reg, word_mode).value & 0xef;  // can't change bit 4
 #else
-					 trap(010);
+					 trap(010);  // reserved instruction
 #endif
 				 }
 				 else {
@@ -1323,7 +1323,7 @@ bool cpu::single_operand_instructions(const uint16_t instr)
 						 setPSW_n(extend_b7);
 					 }
 #else
-					 trap(010);
+					 trap(010);  // reserved instruction
 #endif
 				 }
 				 else {  // SXT
@@ -1428,7 +1428,7 @@ bool cpu::condition_code_operations(const uint16_t instr)
 		}
 
 //		// trap via vector 010  only(?) on an 11/60 and not(?) on an 11/70
-//		trap(010);
+//		trap(010);  // reserved instruction
 
 		return true;
 	}
@@ -1463,12 +1463,13 @@ void cpu::push_stack(const uint16_t v)
 				b->write_word(a, v, d_space);
 				delayed_trap = 04;
 				any_queued_interrupts = true;
-				mmu_->setCPUERRBit(8);
+				mmu_->setCPUERRBit(14);
 			}
 			else {
 				set_register(6, 4);  // red zone
-				trap(04, 7);
+				trap(04, 7);  // address error
 				processing_trap_depth = 127;  // double trap so halt
+				mmu_->setCPUERRBit(15);
 			}
 			return;
 		}
@@ -1495,7 +1496,7 @@ bool cpu::misc_operations(const uint16_t instr)
 			if (getPSW_runmode() == 0)  // only in kernel mode
 				*event = EVENT_HALT;
 			else
-				trap(4);
+				trap(010);  // reserved instruction
 			return true;
 
 		case 0b0000000000000001: // WAIT
@@ -1547,7 +1548,7 @@ bool cpu::misc_operations(const uint16_t instr)
 
 		case 0b0000000000000111: // MFPT
 			//set_register(0, 0);
-			trap(010); // does not exist on PDP-11/70
+			trap(010);  // does not exist on PDP-11/70
 			return true;
 
 		case 0b0000000000000101: // RESET
