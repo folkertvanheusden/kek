@@ -148,7 +148,7 @@ public:
 	std::array<std::set<uint16_t>, 8> get_queued_interrupts() const { return queued_interrupts; }
 	bool check_if_interrupts_pending() const { return any_queued_interrupts; }
 
-	void trap(uint16_t vector, const int new_ipl = -1, const bool is_interrupt = false);
+	void trap(uint16_t vector, const int new_ipl = -1);
 
 	bool getPSW_c() const;
 	bool getPSW_v() const;
