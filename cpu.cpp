@@ -1628,10 +1628,29 @@ bool cpu::misc_operations(const uint16_t instr)
 	return false;
 }
 
+const char *vector_name(const uint16_t vector)
+{
+	switch(vector) {
+		case 0004: return "address error";
+		case 0010: return "reserved instruction";
+		case 0014: return "BPT";
+		case 0020: return "IOT";
+		case 0030: return "EMT";
+		case 0034: return "TRAP";
+		case 0100: return "KW11-L";
+		case 0160: return "RL02";
+		case 0220: return "RK05";
+		case 0224: return "TM-11";
+		case 0250: return "MMU";
+		default:
+			    return "(other)";
+	}
+}
+
 // 'is_interrupt' is not correct naming; it is true for mmu faults and interrupts
 void cpu::trap(uint16_t vector, const int new_ipl, const bool is_interrupt)
 {
-	DOLOG(log_ss::LS_TRACE, "*** CPU::TRAP %o, new-ipl: %d, is-interrupt: %d, run mode: %d ***", vector, new_ipl, is_interrupt, getPSW_runmode());
+	DOLOG(log_ss::LS_TRACE, "*** CPU::TRAP %o, new-ipl: %d, is-interrupt: %d, run mode: %d, name: %s ***", vector, new_ipl, is_interrupt, getPSW_runmode(), vector_name(vector));
 
 	auto it = trap_counts.find(vector);
 	if (it == trap_counts.end())
