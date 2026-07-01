@@ -353,9 +353,9 @@ void mmu::verify_page_access(const int page_index, const bool is_write)
 		if (access_control == 0 || access_control == 4)
 			temp |= 1l << 15;  // not resident
 		else if (access_control == 1 || access_control == 2)
-			temp |= 1 << 13;
+			temp |= 1 << 13;  // read only
 		else if (access_control == 3 || access_control == 7)
-			temp |= 1 << 15;
+			temp |= 1 << 15;  // not resident -> correct?
 
 		temp |= page_index << 1;
 
