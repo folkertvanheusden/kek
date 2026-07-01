@@ -360,6 +360,7 @@ void mmu::verify_page_access(const int page_index, const bool is_write)
 
 	DOLOG(log_ss::LS_MMU, "TRAP 250 for page access");
 	c->trap(0250);  // abort
+	setCPUERRBit(10);
 	throw 5;
 }
 
@@ -395,6 +396,7 @@ void mmu::verify_page_length(const uint16_t virt_addr, const int page_index)
 
 		DOLOG(log_ss::LS_MMU, "TRAP 250 for page length");
 		c->trap(0250);  // invalid access
+		setCPUERRBit(10);
 
 		throw 7;
 	}
