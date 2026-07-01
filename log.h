@@ -24,6 +24,7 @@ enum class log_ss : log_ss_type {
 	LS_DISK    = 256,
 	LS_MMU     = 512,
 	LS_TAPE    = 1024,
+	LS_BUS_IO  = 2048,
 };
 
 void setlogfile(const char *const lf, const bool l_timestamp);

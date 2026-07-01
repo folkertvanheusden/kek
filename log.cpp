@@ -57,7 +57,7 @@ static console     *log_cnsl          = nullptr;
 log_ss_type         log_mask_c        = 0;
 log_ss_type         log_mask_f        = 0;
 log_ss_type         log_mask_match    = log_mask_c | log_mask_f;
-constexpr const char *const ls_names[] { "GENERIC", "CPU", "DEQNA", "ETH", "TRACE", "BLINKEN", "BUS", "COMM", "DISK", "MMU", "TAPE" };
+constexpr const char *const ls_names[] { "GENERIC", "CPU", "DEQNA", "ETH", "TRACE", "BLINKEN", "BUS", "COMM", "DISK", "MMU", "TAPE", "BUS-IO" };
 
 
 void disable_all_log_ss(const bool console)
@@ -106,6 +106,8 @@ bool toggle_ss_log(const bool console, const std::string & name)
 		mask = log_ss_type(log_ss::LS_MMU);
 	else if (name == "tape")
 		mask = log_ss_type(log_ss::LS_TAPE);
+	else if (name == "bus-io")
+		mask = log_ss_type(log_ss::LS_BUS_IO);
 	else
 		return false;
 
@@ -146,12 +148,14 @@ std::string get_ss_mask(const bool console)
 		out += "mmu,";
 	if (log_mask & log_ss_type(log_ss::LS_TAPE))
 		out += "tape,";
+	if (log_mask & log_ss_type(log_ss::LS_BUS_IO))
+		out += "bus-io,";
 	return out;
 }
 
 std::string get_all_available_log_ss_masks()
 {
-	return "generic,cpu,deqna,eth,trace,blinken,bus,comm,disk,mmu,tape";
+	return "generic,cpu,deqna,eth,trace,blinken,bus,comm,disk,mmu,tape,bus-io";
 }
 
 #if defined(ESP32)
