@@ -821,7 +821,7 @@ int main(int argc, char *argv[])
 
 				*running = false;
 
-				uint32_t stop_event = event.exchange(EVENT_NONE);
+				uint32_t stop_event = event;
 				if (stop_event == EVENT_HALT || stop_event == EVENT_INTERRUPT || stop_event == EVENT_TERMINATE)
 					break;
 			}

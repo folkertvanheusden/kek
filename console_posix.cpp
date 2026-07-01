@@ -179,6 +179,6 @@ void console_posix::refresh_virtual_terminal()
 
 void console_posix::ui_event_loop()
 {
-       while(*stop_event != EVENT_TERMINATE)
+	while(*stop_event != EVENT_HALT && *stop_event != EVENT_INTERRUPT && *stop_event != EVENT_TERMINATE)
                myusleep(1'000'000 / 10);
 }
