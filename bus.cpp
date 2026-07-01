@@ -370,6 +370,7 @@ uint16_t bus::read_IO(const uint16_t a, const word_mode_t word_mode, const int r
 	if ((a >= ADDR_PDR_SV_START && a < ADDR_PAR_SV_END) ||
 			(a >= ADDR_PDR_K_START && a < ADDR_PAR_K_END) ||
 			(a >= ADDR_PDR_U_START && a < ADDR_PAR_U_END)) {
+		DOLOG(log_ss::LS_BUS_IO, "READ-I/O MMU (PDR/PAR) (%06o): %o", a, 0);
 		if (word_mode == wm_word)
 			return mmu_->read_word(a);
 
@@ -797,6 +798,7 @@ bool bus::write_IO(const uint16_t a, const word_mode_t word_mode, const int page
 	if ((a >= ADDR_PDR_SV_START && a < ADDR_PAR_SV_END) ||
 			(a >= ADDR_PDR_K_START && a < ADDR_PAR_K_END) ||
 			(a >= ADDR_PDR_U_START && a < ADDR_PAR_U_END)) {
+		DOLOG(log_ss::LS_BUS_IO, "writing %06o to MMU (PAR/PDR) (%06o)", value, a);
 		if (word_mode == wm_word)
 			mmu_->write_word(a, value);
 		else
@@ -807,7 +809,8 @@ bool bus::write_IO(const uint16_t a, const word_mode_t word_mode, const int page
 	///////////
 
 	if (a >= 0177740 && a <= 0177753) { // cache control register and others
-					    // TODO
+		DOLOG(log_ss::LS_BUS_IO, "writing %06o to cache control etc (%06o)", value, a);
+		// TODO
 		return false;
 	}
 
