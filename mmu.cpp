@@ -387,6 +387,9 @@ void mmu::verify_page_length(const uint16_t virt_addr, const int page_index)
 			temp |= 1 << 14;  // length
 
 			const auto [ run_mode, d, apf ] = explode_page_index(page_index);
+			assert(apf < 8);
+			assert(run_mode < 4);
+			assert(d == false || d == true);
 
 			temp &= ~14;  // add current page
 			temp |= apf << 1;

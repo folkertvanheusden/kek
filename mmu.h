@@ -99,7 +99,7 @@ public:
 	int      get_access_control (const int page_index) { return pages[page_index].pdr & 7; }
 	int      get_pdr_len        (const int page_index) { return (pages[page_index].pdr >> 8) & 127; }
 	int      get_pdr_direction  (const int page_index) { return pages[page_index].pdr & 8; }
-	uint32_t get_physical_memory_offset(const int page_index) const { return pages[page_index].par_preshifted; }
+	uint32_t get_physical_memory_offset(const int page_index) const { assert(page_index < 64); return pages[page_index].par_preshifted; }
 	bool     get_use_data_space(const int run_mode) const;
 	uint32_t get_io_base() const { return io_base; }
 
