@@ -109,10 +109,10 @@ public:
 	std::pair<trap_action_t, int> get_trap_action(const int page_index, const bool is_write);
 	std::pair<uint32_t, int>      calculate_physical_address(const int run_mode, const uint16_t a, const bool is_write, const d_i_space_t space);
 
-	uint16_t getMMR0()  const { return  MMR0; }
-	uint16_t getMMR1()  const { return  MMR1; }
-	uint16_t getMMR2()  const { return  MMR2; }
-	uint16_t getMMR3()  const { return  MMR3; }
+	inline uint16_t getMMR0()  const { return  MMR0; }
+	inline uint16_t getMMR1()  const { return  MMR1; }
+	inline uint16_t getMMR2()  const { return  MMR2; }
+	inline uint16_t getMMR3()  const { return  MMR3; }
 
 	void     setMMR0_as_is(uint16_t value);
 	void     setMMR0(const uint16_t value);
