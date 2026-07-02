@@ -351,7 +351,7 @@ void mmu::verify_page_access(const ppi_t page_index, const bool is_write)
 			temp |= 1 << 13;  // read-only
 
 		if (access_control == 0 || access_control == 4)
-			temp |= 1l << 15;  // not resident
+			temp |= 1 << 15;  // not resident
 		else if (access_control == 1 || access_control == 2)
 			temp |= 1 << 13;  // read only
 		else if (access_control == 3 || access_control == 7)
@@ -363,7 +363,7 @@ void mmu::verify_page_access(const ppi_t page_index, const bool is_write)
 
 		setMMR0_as_is(temp);
 
-		DOLOG(log_ss::LS_MMU, "MMR0: %06o, page index %d, apf %d, run_mode %d, d %d", temp, page_index, apf, run_mode, d);
+		DOLOG(log_ss::LS_MMU, "MMR0: %06o, page index %d, apf %d, run_mode %d, d %d, write: %d, AC: %d, ta: %d", temp, page_index, apf, run_mode, d, is_write, access_control, trap_action);
 	}
 
 	DOLOG(log_ss::LS_MMU, "TRAP 250 for page access");
