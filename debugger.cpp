@@ -775,6 +775,7 @@ struct debugger_state {
 	unsigned pc_monitor_count   { 0 };
 	unsigned pc_monitor_counter { 0 };
 	std::unordered_map<uint16_t, std::pair<uint32_t, int> > pc_monitor;
+	std::optional<uint16_t> trap_trace_trigger;
 };
 
 enum cmd_rc { debugger_continue, debugger_stop, start_emulation };
@@ -985,6 +986,20 @@ FLASHMEM cmd_rc cmd_lbp(console *const cnsl, const std::vector<std::string> &, b
 		cnsl->put_string_lf(format("%d: %s", a.first, a.second->emit().c_str()));
 	if (bps.empty())
 		cnsl->put_string_lf("(none)");
+
+	return debugger_continue;
+}
+
+FLASHMEM cmd_rc cmd_traps(console *const cnsl, const std::vector<std::string> & parts, bus *const, cpu *const, debugger_state *const state, kek_event_t *const)
+{
+	if (parts.empty() == 1) {
+		state->trap_trace_trigger.reset();
+		cnsl->put_string_lf("Trap trace trigger disabled");
+	}
+	else {
+		state->trap_trace_trigger = std::stoi(parts[1]);
+		cnsl->put_string_lf(format("Trap trace trigger set to %06o", state->trap_trace_trigger.value()));
+	}
 
 	return debugger_continue;
 }
@@ -1656,6 +1671,7 @@ constexpr const cmd_pair cmd_pairs[] {
 	{ "sbp", "", "set breakpoint(s), e.g.: action (pc=0123 and memwv[04000]=0200,0300 and (r4=07,05 or r5=0456) and instr[]=1), values seperated by ',', char after mem is w/b (word/byte), then follows v/p (virtual/physical), all octal values, mmr0-3 and psw are registers. \"action\" can be stop, trace or log. instr can have a mask between the [] and on the right an instruction-opcode to compare against.", cmd_sbp, cmd_pair::par_yes },
 	{ "cbp", "", "clear breakpoints", cmd_cbp, cmd_pair::par_yes },
 	{ "lbp", "", "list breakpoints", cmd_lbp, cmd_pair::par_no },
+	{ "traps", "vector", "trap on selected vector, empty to disable", cmd_traps, cmd_pair::par_yes },
 	{ "single", "[n]", "run 1 (or n-) instruction (implicit 'disassemble' command)", cmd_single, cmd_pair::par_optional },
 	{ "trace", "con/fil", "toggle tracing for [con]sole/[fil]e logging", cmd_trace, cmd_pair::par_yes },
 	{ "getlss", "con/fil", "show what subystems logging is enabled for", cmd_getlss, cmd_pair::par_yes },
@@ -1815,6 +1831,13 @@ bool emulation_do(console *const cnsl, bus *const b, cpu *const c, debugger_stat
 		bool     is_trace_enabled    = trace_enabled();
 		std::unordered_map<uint16_t, uint32_t> trap_counts_before = c->get_trap_counts();
 		while(load_relaxed_p(stop_event) == EVENT_NONE) {
+			if (state->trap_trace_trigger.has_value() && state->trap_trace_trigger.value() == c->get_last_trap_vector()) {
+				DOLOG(log_ss::LS_CPU, "Trap trace triggered");
+				set_ss_log(false, log_ss::LS_TRACE);
+				is_trace_enabled = true;
+				c->reset_last_trap_vector();
+			}
+
 			if (is_trace_enabled || state->single_step) {
 				if (!state->single_step)
 					DOLOG(log_ss::LS_TRACE, "---");
@@ -1835,6 +1858,7 @@ bool emulation_do(console *const cnsl, bus *const b, cpu *const c, debugger_stat
 				else if (bp_result.value().first.get_action() == breakpoint::bp_action::start_tracing) {
 					set_ss_log(false, log_ss::LS_TRACE);
 					set_ss_log(true,  log_ss::LS_TRACE);
+					is_trace_enabled = true;
 				}
 				else if (bp_result.value().first.get_action() == breakpoint::bp_action::only_log_entry) {
 					DOLOG(log_ss::LS_TRACE, "Breakpoint: %s", bp_result.value().second.c_str());

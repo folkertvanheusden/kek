@@ -57,6 +57,7 @@ private:
 	uint64_t trap_counter       { 0     };
 	std::unordered_map<uint16_t, uint32_t> trap_counts;
 	uint64_t instructions_executed { 0  };
+	uint16_t last_trap_vector   { 0     };
 
 	// vector, 8 levels
 	std::array<std::set<uint16_t>, 8> queued_interrupts;
@@ -141,6 +142,9 @@ public:
 
 	void     push_stack(const uint16_t v);
 	uint16_t pop_stack();
+
+	void     reset_last_trap_vector() { last_trap_vector = 0; }
+	uint16_t get_last_trap_vector() const { return last_trap_vector; }
 
 	void init_interrupt_queue();
 	void queue_interrupt(const uint8_t level, const uint16_t vector);
