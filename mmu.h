@@ -29,6 +29,8 @@
 
 typedef enum { T_PROCEED, T_ABORT_4, T_TRAP_250 } trap_action_t;
 
+typedef int ppi_t;
+
 typedef struct {
 	uint16_t virtual_address;
 	uint8_t  apf;  // active page field
@@ -68,8 +70,8 @@ private:
 
 	void update_io_base() { io_base = is_enabled() ? (getMMR3() & 16 ? 017760000 : 0760000) : 0160000; }
 
-	void verify_page_access(const int page_index, const bool is_write);
-	void verify_page_length(const uint16_t virt_addr, const int page_index);
+	void verify_page_access(const ppi_t page_index, const bool is_write);
+	void verify_page_length(const uint16_t virt_addr, const ppi_t page_index);
 
 public:
 	mmu();
@@ -92,14 +94,14 @@ public:
 	bool     is_enabled() const { return MMR0 & 1; }
 	bool     is_locked()  const { return MMR0 & 0160000; }
 
-	int      calc_par_pdr_index(const int run_mode, const d_i_space_t d, const int apf) const { return apf + ((d == d_space) << 3) + (run_mode << 4); }
-	std::tuple<int, bool, int> explode_page_index(const int page) { return { page >> 4, (page >> 3) & 1, page & 7 }; }
-	void     set_page_accessed  (const int page_index) { pages[page_index].pdr |= 1 << 7; }
-	void     set_page_written_to(const int page_index) { pages[page_index].pdr |= (1 << 6) | (1 << 7); }  // implicit set_page_accessed
-	int      get_access_control (const int page_index) { return pages[page_index].pdr & 7; }
-	int      get_pdr_len        (const int page_index) { return (pages[page_index].pdr >> 8) & 127; }
-	int      get_pdr_direction  (const int page_index) { return pages[page_index].pdr & 8; }
-	uint32_t get_physical_memory_offset(const int page_index) const { assert(page_index < 64); return pages[page_index].par_preshifted; }
+	ppi_t    calc_par_pdr_index(const int run_mode, const d_i_space_t d, const int apf) const { return apf + ((d == d_space) << 3) + (run_mode << 4); }
+	std::tuple<int, bool, int> explode_page_index(const ppi_t page) { return { page >> 4, (page >> 3) & 1, page & 7 }; }
+	void     set_page_accessed  (const ppi_t page_index) { pages[page_index].pdr |= 1 << 7; }
+	void     set_page_written_to(const ppi_t page_index) { pages[page_index].pdr |= (1 << 6) | (1 << 7); }  // implicit set_page_accessed
+	int      get_access_control (const ppi_t page_index) { return pages[page_index].pdr & 7; }
+	int      get_pdr_len        (const ppi_t page_index) { return (pages[page_index].pdr >> 8) & 127; }
+	int      get_pdr_direction  (const ppi_t page_index) { return pages[page_index].pdr & 8; }
+	uint32_t get_physical_memory_offset(const ppi_t page_index) const { return pages[page_index].par_preshifted; }
 	bool     get_use_data_space(const int run_mode) const;
 	uint32_t get_io_base() const { return io_base; }
 

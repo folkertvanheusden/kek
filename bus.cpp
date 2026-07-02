@@ -594,7 +594,7 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const in
 	else {
 		if (m_offset & 1) {
 			DOLOG(log_ss::LS_BUS, "READ from %08o - odd address!", m_offset);
-			mmu_->trap_if_odd(page_index);
+			mmu_->trap_if_odd(apf);
 			throw 2;
 		}
 
@@ -873,7 +873,7 @@ bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, const uint1
 	else {
 		if (m_offset & 1) [[unlikely]] {
 			DOLOG(log_ss::LS_BUS, "WRITE to %08o (value: %06o) - odd address!", m_offset, value);
-			mmu_->trap_if_odd(page_index);
+			mmu_->trap_if_odd(apf);
 			throw 10;
 		}
 

@@ -48,7 +48,7 @@ void mmu::dump_par_pdr(console *const cnsl, const int run_mode, const d_i_space_
 	for(int i=0; i<8; i++) {
 		if (selection.has_value() && i != selection.value())
 			continue;
-		int      page_index = calc_par_pdr_index(run_mode, d, i);
+		ppi_t    page_index = calc_par_pdr_index(run_mode, d, i);
 		uint16_t par_value  = pages[page_index].par_preshifted >> 6;
 		uint16_t pdr_value  = pages[page_index].pdr;
 
@@ -81,7 +81,7 @@ uint16_t mmu::read_pdr(const uint32_t a, const int run_mode)
 {
 	int         page       = (a >> 1) & 7;
 	d_i_space_t d          = a & 16 ? d_space : i_space;
-	int         page_index = calc_par_pdr_index(run_mode, d, page);
+	ppi_t       page_index = calc_par_pdr_index(run_mode, d, page);
 	return pages[page_index].pdr;
 }
 
@@ -89,7 +89,7 @@ uint16_t mmu::read_par(const uint32_t a, const int run_mode)
 {
 	int         page       = (a >> 1) & 7;
 	d_i_space_t d          = a & 16 ? d_space : i_space;
-	int         page_index = calc_par_pdr_index(run_mode, d, page);
+	ppi_t       page_index = calc_par_pdr_index(run_mode, d, page);
 	return pages[page_index].par_preshifted >> 6;
 }
 
@@ -157,7 +157,7 @@ void mmu::write_pdr(const uint32_t a, const int run_mode, const uint16_t value, 
 {
 	d_i_space_t d          = a & 16 ? d_space : i_space;
 	int         page       = (a >> 1) & 7;
-	int         page_index = calc_par_pdr_index(run_mode, d, page);
+	ppi_t       page_index = calc_par_pdr_index(run_mode, d, page);
 
 	if (word_mode == wm_byte) {
 		assert(a != 0 || value < 256);
@@ -177,7 +177,7 @@ void mmu::write_par(const uint32_t a, const int run_mode, const uint16_t value, 
 {
 	d_i_space_t d          = a & 16 ? d_space : i_space;
 	int         page       = (a >> 1) & 7;
-	int         page_index = calc_par_pdr_index(run_mode, d, page);
+	ppi_t       page_index = calc_par_pdr_index(run_mode, d, page);
 
 	if (word_mode == wm_byte) {
 		uint16_t par = pages[page_index].par_preshifted >> 6;
@@ -267,10 +267,10 @@ void mmu::setCPUERRBit(const int bit)
 	CPUERR |= 1 << bit;
 }
 
-void mmu::trap_if_odd(const int page_index)
+void mmu::trap_if_odd(const int apf)
 {
 	MMR0 &= ~(7 << 1);
-	MMR0 |= (page_index & 7) << 1;
+	MMR0 |= apf << 1;
 
 	CPUERR |= 0100;
 }
@@ -284,7 +284,7 @@ memory_addresses_t mmu::calculate_physical_address(const int run_mode, const uin
 		return { a, apf, a, is_psw, a, is_psw };
 	}
 
-	int      page_index           = calc_par_pdr_index(run_mode, d_space, apf);
+	ppi_t    page_index           = calc_par_pdr_index(run_mode, d_space, apf);
 	uint32_t physical_instruction = get_physical_memory_offset(page_index + 0);
 	uint32_t physical_data        = get_use_data_space(run_mode) ?
 					get_physical_memory_offset(page_index + 8) : physical_instruction;
@@ -305,7 +305,7 @@ memory_addresses_t mmu::calculate_physical_address(const int run_mode, const uin
 	return { a, apf, physical_instruction, physical_instruction_is_psw, physical_data, physical_data_is_psw };
 }
 
-std::pair<trap_action_t, int> mmu::get_trap_action(const int page_index, const bool is_write)
+std::pair<trap_action_t, int> mmu::get_trap_action(const ppi_t page_index, const bool is_write)
 {
 	const int access_control = get_access_control(page_index);
 
@@ -336,7 +336,7 @@ void mmu::mmudebug(const uint16_t a)
 #endif
 }
 
-void mmu::verify_page_access(const int page_index, const bool is_write)
+void mmu::verify_page_access(const ppi_t page_index, const bool is_write)
 {
 	const auto [ trap_action, access_control ] = get_trap_action(page_index, is_write);
 	if (trap_action == T_PROCEED) [[likely]]
@@ -357,11 +357,13 @@ void mmu::verify_page_access(const int page_index, const bool is_write)
 		else if (access_control == 3 || access_control == 7)
 			temp |= 1 << 15;  // not resident -> correct?
 
-		temp |= page_index << 1;
+		const auto [ run_mode, d, apf ] = explode_page_index(page_index);
+		assert(apf < 8);
+		temp |= apf << 1;
 
 		setMMR0_as_is(temp);
 
-		DOLOG(log_ss::LS_MMU, "MMR0: %06o", temp);
+		DOLOG(log_ss::LS_MMU, "MMR0: %06o, page index %d, apf %d, run_mode %d, d %d", temp, page_index, apf, run_mode, d);
 	}
 
 	DOLOG(log_ss::LS_MMU, "TRAP 250 for page access");
@@ -370,7 +372,7 @@ void mmu::verify_page_access(const int page_index, const bool is_write)
 	throw 5;
 }
 
-void mmu::verify_page_length(const uint16_t virt_addr, const int page_index)
+void mmu::verify_page_length(const uint16_t virt_addr, const ppi_t page_index)
 {
 	uint16_t pdr_len    = get_pdr_len(page_index);
 	uint16_t pdr_cmp   = (virt_addr >> 6) & 127;
@@ -416,7 +418,7 @@ std::pair<uint32_t, int> mmu::calculate_physical_address(const int run_mode, con
 	if (is_enabled() || (is_write && (getMMR0() & (1 << 8 /* maintenance check */)))) {
 		uint16_t p_offset   = a & 8191;  // page offset
 		uint8_t  apf        = a >> 13;  // active page field
-		int      page_index = calc_par_pdr_index(run_mode, space, apf);
+		ppi_t    page_index = calc_par_pdr_index(run_mode, space, apf);
 
 		uint32_t m_offset   = get_physical_memory_offset(page_index);
 		m_offset += p_offset;
@@ -442,7 +444,7 @@ JsonDocument mmu::add_par_pdr(const int run_mode, const d_i_space_t d) const
 	JsonDocument ja_par;
 	JsonArray ja_par_work = ja_par.to<JsonArray>();
 	for(int i=0; i<8; i++) {
-		int page_index = calc_par_pdr_index(run_mode, d, i);
+		ppi_t page_index = calc_par_pdr_index(run_mode, d, i);
 		ja_par_work.add(pages[page_index].par_preshifted);
 	}
 	j["par"] = ja_par;
@@ -450,7 +452,7 @@ JsonDocument mmu::add_par_pdr(const int run_mode, const d_i_space_t d) const
 	JsonDocument ja_pdr;
 	JsonArray ja_pdr_work = ja_pdr.to<JsonArray>();
 	for(int i=0; i<8; i++) {
-		int page_index = calc_par_pdr_index(run_mode, d, i);
+		ppi_t page_index = calc_par_pdr_index(run_mode, d, i);
 		ja_pdr_work.add(pages[page_index].pdr);
 	}
 	j["pdr"] = ja_pdr;
@@ -486,14 +488,14 @@ void mmu::set_par_pdr(const JsonVariantConst j_in, const int run_mode, const d_i
 	JsonArrayConst j_par = j_in["par"];
 	int       i_par = 0;
 	for(auto v: j_par) {
-		int page_index = calc_par_pdr_index(run_mode, d, i_par++);
+		ppi_t page_index = calc_par_pdr_index(run_mode, d, i_par++);
 		pages[page_index].par_preshifted = v;
 	}
 
 	JsonArrayConst j_pdr = j_in["pdr"];
 	int       i_pdr = 0;
 	for(auto v: j_pdr) {
-		int page_index = calc_par_pdr_index(run_mode, d, i_pdr++);
+		ppi_t page_index = calc_par_pdr_index(run_mode, d, i_pdr++);
 		pages[page_index].pdr = v;
 	}
 }
