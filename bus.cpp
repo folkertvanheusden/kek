@@ -279,6 +279,8 @@ void bus::del_DZ11()
 
 uint16_t bus::read_IO(const uint16_t a, const word_mode_t word_mode, const int run_mode, const d_i_space_t space, const int apf, const int page_index)
 {
+	DOLOG(log_ss::LS_BUS, "READ-I/O %06o", a);
+
 	//// REGISTERS ////
 	if (a >= ADDR_KERNEL_R && a <= ADDR_KERNEL_R + 5) { // kernel R0-R5
 		uint16_t temp = c->get_register(a - ADDR_KERNEL_R) & (word_mode == wm_byte ? 0xff : 0xffff);
@@ -608,6 +610,8 @@ uint16_t bus::read(const uint16_t addr_in, const word_mode_t word_mode, const in
 
 bool bus::write_IO(const uint16_t a, const word_mode_t word_mode, const int page, uint16_t value)
 {
+	DOLOG(log_ss::LS_BUS, "WRITE-I/O %06o to %06o", value, a);
+
 	if (word_mode == wm_byte) {
 		if (a == ADDR_PSW || a == ADDR_PSW + 1) { // PSW
 			DOLOG(log_ss::LS_BUS_IO, "WRITE-I/O PSW %s: %03o", a & 1 ? "MSB" : "LSB", value);
