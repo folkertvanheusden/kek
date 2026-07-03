@@ -856,7 +856,7 @@ bool bus::write(const uint16_t addr_in, const word_mode_t word_mode, const uint1
 {
 	const uint8_t apf        = addr_in >> 13; // active page field
 	auto          space      = mmu_->get_use_data_space(run_mode) ? space_in : i_space;
-	const auto [ m_offset, page_index ] = mmu_->calculate_physical_address(run_mode, addr_in, false, space);
+	const auto [ m_offset, page_index ] = mmu_->calculate_physical_address(run_mode, addr_in, true, space);
 
 	uint32_t      io_base    = mmu_->get_io_base();
 	bool          is_io      = m_offset >= io_base;
