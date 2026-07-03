@@ -322,7 +322,7 @@ uint16_t bus::read_IO(const uint16_t a, const word_mode_t word_mode, const int, 
 	}
 
 	if (a == ADDR_CPU_ERR) { // cpu error register
-		uint16_t temp = mmu_->getCPUERR() & 0xff;
+		uint16_t temp = mmu_->getCPUERR();
 		DOLOG(log_ss::LS_BUS_IO, "READ-I/O CPU error: %03o", temp);
 		return temp;
 	}
