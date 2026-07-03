@@ -138,7 +138,8 @@ bool mmu::get_use_data_space(const int run_mode) const
 
 void mmu::clearMMR1()
 {
-	MMR1 = 0;
+	MMR1   = 0;
+	MMR1nr = false;
 }
 
 void mmu::add_to_MMR1(const int8_t delta, const uint8_t reg)
@@ -148,9 +149,15 @@ void mmu::add_to_MMR1(const int8_t delta, const uint8_t reg)
 
 	assert((getMMR0() & 0160000) == 0);  // MMR1 should not be locked
 
-	MMR1 <<= 8;
-	MMR1 |= (delta & 31) << 3;
-	MMR1 |= reg;
+	if (MMR1nr) {
+		MMR1  |= (delta & 31) << 11;
+		MMR1  |= reg << 8;
+	}
+	else {
+		MMR1  |= (delta & 31) << 3;
+		MMR1  |= reg;
+		MMR1nr = true;
+	}
 }
 
 void mmu::write_pdr(const uint32_t a, const int run_mode, const uint16_t value, const word_mode_t word_mode)

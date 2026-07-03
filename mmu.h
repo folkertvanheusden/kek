@@ -53,6 +53,7 @@ private:
 
 	uint16_t MMR0    { 0 };
 	uint16_t MMR1    { 0 };
+	bool     MMR1nr  { false };  // false = lower, true = upper
 	uint16_t MMR2    { 0 };
 	uint16_t MMR3    { 0 };
 	uint16_t CPUERR  { 0 };
