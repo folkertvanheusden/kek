@@ -346,7 +346,7 @@ void mmu::verify_page_access(const ppi_t page_index, const bool is_write)
 	if (is_locked() == false) {
 		uint16_t temp = getMMR0();
 
-		temp &= ~((1l << 15) | (1 << 14) | (1 << 13) | (1 << 12) | (3 << 5) | (7 << 1) | (1 << 4));
+		temp &= ~((1 << 15) | (1 << 14) | (1 << 13) | (1 << 12) | (3 << 5) | (7 << 1) | (1 << 4));
 
 		if (is_write && access_control != 6)
 			temp |= 1 << 13;  // read-only
