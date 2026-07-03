@@ -348,13 +348,11 @@ void mmu::verify_page_access(const ppi_t page_index, const bool is_write)
 
 		temp &= ~((1 << 15) | (1 << 14) | (1 << 13) | (1 << 12) | (3 << 5) | (7 << 1) | (1 << 4));
 
-		if (is_write && access_control != 6)
+		if (is_write && (access_control == 1 || access_control == 2 || access_control == 5))
 			temp |= 1 << 13;  // read-only
 
 		if (access_control == 0 || access_control == 4)
 			temp |= 1 << 15;  // not resident
-		else if (access_control == 1 || access_control == 2)
-			temp |= 1 << 13;  // read only
 		else if (access_control == 3 || access_control == 7)
 			temp |= 1 << 15;  // not resident -> correct?
 
