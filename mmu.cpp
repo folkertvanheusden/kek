@@ -362,6 +362,10 @@ void mmu::verify_page_access(const ppi_t page_index, const bool is_write)
 		assert(apf < 8);
 		temp |= apf << 1;
 
+		temp |= run_mode << 5;
+
+		temp |= d << 4;
+
 		setMMR0_as_is(temp);
 
 		DOLOG(log_ss::LS_MMU, "MMR0: %06o, page index %d, apf %d, run_mode %d, d %d, write: %d, AC: %d, ta: %d", temp, page_index, apf, run_mode, d, is_write, access_control, trap_action);
