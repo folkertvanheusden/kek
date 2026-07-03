@@ -531,7 +531,7 @@ int main(int argc, char *argv[])
 		disable_all_log_ss(false);
 		auto parts = split(log_subsystems_file.value(), ",");
 		for(auto & ss: parts) {
-			if (toggle_ss_log(false, ss) == false)
+			if (toggle_ss_log(false, ss).first == false)
 				error_exit(false, "\"%s\" is now known", ss.c_str());
 		}
 	}
@@ -540,7 +540,7 @@ int main(int argc, char *argv[])
 		disable_all_log_ss(true);
 		auto parts = split(log_subsystems_console.value(), ",");
 		for(auto & ss: parts) {
-			if (toggle_ss_log(true, ss) == false)
+			if (toggle_ss_log(true, ss).first == false)
 				error_exit(false, "\"%s\" is now known", ss.c_str());
 		}
 	}

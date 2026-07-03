@@ -80,7 +80,8 @@ log_ss_type get_log_ss_masks(const bool console)
 	return console ? log_mask_c : log_mask_f;
 }
 
-bool toggle_ss_log(const bool console, const std::string & name)
+// valid, state
+std::pair<bool, bool> toggle_ss_log(const bool console, const std::string & name)
 {
 	log_ss_type mask = 0;
 
@@ -109,7 +110,7 @@ bool toggle_ss_log(const bool console, const std::string & name)
 	else if (name == "bus-io")
 		mask = log_ss_type(log_ss::LS_BUS_IO);
 	else
-		return false;
+		return { false, false };
 
 	auto & log_mask = console ? log_mask_c : log_mask_f;
 	if (log_mask & mask)
@@ -118,7 +119,7 @@ bool toggle_ss_log(const bool console, const std::string & name)
 		log_mask |= mask;
 	log_mask_match = log_mask_c | log_mask_f;
 
-	return true;
+	return { true, log_mask & mask };
 }
 
 std::string get_ss_mask(const bool console)

@@ -1063,10 +1063,11 @@ FLASHMEM cmd_rc cmd_toggle_ss(console *const cnsl, const std::vector<std::string
 {
 	bool is_console = parts[1] == "console" || parts[1] == "con";
 	for(size_t i=2; i<parts.size(); i++) {
-		if (toggle_ss_log(is_console, parts[i]))
-			cnsl->put_string_lf(parts[i] + " toggled");
+		auto rc = toggle_ss_log(is_console, parts[i]);
+		if (rc.first)
+			cnsl->put_string_lf(parts[i] + " toggled to " + (rc.second ? "on": "off"));
 		else
-			cnsl->put_string_lf(parts[i] + " not known");
+			cnsl->put_string_lf("\"" + parts[i] + "\" not known");
 	}
 	return debugger_continue;
 }

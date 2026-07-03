@@ -38,7 +38,7 @@ void set_clock_reference(const char *const ntp_server);
 #endif
 void set_terminal(console *const cnsl);
 bool is_terminal_set();
-bool toggle_ss_log(const bool is_console, const std::string & name);
+std::pair<bool, bool> toggle_ss_log(const bool console, const std::string & name);
 void set_ss_log(const bool is_console, const log_ss ls);
 std::string get_ss_mask(const bool is_console);
 void disable_all_log_ss(const bool is_console);
