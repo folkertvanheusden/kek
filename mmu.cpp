@@ -284,10 +284,11 @@ memory_addresses_t mmu::calculate_physical_address(const int run_mode, const uin
 		return { a, apf, a, is_psw, a, is_psw };
 	}
 
-	ppi_t    page_index           = calc_par_pdr_index(run_mode, d_space, apf);
-	uint32_t physical_instruction = get_physical_memory_offset(page_index + 0);
+	ppi_t    page_index_d         = calc_par_pdr_index(run_mode, d_space, apf);
+	ppi_t    page_index_i         = calc_par_pdr_index(run_mode, i_space, apf);
+	uint32_t physical_instruction = get_physical_memory_offset(page_index_i);
 	uint32_t physical_data        = get_use_data_space(run_mode) ?
-					get_physical_memory_offset(page_index + 8) : physical_instruction;
+					get_physical_memory_offset(page_index_d) : physical_instruction;
 
 	uint16_t p_offset = a & 8191;  // page offset
 
