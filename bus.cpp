@@ -277,7 +277,7 @@ void bus::del_DZ11()
 	dz11_ = nullptr;
 }
 
-uint16_t bus::read_IO(const uint16_t a, const word_mode_t word_mode, const int run_mode, const d_i_space_t space, const int apf, const int page_index)
+uint16_t bus::read_IO(const uint16_t a, const word_mode_t word_mode, const int, const d_i_space_t, const int apf, const int)
 {
 	DOLOG(log_ss::LS_BUS, "READ-I/O %06o", a);
 
