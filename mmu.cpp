@@ -106,9 +106,9 @@ void mmu::setMMR0(uint16_t value)
 	if (value & 1)
 		value &= ~(7l << 13);  // reset error bits
 
-	if (MMR0 & 0160000) {
-		if ((value & 1) == 0)
-			value &= 254;  // bits 7...1 are protected 
+	if (MMR0 & 0160000) {  // bit 15-13 set?
+		value &= ~254;  // bits 7...1 are protected
+		value |= MMR0 & 254;
 	}
 
 	MMR0 = value;
