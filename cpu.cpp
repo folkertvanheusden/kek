@@ -1460,6 +1460,7 @@ void cpu::push_stack(const uint16_t v)
 		if (sp < use_limit) {
 			if (sp >= use_limit - 32) {  // yellow zone
 				uint16_t a = add_register(6, -2);
+				add_to_MMR1(6, -2);  // record SP change before write so MMR1 is correct if write faults
 				b->write_word(a, v, d_space);
 				delayed_trap = 04;
 				any_queued_interrupts = true;
@@ -1476,6 +1477,7 @@ void cpu::push_stack(const uint16_t v)
 	}
 
 	uint16_t a = add_register(6, -2);
+	add_to_MMR1(6, -2);  // record SP change before write so MMR1 is correct if write faults
 	b->write_word(a, v, d_space);
 }
 
@@ -1594,10 +1596,8 @@ bool cpu::misc_operations(const uint16_t instr)
 
 		int  link_reg  = (instr >> 6) & 7;
 
-		// PUSH link
+		// PUSH link (push_stack records the SP decrement in MMR1 before the write)
 		push_stack(get_register(link_reg));
-		if (mmu_->isMMR1Locked() == false)
-			mmu_->add_to_MMR1(-2, 6);
 
 		// MOVE PC,link
 		set_register(link_reg, getPC());
