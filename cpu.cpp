@@ -1460,6 +1460,7 @@ void cpu::push_stack(const uint16_t v)
 		if (sp < use_limit) {
 			if (sp >= use_limit - 32) {  // yellow zone
 				uint16_t a = add_register(6, -2);
+				add_to_MMR1(6, -2);
 				b->write_word(a, v, d_space);
 				delayed_trap = 04;
 				any_queued_interrupts = true;
@@ -1476,6 +1477,7 @@ void cpu::push_stack(const uint16_t v)
 	}
 
 	uint16_t a = add_register(6, -2);
+	add_to_MMR1(6, -2);
 	b->write_word(a, v, d_space);
 }
 
