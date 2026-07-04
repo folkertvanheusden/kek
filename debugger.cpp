@@ -526,7 +526,7 @@ FLASHMEM std::tuple<int, uint32_t, bool, std::string> disassemble(cpu *const c, 
 				duration_f,
 				instruction.c_str());
 	else
-		result = format("R0: %s, R1: %s, R2: %s, R3: %s, R4: %s, R5: %s, SP: %s, PC: %06o, PSW: %s (%s), instr: %s: %s (%.3f us)",
+		result = format("R0:%s R1:%s R2:%s R3:%s R4:%s R5:%s SP:%s PC:%06o PSW:%s (%s) instr: %s: %s (%.3f us)",
 				registers[0].c_str(), registers[1].c_str(), registers[2].c_str(), registers[3].c_str(), registers[4].c_str(),
 				registers[5].c_str(), registers[6].c_str(), pc,
 				psw.c_str(), data["psw-value"][0].c_str(),
@@ -537,7 +537,7 @@ FLASHMEM std::tuple<int, uint32_t, bool, std::string> disassemble(cpu *const c, 
 	for(auto sp_val : data["sp"])
 		sp += (sp.empty() ? "" : ",") + sp_val;
 
-	DOLOG(log_ss::LS_TRACE, "SP: %s, MMR0/1/2/3: %s/%s/%s/%s", sp.c_str(), MMR0.c_str(), MMR1.c_str(), MMR2.c_str(), MMR3.c_str());
+	DOLOG(log_ss::LS_TRACE, "SP:%s MMR0/1/2/3: %s/%s/%s/%s", sp.c_str(), MMR0.c_str(), MMR1.c_str(), MMR2.c_str(), MMR3.c_str());
 
 	if (cnsl)
 		cnsl->put_string_lf(result);
