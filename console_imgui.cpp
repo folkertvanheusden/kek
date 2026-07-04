@@ -239,9 +239,9 @@ void console_imgui::ui_event_loop()
 	ImGui_ImplSDLRenderer3_Init(renderer);
 
 	while(!stop && *stop_event != EVENT_TERMINATE) {
-		SDL_Delay(1);
+		bool minimized = SDL_GetWindowFlags(window) & SDL_WINDOW_MINIMIZED;
 		SDL_Event event;
-		while (SDL_PollEvent(&event)) {
+		while (SDL_WaitEventTimeout(&event, minimized ? 10 : 1)) {
 			ImGui_ImplSDL3_ProcessEvent(&event);
 			if (event.type == SDL_EVENT_QUIT) 
 				stop = true;
@@ -254,11 +254,6 @@ void console_imgui::ui_event_loop()
 				else if (keycode < 127)
 					kb_buffer.push(keycode);
 			}
-		}
-
-		if (SDL_GetWindowFlags(window) & SDL_WINDOW_MINIMIZED) {
-			SDL_Delay(10);
-			continue;
 		}
 
 		if (refresh.exchange(false) == false)
