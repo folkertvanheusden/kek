@@ -43,7 +43,7 @@ int console_imgui::wait_for_char_ll(const int timeout)
 
 void console_imgui::put_char_ll(const char)
 {
-	// TODO trigger refresh
+	refresh = true;
 }
 
 void console_imgui::put_string_lf(const std::string & what)
@@ -53,6 +53,7 @@ void console_imgui::put_string_lf(const std::string & what)
 
 void console_imgui::resize_terminal()
 {
+	refresh = true;
 }
 
 void console_imgui::panel_update_thread()
@@ -173,6 +174,8 @@ void console_imgui::panel_update_thread()
 			panel = new_surface;
 		}
 
+		refresh = true;
+
 		SDL_Delay(1000 / refreshrate);
 	}
 
@@ -192,6 +195,7 @@ void console_imgui::panel_update_thread()
 
 void console_imgui::refresh_virtual_terminal()
 {
+	refresh = true;
 }
 
 void console_imgui::ui_event_loop()
@@ -256,6 +260,9 @@ void console_imgui::ui_event_loop()
 			SDL_Delay(10);
 			continue;
 		}
+
+		if (refresh.exchange(false) == false)
+			continue;
 
 		ImGui_ImplSDLRenderer3_NewFrame();
 		ImGui_ImplSDL3_NewFrame();

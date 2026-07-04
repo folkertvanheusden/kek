@@ -22,6 +22,7 @@ private:
 	my_lock                       panel_lock;
 	std::vector<uint64_t>         loads;
 	my_lock                       loads_lock;
+	std::atomic_bool              refresh { false   };
 
 protected:
 	int  wait_for_char_ll(const int  timeout) override;
