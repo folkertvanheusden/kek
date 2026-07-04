@@ -207,14 +207,11 @@ void rl02::write_word(const uint16_t addr, uint16_t v)
 
 	if (addr == RL02_CSR) {  // control status
 		const uint8_t command = (v >> 1) & 7;
-
 		const bool    do_exec = !(v & 128);
-
 		int           device  = (v >> 8) & 3;
+		bool          do_int  = false;
 
 		DOLOG(log_ss::LS_DISK, "RL02: device %d, set command %d, exec: %d (%s)", device, command, do_exec, commands[command]);
-
-		bool          do_int  = false;
 
 		if (size_t(device) >= fhs.size()) {
 			DOLOG(log_ss::LS_DISK, "RL02: PDP11/70 is accessing virtual disk %d which is not attached", device);
@@ -292,20 +289,15 @@ void rl02::write_word(const uint16_t addr, uint16_t v)
 					break;
 				}
 
-				mpr[0] += count / 2;
-
 				temp_disk_offset += cur;
-
-				count -= cur;
+				count            -= cur;
 
 				sector++;
 				if (sector >= rl02_sectors_per_track) {
 					sector = 0;
-
 					head++;
 					if (head >= 2) {
 						head = 0;
-
 						track++;
 					}
 				}
