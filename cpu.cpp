@@ -393,7 +393,7 @@ void cpu::add_to_MMR1(const int reg, const int delta)
 	assert(delta >= -2 && delta <= 2);
 
 	if (mmu_->isMMR1Locked() == false) {
-		DOLOG(log_ss::LS_TRACE, "MMR1: add %d to register R%d", delta, reg);
+//		DOLOG(log_ss::LS_TRACE, "MMR1: add %d to register R%d", delta, reg);
 		mmu_->add_to_MMR1(delta, reg);
 	}
 }
