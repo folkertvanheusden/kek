@@ -508,13 +508,8 @@ FLASHMEM std::tuple<int, uint32_t, bool, std::string> disassemble(cpu *const c, 
 
 	std::string instruction = data["instruction-text"].at(0);
 
-	std::string MMR0 = data["MMR0"].at(0);
-	std::string MMR1 = data["MMR1"].at(0);
-	std::string MMR2 = data["MMR2"].at(0);
-	std::string MMR3 = data["MMR3"].at(0);
-
-	uint32_t duration   = std::stoi(data["duration"].at(0));
-	float    duration_f = duration / 1000.;
+	uint32_t    duration    = std::stoi(data["duration"].at(0));
+	float       duration_f  = duration / 1000.;
 
 	std::string result;
 
@@ -532,12 +527,6 @@ FLASHMEM std::tuple<int, uint32_t, bool, std::string> disassemble(cpu *const c, 
 				psw.c_str(), data["psw-value"][0].c_str(),
 				instruction_values.c_str(),
 				instruction.c_str(), duration_f);
-
-	std::string sp;
-	for(auto sp_val : data["sp"])
-		sp += (sp.empty() ? "" : ",") + sp_val;
-
-	DOLOG(log_ss::LS_TRACE, "SP:%s MMR0/1/2/3: %s/%s/%s/%s", sp.c_str(), MMR0.c_str(), MMR1.c_str(), MMR2.c_str(), MMR3.c_str());
 
 	if (cnsl)
 		cnsl->put_string_lf(result);
@@ -1840,7 +1829,8 @@ bool emulation_do(console *const cnsl, bus *const b, cpu *const c, debugger_stat
 			}
 
 			if (is_trace_enabled || state->single_step) {
-				if (!state->single_step)
+				extern log_ss_type log_mask_match;
+				if (!state->single_step && log_mask_match != unsigned(log_ss::LS_TRACE))
 					DOLOG(log_ss::LS_TRACE, "---");
 
 				auto rc = disassemble(c, state->single_step ? cnsl : nullptr, c->getPC(), false);
