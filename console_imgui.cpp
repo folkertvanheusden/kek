@@ -15,11 +15,14 @@
 #include "cpu.h"
 
 
+#define GRAPH_N 250
+
 extern aint term_cols;
 extern aint term_lines;
 
 console_imgui::console_imgui(std::atomic_uint32_t *const stop_event): console(stop_event)
 {
+	loads.resize(GRAPH_N);
 }
 
 console_imgui::~console_imgui()
@@ -86,7 +89,7 @@ void console_imgui::panel_update_thread()
 			uint64_t done_n_instr    = prev_instr_count <= cur_instr_count ? cur_instr_count - prev_instr_count : 0;
 
 			my_unique_lock lck(&loads_lock);
-			while(loads.size() >= 500)
+			while(loads.size() >= GRAPH_N)
 				loads.erase(loads.begin());
 			loads.push_back(done_n_instr);
 
@@ -259,6 +262,7 @@ void console_imgui::ui_event_loop()
 		ImGui::NewFrame();
 
 		///
+		ImGui::SetNextWindowSize(ImVec2(640.0f, 320.0f), ImGuiCond_FirstUseEver);
 		ImGui::Begin("Front panel");
 		auto         available_space = ImGui::GetContentRegionAvail();
 		SDL_Texture *texture         = nullptr;
@@ -272,6 +276,7 @@ void console_imgui::ui_event_loop()
 			ImGui::Image(ImTextureID(intptr_t(texture)), ImVec2(float(texture->w), float(texture->h)));
 		ImGui::End();
 
+		ImGui::SetNextWindowSize(ImVec2(250.0f, 250.0f), ImGuiCond_FirstUseEver);
 		ImGui::Begin("System load");
 		ImVec2 pos = ImGui::GetCursorScreenPos();
 		ImVec2 dim = ImGui::GetWindowSize();
@@ -301,6 +306,8 @@ void console_imgui::ui_event_loop()
 		}
 		ImGui::End();
 
+		ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+		ImGui::SetNextWindowPos(center, ImGuiCond_FirstUseEver, ImVec2(0.5f, 0.5f));
 		ImGui::Begin("Terminal");
 		ImVec2 cpos = ImGui::GetCursorScreenPos();
 		ImVec2 cdim = ImGui::GetWindowSize();
