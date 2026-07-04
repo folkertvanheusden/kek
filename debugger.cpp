@@ -1966,6 +1966,7 @@ FLASHMEM void debugger(console *const cnsl, bus *const b, kek_event_t *const sto
 
 	b->set_debug_mode();
 
+#if !defined(TEENSY4_1)
 	if (init.has_value()) {
 		std::string   line;
 		std::ifstream fh;
@@ -1980,6 +1981,7 @@ FLASHMEM void debugger(console *const cnsl, bus *const b, kek_event_t *const sto
 			}
 		}
 	}
+#endif
 
 	while(load_relaxed_p(stop_event) != EVENT_TERMINATE) {
 		try {
