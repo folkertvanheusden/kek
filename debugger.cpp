@@ -2,7 +2,9 @@
 // Released under MIT license
 
 #include "gen.h"
+#if IS_POSIX || defined(_WIN32)
 #include <fstream>
+#endif
 #include <optional>
 #include <unordered_map>
 #if IS_POSIX || defined(_WIN32)
@@ -1967,6 +1969,7 @@ FLASHMEM void debugger(console *const cnsl, bus *const b, kek_event_t *const sto
 	b->set_debug_mode();
 
 	if (init.has_value()) {
+#if IS_POSIX || defined(_WIN32)
 		std::string   line;
 		std::ifstream fh;
 		fh.open(init.value());
@@ -1979,6 +1982,7 @@ FLASHMEM void debugger(console *const cnsl, bus *const b, kek_event_t *const sto
 				cnsl->put_string_lf("Exception in debugger");
 			}
 		}
+#endif
 	}
 
 	while(load_relaxed_p(stop_event) != EVENT_TERMINATE) {
